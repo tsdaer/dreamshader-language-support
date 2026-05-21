@@ -11,6 +11,7 @@ dependencies {
 
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
+        // Keep IU for reliable headless test execution.
         intellijIdea("2025.2.6.2")
         testFramework(TestFrameworkType.Platform)
     }

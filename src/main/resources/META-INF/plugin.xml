@@ -3,6 +3,7 @@
     <id>com.github.tsdaer.dreamshaderlanguagesupport</id>
     <name>Dreamshader Language Extension</name>
     <vendor>tsdaer</vendor>
+    <depends>com.intellij.modules.platform</depends>
     <description><![CDATA[
         <p>DreamShaderLang language support for JetBrains Rider.</p>
         <p>Current features include file type registration for <code>.dsm</code>, <code>.dsf</code>, and <code>.dsh</code>, syntax highlighting, comment support, and paired braces.</p>

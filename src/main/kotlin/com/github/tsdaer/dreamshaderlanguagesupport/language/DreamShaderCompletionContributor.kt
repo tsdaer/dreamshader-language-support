@@ -315,6 +315,10 @@ private data class DreamShaderSettingValueContext(
     val settingKey: String
 )
 
+private data class DreamShaderExpressionClassValueContext(
+    val prefix: String
+)
+
 private object DreamShaderCompletionData {
     val settingsKeys = listOf(
         "MaterialDomain",
@@ -563,13 +567,23 @@ private object DreamShaderCompletionData {
         "step",
         "tan"
     )
+
+    val defaultExpressionClasses = listOf(
+        "Sine",
+        "Cosine",
+        "Multiply",
+        "Add",
+        "Subtract",
+        "TextureSample"
+    )
 }
 
 internal object DreamShaderCompletionSuggester {
     fun suggest(
         text: String,
         offset: Int,
-        importCandidates: List<String> = emptyList()
+        importCandidates: List<String> = emptyList(),
+        expressionClassCandidates: List<String> = emptyList()
     ): List<DreamShaderCompletionItem> {
         val context = DreamShaderCompletionContextAnalyzer.analyze(text, offset)
         val suggestions = linkedMapOf<String, DreamShaderCompletionItem>()
@@ -590,6 +604,22 @@ internal object DreamShaderCompletionSuggester {
         }
 
         val linePrefix = linePrefix(text, offset)
+        val expressionClassContext = extractExpressionClassValueContext(text, offset)
+        if (expressionClassContext != null) {
+            val candidates = if (expressionClassCandidates.isEmpty()) {
+                DreamShaderCompletionData.defaultExpressionClasses
+            } else {
+                expressionClassCandidates
+            }
+            candidates
+                .filter { it.lowercase(Locale.ROOT).startsWith(expressionClassContext.prefix.lowercase(Locale.ROOT)) }
+                .sorted()
+                .forEach { className ->
+                    add(DreamShaderCompletionItem(label = className, insertText = className, detail = "UE.Expression Class"))
+                }
+            return suggestions.values.toList()
+        }
+
         if (context.isInSettingsOrOptionsSection) {
             val settingValueContext = extractSettingValueContext(linePrefix, text, offset)
             if (settingValueContext != null) {
@@ -724,6 +754,19 @@ internal object DreamShaderCompletionSuggester {
         val match = Regex("""\bUE\.([A-Za-z0-9_]*)$""").find(linePrefix) ?: return null
         return match.groupValues[1]
     }
+
+    private fun extractExpressionClassValueContext(
+        text: String,
+        offset: Int
+    ): DreamShaderExpressionClassValueContext? {
+        val safeOffset = offset.coerceIn(0, text.length)
+        val prefixText = text.substring(0, safeOffset).takeLast(600)
+        val pattern = Regex(
+            """(?is)UE\s*\.\s*Expression\s*\([^)]*?\bClass\s*=\s*"([A-Za-z0-9_]*)$"""
+        )
+        val match = pattern.find(prefixText) ?: return null
+        return DreamShaderExpressionClassValueContext(prefix = match.groupValues[1])
+    }
 }
 
 private class DreamShaderInsertTextHandler(
@@ -771,6 +814,14 @@ private fun collectProjectImportCandidates(file: PsiFile): List<String> {
         .toList()
 }
 
+private fun collectMaterialExpressionClassCandidates(file: PsiFile): List<String> {
+    val settings = file.project.getService(DreamShaderProjectSettings::class.java)
+    return DreamShaderMaterialExpressionManifest.expressionClassNames(
+        project = file.project,
+        explicitManifestPath = settings?.state?.materialExpressionManifestPath
+    )
+}
+
 class DreamShaderCompletionContributor : CompletionContributor() {
     init {
         extend(
@@ -788,7 +839,8 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                     val suggestions = DreamShaderCompletionSuggester.suggest(
                         text = file.text,
                         offset = parameters.offset,
-                        importCandidates = collectProjectImportCandidates(file)
+                        importCandidates = collectProjectImportCandidates(file),
+                        expressionClassCandidates = collectMaterialExpressionClassCandidates(file)
                     )
                     suggestions.forEach { suggestion ->
                         val builder = LookupElementBuilder.create(suggestion.label)

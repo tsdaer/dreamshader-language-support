@@ -97,12 +97,33 @@ class DreamShaderCompletionSuggesterTest {
         )
 
         val labels = DreamShaderCompletionSuggester
-            .suggest(text, offset, importCandidates)
+            .suggest(text, offset, importCandidates = importCandidates)
             .map { it.label }
             .toSet()
 
         assertTrue(labels.contains("Common/Core.dsh"))
         assertTrue(labels.contains("Common/Lighting.dsf"))
         assertTrue(!labels.contains("UI/Widget.dsh"))
+    }
+
+    @Test
+    fun `suggests UE expression class values from manifest candidates`() {
+        val text = """
+            Shader Main {
+                Graph {
+                    float x = UE.Expression(Class="Si");
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("\"Si") + "\"Si".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(
+            text = text,
+            offset = offset,
+            expressionClassCandidates = listOf("Sine", "Cosine", "Multiply")
+        ).map { it.label }.toSet()
+
+        assertTrue(labels.contains("Sine"))
+        assertTrue(!labels.contains("Cosine"))
     }
 }

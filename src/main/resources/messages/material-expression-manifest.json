@@ -1,0 +1,10 @@
+{
+  "classes": [
+    { "className": "Sine" },
+    { "className": "Cosine" },
+    { "className": "Multiply" },
+    { "className": "Add" },
+    { "className": "Subtract" },
+    { "className": "TextureSample" }
+  ]
+}

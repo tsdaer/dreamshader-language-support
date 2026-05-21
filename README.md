@@ -1,7 +1,7 @@
 # dreamshader-language-support (Rider)
 
 JetBrains Rider plugin for DreamShaderLang (`.dsm`, `.dsf`, `.dsh`).
-Built on IntelliJ Platform SDK (`rider`) with Rider module dependency (`com.intellij.modules.rider`).
+Built on IntelliJ Platform SDK with platform module dependency (`com.intellij.modules.platform`).
 
 Target reference (VS Code extension):
 https://github.com/TypeDreamMoon/dreamshader-language-support

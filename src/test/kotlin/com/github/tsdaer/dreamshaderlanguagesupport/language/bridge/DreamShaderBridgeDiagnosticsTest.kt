@@ -1,0 +1,118 @@
+package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
+
+import com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderProjectSettings
+import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import java.nio.file.Paths
+
+class DreamShaderBridgeDiagnosticsTest : BasePlatformTestCase() {
+    fun testBridgeDiagnosticNavigationToExactLocation() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val sourcePath = Paths.get(projectBase, "DShader", "Materials", "Main.dsm")
+        var sourceFile = VfsUtil.findFile(sourcePath, false)
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(sourcePath.parent.toString())
+            val file = parent.findOrCreateChildData(this, sourcePath.fileName.toString())
+            VfsUtil.saveText(
+                file,
+                """
+                Shader Main {
+                    Graph {
+                        float x = 1.0;
+                    }
+                }
+                """.trimIndent()
+            )
+            sourceFile = file
+        }
+        val createdSourceFile = sourceFile ?: error("source file not created")
+
+        val diagnosticsPath = Paths.get(projectBase, "Saved", "DreamShader", "Bridge", "diagnostics.json")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(diagnosticsPath.parent.toString())
+            val file = parent.findOrCreateChildData(this, diagnosticsPath.fileName.toString())
+            VfsUtil.saveText(
+                file,
+                """
+                [
+                  {
+                    "sourcePath": "${createdSourceFile.path.replace("\\", "/")}",
+                    "line": 3,
+                    "column": 15,
+                    "severity": "error",
+                    "message": "Bridge test error"
+                  }
+                ]
+                """.trimIndent()
+            )
+        }
+
+        val repository = project.getService(DreamShaderBridgeDiagnosticsRepository::class.java)
+        val snapshot = repository.refresh(createdSourceFile)
+        assertEquals(1, snapshot.diagnostics.size)
+        val diagnostic = snapshot.diagnostics.first()
+        assertEquals(3, diagnostic.line)
+        assertEquals(15, diagnostic.column)
+        assertEquals("Bridge test error", diagnostic.message)
+    }
+
+    fun testRefreshBridgeDiagnosticsSyncsPanelAndEditor() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val settings = project.getService(DreamShaderProjectSettings::class.java)
+        settings.state.projectRoot = projectBase
+
+        val sourcePath = Paths.get(projectBase, "DShader", "Materials", "Refresh.dsm")
+        var sourceFile = VfsUtil.findFile(sourcePath, false)
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(sourcePath.parent.toString())
+            val file = parent.findOrCreateChildData(this, sourcePath.fileName.toString())
+            VfsUtil.saveText(
+                file,
+                """
+                Shader Refresh {
+                    Graph {
+                        float x = 1.0;
+                    }
+                }
+                """.trimIndent()
+            )
+            sourceFile = file
+        }
+        val createdSourceFile = sourceFile ?: error("source file not created")
+
+        val diagnosticsPath = Paths.get(projectBase, "Saved", "DreamShader", "Bridge", "diagnostics.json")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(diagnosticsPath.parent.toString())
+            val file = parent.findOrCreateChildData(this, diagnosticsPath.fileName.toString())
+            VfsUtil.saveText(
+                file,
+                """
+                {
+                  "diagnostics": [
+                    {
+                      "sourcePath": "${sourcePath.toString().replace("\\", "/")}",
+                      "line": 3,
+                      "column": 12,
+                      "severity": "warning",
+                      "message": "Bridge warning one"
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+
+        myFixture.configureFromExistingVirtualFile(createdSourceFile)
+        val highlights = myFixture.doHighlighting(HighlightSeverity.WARNING)
+        assertTrue(highlights.any { it.description == "Bridge warning one" })
+
+        val repository = project.getService(DreamShaderBridgeDiagnosticsRepository::class.java)
+        val mapped = repository.diagnosticsForFile(createdSourceFile)
+        assertEquals(1, mapped.size)
+        assertEquals("Bridge warning one", mapped.first().message)
+    }
+}
