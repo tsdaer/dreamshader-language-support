@@ -1,0 +1,224 @@
+package com.github.tsdaer.dreamshaderlanguagesupport.language
+
+import java.util.Locale
+
+data class DreamShaderCallSignature(
+    val presentableText: String,
+    val parameterRanges: List<IntRange>
+)
+
+data class DreamShaderCallContext(
+    val functionName: String,
+    val nameStartOffset: Int,
+    val leftParenOffset: Int
+)
+
+object DreamShaderSignatureHelpAnalyzer {
+    private val signatureLookup: Map<String, List<DreamShaderCallSignature>> = buildMap {
+        put(
+            "ue.texcoord",
+            listOf(signature("UE.TexCoord(Index=0)", "Index"))
+        )
+        put(
+            "ue.time",
+            listOf(signature("UE.Time(Period=4.0)", "Period"))
+        )
+        put(
+            "ue.panner",
+            listOf(signature("UE.Panner(Coordinate=UV, Time=UE.Time(), Speed=float2(0.1, 0.0))", "Coordinate", "Time", "Speed"))
+        )
+        put(
+            "ue.worldposition",
+            listOf(signature("UE.WorldPosition()"))
+        )
+        put(
+            "ue.objectpositionws",
+            listOf(signature("UE.ObjectPositionWS()"))
+        )
+        put(
+            "ue.cameravectorws",
+            listOf(signature("UE.CameraVectorWS()"))
+        )
+        put(
+            "ue.screenposition",
+            listOf(signature("UE.ScreenPosition()"))
+        )
+        put(
+            "ue.vertexcolor",
+            listOf(signature("UE.VertexColor()"))
+        )
+        put(
+            "ue.transformvector",
+            listOf(signature("UE.TransformVector(Input=NormalTS, Source=\"Tangent\", Destination=\"World\")", "Input", "Source", "Destination"))
+        )
+        put(
+            "ue.transformposition",
+            listOf(signature("UE.TransformPosition(Input=WorldPos, Source=\"Local\", Destination=\"World\")", "Input", "Source", "Destination"))
+        )
+        put(
+            "ue.expression",
+            listOf(signature("UE.Expression(Class=\"Sine\", OutputType=\"float1\", Input=UE.Time())", "Class", "OutputType", "Input"))
+        )
+        put(
+            "ue.collectionparam",
+            listOf(signature("UE.CollectionParam(Collection=Path(...), Parameter=\"Value\")", "Collection", "Parameter"))
+        )
+        put(
+            "ue.staticswitchparameter",
+            listOf(signature("UE.StaticSwitchParameter(Name=\"UseDetail\", Default=true, True=Detail, False=Base)", "Name", "Default", "True", "False"))
+        )
+        put("abs", listOf(signature("abs(x)", "x")))
+        put("acos", listOf(signature("acos(x)", "x")))
+        put("asin", listOf(signature("asin(x)", "x")))
+        put("atan", listOf(signature("atan(x)", "x")))
+        put("atan2", listOf(signature("atan2(y, x)", "y", "x")))
+        put("ceil", listOf(signature("ceil(x)", "x")))
+        put("clamp", listOf(signature("clamp(x, min, max)", "x", "min", "max")))
+        put("cos", listOf(signature("cos(x)", "x")))
+        put("cross", listOf(signature("cross(x, y)", "x", "y")))
+        put("ddx", listOf(signature("ddx(x)", "x")))
+        put("ddy", listOf(signature("ddy(x)", "x")))
+        put("distance", listOf(signature("distance(x, y)", "x", "y")))
+        put("dot", listOf(signature("dot(x, y)", "x", "y")))
+        put("exp", listOf(signature("exp(x)", "x")))
+        put("exp2", listOf(signature("exp2(x)", "x")))
+        put("floor", listOf(signature("floor(x)", "x")))
+        put("frac", listOf(signature("frac(x)", "x")))
+        put("fmod", listOf(signature("fmod(x, y)", "x", "y")))
+        put("length", listOf(signature("length(x)", "x")))
+        put("lerp", listOf(signature("lerp(x, y, s)", "x", "y", "s")))
+        put("log", listOf(signature("log(x)", "x")))
+        put("log2", listOf(signature("log2(x)", "x")))
+        put("max", listOf(signature("max(x, y)", "x", "y")))
+        put("min", listOf(signature("min(x, y)", "x", "y")))
+        put("mul", listOf(signature("mul(x, y)", "x", "y")))
+        put("normalize", listOf(signature("normalize(x)", "x")))
+        put("pow", listOf(signature("pow(x, y)", "x", "y")))
+        put("reflect", listOf(signature("reflect(i, n)", "i", "n")))
+        put("rsqrt", listOf(signature("rsqrt(x)", "x")))
+        put("saturate", listOf(signature("saturate(x)", "x")))
+        put("sin", listOf(signature("sin(x)", "x")))
+        put("smoothstep", listOf(signature("smoothstep(min, max, x)", "min", "max", "x")))
+        put("sqrt", listOf(signature("sqrt(x)", "x")))
+        put("step", listOf(signature("step(edge, x)", "edge", "x")))
+        put("tan", listOf(signature("tan(x)", "x")))
+    }
+
+    fun resolveSignatures(functionName: String): List<DreamShaderCallSignature> {
+        val key = functionName.lowercase(Locale.ROOT)
+        return signatureLookup[key].orEmpty()
+    }
+
+    fun findCallContext(text: String, offset: Int): DreamShaderCallContext? {
+        if (text.isEmpty()) return null
+        val safeOffset = offset.coerceIn(0, text.length)
+        var depth = 0
+        var i = safeOffset - 1
+
+        while (i >= 0) {
+            when (text[i]) {
+                ')' -> depth++
+                '(' -> {
+                    if (depth == 0) {
+                        val nameRange = findFunctionNameRange(text, i) ?: return null
+                        val functionName = text.substring(nameRange.first, nameRange.last + 1)
+                        return DreamShaderCallContext(
+                            functionName = functionName,
+                            nameStartOffset = nameRange.first,
+                            leftParenOffset = i
+                        )
+                    }
+                    depth--
+                }
+            }
+            i--
+        }
+        return null
+    }
+
+    fun parameterIndex(text: String, call: DreamShaderCallContext, offset: Int): Int {
+        val safeOffset = offset.coerceIn(0, text.length)
+        if (safeOffset <= call.leftParenOffset) return -1
+
+        var nestedDepth = 0
+        var bracketDepth = 0
+        var braceDepth = 0
+        var inString = false
+        var escaped = false
+        var parameterIndex = 0
+
+        var i = call.leftParenOffset + 1
+        while (i < safeOffset) {
+            val ch = text[i]
+            if (inString) {
+                if (escaped) {
+                    escaped = false
+                } else if (ch == '\\') {
+                    escaped = true
+                } else if (ch == '"') {
+                    inString = false
+                }
+                i++
+                continue
+            }
+
+            when (ch) {
+                '"' -> inString = true
+                '(' -> nestedDepth++
+                ')' -> {
+                    if (nestedDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+                        return -1
+                    }
+                    if (nestedDepth > 0) nestedDepth--
+                }
+                '[' -> bracketDepth++
+                ']' -> if (bracketDepth > 0) bracketDepth--
+                '{' -> braceDepth++
+                '}' -> if (braceDepth > 0) braceDepth--
+                ',' -> {
+                    if (nestedDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+                        parameterIndex++
+                    }
+                }
+            }
+            i++
+        }
+        return parameterIndex
+    }
+
+    private fun findFunctionNameRange(text: String, leftParenOffset: Int): IntRange? {
+        var end = leftParenOffset - 1
+        while (end >= 0 && text[end].isWhitespace()) end--
+        if (end < 0) return null
+
+        var start = end
+        while (start >= 0) {
+            val ch = text[start]
+            val isNameChar = ch == '.' || ch == '_' || ch.isLetterOrDigit()
+            if (!isNameChar) break
+            start--
+        }
+        val actualStart = start + 1
+        if (actualStart > end) return null
+        val name = text.substring(actualStart, end + 1)
+        if (name.isBlank()) return null
+        if (!name.any { it.isLetter() }) return null
+        return actualStart..end
+    }
+
+    private fun signature(presentableText: String, vararg parameters: String): DreamShaderCallSignature {
+        val ranges = mutableListOf<IntRange>()
+        var searchStart = 0
+        for (parameter in parameters) {
+            val index = presentableText.indexOf(parameter, startIndex = searchStart)
+            if (index >= 0) {
+                ranges.add(index until (index + parameter.length))
+                searchStart = index + parameter.length
+            }
+        }
+        return DreamShaderCallSignature(
+            presentableText = presentableText,
+            parameterRanges = ranges
+        )
+    }
+}

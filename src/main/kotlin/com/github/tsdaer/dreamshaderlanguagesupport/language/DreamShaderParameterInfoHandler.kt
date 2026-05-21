@@ -1,0 +1,81 @@
+package com.github.tsdaer.dreamshaderlanguagesupport.language
+
+import com.intellij.lang.parameterInfo.CreateParameterInfoContext
+import com.intellij.lang.parameterInfo.ParameterInfoHandler
+import com.intellij.lang.parameterInfo.ParameterInfoUIContext
+import com.intellij.lang.parameterInfo.UpdateParameterInfoContext
+import com.intellij.psi.PsiFile
+
+class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShaderCallSignature> {
+    override fun findElementForParameterInfo(context: CreateParameterInfoContext): PsiFile? {
+        val file = context.file
+        if (file.language != DreamShaderLanguage) return null
+        val call = DreamShaderSignatureHelpAnalyzer.findCallContext(file.text, context.offset) ?: return null
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName)
+        if (signatures.isEmpty()) return null
+        context.itemsToShow = signatures.toTypedArray()
+        context.highlightedElement = file.findElementAt(call.nameStartOffset)
+        return file
+    }
+
+    override fun showParameterInfo(element: PsiFile, context: CreateParameterInfoContext) {
+        context.showHint(element, context.offset, this)
+    }
+
+    override fun findElementForUpdatingParameterInfo(context: UpdateParameterInfoContext): PsiFile? {
+        val owner = context.parameterOwner as? PsiFile
+        if (owner != null && owner.isValid) return owner
+        val file = context.file
+        if (file.language != DreamShaderLanguage) return null
+        return file
+    }
+
+    override fun processFoundElementForUpdatingParameterInfo(element: PsiFile?, context: UpdateParameterInfoContext) {
+        if (element != null) {
+            context.parameterOwner = element
+        }
+    }
+
+    override fun updateParameterInfo(element: PsiFile, context: UpdateParameterInfoContext) {
+        val call = DreamShaderSignatureHelpAnalyzer.findCallContext(element.text, context.offset)
+        if (call == null) {
+            context.removeHint()
+            return
+        }
+
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName)
+        if (signatures.isEmpty()) {
+            context.removeHint()
+            return
+        }
+
+        val parameterIndex = DreamShaderSignatureHelpAnalyzer.parameterIndex(element.text, call, context.offset)
+        context.setCurrentParameter(parameterIndex)
+
+        val objects = context.objectsToView
+        for (i in objects.indices) {
+            context.setUIComponentEnabled(i, true)
+        }
+    }
+
+    override fun updateUI(signature: DreamShaderCallSignature, context: ParameterInfoUIContext) {
+        val parameterIndex = context.currentParameterIndex
+        val parameterRanges = signature.parameterRanges
+
+        val highlightRange = if (parameterIndex in parameterRanges.indices) {
+            parameterRanges[parameterIndex]
+        } else {
+            null
+        }
+
+        context.setupUIComponentPresentation(
+            signature.presentableText,
+            highlightRange?.first ?: -1,
+            highlightRange?.last?.plus(1) ?: -1,
+            false,
+            false,
+            false,
+            context.defaultParameterColor
+        )
+    }
+}
