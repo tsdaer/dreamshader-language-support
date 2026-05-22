@@ -6,6 +6,12 @@ import com.intellij.lang.parameterInfo.ParameterInfoUIContext
 import com.intellij.lang.parameterInfo.UpdateParameterInfoContext
 import com.intellij.psi.PsiFile
 
+/**
+ * 由 [DreamShaderSignatureHelpAnalyzer] 支持的 IntelliJ 参数信息处理程序。
+ *
+ * 该组件仅提供UI粘合和代理调用解析/签名
+ * 分析仪分辨率以保持一个真实来源。
+ */
 class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShaderCallSignature> {
     override fun findElementForParameterInfo(context: CreateParameterInfoContext): PsiFile? {
         val file = context.file

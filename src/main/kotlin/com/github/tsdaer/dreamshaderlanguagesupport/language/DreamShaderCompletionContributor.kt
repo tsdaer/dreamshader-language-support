@@ -58,6 +58,10 @@ internal data class DreamShaderCompletionContext(
     val isFunctionLikeDeclaration: Boolean = false
 )
 
+/**
+ * 计算完备上下文，采用弹性策略：
+ * 先用PSI，第二用解析文本的备回，最后是仅用词法表的备用。
+ */
 internal object DreamShaderCompletionContextAnalyzer {
     fun analyze(text: String, offset: Int): DreamShaderCompletionContext {
         if (ApplicationManager.getApplication() == null) {
@@ -579,6 +583,10 @@ private object DreamShaderCompletionData {
 }
 
 internal object DreamShaderCompletionSuggester {
+    /**
+     * Produces context-aware suggestions for declarations, sections, settings,
+     * import paths, UE builtins, HLSL intrinsics, and expression classes.
+     */
     fun suggest(
         text: String,
         offset: Int,
@@ -823,6 +831,10 @@ private fun collectMaterialExpressionClassCandidates(file: PsiFile): List<String
 }
 
 class DreamShaderCompletionContributor : CompletionContributor() {
+    /**
+     * IntelliJ completion entrypoint that delegates all domain logic to
+     * [DreamShaderCompletionSuggester].
+     */
     init {
         extend(
             CompletionType.BASIC,

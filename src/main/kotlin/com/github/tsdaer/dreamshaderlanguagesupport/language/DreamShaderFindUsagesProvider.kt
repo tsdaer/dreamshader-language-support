@@ -7,6 +7,9 @@ import com.intellij.lang.findUsages.FindUsagesProvider
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiNamedElement
 
+/**
+ * 查找DreamShader声明的使用集成。
+ */
 class DreamShaderFindUsagesProvider : FindUsagesProvider {
     override fun getWordsScanner(): WordsScanner {
         return DefaultWordsScanner(
@@ -33,4 +36,3 @@ class DreamShaderFindUsagesProvider : FindUsagesProvider {
 
     override fun getNodeText(element: PsiElement, useFullName: Boolean): String = getDescriptiveName(element)
 }
-

@@ -2,17 +2,32 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language
 
 import java.util.Locale
 
+/**
+ * 参数信息界面显示的一个签名候选人。
+ *
+ * 'parameterRanges' 是 'presentableText' 内的字符范围，用于
+ * 高亮激活参数。
+ */
 data class DreamShaderCallSignature(
     val presentableText: String,
     val parameterRanges: List<IntRange>
 )
 
+/**
+ * 解析显示了 Caret 周围的呼叫站点位置。
+ */
 data class DreamShaderCallContext(
     val functionName: String,
     val nameStartOffset: Int,
     val leftParenOffset: Int
 )
 
+/**
+ * 用于调用上下文和参数索引解析的无状态分析器。
+ *
+ * 查找表目前涵盖了 UE 内置和 HLSL 内在文件的使用
+ * 完成子系统，用于保持编辑器功能间行为一致。
+ */
 object DreamShaderSignatureHelpAnalyzer {
     private val signatureLookup: Map<String, List<DreamShaderCallSignature>> = buildMap {
         put(

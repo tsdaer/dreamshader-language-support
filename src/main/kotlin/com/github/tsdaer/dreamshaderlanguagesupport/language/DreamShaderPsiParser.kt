@@ -5,6 +5,13 @@ import com.intellij.lang.PsiBuilder
 import com.intellij.lang.PsiParser
 import com.intellij.psi.tree.IElementType
 
+/**
+ * Permissive staged parser for DreamShaderLang.
+ *
+ * Current strategy: reliably mark top-level declarations and direct sections,
+ * while allowing partially invalid code to still produce a usable PSI tree for
+ * completion, navigation and diagnostics.
+ */
 class DreamShaderPsiParser : PsiParser {
     override fun parse(root: IElementType, builder: PsiBuilder): ASTNode {
         val rootMarker = builder.mark()

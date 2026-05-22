@@ -10,12 +10,35 @@ import com.intellij.openapi.components.Storage
     name = "DreamShaderProjectSettings",
     storages = [Storage("dreamshader-language-support.xml")]
 )
+/**
+ * Persistent per-project settings for DreamShader language support.
+ *
+ * These values are the single source of truth for runtime feature switches
+ * (Bridge integration, CodeLens/status visibility) and package index sources.
+ */
 class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSettings.State> {
+    /**
+     * Serialized state stored in `dreamshader-language-support.xml`.
+     */
     data class State(
+        /** Optional explicit project root used by Bridge path resolution. */
         var projectRoot: String = "",
+        /** Optional explicit manifest path for `UE.Expression(Class="...")` completion. */
         var materialExpressionManifestPath: String = "",
+        /** UI toggle for future status bar integration. */
         var showStatusBar: Boolean = true,
-        var enableCodeLens: Boolean = true
+        /** UI toggle for future CodeLens integration. */
+        var enableCodeLens: Boolean = true,
+        /** Preferred package index sources (multi-source mode). */
+        var packageStoreIndexUrls: MutableList<String> = mutableListOf(),
+        /** Backward-compatible single source setting used when list mode is empty. */
+        var packageStoreIndexUrl: String = "",
+        /** External command template for recompiling current DreamShader asset. */
+        var bridgeRecompileCurrentCommand: String = "",
+        /** External command template for recompiling all DreamShader assets. */
+        var bridgeRecompileAllCommand: String = "",
+        /** External command template for cleaning generated DreamShader shaders/assets. */
+        var bridgeCleanGeneratedShadersCommand: String = ""
     )
 
     private var state = State()

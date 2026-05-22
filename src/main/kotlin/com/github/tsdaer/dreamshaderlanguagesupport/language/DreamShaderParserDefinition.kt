@@ -13,6 +13,12 @@ import com.intellij.psi.TokenType
 import com.intellij.psi.tree.IFileElementType
 import com.intellij.psi.tree.TokenSet
 
+/**
+ * IntelliJ parser wiring for DreamShaderLang.
+ *
+ * This binds lexer, parser, PSI factory, and file PSI root so editor features
+ * (completion/navigation/annotator) consume one consistent PSI tree.
+ */
 class DreamShaderParserDefinition : ParserDefinition {
     override fun createLexer(project: Project?): Lexer = DreamShaderLexer()
 

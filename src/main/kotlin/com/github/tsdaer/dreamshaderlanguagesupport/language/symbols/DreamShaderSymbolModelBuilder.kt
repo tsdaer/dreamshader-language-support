@@ -12,6 +12,13 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 
+/**
+ * Builds a lightweight declaration/section symbol model used by structure and
+ * navigation features.
+ *
+ * Supports both PSI-based builds (open editor files) and text-only builds
+ * (tests and parser fallback paths).
+ */
 object DreamShaderSymbolModelBuilder {
     fun build(file: PsiFile): DreamShaderSymbolModel {
         val declarations = PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java)

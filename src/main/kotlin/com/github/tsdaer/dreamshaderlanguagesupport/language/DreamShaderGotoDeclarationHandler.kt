@@ -1,17 +1,19 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
-import java.nio.file.Paths
-import java.util.LinkedHashSet
-import java.util.Locale
 
+/**
+ * 前往声明处理器：
+ * - 导入字符串文字 -> 目标文件
+ * - 标识符引用 -> 顶层声明与名称匹配
+ */
 class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
     override fun getGotoDeclarationTargets(
         sourceElement: PsiElement?,
@@ -38,30 +40,14 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
         if (importPath.isBlank()) return null
 
         val project = element.project
-        val candidates = LinkedHashSet<String>()
-        val normalized = importPath.replace('\\', '/')
-
-        if (Paths.get(normalized).isAbsolute) {
-            candidates.add(normalized)
-        }
-
-        val containingDir = element.containingFile?.virtualFile?.parent?.path?.replace('\\', '/')
-        if (containingDir != null) candidates.add("$containingDir/$normalized")
-
-        val basePath = project.basePath?.replace('\\', '/')
-        if (basePath != null) candidates.add("$basePath/$normalized")
-
         val psiManager = PsiManager.getInstance(project)
-        val localFs = LocalFileSystem.getInstance()
-
-        for (path in candidates) {
-            val vf = localFs.findFileByPath(path) ?: continue
-            if (!vf.isValid || vf.isDirectory) continue
-            if (vf.extension?.lowercase(Locale.ROOT) !in SUPPORTED_EXTENSIONS) continue
-            val psiFile = psiManager.findFile(vf) ?: continue
-            return arrayOf(psiFile)
-        }
-        return null
+        val vf = DreamShaderImportResolver.resolveImport(
+            projectBasePath = project.basePath ?: return null,
+            containingDirectory = element.containingFile?.virtualFile?.parent,
+            importPath = importPath
+        ) ?: return null
+        val psiFile = psiManager.findFile(vf) ?: return null
+        return arrayOf(psiFile)
     }
 
     private fun resolveDeclarationTargets(element: PsiElement): Array<PsiElement>? {
@@ -120,9 +106,4 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
         }
         return false
     }
-
-    companion object {
-        private val SUPPORTED_EXTENSIONS = setOf("dsh", "dsf", "dsm")
-    }
 }
-

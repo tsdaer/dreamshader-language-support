@@ -7,6 +7,14 @@ import com.intellij.openapi.vfs.VirtualFile
 import java.io.File
 import java.nio.charset.StandardCharsets
 
+/**
+ * Project service that reads `Saved/DreamShader/Bridge/diagnostics.json`,
+ * normalizes entries, and exposes per-file diagnostics snapshots.
+ *
+ * Parser accepts two upstream JSON shapes:
+ * - array root: `[ {...}, ... ]`
+ * - object root containing `"diagnostics": [ ... ]`
+ */
 @Service(Service.Level.PROJECT)
 class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
     @Volatile

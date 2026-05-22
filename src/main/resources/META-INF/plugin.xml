@@ -3,6 +3,7 @@
     <id>com.github.tsdaer.dreamshaderlanguagesupport</id>
     <name>Dreamshader Language Extension</name>
     <vendor>tsdaer</vendor>
+    <resource-bundle>messages.DreamShaderBundle</resource-bundle>
     <depends>com.intellij.modules.platform</depends>
     <description><![CDATA[
         <p>DreamShaderLang language support for JetBrains Rider.</p>
@@ -58,5 +59,79 @@
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderInlayParameterHintsProvider"/>
         <colorSettingsPage
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderColorSettingsPage"/>
+        <projectConfigurable
+                id="dreamshader.settings"
+                groupId="tools"
+                key="projectConfigurable.dreamshader.displayName"
+                bundle="messages.DreamShaderBundle"
+                instance="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderSettingsConfigurable"/>
+        <notificationGroup id="DreamShader Notifications" displayType="BALLOON"/>
+        <toolWindow id="DreamShader Bridge Diagnostics"
+                    anchor="bottom"
+                    factoryClass="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeToolWindowFactory"
+                    canCloseContents="false"/>
+        <statusBarWidgetFactory
+                id="DreamShaderBridgeStatus"
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeStatusBarWidgetFactory"/>
     </extensions>
+
+    <actions>
+        <group id="DreamShader.Tools.Group"
+               text="DreamShader"
+               description="DreamShader tools and workflows"
+               popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+
+            <action id="DreamShader.Tools.OpenHub"
+                    class="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderOpenHubAction"/>
+
+            <separator/>
+
+            <group id="DreamShader.BridgeTools.Group"
+                   text="DreamShader Bridge"
+                   description="DreamShader Bridge diagnostics actions"
+                   popup="true">
+                <action id="DreamShader.BridgeTools.RefreshDiagnostics"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderRefreshBridgeDiagnosticsAction"/>
+                <action id="DreamShader.BridgeTools.RecompileCurrent"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderRecompileCurrentAction"/>
+                <action id="DreamShader.BridgeTools.RecompileAll"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderRecompileAllAction"/>
+                <action id="DreamShader.BridgeTools.CleanGeneratedShaders"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderCleanGeneratedShadersAction"/>
+                <action id="DreamShader.BridgeTools.OpenBridgeDirectory"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderOpenBridgeDirectoryAction"/>
+                <action id="DreamShader.BridgeTools.OpenDiagnosticsFile"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderOpenBridgeDiagnosticsFileAction"/>
+                <action id="DreamShader.BridgeTools.OpenFirstDiagnosticLocation"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderOpenFirstBridgeDiagnosticLocationAction"/>
+            </group>
+
+            <group id="DreamShader.PackageTools.Group"
+                   text="DreamShader Packages"
+                   description="DreamShader package management actions"
+                   popup="true">
+                <action id="DreamShader.PackageTools.BrowseStore"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderBrowsePackageStoreAction"/>
+
+                <separator/>
+
+                <action id="DreamShader.PackageTools.InstallFromGitHub"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderInstallPackageFromGitHubAction"/>
+                <action id="DreamShader.PackageTools.UpdateInstalled"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderUpdateInstalledPackageAction"/>
+                <action id="DreamShader.PackageTools.RemoveInstalled"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderRemoveInstalledPackageAction"/>
+                <action id="DreamShader.PackageTools.OpenPackagesFolder"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderOpenPackagesFolderAction"/>
+
+                <separator/>
+
+                <action id="DreamShader.PackageTools.AddIndexSource"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderAddPackageIndexSourceAction"/>
+                <action id="DreamShader.PackageTools.RemoveIndexSource"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderRemovePackageIndexSourceAction"/>
+            </group>
+        </group>
+    </actions>
 </idea-plugin>

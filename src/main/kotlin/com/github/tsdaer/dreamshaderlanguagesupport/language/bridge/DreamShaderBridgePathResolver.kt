@@ -5,6 +5,17 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import java.io.File
 
+/**
+ * Resolves project root and Bridge directory used by DreamShader diagnostics
+ * and manifest integration.
+ *
+ * Fallback order for project root:
+ * 1. Explicit setting `projectRoot`
+ * 2. Project base path when active file is inside project
+ * 3. Active file path prefix before `/DShader/`
+ * 4. Project base path
+ * 5. Active file parent directory
+ */
 internal object DreamShaderBridgePathResolver {
     private const val BRIDGE_RELATIVE_PATH = "Saved/DreamShader/Bridge"
 

@@ -1,5 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeDiagnosticsRepository
@@ -7,15 +8,21 @@ import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.util.TextRange
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import java.nio.file.Paths
-import java.util.LinkedHashSet
 import java.util.Locale
 import java.util.regex.Pattern
 
+/**
+ * Central diagnostics and semantic-highlighting annotator.
+ *
+ * This class intentionally combines multiple diagnostic layers so one PSI walk
+ * can produce all user-facing results:
+ * - syntax-level checks (unclosed literals, brace balance, malformed shells)
+ * - section-shape rules (file-role/declaration-shape constraints)
+ * - semantic checks (settings/base outputs/types/imports/call out-args)
+ * - external Bridge diagnostics mapping
+ */
 class DreamShaderSemanticAnnotator : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
         if (element is DreamShaderPsiFile) {
@@ -506,66 +513,13 @@ class DreamShaderSemanticAnnotator : Annotator {
             if (token.text.length < 2 || !token.text.startsWith('"') || !token.text.endsWith('"')) return@forEach
             val importPath = token.text.substring(1, token.text.length - 1).trim()
             if (importPath.isBlank()) return@forEach
-            if (resolveImportTarget(file, importPath) != null) return@forEach
+            if (DreamShaderImportResolver.resolveImport(file, importPath) != null) return@forEach
 
             holder.newAnnotation(
                 HighlightSeverity.ERROR,
                 "Cannot resolve import '$importPath'"
             ).range(token.range).create()
         }
-    }
-
-    private fun resolveImportTarget(file: DreamShaderPsiFile, importPath: String): VirtualFile? {
-        val normalized = importPath.replace('\\', '/')
-        val candidateRelativePaths = LinkedHashSet<String>()
-        candidateRelativePaths.add(normalized)
-        if (!normalized.substringAfterLast('/', "").contains('.')) {
-            IMPORT_EXTENSIONS.forEach { ext -> candidateRelativePaths.add("$normalized.$ext") }
-        }
-
-        val localFs = LocalFileSystem.getInstance()
-        val containingDir = file.virtualFile?.parent
-        val projectBase = file.project.basePath
-
-        candidateRelativePaths.forEach { candidate ->
-            val asPath = runCatching { Paths.get(candidate) }.getOrNull()
-            if (asPath?.isAbsolute == true) {
-                val direct = localFs.findFileByPath(candidate)
-                if (direct != null && direct.isValid && !direct.isDirectory) return direct
-            }
-        }
-
-        if (containingDir != null) {
-            candidateRelativePaths.forEach { candidate ->
-                val resolved = findRelativeVirtualFile(containingDir, candidate)
-                if (resolved != null) return resolved
-            }
-        }
-
-        if (!projectBase.isNullOrBlank()) {
-            candidateRelativePaths.forEach { candidate ->
-                val projectPath = "$projectBase/${candidate.replace('\\', '/')}"
-                val resolved = localFs.findFileByPath(projectPath)
-                if (resolved != null && resolved.isValid && !resolved.isDirectory) return resolved
-            }
-        }
-
-        return null
-    }
-
-    private fun findRelativeVirtualFile(baseDir: VirtualFile, relativePath: String): VirtualFile? {
-        var current: VirtualFile? = baseDir
-        val parts = relativePath.replace('\\', '/')
-            .split('/')
-            .filter { it.isNotBlank() && it != "." }
-        for (part in parts) {
-            current = when (part) {
-                ".." -> current?.parent
-                else -> current?.findChild(part)
-            }
-            if (current == null) return null
-        }
-        return if (current?.isDirectory == true) null else current
     }
 
     private fun parseDeclarationParameters(declarationText: String): ParsedSignature? {
@@ -891,8 +845,6 @@ class DreamShaderSemanticAnnotator : Annotator {
 
         private val KNOWN_TYPES = DreamShaderLexer.TYPES.map { it.lowercase(Locale.ROOT) }.toSet()
         private val TYPE_QUALIFIERS = setOf("in", "out", "inout", "const", "static", "opt")
-        private val IMPORT_EXTENSIONS = listOf("dsh", "dsf", "dsm")
-
         private val SETTINGS_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
             "(?m)\\b([A-Za-z_][A-Za-z0-9_.]*)\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|[A-Za-z_][A-Za-z0-9_.]*)"
         )

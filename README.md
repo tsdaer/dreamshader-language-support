@@ -68,6 +68,48 @@ Tests:
 - [`src/test/testData/rename/foo.xml`](src/test/testData/rename/foo.xml)
 - [`src/test/testData/rename/foo_after.xml`](src/test/testData/rename/foo_after.xml)
 
+## Architecture and Data Flow
+
+This plugin currently follows a layered architecture:
+
+1. Lexer and parser foundation
+- `DreamShaderLexer` tokenizes source text.
+- `DreamShaderPsiParser` builds a permissive AST for declarations and sections.
+- `DreamShaderParserDefinition` wires lexer/parser/PSI construction into IntelliJ.
+
+2. PSI and symbol model
+- Typed PSI (`DreamShaderDeclaration`, `DreamShaderSection`) is the canonical structure for editor features.
+- `DreamShaderSymbolModelBuilder` derives declaration/section symbols for structure/navigation use.
+
+3. Editor intelligence
+- Completion (`DreamShaderCompletionContributor`) uses PSI-first context analysis with lexer fallback.
+- Signature help and inlay hints consume call-signature parsing utilities.
+- Navigation/references rely on declaration symbol extraction and identifier matching.
+
+4. Diagnostics pipeline
+- `DreamShaderSemanticAnnotator` is the central diagnostic entry and aggregates:
+- Syntax diagnostics
+- Section-shape diagnostics
+- Semantic diagnostics
+- Bridge diagnostics mapped back to source ranges
+
+5. Bridge integration
+- `DreamShaderBridgePathResolver` resolves project root and Bridge folder with explicit-setting-first fallback.
+- `DreamShaderBridgeDiagnosticsRepository` loads and normalizes Bridge diagnostics snapshots.
+- `DreamShaderMaterialExpressionManifest` merges expression classes from explicit path, Bridge manifest, and bundled fallback.
+
+6. Package index data layer (M5 in progress)
+- `DreamShaderPackageIndexLoader` resolves package index sources (multi-source, legacy single-source, default upstream).
+- Index loader accepts both JSON shapes: array root and `{ "packages": [...] }`.
+- Entry `path` is resolved relative to local index location; unresolved paths degrade to `repository`.
+
+7. Project-level persistent settings
+- `DreamShaderProjectSettings` stores project-scoped configuration for Bridge and package tooling.
+- Current keys: `projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`.
+
+Detailed architecture doc:
+- [`docs/architecture.md`](docs/architecture.md)
+
 ## Goal
 
 Build a Rider plugin with feature parity to the VS Code DreamShaderLang extension, in phases:
@@ -302,15 +344,15 @@ Not fully implemented yet (tracked in M5):
 | PSI / Parser foundation | Done | ParserDefinition + PsiParser + typed PSI for declaration/section implemented |
 | Folding | Done | `lang.foldingBuilder` added; supports brace blocks and `// region` / `// endregion` |
 | Semantic tokens | Not started | Planned (declaration/section/code symbol semantic classification parity target) |
-| Diagnostics | Not started | Planned |
+| Diagnostics | Done | Local parser + section-shape + semantic diagnostics implemented with tests |
 | Go to Definition / References | Done | Go to Definition + Find References implemented for top-level declaration symbols |
 | Document symbols / structure | Done | Structure view integrated for top-level declarations and sections |
-| Inlay hints | Not started | Planned |
+| Inlay hints | Done | Parameter name hints implemented with callable-context filtering and settings toggle |
 | Formatting | Not started | Planned |
-| Bridge diagnostics panel | Not started | Planned |
-| Bridge actions | Not started | Planned (recompile/clean/refresh/open diagnostic location) |
-| Status bar / CodeLens | Not started | Planned |
-| Package commands | Not started | Planned |
+| Bridge diagnostics panel | In progress | Tool window added with refresh/list/open-location baseline |
+| Bridge actions | In progress | Refresh/open-location/open bridge path + configurable recompile/clean command execution |
+| Status bar / CodeLens | In progress | Status widget + settings toggle; inlay-based code-lens hints gated by enableCodeLens |
+| Package commands | Done | install/update/remove/browse/open folder + source add/remove wired |
 | Authoring templates / scaffold commands | Not started | Planned |
 
 ## Detailed TODO
@@ -388,7 +430,7 @@ Implemented:
 - [ ] `P2` Semantic token classification for declarations, sections, code symbols, and material outputs.
 - [x] `P2` Hover information for symbols/settings/UE builtins.
 - [x] `P2` Signature help for function-like calls where feasible.
-- [ ] `P2` Inlay hints for callable signatures and output-flow authoring context.
+- [x] `P2` Inlay hints for callable signatures and output-flow authoring context.
 
 Acceptance criteria:
 - Structure view/symbol popup is useful on real project files.
@@ -447,9 +489,9 @@ Rule format:
 
 ### Milestone M4: Diagnostics and Formatting
 
-- [ ] `P1` Local parser diagnostics (unclosed braces/strings/comments, malformed declarations).
-- [ ] `P1` Section-shape diagnostics for `.dsf` file rules.
-- [ ] `P2` Semantic diagnostics for common mistakes (unknown setting keys/types/output fields).
+- [x] `P1` Local parser diagnostics (unclosed braces/strings/comments, malformed declarations).
+- [x] `P1` Section-shape diagnostics for `.dsf` file rules.
+- [x] `P2` Semantic diagnostics for common mistakes (unknown setting keys/types/output fields).
 - [ ] `P1` Basic formatter (indentation, spacing, braces, section layout).
 - [ ] `P2` Formatting options aligned with Rider code style where possible.
 
@@ -700,16 +742,16 @@ Recommendation:
 
 ### Milestone M5: Bridge Integration and Package Tooling
 
-- [ ] `P2` Detect project root and bridge directory resolution.
-- [ ] `P2` Read Unreal bridge diagnostic files and project manifests.
-- [ ] `P2` Tool window/panel for bridge diagnostics.
-- [ ] `P2` Actions: recompile current/all, clean generated shaders, refresh diagnostics, open diagnostic location.
-- [ ] `P2` Bridge-manifest-aware `UE.Expression(...)` completion (`materialExpressionManifestPath` + project bridge manifest + bundled fallback manifest).
-- [ ] `P2` Settings parity for bridge/tooling (`projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`).
+- [x] `P2` Detect project root and bridge directory resolution.
+- [x] `P2` Read Unreal bridge diagnostic files and project manifests.
+- [x] `P2` Tool window/panel for bridge diagnostics.
+- [x] `P2` Actions: recompile current/all, clean generated shaders, refresh diagnostics, open diagnostic location.
+- [x] `P2` Bridge-manifest-aware `UE.Expression(...)` completion (`materialExpressionManifestPath` + project bridge manifest + bundled fallback manifest).
+- [x] `P2` Settings parity for bridge/tooling (`projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`).
 - [ ] `P2` Status bar + CodeLens actions parity for DreamShader workflows.
-- [ ] `P2` Package store index support (multiple sources + deprecated single source compatibility).
-- [ ] `P2` Actions: install/update/remove/browse/open packages folder.
-- [ ] `P3` Add/remove package store index source commands and source-management UX parity.
+- [x] `P2` Package store index support (multiple sources + deprecated single source compatibility).
+- [x] `P2` Actions: install/update/remove/browse/open packages folder.
+- [x] `P3` Add/remove package store index source commands and source-management UX parity.
 - [ ] `P3` Authoring/template commands parity (create package/material/function/header/sample files).
 - [ ] `P3` Optional GitHub package search integration.
 
@@ -1023,8 +1065,8 @@ Recommendation:
 ### Milestone M6: Quality, Tests, and Release
 
 - [ ] `P1` Add lexer/highlighter unit tests with representative DreamShader fixtures.
-- [ ] `P1` Add completion regression tests for key contexts.
-- [ ] `P1` Add navigation/diagnostic tests for common workflows.
+- [x] `P1` Add completion regression tests for key contexts.
+- [x] `P1` Add navigation/diagnostic tests for common workflows.
 - [ ] `P2` Add performance smoke tests for large files.
 - [ ] `P3` Prepare Marketplace metadata, signing, and publishing pipeline.
 - [ ] `P3` Maintain changelog aligned with release tags.
@@ -1046,14 +1088,9 @@ IDEA/IntelliJ Gradle configuration (project-verified):
 ### Terminal Build Prerequisite (Important)
 
 This project **must** run Gradle with Java 17+.
-In this machine, default `java` may point to Java 11, which will fail builds.
+On this machine, system `java` may point to Java 11, so AI/terminal commands should bootstrap JDK 21 explicitly.
 
-Observed failure:
-```text
-Gradle requires JVM 17 or later to run. Your build is currently configured to use JVM 11.
-```
-
-Use a JDK 21 shell bootstrap before any Gradle command:
+Use this before Gradle commands (AI/terminal only):
 ```powershell
 $env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
@@ -1063,6 +1100,19 @@ java -version
 
 Expected checks:
 - `java -version` shows `21.x`
+- `gradlew -version` reports JVM `21.x`
+
+Observed failure when using Java 11:
+```text
+Gradle requires JVM 17 or later to run. Your build is currently configured to use JVM 11.
+```
+
+Quick verification command:
+```powershell
+.\gradlew.bat -version
+```
+
+Expected check:
 - `gradlew -version` reports JVM `21.x`
 
 ### Build Commands
@@ -1082,9 +1132,69 @@ Run plugin in sandbox:
 .\gradlew.bat runIde --no-configuration-cache
 ```
 
-### One-Liner Safe Commands (Recommended)
+### Package Tools Actions (Rider)
 
-If you want to avoid forgetting `JAVA_HOME`, run Gradle with env setup in one command:
+Location:
+- `Tools` -> `DreamShader` -> `DreamShader Packages`
+
+Available actions:
+- Browse Package Store
+- Install Package From GitHub
+- Update Installed Package
+- Remove Installed Package
+- Open Packages Folder
+- Add Package Index Source
+- Remove Package Index Source
+
+### DreamShader Hub (Rider)
+
+Location:
+- `Tools` -> `DreamShader` -> `Open DreamShader Hub`
+
+`DreamShader Hub` provides a one-stop entry for common plugin workflows:
+- Open DreamShader settings
+- Open Bridge diagnostics panel
+- Refresh Bridge diagnostics
+- Recompile current/all and clean generated shaders
+- Browse package store and install from GitHub
+- Open packages folder and add package index source
+
+`Browse Package Store` now opens an interactive dialog with:
+- search field (`name` / `displayName` / `description` / `tags`)
+- package list + detail pane
+- package list summary shows install marker, version, and tag preview
+- refresh/add source/remove source
+- install/update/remove selected package
+- install/update/remove run as cancellable background tasks with progress
+- installed state marker in list and details
+- double-click package to install
+- dynamic action enablement by install state
+- `Installed only` filter
+- `Updates possible only` filter (installed + git available + repository present)
+- auto-select and highlight package after install/update
+
+### DreamShader Settings (Rider)
+
+Location:
+- `Settings` -> `Tools` -> `DreamShader`
+
+Configurable fields:
+- `Project Root`
+- `Material Manifest Path`
+- `Show DreamShader status bar widget`
+- `Enable DreamShader in-editor code lens hints`
+- `Bridge Recompile Current Command`
+- `Bridge Recompile All Command`
+- `Bridge Clean Generated Command`
+
+Bridge command placeholders:
+- `%file%` = current DreamShader file absolute path
+- `%projectRoot%` = project base path
+- `%bridgeDir%` = resolved bridge directory path
+
+### One-Liner Commands
+
+AI/terminal recommended one-liners (with JDK 21 bootstrap):
 ```powershell
 $env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; .\gradlew.bat build --no-configuration-cache
 ```
@@ -1101,14 +1211,13 @@ $env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$
 
 - If build still reports JVM 11:
 ```powershell
+.\gradlew.bat -version
 Get-Command java | Format-List Source
 java -version
 ```
-Then re-run the JDK 21 bootstrap commands above in the same shell session.
+Re-run the JDK 21 bootstrap commands above in the same shell session.
 
 - If Rider IDE can build but terminal cannot:
 Rider uses configured Gradle JVM.
 Terminal uses system `java` from `PATH`.
 Fix terminal by setting `JAVA_HOME` and prepending `$env:JAVA_HOME\bin`.
-
-

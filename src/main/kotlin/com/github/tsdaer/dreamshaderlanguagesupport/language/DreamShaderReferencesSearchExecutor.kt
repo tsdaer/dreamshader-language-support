@@ -8,6 +8,12 @@ import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.Processor
 
+/**
+ * 自定义参考文献搜索顶级DreamShader声明。
+ *
+ * 当前实现为文件本地和文本/PSI混合：它找到匹配
+ * 标识符标记标记并过滤声明的头/注释/字符串。
+ */
 class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiReference, ReferencesSearch.SearchParameters> {
     override fun execute(queryParameters: ReferencesSearch.SearchParameters, consumer: Processor<in PsiReference>): Boolean {
         val declaration = queryParameters.elementToSearch as? DreamShaderDeclaration ?: return true
@@ -39,6 +45,9 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
     }
 }
 
+/**
+ * Lightweight synthetic reference used by [DreamShaderReferencesSearchExecutor].
+ */
 private class DreamShaderLightReference(
     private val sourceElement: PsiElement,
     private val targetDeclaration: DreamShaderDeclaration

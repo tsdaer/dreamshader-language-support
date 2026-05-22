@@ -8,6 +8,9 @@ import java.util.Locale
 
 class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     override fun getParameterHints(element: PsiElement): List<InlayInfo> {
+        val settings = element.project.getService(DreamShaderProjectSettings::class.java)?.state
+        if (settings != null && !settings.enableCodeLens) return emptyList()
+
         if (element.node.elementType != DreamShaderTokenTypes.IDENTIFIER) return emptyList()
 
         val callInfo = findCallAtIdentifier(element) ?: return emptyList()
@@ -34,6 +37,9 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     }
 
     override fun getHintInfo(element: PsiElement): HintInfo? {
+        val settings = element.project.getService(DreamShaderProjectSettings::class.java)?.state
+        if (settings != null && !settings.enableCodeLens) return null
+
         val callInfo = findCallAtIdentifier(element) ?: return null
         val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(callInfo.functionName)
         if (signatures.isEmpty()) return null
@@ -45,9 +51,11 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
 
     override fun isBlackListSupported(): Boolean = false
 
+    @Deprecated("Required by legacy InlayParameterHintsProvider API.")
     @Suppress("OVERRIDE_DEPRECATION")
     override fun getBlacklistExplanationHTML(): String = "DreamShader inlay hints are based on built-in callable signatures."
 
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun getSettingsPreview(): String = """
         Shader Main {
             Graph {
