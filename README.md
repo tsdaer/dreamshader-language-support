@@ -103,14 +103,14 @@ This plugin currently follows a layered architecture:
 - `DreamShaderBridgeDiagnosticsRepository` loads and normalizes Bridge diagnostics snapshots.
 - `DreamShaderMaterialExpressionManifest` merges expression classes from explicit path, Bridge manifest, and bundled fallback.
 
-6. Package index data layer (M5 in progress)
+6. Package index data layer (M5 completed)
 - `DreamShaderPackageIndexLoader` resolves package index sources (multi-source, legacy single-source, default upstream).
 - Index loader accepts both JSON shapes: array root and `{ "packages": [...] }`.
 - Entry `path` is resolved relative to local index location; unresolved paths degrade to `repository`.
 
 7. Project-level persistent settings
 - `DreamShaderProjectSettings` stores project-scoped configuration for Bridge and package tooling.
-- Current keys: `projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`.
+- Current keys: `projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `packageStoreGitHubToken`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`.
 
 Detailed architecture doc:
 - [`docs/architecture.md`](docs/architecture.md)
@@ -225,7 +225,6 @@ Not fully implemented yet (tracked in milestones below):
 - Formatting rules aligned with DreamShader structure conventions.
 - Semantic token classification parity with upstream VS Code behavior.
 - Inlay hints parity for callable/output authoring contexts.
-- Bridge-manifest-aware `UE.Expression(...)` completion parity (`project bridge manifest` + explicit manifest path + bundled fallback).
 
 ## DreamShader Package Baseline
 
@@ -327,8 +326,8 @@ Already implemented in this plugin:
 - Import completion can suggest project `.dsh` / `.dsf` files.
 - Import navigation resolves to local files when paths are valid.
 
-Not fully implemented yet (tracked in M5):
-- Optional GitHub package discovery integration.
+Implemented in M5:
+- Optional GitHub package discovery integration (`DreamShaderGitHubPackageSearch`) is available.
 
 ## Current Progress
 
@@ -350,10 +349,10 @@ Not fully implemented yet (tracked in M5):
 | Go to Definition / References | Done | Go to Definition + Find References implemented for top-level declaration symbols |
 | Document symbols / structure | Done | Structure view integrated for top-level declarations and sections |
 | Inlay hints | Done | Parameter name hints implemented with callable-context filtering and settings toggle (`enableCodeLens` controls this inlay-hints layer) |
-| Formatting | Not started | Planned |
-| Bridge diagnostics panel | In progress | Tool window added with refresh/list/open-location baseline |
-| Bridge actions | In progress | Refresh/open-location/open bridge path + configurable recompile/clean command execution |
-| Status bar / CodeLens | In progress | Status widget is implemented; "CodeLens" currently maps to inlay-parameter-hints behavior (CodeLens-like), not official IntelliJ Code Vision actions |
+| Formatting | Done | Basic formatter implemented (`lang.formatter`): indentation, operator spacing, braces/section layout |
+| Bridge diagnostics panel | Done | Tool window added with refresh/list/open-location baseline |
+| Bridge actions | Done | Refresh/open-location/open bridge path + configurable recompile/clean command execution |
+| Status bar / CodeLens | Done | Status widget is gated by `showStatusBar`; inlay hints and IntelliJ daemon-bound Code Vision are gated by `enableCodeLens` |
 | Package commands | Done | install/update/remove/browse/open folder + source add/remove wired |
 | Authoring templates / scaffold commands | Done | Material/function/header/package scaffold commands implemented and covered by tests (`DTPL-001` to `DTPL-004`) |
 
@@ -490,21 +489,21 @@ Rule format:
 `Priority`: `P2`  
 `Rule`: inlay hints show callable signature/output context where invocation is ambiguous.  
 `Expected`: hint text reflects callable parameter/output ordering and updates when signature changes  
-`Test`: `testInlayHintsForFunctionLikeCalls()`
+`Test`: `testProducesHintsForUeAndIntrinsicCalls()`
 
 4. `ID`: `DSYM-004`  
 `Priority`: `P2`  
 `Rule`: inlay hints are suppressed in non-call contexts and do not duplicate existing editor cues.  
 `Expected`: no duplicated hint rows for the same call site; hints disappear outside supported scopes  
-`Test`: `testInlayHintsContextFiltering()`
+`Test`: `testSkipsNamedArguments()`
 
 ### Milestone M4: Diagnostics and Formatting
 
 - [x] `P1` Local parser diagnostics (unclosed braces/strings/comments, malformed declarations).
 - [x] `P1` Section-shape diagnostics for `.dsf` file rules.
 - [x] `P2` Semantic diagnostics for common mistakes (unknown setting keys/types/output fields).
-- [ ] `P1` Basic formatter (indentation, spacing, braces, section layout).
-- [ ] `P2` Formatting options aligned with Rider code style where possible.
+- [x] `P1` Basic formatter (indentation, spacing, braces, section layout).
+- [x] `P2` Formatting options aligned with Rider code style where possible.
 
 Acceptance criteria:
 - Errors are shown inline and in inspection results with actionable messages.
@@ -759,12 +758,12 @@ Recommendation:
 - [x] `P2` Actions: recompile current/all, clean generated shaders, refresh diagnostics, open diagnostic location.
 - [x] `P2` Bridge-manifest-aware `UE.Expression(...)` completion (`materialExpressionManifestPath` + project bridge manifest + bundled fallback manifest).
 - [x] `P2` Settings parity for bridge/tooling (`projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`).
-- [ ] `P2` Status bar + CodeLens actions parity for DreamShader workflows (official Code Vision-style actions still pending; current behavior is inlay-parameter-hints based).
+- [x] `P2` Status bar + CodeLens actions parity for DreamShader workflows (official IntelliJ daemon-bound Code Vision provider + inlay hints toggle parity).
 - [x] `P2` Package store index support (multiple sources + deprecated single source compatibility).
 - [x] `P2` Actions: install/update/remove/browse/open packages folder.
 - [x] `P3` Add/remove package store index source commands and source-management UX parity.
 - [x] `P3` Authoring/template commands parity (create package/material/function/header/sample files).
-- [ ] `P3` Optional GitHub package search integration.
+- [x] `P3` Optional GitHub package search integration.
 
 Acceptance criteria:
 - Bridge diagnostics appear in Rider and map back to source locations.
@@ -1057,18 +1056,25 @@ Rule format:
 
 #### F. Test Harness Mapping
 
-Recommended new test files:
+Current test files:
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt` for `DSYM-001` to `DSYM-002`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderInlayHintsTest.kt` for `DSYM-003` to `DSYM-004`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeDiagnosticsTest.kt` for `DBRG-001` to `DBRG-005`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderManifestCompletionTest.kt` for `DBRG-101` to `DBRG-103`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/ui/DreamShaderUiToggleSettingsTest.kt` for `DBRG-104` to `DBRG-105`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderInlayParameterHintsProviderTest.kt` for `DSYM-003` to `DSYM-004`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgePathResolverTest.kt` for `DBRG-001` to `DBRG-002`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeDiagnosticsTest.kt` for `DBRG-003` to `DBRG-004`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeActionsTest.kt` for `DBRG-005`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderManifestCompletionTest.kt` for `DBRG-101` to `DBRG-103`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderStatusBarVisibilityTest.kt` for `DBRG-104`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSettingsToggleTest.kt` for `DBRG-105`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/templates/DreamShaderTemplateCommandsTest.kt` for `DTPL-001` to `DTPL-004`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageIndexTest.kt` for `DPKG-001` to `DPKG-006`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageLifecycleTest.kt` for `DPKG-101` to `DPKG-110`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageImportResolutionTest.kt` for `DPKG-201` to `DPKG-203`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageStoreUiModelTest.kt` for `DPKG-301` to `DPKG-303`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderGitHubPackageSearchTest.kt` for GitHub discovery integration.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageBridgeInteropTest.kt` for `DPKG-401`.
+
+Planned additional tests:
+- Extend `DBRG-005` from action registration/invocation safety to richer success/error message assertions.
 
 Recommendation:
 - Implement `DPKG-001` to `DPKG-006` first to stabilize data model and source handling before UI/actions.
@@ -1079,8 +1085,8 @@ Recommendation:
 - [x] `P1` Add completion regression tests for key contexts.
 - [x] `P1` Add navigation/diagnostic tests for common workflows.
 - [x] `P2` Add performance smoke tests for large files.
-- [ ] `P3` Prepare Marketplace metadata, signing, and publishing pipeline.
-- [ ] `P3` Maintain changelog aligned with release tags.
+- [x] `P3` Prepare Marketplace metadata, signing, and publishing pipeline.
+- [x] `P3` Maintain changelog aligned with release tags.
 
 Acceptance criteria:
 - CI covers core language behaviors and prevents regressions.

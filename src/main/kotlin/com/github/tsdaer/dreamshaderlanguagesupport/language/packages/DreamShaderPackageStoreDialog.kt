@@ -71,6 +71,9 @@ internal class DreamShaderPackageStoreDialog(
         val searchButton = JButton(DreamShaderBundle.message("package.store.dialog.button.search"))
         searchButton.addActionListener { refreshData() }
         leftToolbar.add(searchButton, BorderLayout.EAST)
+        val githubSearchButton = JButton(DreamShaderBundle.message("package.store.dialog.button.githubSearch"))
+        githubSearchButton.addActionListener { searchOnGitHub() }
+        leftToolbar.add(githubSearchButton, BorderLayout.WEST)
 
         val rightToolbar = JPanel()
         installedOnlyCheckBox.addActionListener { refreshData() }
@@ -513,5 +516,44 @@ internal class DreamShaderPackageStoreDialog(
                 }
             }
         )
+    }
+
+    private fun searchOnGitHub() {
+        val query = queryField.text.trim()
+        if (query.isBlank()) {
+            Messages.showInfoMessage(
+                project,
+                DreamShaderBundle.message("package.store.dialog.githubSearch.emptyQuery"),
+                DreamShaderBundle.message("packages.store.title")
+            )
+            return
+        }
+
+        val result = storeService.searchGitHubPackages(query)
+        if (result.errorMessage != null) {
+            DreamShaderPackageNotifier.error(
+                project,
+                DreamShaderBundle.message("packages.store.title"),
+                result.errorMessage
+            )
+            return
+        }
+
+        listModel.clear()
+        result.entries.forEach { listModel.addElement(it) }
+        snapshot = snapshot.copy(entries = result.entries)
+        installedByName = packageManager.listLockEntries().associateBy { it.name }
+        if (listModel.size > 0) {
+            packageList.selectedIndex = 0
+            packageList.ensureIndexIsVisible(0)
+        } else {
+            renderDetails(null)
+            DreamShaderPackageNotifier.info(
+                project,
+                DreamShaderBundle.message("packages.store.title"),
+                DreamShaderBundle.message("package.store.dialog.githubSearch.noResults", query)
+            )
+        }
+        updateActionButtons()
     }
 }

@@ -23,6 +23,7 @@ class DreamShaderSettingsConfigurable(
     private var manifestPathField: JBTextField? = null
     private var showStatusBarBox: JBCheckBox? = null
     private var enableCodeLensBox: JBCheckBox? = null
+    private var packageSearchGitHubTokenField: JBTextField? = null
     private var recompileCurrentCommandField: JBTextField? = null
     private var recompileAllCommandField: JBTextField? = null
     private var cleanGeneratedCommandField: JBTextField? = null
@@ -73,6 +74,7 @@ class DreamShaderSettingsConfigurable(
         manifestPathField = JBTextField()
         showStatusBarBox = JBCheckBox(DreamShaderBundle.message("settings.showStatusBar.checkbox"))
         enableCodeLensBox = JBCheckBox(DreamShaderBundle.message("settings.enableCodeLens.checkbox"))
+        packageSearchGitHubTokenField = JBTextField()
         recompileCurrentCommandField = JBTextField()
         recompileAllCommandField = JBTextField()
         cleanGeneratedCommandField = JBTextField()
@@ -94,6 +96,11 @@ class DreamShaderSettingsConfigurable(
         addCheckBox(
             enableCodeLensBox as JBCheckBox,
             DreamShaderBundle.message("settings.enableCodeLens.tooltip")
+        )
+        addLabelAndField(
+            DreamShaderBundle.message("settings.packageSearchGitHubToken.label"),
+            packageSearchGitHubTokenField as JBTextField,
+            DreamShaderBundle.message("settings.packageSearchGitHubToken.tooltip")
         )
         addLabelAndField(
             DreamShaderBundle.message("settings.bridgeRecompileCurrent.label"),
@@ -132,6 +139,7 @@ class DreamShaderSettingsConfigurable(
             manifestPathField?.text.orEmpty() != state.materialExpressionManifestPath ||
             showStatusBarBox?.isSelected != state.showStatusBar ||
             enableCodeLensBox?.isSelected != state.enableCodeLens ||
+            packageSearchGitHubTokenField?.text.orEmpty() != state.packageStoreGitHubToken ||
             recompileCurrentCommandField?.text.orEmpty() != state.bridgeRecompileCurrentCommand ||
             recompileAllCommandField?.text.orEmpty() != state.bridgeRecompileAllCommand ||
             cleanGeneratedCommandField?.text.orEmpty() != state.bridgeCleanGeneratedShadersCommand
@@ -146,6 +154,7 @@ class DreamShaderSettingsConfigurable(
         state.materialExpressionManifestPath = manifestPathField?.text.orEmpty().trim()
         state.showStatusBar = showStatusBarBox?.isSelected ?: true
         state.enableCodeLens = enableCodeLensBox?.isSelected ?: true
+        state.packageStoreGitHubToken = packageSearchGitHubTokenField?.text.orEmpty().trim()
         state.bridgeRecompileCurrentCommand = recompileCurrentCommandField?.text.orEmpty().trim()
         state.bridgeRecompileAllCommand = recompileAllCommandField?.text.orEmpty().trim()
         state.bridgeCleanGeneratedShadersCommand = cleanGeneratedCommandField?.text.orEmpty().trim()
@@ -170,6 +179,7 @@ class DreamShaderSettingsConfigurable(
         manifestPathField?.text = state.materialExpressionManifestPath
         showStatusBarBox?.isSelected = state.showStatusBar
         enableCodeLensBox?.isSelected = state.enableCodeLens
+        packageSearchGitHubTokenField?.text = state.packageStoreGitHubToken
         recompileCurrentCommandField?.text = state.bridgeRecompileCurrentCommand
         recompileAllCommandField?.text = state.bridgeRecompileAllCommand
         cleanGeneratedCommandField?.text = state.bridgeCleanGeneratedShadersCommand
@@ -181,6 +191,7 @@ class DreamShaderSettingsConfigurable(
         manifestPathField = null
         showStatusBarBox = null
         enableCodeLensBox = null
+        packageSearchGitHubTokenField = null
         recompileCurrentCommandField = null
         recompileAllCommandField = null
         cleanGeneratedCommandField = null

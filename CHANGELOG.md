@@ -17,6 +17,10 @@
 - Multi-source package index support with legacy single-source compatibility and default upstream index fallback.
 - Internationalization infrastructure with `messages.DreamShaderBundle` and localized UI/message strings for plugin actions, settings, bridge tooling, and package tooling.
 - Chinese translation bundle `DreamShaderBundle_zh_CN.properties` in readable UTF-8 form.
+- Basic DreamShader formatter registered via `lang.formatter` with indentation, operator spacing, and section/brace layout normalization.
+- DreamShader daemon-bound Code Vision provider for declaration-level workflow hints in editor.
+- Optional GitHub package search integration in package store (with optional token setting for API rate limits).
+- Marketplace publishing metadata/signing/publishing Gradle configuration wired for release workflow (`pluginConfiguration`, `signing`, `publishing`).
 
 ### Changed
 - Plugin descriptor now declares `<resource-bundle>messages.DreamShaderBundle</resource-bundle>` and uses resource keys for configurable display name.

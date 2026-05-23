@@ -628,13 +628,13 @@ internal object DreamShaderCompletionSuggester {
             return suggestions.values.toList()
         }
 
-        if (context.isInSettingsOrOptionsSection) {
-            val settingValueContext = extractSettingValueContext(linePrefix, text, offset)
-            if (settingValueContext != null) {
-                val key = settingValueContext.settingKey.lowercase(Locale.ROOT)
-                DreamShaderCompletionData.settingValueMappings[key].orEmpty().forEach { value ->
-                    add(DreamShaderCompletionItem(label = value, insertText = value, detail = "$key value"))
-                }
+        val settingValueContext = extractSettingValueContext(linePrefix, text, offset)
+        if (settingValueContext != null) {
+            val key = settingValueContext.settingKey.lowercase(Locale.ROOT)
+            DreamShaderCompletionData.settingValueMappings[key].orEmpty().forEach { value ->
+                add(DreamShaderCompletionItem(label = value, insertText = value, detail = "$key value"))
+            }
+            if (suggestions.isNotEmpty()) {
                 return suggestions.values.toList()
             }
         }

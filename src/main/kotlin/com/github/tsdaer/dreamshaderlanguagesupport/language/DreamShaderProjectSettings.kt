@@ -33,6 +33,8 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         var packageStoreIndexUrls: MutableList<String> = mutableListOf(),
         /** Backward-compatible single source setting used when list mode is empty. */
         var packageStoreIndexUrl: String = "",
+        /** Optional GitHub token for package search API requests. */
+        var packageStoreGitHubToken: String = "",
         /** External command template for recompiling current DreamShader asset. */
         var bridgeRecompileCurrentCommand: String = "",
         /** External command template for recompiling all DreamShader assets. */

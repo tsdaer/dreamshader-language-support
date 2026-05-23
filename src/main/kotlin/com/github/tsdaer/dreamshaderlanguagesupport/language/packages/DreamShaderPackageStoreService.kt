@@ -81,6 +81,11 @@ internal class DreamShaderPackageStoreService(private val project: Project) {
         )
     }
 
+    fun searchGitHubPackages(query: String): DreamShaderGitHubSearchResult {
+        val token = project.getService(DreamShaderProjectSettings::class.java).state.packageStoreGitHubToken
+        return DreamShaderGitHubPackageSearch.searchDreamShaderPackages(query, token)
+    }
+
     private fun filterEntries(
         entries: List<DreamShaderPackageIndexEntry>,
         query: String?

@@ -23,6 +23,9 @@
         <lang.parserDefinition
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderParserDefinition"/>
+        <lang.formatter
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderFormattingModelBuilder"/>
         <lang.commenter
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderCommenter"/>
@@ -51,6 +54,8 @@
         <completion.contributor
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderCompletionContributor"/>
+        <codeInsight.daemonBoundCodeVisionProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderCodeVisionProvider"/>
         <codeInsight.parameterInfo
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderParameterInfoHandler"/>
