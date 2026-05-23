@@ -38,6 +38,18 @@ object DreamShaderTextAttributes {
     )
 
     @JvmField
+    val LOCAL_SYMBOL_DECLARATION: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_LOCAL_SYMBOL_DECLARATION",
+        DefaultLanguageHighlighterColors.PARAMETER
+    )
+
+    @JvmField
+    val NAMESPACE_QUALIFIER: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_NAMESPACE_QUALIFIER",
+        DefaultLanguageHighlighterColors.METADATA
+    )
+
+    @JvmField
     val MATERIAL_OUTPUT_MEMBER: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
         "DREAMSHADER_MATERIAL_OUTPUT_MEMBER",
         DefaultLanguageHighlighterColors.INSTANCE_FIELD

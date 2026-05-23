@@ -48,6 +48,7 @@ Symbol model:
 
 Completion and editor features:
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContributor.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContributor.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokenClassifier.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokenClassifier.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxHighlighter.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxHighlighter.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxHighlighterFactory.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxHighlighterFactory.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderTextAttributes.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderTextAttributes.kt)
@@ -62,6 +63,7 @@ Icons/resources:
 Tests:
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLexerSyntaxHighlighterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLexerSyntaxHighlighterTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLargeFilePerformanceSmokeTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLargeFilePerformanceSmokeTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokenClassifierTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokenClassifierTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContextAnalyzerTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContextAnalyzerTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionSuggesterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionSuggesterTest.kt)
@@ -343,7 +345,7 @@ Not fully implemented yet (tracked in M5):
 | Context-aware completion | Done | PSI-first context detection + lexer fallback; top-level/section/type/settings/base-output/UE/HLSL/import completion available |
 | PSI / Parser foundation | Done | ParserDefinition + PsiParser + typed PSI for declaration/section implemented |
 | Folding | Done | `lang.foldingBuilder` added; supports brace blocks and `// region` / `// endregion` |
-| Semantic tokens | Done | Semantic classification implemented for declaration keywords/names, section names, callable references, `UE` namespace, local symbols, and `Base.*` material output members |
+| Semantic tokens | Done | Semantic classification implemented for declaration keywords/names, section names, callable references, `UE` namespace, namespace qualifiers (`Namespace::`), local symbol declaration/usage split, and `Base.*` material output members |
 | Diagnostics | Done | Local parser + section-shape + semantic diagnostics implemented with tests |
 | Go to Definition / References | Done | Go to Definition + Find References implemented for top-level declaration symbols |
 | Document symbols / structure | Done | Structure view integrated for top-level declarations and sections |
@@ -454,8 +456,11 @@ Implemented:
 - Added `DreamShaderDocumentationProvider` via `lang.documentationProvider` for hover docs on declarations, settings keys/values, and `UE.*` builtins.
 - Added `DreamShaderParameterInfoHandler` via `codeInsight.parameterInfo` for signature help on `UE.*` builtins and common HLSL intrinsics.
 - Added regression tests in `DreamShaderDocumentationProviderTest` and `DreamShaderSignatureHelpAnalyzerTest`.
-- Added semantic token classification in `DreamShaderSemanticAnnotator` for declaration keywords/names, section names, callable references, `UE` namespace, local symbols, and `Base.*` material output members.
-- Added regression tests in `DreamShaderSemanticTokensTest` for `DSYM-001` and `DSYM-002`.
+- Added semantic token classification in `DreamShaderSemanticAnnotator` for declaration keywords/names, section names, callable references, `UE` namespace, namespace qualifiers (`Namespace::`), local symbol declaration/usage split, and `Base.*` material output members.
+- Refactored semantic-token classification logic into `DreamShaderSemanticTokenClassifier` so `DreamShaderSemanticAnnotator` focuses on annotation emission + diagnostics pipeline aggregation.
+- Reorganized `DreamShaderSemanticAnnotator` internals into grouped diagnostic sections (`bridge`, `syntax`, `section-shape`, `semantic`, `call/import utilities`) and grouped constant/regex blocks to improve maintainability without behavior changes.
+- Added regression tests in `DreamShaderSemanticTokensTest` for `DSYM-001` and `DSYM-002`, including nested-call/member-like edge cases, array-index symbol usage, and multi-level namespace qualifier classification.
+- Added `DreamShaderSemanticTokenClassifierTest` to validate classifier behavior directly and verify classifier/annotator consistency on representative samples.
 
 ### M3 Testable Navigation/Symbol Checklist
 
@@ -476,6 +481,10 @@ Rule format:
 `Rule`: semantic tokens inside `Graph` and function-like bodies classify known builtins/types/symbols predictably.  
 `Expected`: `UE.*`, known types, and local symbols receive deterministic token classes  
 `Test`: `testSemanticTokensInGraphAndFunctionBodies()`
+
+`Subcases`:
+- `testSemanticTokensForNestedCallsAndMemberLikeSyntax()`: nested call chains classify callable references; named call argument keys (`Index=...`) and swizzle/member suffixes (`.x`, `.xyz`) are not misclassified as local symbols.
+- `testSemanticTokensForArrayIndexAndMultiLevelNamespaceQualifier()`: local symbols used in index expressions (`Values[idx]`) classify as symbol usages; `A::B::Blend(...)` classifies `A` and `B` as namespace qualifiers and `Blend` as callable reference.
 
 3. `ID`: `DSYM-003`  
 `Priority`: `P2`  

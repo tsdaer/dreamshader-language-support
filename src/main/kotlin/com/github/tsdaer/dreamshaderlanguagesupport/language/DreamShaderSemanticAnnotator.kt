@@ -29,203 +29,11 @@ class DreamShaderSemanticAnnotator : Annotator {
             annotateFileDiagnostics(element, holder)
             return
         }
-
-        if (element.text.isBlank()) return
-
-        when (element.node.elementType) {
-            DreamShaderTokenTypes.KEYWORD -> {
-                if (isDeclarationKeywordElement(element)) {
-                    holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                        .range(element)
-                        .textAttributes(DreamShaderTextAttributes.KEYWORD)
-                        .create()
-                }
-                return
-            }
-
-            DreamShaderTokenTypes.SECTION -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                    .range(element)
-                    .textAttributes(DreamShaderTextAttributes.SECTION)
-                    .create()
-                return
-            }
-
-            DreamShaderTokenTypes.IDENTIFIER -> annotateIdentifierSemanticToken(element, holder)
-        }
-    }
-
-    private fun annotateIdentifierSemanticToken(
-        element: PsiElement,
-        holder: AnnotationHolder
-    ) {
-        if (element.text.isBlank()) return
-
-        val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false)
-        if (declaration != null && element == declaration.nameIdentifier) {
-            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                .range(element)
-                .textAttributes(DreamShaderTextAttributes.DECLARATION_NAME)
-                .create()
-            return
-        }
-
-        if (isUeNamespaceIdentifier(element)) {
-            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                .range(element)
-                .textAttributes(DreamShaderTextAttributes.BUILTIN_NAMESPACE)
-                .create()
-            return
-        }
-
-        if (isMaterialOutputMemberIdentifier(element)) {
-            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                .range(element)
-                .textAttributes(DreamShaderTextAttributes.MATERIAL_OUTPUT_MEMBER)
-                .create()
-            return
-        }
-
-        if (looksLikeLocalSymbol(element)) {
-            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                .range(element)
-                .textAttributes(DreamShaderTextAttributes.LOCAL_SYMBOL)
-                .create()
-            return
-        }
-
-        val text = element.text
-        if (!looksLikeCallableReference(text, element)) return
-        if (isDeclarationHeadIdentifier(element)) return
-        if (!isInsideDeclarationBody(element)) return
-
+        val attribute = DreamShaderSemanticTokenClassifier.classify(element) ?: return
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
             .range(element)
-            .textAttributes(DreamShaderTextAttributes.CALLABLE_REFERENCE)
+            .textAttributes(attribute)
             .create()
-    }
-
-    private fun isDeclarationKeywordElement(element: PsiElement): Boolean {
-        val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return false
-        val firstKeyword = declaration.node.getChildren(null).firstOrNull { it.elementType == DreamShaderTokenTypes.KEYWORD }
-        return firstKeyword?.psi == element
-    }
-
-    private fun isUeNamespaceIdentifier(element: PsiElement): Boolean {
-        if (!element.text.equals("UE", ignoreCase = true)) return false
-        if (!isInsideDeclarationBody(element)) return false
-        return skipWhitespaceForward(element) == "."
-    }
-
-    private fun isMaterialOutputMemberIdentifier(element: PsiElement): Boolean {
-        if (!isInsideDeclarationBody(element)) return false
-        val prev = previousSignificantElement(element) ?: return false
-        if (prev.node.elementType != DreamShaderTokenTypes.OPERATOR || prev.text != ".") return false
-        val base = previousSignificantElement(prev) ?: return false
-        if (base.node.elementType != DreamShaderTokenTypes.IDENTIFIER || !base.text.equals("Base", ignoreCase = true)) {
-            return false
-        }
-        return element.text.lowercase(Locale.ROOT) in BASE_OUTPUT_MEMBERS
-    }
-
-    private fun looksLikeLocalSymbol(element: PsiElement): Boolean {
-        if (!isInsideDeclarationBody(element)) return false
-        if (isDeclarationHeadIdentifier(element)) return false
-        val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false)
-        val parentSection = PsiTreeUtil.getParentOfType(element, DreamShaderSection::class.java, false)
-        val sectionName = parentSection?.sectionName()
-        val allowedBySection = sectionName == "graph" || sectionName == "outputs" || sectionName == "inputs"
-        val allowedByFunctionBody = declaration?.isFunctionLike() == true
-        if (!allowedBySection && !allowedByFunctionBody) return false
-        if (looksLikeCallableReference(element.text, element)) return false
-        if (isNamespaceQualifier(element)) return false
-        if (isLikelyMemberAccessTarget(element)) return false
-        return true
-    }
-
-    private fun isNamespaceQualifier(element: PsiElement): Boolean {
-        val next = skipWhitespaceForward(element)
-        if (next != ":") return false
-        val text = element.containingFile.text
-        var i = element.textRange.endOffset
-        while (i < text.length && text[i].isWhitespace()) i++
-        if (i + 1 >= text.length) return false
-        return text[i] == ':' && text[i + 1] == ':'
-    }
-
-    private fun isLikelyMemberAccessTarget(element: PsiElement): Boolean {
-        val next = skipWhitespaceForward(element) ?: return false
-        return next == "." || next == "["
-    }
-
-    private fun previousSignificantElement(element: PsiElement): PsiElement? {
-        var current = element.prevSibling
-        while (current != null) {
-            if (!current.text.isNullOrBlank()) {
-                val type = current.node?.elementType
-                if (type != DreamShaderTokenTypes.WHITE_SPACE &&
-                    type != DreamShaderTokenTypes.LINE_COMMENT &&
-                    type != DreamShaderTokenTypes.BLOCK_COMMENT
-                ) {
-                    return current
-                }
-            }
-            current = current.prevSibling
-        }
-
-        var leaf = PsiTreeUtil.prevVisibleLeaf(element)
-        while (leaf != null) {
-            val type = leaf.node?.elementType
-            if (type != DreamShaderTokenTypes.WHITE_SPACE &&
-                type != DreamShaderTokenTypes.LINE_COMMENT &&
-                type != DreamShaderTokenTypes.BLOCK_COMMENT
-            ) {
-                return leaf
-            }
-            leaf = PsiTreeUtil.prevVisibleLeaf(leaf)
-        }
-        return null
-    }
-
-    private fun looksLikeCallableReference(text: String, element: PsiElement): Boolean {
-        if (text.equals("ue", ignoreCase = true)) return false
-        val next = skipWhitespaceForward(element)
-        return next == "("
-    }
-
-    private fun skipWhitespaceForward(element: PsiElement): String? {
-        val text = element.containingFile.text
-        val start = element.textRange.endOffset
-        var i = start
-        while (i < text.length && text[i].isWhitespace()) i++
-        if (i >= text.length) return null
-        return text[i].toString()
-    }
-
-    private fun isDeclarationHeadIdentifier(element: PsiElement): Boolean {
-        val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return false
-        if (element == declaration.nameIdentifier) return true
-
-        val declarationRange = declaration.textRange
-        val bodyRange = declaration.bodyTextRange() ?: return false
-        val elementRange = element.textRange
-        return declarationRange.contains(elementRange) && !bodyRange.contains(elementRange)
-    }
-
-    private fun isInsideDeclarationBody(element: PsiElement): Boolean {
-        val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return false
-        val bodyRange = declaration.bodyTextRange() ?: return false
-        if (!bodyRange.contains(element.textRange)) return false
-
-        val section = PsiTreeUtil.getParentOfType(element, DreamShaderSection::class.java, false)
-        if (section != null) {
-            val sectionName = section.sectionName()?.lowercase(Locale.ROOT)
-            if (sectionName == "settings" || sectionName == "options" || sectionName == "properties") {
-                return false
-            }
-        }
-
-        return true
     }
 
     private fun annotateFileDiagnostics(file: DreamShaderPsiFile, holder: AnnotationHolder) {
@@ -239,6 +47,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         annotateBridgeDiagnostics(file, holder)
     }
 
+    // Bridge diagnostics.
     private fun annotateBridgeDiagnostics(file: DreamShaderPsiFile, holder: AnnotationHolder) {
         val repository = file.project.getService(DreamShaderBridgeDiagnosticsRepository::class.java) ?: return
         repository.refresh(file.virtualFile)
@@ -273,6 +82,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         annotateMalformedSectionDiagnostics(tokens, holder)
     }
 
+    // Section-shape diagnostics.
     private fun annotateSectionShapeDiagnostics(
         file: DreamShaderPsiFile,
         sourceText: String,
@@ -302,6 +112,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         annotateNamespaceRules(tokens, holder)
     }
 
+    // Semantic diagnostics.
     private fun annotateSemanticDiagnostics(
         file: DreamShaderPsiFile,
         sourceText: String,
@@ -316,6 +127,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         annotateUnresolvedImportDiagnostics(file, tokens, holder)
     }
 
+    // Syntax diagnostics: literals/braces/declaration-shape.
     private fun annotateUnclosedLiteralDiagnostics(tokens: List<LexedToken>, holder: AnnotationHolder) {
         tokens.forEach { token ->
             if (token.type == DreamShaderTokenTypes.STRING && !token.text.endsWith("\"")) {
@@ -409,6 +221,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         }
     }
 
+    // Section-shape diagnostics: declaration-level constraints.
     private fun annotateVirtualFunctionRules(
         sourceText: String,
         declaration: DreamShaderDeclaration,
@@ -510,6 +323,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         return namespaceKeywordIndex
     }
 
+    // Semantic diagnostics: settings/material outputs/types.
     private fun annotateSettingsDiagnostics(
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
@@ -594,6 +408,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         }
     }
 
+    // Semantic diagnostics: call/import validations.
     private fun annotateMissingOutArgumentDiagnostics(
         sourceText: String,
         tokens: List<LexedToken>,
@@ -656,6 +471,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         }
     }
 
+    // Call-signature utilities.
     private fun parseDeclarationParameters(declarationText: String): ParsedSignature? {
         val headerEnd = declarationText.indexOf('{').let { if (it >= 0) it else declarationText.length }
         val header = declarationText.substring(0, headerEnd)
@@ -781,6 +597,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         return result
     }
 
+    // PSI/token traversal helpers.
     private fun topLevelDeclarations(file: DreamShaderPsiFile): List<DreamShaderDeclaration> {
         return PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java)
             .filter { PsiTreeUtil.getParentOfType(it, DreamShaderDeclaration::class.java, true) == null }
@@ -950,6 +767,7 @@ class DreamShaderSemanticAnnotator : Annotator {
     )
 
     companion object {
+        // Semantic validation data.
         private val SETTINGS_KEYS = setOf(
             "materialdomain", "domain", "shadingmodel", "blendmode", "rendertype", "translucencylightingmode",
             "lightingmode", "twosided", "wireframe", "ditheredlodtransition", "ditheropacitymask",
@@ -977,8 +795,11 @@ class DreamShaderSemanticAnnotator : Annotator {
             "mooaencodedattribute2", "mooaencodedattribute3", "mooaencodedattribute4", "anisotropy", "tangent"
         )
 
+        // Type validation data.
         private val KNOWN_TYPES = DreamShaderLexer.TYPES.map { it.lowercase(Locale.ROOT) }.toSet()
         private val TYPE_QUALIFIERS = setOf("in", "out", "inout", "const", "static", "opt")
+
+        // Regex: settings/output/type diagnostics.
         private val SETTINGS_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
             "(?m)\\b([A-Za-z_][A-Za-z0-9_.]*)\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|[A-Za-z_][A-Za-z0-9_.]*)"
         )
@@ -986,6 +807,8 @@ class DreamShaderSemanticAnnotator : Annotator {
         private val TYPED_DECLARATION_PATTERN: Pattern = Pattern.compile(
             "(?m)(?:^|;)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=|;|\\n)"
         )
+
+        // Regex: call-signature diagnostics.
         private val PARAM_NAME_PATTERN: Pattern = Pattern.compile("([A-Za-z_][A-Za-z0-9_]*)\\s*$")
         private val OUT_QUALIFIER_PATTERN: Pattern = Pattern.compile("\\bout\\b")
     }
