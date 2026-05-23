@@ -18,6 +18,168 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Top-level Shader declaration is not allowed in .dsf files")
     }
 
+    fun testDsfDisallowsTopLevelNamespace() {
+        val text = """
+            Namespace Tools {
+                Function Helper(in float x, out float y) {
+                    y = x;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("invalid_namespace.dsf", text)
+
+        assertHasError("Top-level Namespace declaration is not allowed in .dsf files")
+    }
+
+    fun testDsfAllowsCoreFunctionAssetDeclarations() {
+        val text = """
+            ShaderFunction BuildNoise {
+                Outputs {
+                    float Out = 0.0;
+                }
+            }
+
+            ShaderLayer LayerA {
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+
+            ShaderLayerBlend BlendA {
+                Inputs {
+                    MaterialAttributes A;
+                    MaterialAttributes B;
+                }
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+
+            VirtualFunction VF {
+            }
+
+            Function F(in float x, out float y) {
+                y = x;
+            }
+
+            GraphFunction G(in float x, out float y) {
+                y = x;
+            }
+        """.trimIndent()
+        myFixture.configureByText("valid_dsf_allowed_decls.dsf", text)
+
+        assertNoError(
+            "Top-level Shader declaration is not allowed in .dsf files",
+            "Top-level Namespace declaration is not allowed in .dsf files"
+        )
+    }
+
+    fun testDsmDisallowsTopLevelShaderLayer() {
+        val text = """
+            ShaderLayer LayerA {
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("invalid_shader_layer.dsm", text)
+
+        assertHasError("Top-level ShaderLayer declaration is not allowed in .dsm files")
+    }
+
+    fun testDsmDisallowsTopLevelShaderFunction() {
+        val text = """
+            ShaderFunction BuildNoise {
+                Outputs {
+                    float Out = 0.0;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("invalid_shader_function.dsm", text)
+
+        assertHasError("Top-level ShaderFunction declaration is not allowed in .dsm files")
+    }
+
+    fun testDsmDisallowsTopLevelShaderLayerBlend() {
+        val text = """
+            ShaderLayerBlend BlendA {
+                Inputs {
+                    MaterialAttributes A;
+                    MaterialAttributes B;
+                }
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("invalid_shader_layer_blend.dsm", text)
+
+        assertHasError("Top-level ShaderLayerBlend declaration is not allowed in .dsm files")
+    }
+
+    fun testDshDisallowsTopLevelShaderFunction() {
+        val text = """
+            ShaderFunction BuildNoise {
+                Outputs {
+                    float Out = 0.0;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("invalid_shader_function.dsh", text)
+
+        assertHasError("Top-level ShaderFunction declaration is not allowed in .dsh files")
+    }
+
+    fun testDshDisallowsTopLevelShaderLayer() {
+        val text = """
+            ShaderLayer LayerA {
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("invalid_shader_layer.dsh", text)
+
+        assertHasError("Top-level ShaderLayer declaration is not allowed in .dsh files")
+    }
+
+    fun testDshDisallowsTopLevelShaderLayerBlend() {
+        val text = """
+            ShaderLayerBlend BlendA {
+                Inputs {
+                    MaterialAttributes A;
+                    MaterialAttributes B;
+                }
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("invalid_shader_layer_blend.dsh", text)
+
+        assertHasError("Top-level ShaderLayerBlend declaration is not allowed in .dsh files")
+    }
+
+    fun testDshAllowsFunctionAndGraphFunctionDeclarations() {
+        val text = """
+            Function SharedMath(in float a, in float b, out float result) {
+                result = a + b;
+            }
+
+            GraphFunction SampleGraph(in float x, out float y) {
+                y = x;
+            }
+        """.trimIndent()
+        myFixture.configureByText("valid_header_declarations.dsh", text)
+
+        assertNoError(
+            "Top-level Shader declaration is not allowed in .dsh files",
+            "Top-level ShaderFunction declaration is not allowed in .dsh files",
+            "Top-level ShaderLayer declaration is not allowed in .dsh files",
+            "Top-level ShaderLayerBlend declaration is not allowed in .dsh files"
+        )
+    }
+
     fun testVirtualFunctionDisallowsGraphSection() {
         val text = """
             VirtualFunction BufferWriter {
@@ -90,6 +252,73 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
             "ShaderLayerBlend requires at least two MaterialAttributes inputs",
             "ShaderLayer/ShaderLayerBlend must declare exactly one MaterialAttributes output"
         )
+    }
+
+    fun testShaderRequiresGraphSection() {
+        val text = """
+            Shader Main {
+                Settings {
+                    Domain = "Surface";
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("shader_missing_graph.dsm", text)
+
+        assertHasError("Shader declaration requires Graph section")
+    }
+
+    fun testShaderFunctionRequiresGraphSection() {
+        val text = """
+            ShaderFunction BuildNoise {
+                Outputs {
+                    float Out = 0.0;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("shader_function_missing_graph.dsf", text)
+
+        assertHasError("ShaderFunction declaration requires Graph section")
+    }
+
+    fun testShaderDisallowsInputsSection() {
+        val text = """
+            Shader Main {
+                Inputs {
+                    float UV;
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("shader_disallow_inputs.dsm", text)
+
+        assertHasError("Section 'Inputs' is not allowed in Shader declarations")
+    }
+
+    fun testVirtualFunctionDisallowsGraphBySectionSchema() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_graph_schema.dsh", text)
+
+        assertHasError("Section 'Graph' is not allowed in VirtualFunction declarations")
+    }
+
+    fun testShaderDuplicateSectionIsReported() {
+        val text = """
+            Shader Main {
+                Graph {
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("shader_duplicate_graph.dsm", text)
+
+        assertHasError("Duplicate section 'Graph' in Shader declaration")
     }
 
     private fun assertHasError(message: String) {

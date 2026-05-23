@@ -75,6 +75,134 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Cannot resolve import 'NotFound/Nope.dsh'")
     }
 
+    fun testGraphDisallowsForLoopStatement() {
+        val text = """
+            Shader Main {
+                Graph {
+                    for (int i = 0; i < 4; i = i + 1) {
+                    }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_for_loop.dsm", text)
+        assertHasError("Graph section does not support loop statement 'for'")
+    }
+
+    fun testGraphDisallowsWhileLoopStatement() {
+        val text = """
+            Shader Main {
+                Graph {
+                    while (true) {
+                        break;
+                    }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_while_loop.dsm", text)
+        assertHasError("Graph section does not support loop statement 'while'")
+    }
+
+    fun testGraphDisallowsDoLoopStatement() {
+        val text = """
+            Shader Main {
+                Graph {
+                    do {
+                        break;
+                    } while (false);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_do_loop.dsm", text)
+        assertHasError("Graph section does not support loop statement 'do'")
+    }
+
+    fun testGraphDisallowsSwitchStatement() {
+        val text = """
+            Shader Main {
+                Graph {
+                    switch (Mode) {
+                        default:
+                            break;
+                    }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_switch_statement.dsm", text)
+        assertHasError("Graph section does not support switch statement 'switch'")
+    }
+
+    fun testGraphDisallowsCaseKeyword() {
+        val text = """
+            Shader Main {
+                Graph {
+                    switch (Mode) {
+                        case 1:
+                            break;
+                    }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_case_keyword.dsm", text)
+        assertHasError("Graph section does not support switch statement 'case'")
+    }
+
+    fun testGraphDisallowsDefaultKeyword() {
+        val text = """
+            Shader Main {
+                Graph {
+                    switch (Mode) {
+                        default:
+                            break;
+                    }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_default_keyword.dsm", text)
+        assertHasError("Graph section does not support switch statement 'default'")
+    }
+
+    fun testGraphDisallowsBreakStatement() {
+        val text = """
+            Shader Main {
+                Graph {
+                    if (Enabled) {
+                        break;
+                    }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_break_statement.dsm", text)
+        assertHasError("Graph section does not support control statement 'break'")
+    }
+
+    fun testGraphDisallowsContinueStatement() {
+        val text = """
+            Shader Main {
+                Graph {
+                    if (Enabled) {
+                        continue;
+                    }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_continue_statement.dsm", text)
+        assertHasError("Graph section does not support control statement 'continue'")
+    }
+
+    fun testGraphDisallowsReturnStatement() {
+        val text = """
+            Shader Main {
+                Graph {
+                    if (Enabled) {
+                        return;
+                    }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_return_statement.dsm", text)
+        assertHasError("Graph section does not support return statement")
+    }
+
     private fun assertHasError(message: String) {
         val errors = myFixture.doHighlighting(HighlightSeverity.ERROR)
         assertTrue(

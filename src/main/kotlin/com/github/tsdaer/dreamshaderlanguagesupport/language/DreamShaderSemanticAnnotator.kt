@@ -93,11 +93,45 @@ class DreamShaderSemanticAnnotator : Annotator {
         val extension = file.virtualFile?.extension?.lowercase(Locale.ROOT)
         if (extension == "dsf") {
             topLevelDeclarations
-                .filter { it.keywordText() == "shader" }
+                .filter { declaration -> declaration.keywordText() !in DSF_ALLOWED_TOP_LEVEL_DECLARATIONS }
                 .forEach { declaration ->
+                    val declarationKeyword = DISPLAY_DECLARATION_KEYWORDS[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
                     holder.newAnnotation(
                         HighlightSeverity.ERROR,
-                        "Top-level Shader declaration is not allowed in .dsf files"
+                        "Top-level $declarationKeyword declaration is not allowed in .dsf files"
+                    ).range(declaration.nameIdentifier ?: declaration).create()
+                }
+
+            tokens.filter { token ->
+                token.depthBefore == 0 &&
+                    token.type == DreamShaderTokenTypes.KEYWORD &&
+                    token.text.equals("namespace", ignoreCase = true)
+            }.forEach { token ->
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    "Top-level Namespace declaration is not allowed in .dsf files"
+                ).range(token.range).create()
+            }
+        }
+        if (extension == "dsm") {
+            topLevelDeclarations
+                .filter { declaration -> declaration.keywordText() in DSM_DISALLOWED_TOP_LEVEL_DECLARATIONS }
+                .forEach { declaration ->
+                    val declarationKeyword = DISPLAY_DECLARATION_KEYWORDS[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
+                    holder.newAnnotation(
+                        HighlightSeverity.ERROR,
+                        "Top-level $declarationKeyword declaration is not allowed in .dsm files"
+                    ).range(declaration.nameIdentifier ?: declaration).create()
+                }
+        }
+        if (extension == "dsh") {
+            topLevelDeclarations
+                .filter { declaration -> declaration.keywordText() in DSH_DISALLOWED_TOP_LEVEL_DECLARATIONS }
+                .forEach { declaration ->
+                    val declarationKeyword = DISPLAY_DECLARATION_KEYWORDS[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
+                    holder.newAnnotation(
+                        HighlightSeverity.ERROR,
+                        "Top-level $declarationKeyword declaration is not allowed in .dsh files"
                     ).range(declaration.nameIdentifier ?: declaration).create()
                 }
         }
@@ -107,6 +141,7 @@ class DreamShaderSemanticAnnotator : Annotator {
                 "virtualfunction" -> annotateVirtualFunctionRules(sourceText, declaration, holder)
                 "shaderlayer", "shaderlayerblend" -> annotateLayerRules(declaration, holder)
             }
+            annotateDeclarationSectionSchemaRules(declaration, holder)
         }
 
         annotateNamespaceRules(tokens, holder)
@@ -123,6 +158,10 @@ class DreamShaderSemanticAnnotator : Annotator {
         annotateSettingsDiagnostics(topLevelDeclarations, holder)
         annotateBaseOutputMemberDiagnostics(topLevelDeclarations, holder)
         annotateUnknownTypeDiagnostics(topLevelDeclarations, holder)
+        annotateUnsupportedGraphLoopDiagnostics(sourceText, topLevelDeclarations, holder)
+        annotateUnsupportedGraphSwitchDiagnostics(sourceText, topLevelDeclarations, holder)
+        annotateUnsupportedGraphBreakContinueDiagnostics(sourceText, topLevelDeclarations, holder)
+        annotateUnsupportedGraphReturnDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateMissingOutArgumentDiagnostics(sourceText, tokens, topLevelDeclarations, holder)
         annotateUnresolvedImportDiagnostics(file, tokens, holder)
     }
@@ -272,6 +311,48 @@ class DreamShaderSemanticAnnotator : Annotator {
         }
     }
 
+    private fun annotateDeclarationSectionSchemaRules(
+        declaration: DreamShaderDeclaration,
+        holder: AnnotationHolder
+    ) {
+        val keyword = declaration.keywordText() ?: return
+        val allowedSections = DECLARATION_ALLOWED_SECTIONS[keyword] ?: return
+        val requiredSections = DECLARATION_REQUIRED_SECTIONS[keyword].orEmpty()
+        val sections = directSectionsOf(declaration)
+
+        val groupedByName = sections
+            .mapNotNull { section -> section.sectionName()?.let { name -> name to section } }
+            .groupBy({ it.first }, { it.second })
+
+        groupedByName.forEach { (sectionName, entries) ->
+            if (entries.size <= 1) return@forEach
+            entries.drop(1).forEach { section ->
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    "Duplicate section '${displaySectionName(sectionName)}' in ${displayDeclarationKeyword(keyword)} declaration"
+                ).range(section).create()
+            }
+        }
+
+        sections.forEach { section ->
+            val sectionName = section.sectionName() ?: return@forEach
+            if (sectionName !in allowedSections) {
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    "Section '${displaySectionName(sectionName)}' is not allowed in ${displayDeclarationKeyword(keyword)} declarations"
+                ).range(section).create()
+            }
+        }
+
+        requiredSections.forEach { requiredSection ->
+            if (groupedByName.containsKey(requiredSection)) return@forEach
+            holder.newAnnotation(
+                HighlightSeverity.ERROR,
+                "${displayDeclarationKeyword(keyword)} declaration requires ${displaySectionName(requiredSection)} section"
+            ).range(declaration.nameIdentifier ?: declaration).create()
+        }
+    }
+
     private fun annotateNamespaceRules(tokens: List<LexedToken>, holder: AnnotationHolder) {
         val allowed = setOf("function", "graphfunction")
         var i = 0
@@ -403,6 +484,98 @@ class DreamShaderSemanticAnnotator : Annotator {
                             HighlightSeverity.ERROR,
                             "Unknown type '$type'"
                         ).range(range).create()
+                    }
+                }
+        }
+    }
+
+    private fun annotateUnsupportedGraphLoopDiagnostics(
+        sourceText: String,
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        topLevelDeclarations.forEach { declaration ->
+            directSectionsOf(declaration)
+                .filter { it.sectionName() == "graph" }
+                .forEach { section ->
+                    val body = sectionBody(section) ?: return@forEach
+                    val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
+                    tokens.forEach { token ->
+                        if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
+                        if (token.text !in UNSUPPORTED_GRAPH_LOOP_KEYWORDS) return@forEach
+                        holder.newAnnotation(
+                            HighlightSeverity.ERROR,
+                            "Graph section does not support loop statement '${token.text}'"
+                        ).range(token.range).create()
+                    }
+                }
+        }
+    }
+
+    private fun annotateUnsupportedGraphSwitchDiagnostics(
+        sourceText: String,
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        topLevelDeclarations.forEach { declaration ->
+            directSectionsOf(declaration)
+                .filter { it.sectionName() == "graph" }
+                .forEach { section ->
+                    val body = sectionBody(section) ?: return@forEach
+                    val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
+                    tokens.forEach { token ->
+                        if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
+                        if (token.text !in UNSUPPORTED_GRAPH_SWITCH_KEYWORDS) return@forEach
+                        holder.newAnnotation(
+                            HighlightSeverity.ERROR,
+                            "Graph section does not support switch statement '${token.text}'"
+                        ).range(token.range).create()
+                    }
+                }
+        }
+    }
+
+    private fun annotateUnsupportedGraphBreakContinueDiagnostics(
+        sourceText: String,
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        topLevelDeclarations.forEach { declaration ->
+            directSectionsOf(declaration)
+                .filter { it.sectionName() == "graph" }
+                .forEach { section ->
+                    val body = sectionBody(section) ?: return@forEach
+                    val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
+                    tokens.forEach { token ->
+                        if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
+                        if (token.text !in UNSUPPORTED_GRAPH_FLOW_KEYWORDS) return@forEach
+                        holder.newAnnotation(
+                            HighlightSeverity.ERROR,
+                            "Graph section does not support control statement '${token.text}'"
+                        ).range(token.range).create()
+                    }
+                }
+        }
+    }
+
+    private fun annotateUnsupportedGraphReturnDiagnostics(
+        sourceText: String,
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        topLevelDeclarations.forEach { declaration ->
+            directSectionsOf(declaration)
+                .filter { it.sectionName() == "graph" }
+                .forEach { section ->
+                    val body = sectionBody(section) ?: return@forEach
+                    val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
+                    tokens.forEach { token ->
+                        if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
+                        if (token.text != UNSUPPORTED_GRAPH_RETURN_KEYWORD) return@forEach
+                        holder.newAnnotation(
+                            HighlightSeverity.ERROR,
+                            "Graph section does not support return statement"
+                        ).range(token.range).create()
                     }
                 }
         }
@@ -671,6 +844,14 @@ class DreamShaderSemanticAnnotator : Annotator {
         return sectionText.substring(start + 1, end)
     }
 
+    private fun displaySectionName(sectionName: String): String {
+        return DISPLAY_SECTION_NAMES[sectionName] ?: sectionName.replaceFirstChar { it.uppercase(Locale.ROOT) }
+    }
+
+    private fun displayDeclarationKeyword(keyword: String): String {
+        return DISPLAY_DECLARATION_KEYWORDS[keyword] ?: keyword.replaceFirstChar { it.uppercase(Locale.ROOT) }
+    }
+
     private fun nextSignificantTokenIndex(tokens: List<LexedToken>, index: Int): Int? {
         var i = index + 1
         while (i < tokens.size) {
@@ -811,5 +992,60 @@ class DreamShaderSemanticAnnotator : Annotator {
         // Regex: call-signature diagnostics.
         private val PARAM_NAME_PATTERN: Pattern = Pattern.compile("([A-Za-z_][A-Za-z0-9_]*)\\s*$")
         private val OUT_QUALIFIER_PATTERN: Pattern = Pattern.compile("\\bout\\b")
+
+        private val DSH_DISALLOWED_TOP_LEVEL_DECLARATIONS = setOf(
+            "shader",
+            "shaderfunction",
+            "shaderlayer",
+            "shaderlayerblend"
+        )
+        private val DSF_ALLOWED_TOP_LEVEL_DECLARATIONS = setOf(
+            "shaderfunction",
+            "shaderlayer",
+            "shaderlayerblend",
+            "virtualfunction",
+            "function",
+            "graphfunction"
+        )
+        private val DSM_DISALLOWED_TOP_LEVEL_DECLARATIONS = setOf(
+            "shaderfunction",
+            "shaderlayer",
+            "shaderlayerblend"
+        )
+
+        private val DISPLAY_DECLARATION_KEYWORDS = mapOf(
+            "shader" to "Shader",
+            "shaderfunction" to "ShaderFunction",
+            "shaderlayer" to "ShaderLayer",
+            "shaderlayerblend" to "ShaderLayerBlend",
+            "virtualfunction" to "VirtualFunction",
+            "function" to "Function",
+            "graphfunction" to "GraphFunction",
+            "namespace" to "Namespace"
+        )
+        private val DISPLAY_SECTION_NAMES = mapOf(
+            "properties" to "Properties",
+            "inputs" to "Inputs",
+            "outputs" to "Outputs",
+            "settings" to "Settings",
+            "options" to "Options",
+            "graph" to "Graph"
+        )
+
+        private val DECLARATION_ALLOWED_SECTIONS = mapOf(
+            "shader" to setOf("properties", "outputs", "settings", "graph"),
+            "shaderfunction" to setOf("properties", "inputs", "outputs", "settings", "graph"),
+            "virtualfunction" to setOf("properties", "inputs", "outputs", "settings", "options")
+        )
+
+        private val DECLARATION_REQUIRED_SECTIONS = mapOf(
+            "shader" to setOf("graph"),
+            "shaderfunction" to setOf("graph")
+        )
+
+        private val UNSUPPORTED_GRAPH_LOOP_KEYWORDS = setOf("for", "while", "do")
+        private val UNSUPPORTED_GRAPH_SWITCH_KEYWORDS = setOf("switch", "case", "default")
+        private val UNSUPPORTED_GRAPH_FLOW_KEYWORDS = setOf("break", "continue")
+        private const val UNSUPPORTED_GRAPH_RETURN_KEYWORD = "return"
     }
 }

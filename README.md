@@ -142,7 +142,8 @@ This section summarizes the language rules that this Rider plugin should follow.
 - `.dsh`: shared header source; usually shared `Function`/`GraphFunction`/`Namespace`/`VirtualFunction`.
 
 Key constraints to enforce:
-- `.dsf` must not declare top-level `Shader(...)`.
+- `.dsf` top-level declarations are restricted to `ShaderFunction(...)`, `ShaderLayer(...)`, `ShaderLayerBlend(...)`, `VirtualFunction(...)`, `Function(...)`, `GraphFunction(...)`.
+- `.dsm` must not declare top-level `ShaderFunction(...)`, `ShaderLayer(...)`, or `ShaderLayerBlend(...)` (function/layer assets belong in `.dsf`).
 - `.dsh` should not be used for asset-generating declarations such as `Shader(...)`, `ShaderFunction(...)`, `ShaderLayer(...)`, `ShaderLayerBlend(...)`.
 
 ### 2. Top-Level Declarations
@@ -207,6 +208,7 @@ Type system expectations:
 
 - Graph DSL is intentionally not a fully general-purpose programming language.
 - Graph currently supports `if` / `else`, not full loop/control-flow parity.
+- Rider plugin currently reports diagnostics for unsupported Graph control-flow statements: `for`, `while`, `do`, `switch`, `case`, `default`, `break`, `continue`, `return`.
 - `Function` calls require explicit `out` target passing.
 - `Namespace` is for function organization (not arbitrary declaration containers).
 
@@ -215,6 +217,7 @@ Type system expectations:
 Already implemented in this plugin:
 - File type association (`.dsm`, `.dsf`, `.dsh`).
 - Top-level declaration and section tokenization/parsing foundations.
+- File-role declaration constraints baseline (`.dsf` uses top-level declaration whitelist; `.dsm` disallow top-level `ShaderFunction`/`ShaderLayer`/`ShaderLayerBlend`; `.dsh` disallow asset-generating top-level declarations).
 - Context-aware completion for sections, types, settings values, `UE.*`, HLSL intrinsics, imports.
 - Navigation/symbols/folding/references/hover/signature help basics.
 
@@ -588,7 +591,7 @@ Shader Main {
 
 6. `ID`: `DSYN-101`  
 `Priority`: `P1`  
-`Rule`: `.dsf` must not declare top-level `Shader(...)`.  
+`Rule`: `.dsf` top-level declarations are restricted to `ShaderFunction`, `ShaderLayer`, `ShaderLayerBlend`, `VirtualFunction`, `Function`, `GraphFunction`.  
 `Invalid` (`foo.dsf`):
 ```c
 Shader(Name="M_Invalid") {
@@ -597,6 +600,15 @@ Shader(Name="M_Invalid") {
 ```
 `Expected`: `Top-level Shader declaration is not allowed in .dsf files`  
 `Test`: `testDsfDisallowsTopLevelShader()`
+
+Additional invalid example:
+```c
+Namespace Tools {
+    Function Helper(in float X, out float Y) { Y = X; }
+}
+```
+`Expected`: `Top-level Namespace declaration is not allowed in .dsf files`  
+`Test`: `testDsfDisallowsTopLevelNamespace()`
 
 7. `ID`: `DSYN-102`  
 `Priority`: `P1`  
@@ -654,9 +666,69 @@ ShaderLayerBlend(Name="BlendA") {
 `Expected`: `ShaderLayerBlend requires at least two MaterialAttributes inputs`  
 `Test`: `testLayerBlendRequiresTwoMaterialAttributesInputs()`
 
+11. `ID`: `DSYN-106`  
+`Priority`: `P1`  
+`Rule`: `.dsh` must not declare top-level asset-generating declarations (`Shader`, `ShaderFunction`, `ShaderLayer`, `ShaderLayerBlend`).  
+`Invalid` (`foo.dsh`):
+```c
+ShaderFunction(Name="F_Invalid") {
+    Outputs = {
+        float Out = 0.0;
+    }
+}
+```
+`Expected`: `Top-level ShaderFunction declaration is not allowed in .dsh files`  
+`Test`: `testDshDisallowsTopLevelShaderFunction()`
+
+12. `ID`: `DSYN-107`  
+`Priority`: `P1`  
+`Rule`: `.dsm` must not declare top-level `ShaderFunction(...)`, `ShaderLayer(...)`, or `ShaderLayerBlend(...)`.  
+`Invalid` (`foo.dsm`):
+```c
+ShaderFunction(Name="F_Invalid") {
+    Outputs = {
+        float Out = 0.0;
+    }
+}
+```
+`Expected`: `Top-level ShaderFunction declaration is not allowed in .dsm files`  
+`Test`: `testDsmDisallowsTopLevelShaderFunction()`
+
+13. `ID`: `DSYN-108`  
+`Priority`: `P1`  
+`Rule`: declaration section schema must reject unsupported sections and require key sections for supported declaration kinds.  
+`Invalid`:
+```c
+Shader Main {
+    Inputs = {
+        float UV;
+    }
+    Settings = {
+        Domain = "Surface";
+    }
+}
+```
+`Expected`:
+- `Section 'Inputs' is not allowed in Shader declarations`
+- `Shader declaration requires Graph section`  
+`Test`: `testShaderDisallowsInputsSection()` / `testShaderRequiresGraphSection()`
+
+14. `ID`: `DSYN-109`  
+`Priority`: `P1`  
+`Rule`: duplicate sections in one declaration must report diagnostics.  
+`Invalid`:
+```c
+Shader Main {
+    Graph = { }
+    Graph = { }
+}
+```
+`Expected`: `Duplicate section 'Graph' in Shader declaration`  
+`Test`: `testShaderDuplicateSectionIsReported()`
+
 #### C. Semantic Diagnostics (`P2`)
 
-11. `ID`: `DSYN-201`  
+15. `ID`: `DSYN-201`  
 `Priority`: `P2`  
 `Rule`: unknown `Settings` key should report warning/error with suggestion.  
 `Invalid`:
@@ -670,7 +742,7 @@ Shader Main {
 `Expected`: `Unknown settings key 'DomainX'`  
 `Test`: `testUnknownSettingsKey()`
 
-12. `ID`: `DSYN-202`  
+16. `ID`: `DSYN-202`  
 `Priority`: `P2`  
 `Rule`: invalid enum-like `Settings` value should report diagnostic.  
 `Invalid`:
@@ -684,7 +756,7 @@ Shader Main {
 `Expected`: `Invalid value 'OpaqueX' for setting 'BlendMode'`  
 `Test`: `testInvalidSettingsEnumValue()`
 
-13. `ID`: `DSYN-203`  
+17. `ID`: `DSYN-203`  
 `Priority`: `P2`  
 `Rule`: unknown `Base.*` output member in `Outputs`/`Graph` should report diagnostic.  
 `Invalid`:
@@ -698,7 +770,7 @@ Shader Main {
 `Expected`: `Unknown material output member 'Base.ColorX'`  
 `Test`: `testUnknownBaseOutputMember()`
 
-14. `ID`: `DSYN-204`  
+18. `ID`: `DSYN-204`  
 `Priority`: `P2`  
 `Rule`: unknown type token in typed declaration context should report diagnostic.  
 `Invalid`:
@@ -712,7 +784,7 @@ Shader Main {
 `Expected`: `Unknown type 'float9'`  
 `Test`: `testUnknownTypeInInputs()`
 
-15. `ID`: `DSYN-205`  
+19. `ID`: `DSYN-205`  
 `Priority`: `P2`  
 `Rule`: calling a `Function`/multi-output `GraphFunction` without required `out` target should report diagnostic.  
 `Invalid`:
@@ -730,7 +802,7 @@ Shader Main {
 `Expected`: `Missing out argument for parameter 'result'`  
 `Test`: `testMissingOutArgumentInFunctionCall()`
 
-16. `ID`: `DSYN-206`  
+20. `ID`: `DSYN-206`  
 `Priority`: `P2`  
 `Rule`: unresolved `import` path should report diagnostic on string literal.  
 `Invalid`:
@@ -740,12 +812,36 @@ import "NotFound/Nope.dsh";
 `Expected`: `Cannot resolve import 'NotFound/Nope.dsh'`  
 `Test`: `testUnresolvedImportPath()`
 
+21. `ID`: `DSYN-207`  
+`Priority`: `P2`  
+`Rule`: Graph section must reject loop statements `for` / `while` / `do`.  
+`Expected`: `Graph section does not support loop statement '<keyword>'`  
+`Test`: `testGraphDisallowsForLoopStatement()` / `testGraphDisallowsWhileLoopStatement()` / `testGraphDisallowsDoLoopStatement()`
+
+22. `ID`: `DSYN-208`  
+`Priority`: `P2`  
+`Rule`: Graph section must reject `switch` family tokens `switch` / `case` / `default`.  
+`Expected`: `Graph section does not support switch statement '<keyword>'`  
+`Test`: `testGraphDisallowsSwitchStatement()` / `testGraphDisallowsCaseKeyword()` / `testGraphDisallowsDefaultKeyword()`
+
+23. `ID`: `DSYN-209`  
+`Priority`: `P2`  
+`Rule`: Graph section must reject `break` and `continue` control statements.  
+`Expected`: `Graph section does not support control statement '<keyword>'`  
+`Test`: `testGraphDisallowsBreakStatement()` / `testGraphDisallowsContinueStatement()`
+
+24. `ID`: `DSYN-210`  
+`Priority`: `P2`  
+`Rule`: Graph section must reject `return` statement.  
+`Expected`: `Graph section does not support return statement`  
+`Test`: `testGraphDisallowsReturnStatement()`
+
 #### D. Test Harness Mapping
 
 Recommended new test files:
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxDiagnosticsTest.kt` for `DSYN-001` to `DSYN-005`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSectionShapeDiagnosticsTest.kt` for `DSYN-101` to `DSYN-105`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-206`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSectionShapeDiagnosticsTest.kt` for `DSYN-101` to `DSYN-109`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210`.
 
 Recommendation:
 - Implement rules in id order and keep diagnostic messages stable to reduce snapshot churn.
