@@ -39,7 +39,10 @@ intellijPlatform {
         }
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild").orElse("252")
-            untilBuild = providers.gradleProperty("pluginUntilBuild").orElse("252.*")
+            val untilBuildProperty = providers.gradleProperty("pluginUntilBuild")
+            if (untilBuildProperty.isPresent) {
+                untilBuild = untilBuildProperty.get()
+            }
         }
         vendor {
             name = providers.gradleProperty("pluginVendorName").orElse("tsdaer")
