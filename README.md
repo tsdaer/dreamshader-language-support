@@ -60,6 +60,9 @@ Icons/resources:
 - [`src/main/resources/icons/dreamshaderFile.svg`](src/main/resources/icons/dreamshaderFile.svg)
 
 Tests:
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLexerSyntaxHighlighterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLexerSyntaxHighlighterTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLargeFilePerformanceSmokeTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLargeFilePerformanceSmokeTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContextAnalyzerTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContextAnalyzerTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionSuggesterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionSuggesterTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderFoldingBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderFoldingBuilderTest.kt)
@@ -83,7 +86,7 @@ This plugin currently follows a layered architecture:
 
 3. Editor intelligence
 - Completion (`DreamShaderCompletionContributor`) uses PSI-first context analysis with lexer fallback.
-- Signature help and inlay hints consume call-signature parsing utilities.
+- Signature help and inlay hints consume call-signature parsing utilities (current implementation is parameter inlay hints, not IntelliJ Code Vision lenses).
 - Navigation/references rely on declaration symbol extraction and identifier matching.
 
 4. Diagnostics pipeline
@@ -323,9 +326,6 @@ Already implemented in this plugin:
 - Import navigation resolves to local files when paths are valid.
 
 Not fully implemented yet (tracked in M5):
-- Package index source configuration and parsing (`packageStoreIndexUrls` + legacy compatibility).
-- Package install/update/remove/open actions with lock file lifecycle.
-- Package store browsing UI and repository actions.
 - Optional GitHub package discovery integration.
 
 ## Current Progress
@@ -343,17 +343,17 @@ Not fully implemented yet (tracked in M5):
 | Context-aware completion | Done | PSI-first context detection + lexer fallback; top-level/section/type/settings/base-output/UE/HLSL/import completion available |
 | PSI / Parser foundation | Done | ParserDefinition + PsiParser + typed PSI for declaration/section implemented |
 | Folding | Done | `lang.foldingBuilder` added; supports brace blocks and `// region` / `// endregion` |
-| Semantic tokens | Not started | Planned (declaration/section/code symbol semantic classification parity target) |
+| Semantic tokens | Done | Semantic classification implemented for declaration keywords/names, section names, callable references, `UE` namespace, local symbols, and `Base.*` material output members |
 | Diagnostics | Done | Local parser + section-shape + semantic diagnostics implemented with tests |
 | Go to Definition / References | Done | Go to Definition + Find References implemented for top-level declaration symbols |
 | Document symbols / structure | Done | Structure view integrated for top-level declarations and sections |
-| Inlay hints | Done | Parameter name hints implemented with callable-context filtering and settings toggle |
+| Inlay hints | Done | Parameter name hints implemented with callable-context filtering and settings toggle (`enableCodeLens` controls this inlay-hints layer) |
 | Formatting | Not started | Planned |
 | Bridge diagnostics panel | In progress | Tool window added with refresh/list/open-location baseline |
 | Bridge actions | In progress | Refresh/open-location/open bridge path + configurable recompile/clean command execution |
-| Status bar / CodeLens | In progress | Status widget + settings toggle; inlay-based code-lens hints gated by enableCodeLens |
+| Status bar / CodeLens | In progress | Status widget is implemented; "CodeLens" currently maps to inlay-parameter-hints behavior (CodeLens-like), not official IntelliJ Code Vision actions |
 | Package commands | Done | install/update/remove/browse/open folder + source add/remove wired |
-| Authoring templates / scaffold commands | Not started | Planned |
+| Authoring templates / scaffold commands | Done | Material/function/header/package scaffold commands implemented and covered by tests (`DTPL-001` to `DTPL-004`) |
 
 ## Detailed TODO
 
@@ -427,7 +427,7 @@ Implemented:
 - [x] `P1` Folding for blocks and `// region` markers.
 - [x] `P1` Go to Definition for imports and symbol declarations.
 - [x] `P1` Find References for local declarations/usages.
-- [ ] `P2` Semantic token classification for declarations, sections, code symbols, and material outputs.
+- [x] `P2` Semantic token classification for declarations, sections, code symbols, and material outputs.
 - [x] `P2` Hover information for symbols/settings/UE builtins.
 - [x] `P2` Signature help for function-like calls where feasible.
 - [x] `P2` Inlay hints for callable signatures and output-flow authoring context.
@@ -454,6 +454,8 @@ Implemented:
 - Added `DreamShaderDocumentationProvider` via `lang.documentationProvider` for hover docs on declarations, settings keys/values, and `UE.*` builtins.
 - Added `DreamShaderParameterInfoHandler` via `codeInsight.parameterInfo` for signature help on `UE.*` builtins and common HLSL intrinsics.
 - Added regression tests in `DreamShaderDocumentationProviderTest` and `DreamShaderSignatureHelpAnalyzerTest`.
+- Added semantic token classification in `DreamShaderSemanticAnnotator` for declaration keywords/names, section names, callable references, `UE` namespace, local symbols, and `Base.*` material output members.
+- Added regression tests in `DreamShaderSemanticTokensTest` for `DSYM-001` and `DSYM-002`.
 
 ### M3 Testable Navigation/Symbol Checklist
 
@@ -748,11 +750,11 @@ Recommendation:
 - [x] `P2` Actions: recompile current/all, clean generated shaders, refresh diagnostics, open diagnostic location.
 - [x] `P2` Bridge-manifest-aware `UE.Expression(...)` completion (`materialExpressionManifestPath` + project bridge manifest + bundled fallback manifest).
 - [x] `P2` Settings parity for bridge/tooling (`projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`).
-- [ ] `P2` Status bar + CodeLens actions parity for DreamShader workflows.
+- [ ] `P2` Status bar + CodeLens actions parity for DreamShader workflows (official Code Vision-style actions still pending; current behavior is inlay-parameter-hints based).
 - [x] `P2` Package store index support (multiple sources + deprecated single source compatibility).
 - [x] `P2` Actions: install/update/remove/browse/open packages folder.
 - [x] `P3` Add/remove package store index source commands and source-management UX parity.
-- [ ] `P3` Authoring/template commands parity (create package/material/function/header/sample files).
+- [x] `P3` Authoring/template commands parity (create package/material/function/header/sample files).
 - [ ] `P3` Optional GitHub package search integration.
 
 Acceptance criteria:
@@ -830,9 +832,9 @@ Rule format:
 
 10. `ID`: `DBRG-105`  
 `Priority`: `P2`  
-`Rule`: `enableCodeLens` toggles DreamShader code lens actions for supported declaration blocks.  
-`Expected`: code lens entries appear/disappear without restart when setting changes  
-`Test`: `testCodeLensVisibilitySetting()`
+`Rule`: `enableCodeLens` currently toggles DreamShader inlay-parameter-hints output (CodeLens-like UX), not IntelliJ Code Vision actions.  
+`Expected`: inlay hints appear/disappear without restart when setting changes  
+`Test`: `testEnableCodeLensToggleControlsInlayHintsProviderOutput()`
 
 #### C. Authoring Template / Scaffold Commands
 
@@ -1064,10 +1066,10 @@ Recommendation:
 
 ### Milestone M6: Quality, Tests, and Release
 
-- [ ] `P1` Add lexer/highlighter unit tests with representative DreamShader fixtures.
+- [x] `P1` Add lexer/highlighter unit tests with representative DreamShader fixtures.
 - [x] `P1` Add completion regression tests for key contexts.
 - [x] `P1` Add navigation/diagnostic tests for common workflows.
-- [ ] `P2` Add performance smoke tests for large files.
+- [x] `P2` Add performance smoke tests for large files.
 - [ ] `P3` Prepare Marketplace metadata, signing, and publishing pipeline.
 - [ ] `P3` Maintain changelog aligned with release tags.
 
@@ -1146,6 +1148,17 @@ Available actions:
 - Add Package Index Source
 - Remove Package Index Source
 
+### Template Tools Actions (Rider)
+
+Location:
+- `Tools` -> `DreamShader` -> `DreamShader Templates`
+
+Available actions:
+- Create Material Template
+- Create Function Template
+- Create Header Template
+- Create Package Scaffold
+
 ### DreamShader Hub (Rider)
 
 Location:
@@ -1158,6 +1171,7 @@ Location:
 - Recompile current/all and clean generated shaders
 - Browse package store and install from GitHub
 - Open packages folder and add package index source
+- Create material/function/header templates and package scaffold
 
 `Browse Package Store` now opens an interactive dialog with:
 - search field (`name` / `displayName` / `description` / `tags`)
@@ -1182,7 +1196,7 @@ Configurable fields:
 - `Project Root`
 - `Material Manifest Path`
 - `Show DreamShader status bar widget`
-- `Enable DreamShader in-editor code lens hints`
+- `Enable DreamShader in-editor code lens hints` (currently controls inlay-parameter-hints behavior, not IntelliJ Code Vision)
 - `Bridge Recompile Current Command`
 - `Bridge Recompile All Command`
 - `Bridge Clean Generated Command`

@@ -12,6 +12,9 @@ private val COLOR_ATTRIBUTES = arrayOf(
     AttributesDescriptor("DreamShader Section", DreamShaderTextAttributes.SECTION),
     AttributesDescriptor("DreamShader Declaration Name", DreamShaderTextAttributes.DECLARATION_NAME),
     AttributesDescriptor("DreamShader Callable Reference", DreamShaderTextAttributes.CALLABLE_REFERENCE),
+    AttributesDescriptor("DreamShader Builtin Namespace", DreamShaderTextAttributes.BUILTIN_NAMESPACE),
+    AttributesDescriptor("DreamShader Local Symbol", DreamShaderTextAttributes.LOCAL_SYMBOL),
+    AttributesDescriptor("DreamShader Material Output Member", DreamShaderTextAttributes.MATERIAL_OUTPUT_MEMBER),
     AttributesDescriptor("DreamShader Type", DreamShaderTextAttributes.TYPE),
     AttributesDescriptor("DreamShader String", DreamShaderTextAttributes.STRING),
     AttributesDescriptor("DreamShader Number", DreamShaderTextAttributes.NUMBER),
@@ -43,14 +46,15 @@ class DreamShaderColorSettingsPage : ColorSettingsPage {
             }
         
             Outputs {
-                Base.Color = float4(Albedo, 1.0f);
+                Base.BaseColor = float4(Albedo, 1.0f);
             }
         
             Graph {
                 // simple graph body
                 float n = 1.0f;
                 if (n > 0.5f) {
-                    Base.Emissive = float3(1.0f, 0.4f, 0.0f);
+                    float3 glow = UE.TexCoord(Index=0).xxx;
+                    Base.EmissiveColor = glow;
                 }
             }
         }

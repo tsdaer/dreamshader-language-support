@@ -132,6 +132,23 @@
                 <action id="DreamShader.PackageTools.RemoveIndexSource"
                         class="com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderRemovePackageIndexSourceAction"/>
             </group>
+
+            <group id="DreamShader.TemplateTools.Group"
+                   text="DreamShader Templates"
+                   description="DreamShader template and scaffold actions"
+                   popup="true">
+                <action id="DreamShader.TemplateTools.CreateMaterial"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateMaterialTemplateAction"/>
+                <action id="DreamShader.TemplateTools.CreateFunction"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateFunctionTemplateAction"/>
+                <action id="DreamShader.TemplateTools.CreateHeader"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateHeaderTemplateAction"/>
+
+                <separator/>
+
+                <action id="DreamShader.TemplateTools.CreatePackageScaffold"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreatePackageScaffoldAction"/>
+            </group>
         </group>
     </actions>
 </idea-plugin>

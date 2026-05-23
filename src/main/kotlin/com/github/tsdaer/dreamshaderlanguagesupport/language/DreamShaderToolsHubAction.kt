@@ -108,6 +108,26 @@ private class DreamShaderHubDialog(
             )
         )
 
+        content.add(
+            createSection(
+                DreamShaderBundle.message("hub.section.templates"),
+                listOf(
+                    button("hub.button.createMaterialTemplate") {
+                        invokeActionById("DreamShader.TemplateTools.CreateMaterial")
+                    },
+                    button("hub.button.createFunctionTemplate") {
+                        invokeActionById("DreamShader.TemplateTools.CreateFunction")
+                    },
+                    button("hub.button.createHeaderTemplate") {
+                        invokeActionById("DreamShader.TemplateTools.CreateHeader")
+                    },
+                    button("hub.button.createPackageScaffold") {
+                        invokeActionById("DreamShader.TemplateTools.CreatePackageScaffold")
+                    }
+                )
+            )
+        )
+
         root.add(content, BorderLayout.CENTER)
         return root
     }
