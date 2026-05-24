@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(8 8) scale(5.56)">
+      <stop offset="0" stop-color="#7D8397"/>
+      <stop offset="1" stop-color="#373D4D"/>
+    </radialGradient>
+    <radialGradient id="shade" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(7.95 7.95) scale(5.42)">
+      <stop offset="0" stop-color="#7D8397" stop-opacity="0"/>
+      <stop offset="0.82" stop-color="#202430" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#202430" stop-opacity="0.78"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="8" y1="2.3" x2="8" y2="13.7" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F2F5FF"/>
+      <stop offset="1" stop-color="#BAC1D6"/>
+    </linearGradient>
+    <linearGradient id="badge" x1="10.85" y1="13.1" x2="10.85" y2="8.3" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#454C5E"/>
+      <stop offset="1" stop-color="#696F85"/>
+    </linearGradient>
+  </defs>
+  <circle cx="8" cy="8" r="5.56" fill="url(#bg)"/>
+  <path fill="#FAFCFF" d="M11.42 4.58V3.64A5.53 5.53 0 0 0 8 2.44v2.14z"/>
+  <path fill="#FAFCFF" d="M11.42 8H8v3.42h3.42z"/>
+  <path fill="#FAFCFF" d="M8 4.58H4.58V8H8z"/>
+  <path fill="#FAFCFF" d="M13.56 8a5.53 5.53 0 0 0-1.2-3.42h-.94V8z"/>
+  <path fill="#FAFCFF" d="M12.36 11.42h-.94v.94c.36-.27.67-.58.94-.94z"/>
+  <path fill="#FAFCFF" d="M4.58 12.36A5.53 5.53 0 0 0 8 13.56v-2.14H4.58z"/>
+  <path fill="#FAFCFF" d="M2.44 8c0 1.28.44 2.53 1.2 3.42h.94V8z"/>
+  <path fill="#FAFCFF" d="M3.64 4.58h.94v-.94c-.36.27-.67.58-.94.94z"/>
+  <circle cx="7.95" cy="7.95" r="5.42" fill="url(#shade)"/>
+  <circle cx="8" cy="8" r="5.56" fill="none" stroke="url(#ring)" stroke-width=".5"/>
+  <rect x="8.4" y="8.3" width="4.9" height="4.8" rx=".85" fill="url(#badge)"/>
+  <circle cx="9.65" cy="10.05" r=".45" fill="#FBFDFF"/>
+  <rect x="10.45" y="9.78" width="2.05" height=".5" rx=".22" fill="#FBFDFF"/>
+  <rect x="9.65" y="10.95" width="2.85" height=".5" rx=".22" fill="#FBFDFF"/>
+</svg>

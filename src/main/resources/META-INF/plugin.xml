@@ -73,6 +73,7 @@
         <notificationGroup id="DreamShader Notifications" displayType="BALLOON"/>
         <toolWindow id="DreamShader Bridge Diagnostics"
                     anchor="bottom"
+                    icon="/icons/dreamshaderToolWindow.svg"
                     factoryClass="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeToolWindowFactory"
                     canCloseContents="false"/>
         <statusBarWidgetFactory

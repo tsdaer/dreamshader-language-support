@@ -1,5 +1,10 @@
 # dreamshader-language-support (Rider)
 
+<!-- plugin-metadata:start -->
+name: Dreamshader Language Extension
+description: Comprehensive DreamShaderLang support for JetBrains Rider, including `.dsm`/`.dsf`/`.dsh` file type registration, syntax highlighting, parsing and PSI foundations, context-aware completion, navigation and references, diagnostics and bridge integration, semantic tokens and inlay hints, package store and package lifecycle tooling, template generation, and a unified DreamShader Hub workflow entry.
+<!-- plugin-metadata:end -->
+
 JetBrains Rider plugin for DreamShaderLang (`.dsm`, `.dsf`, `.dsh`).
 Built on IntelliJ Platform SDK with platform module dependency (`com.intellij.modules.platform`).
 

@@ -18,6 +18,35 @@ dependencies {
 }
 
 intellijPlatform {
+    val pluginMetadata = providers.fileContents(layout.projectDirectory.file("README.md")).asText.map { readme ->
+        val startMarker = "<!-- plugin-metadata:start -->"
+        val endMarker = "<!-- plugin-metadata:end -->"
+        val start = readme.indexOf(startMarker)
+        val end = readme.indexOf(endMarker)
+        if (start in 0..<end) {
+            readme.substring(start + startMarker.length, end)
+        } else {
+            ""
+        }
+    }
+
+    fun parsePluginMetadataValue(block: String, key: String): String? {
+        val prefix = "$key:"
+        return block.lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.startsWith(prefix) }
+            ?.substring(prefix.length)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    }
+
+    val pluginNameFromReadme = pluginMetadata.map { block ->
+        parsePluginMetadataValue(block, "name")
+    }
+    val pluginDescriptionFromReadme = pluginMetadata.map { block ->
+        parsePluginMetadataValue(block, "description")
+    }
+
     val secretsDirPath = providers.gradleProperty("jetbrainsSecretsDir")
         .orElse(".secrets")
 
@@ -60,16 +89,10 @@ intellijPlatform {
         id = providers.gradleProperty("pluginGroup").zip(providers.gradleProperty("pluginName")) { group, name ->
             "$group.$name"
         }.orElse("com.github.tsdaer.dreamshaderlanguagesupport")
-        name = providers.gradleProperty("pluginDisplayName").orElse("Dreamshader Language Extension")
+        name = pluginNameFromReadme.orElse("Dreamshader Language Extension")
         version = providers.gradleProperty("version")
-        description = providers.fileContents(layout.projectDirectory.file("README.md")).asText.map { readme ->
-            val marker = "## Quick File Links"
-            val idx = readme.indexOf(marker)
-            if (idx > 0) {
-                "<p>" + readme.substring(0, idx).trim().replace("\n", "<br/>") + "</p>"
-            } else {
-                "<p>DreamShaderLang language support for JetBrains Rider.</p>"
-            }
+        description = pluginDescriptionFromReadme.map { metadataDescription ->
+            "<p>${metadataDescription ?: "DreamShaderLang language support for JetBrains Rider."}</p>"
         }
         changeNotes = providers.fileContents(layout.projectDirectory.file("CHANGELOG.md")).asText.map { changelog ->
             val lines = changelog.lineSequence().take(30).joinToString("\n")

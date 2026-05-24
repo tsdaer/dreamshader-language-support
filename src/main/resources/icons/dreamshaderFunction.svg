@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(7.25 7.25) scale(4.95)">
+      <stop offset="0" stop-color="#8B90A0"/>
+      <stop offset="1" stop-color="#4F5566"/>
+    </radialGradient>
+    <radialGradient id="shade" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(7.22 7.22) scale(4.83)">
+      <stop offset="0" stop-color="#8B90A0" stop-opacity="0"/>
+      <stop offset="0.82" stop-color="#2F3442" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#2F3442" stop-opacity="0.75"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="7.25" y1="2.3" x2="7.25" y2="12.2" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E9ECF5"/>
+      <stop offset="1" stop-color="#AEB4C5"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="10.78" y1="13.25" x2="10.69" y2="8.3" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3C4150"/>
+      <stop offset="1" stop-color="#5C6375"/>
+    </linearGradient>
+  </defs>
+  <circle cx="7.25" cy="7.25" r="4.95" fill="url(#bg)"/>
+  <path fill="#FFFFFF" d="M10.3 4.2v-.84a4.92 4.92 0 0 0-3.05-1.06V4.2z"/>
+  <path fill="#FFFFFF" d="M10.3 7.25H7.25v3.05h3.05z"/>
+  <path fill="#FFFFFF" d="M7.25 4.2H4.2v3.05h3.05z"/>
+  <path fill="#FFFFFF" d="M12.2 7.25A4.92 4.92 0 0 0 11.14 4.2h-.84v3.05z"/>
+  <path fill="#FFFFFF" d="M11.14 10.3h-.84v.84c.31-.24.6-.52.84-.84z"/>
+  <path fill="#FFFFFF" d="M4.2 11.14c.86.69 1.93 1.06 3.05 1.06V10.3H4.2z"/>
+  <path fill="#FFFFFF" d="M2.3 7.25c0 1.12.37 2.2 1.06 3.05h.84V7.25z"/>
+  <path fill="#FFFFFF" d="M3.36 4.2h.84v-.84c-.32.24-.6.52-.84.84z"/>
+  <circle cx="7.22" cy="7.22" r="4.83" fill="url(#shade)"/>
+  <circle cx="7.25" cy="7.25" r="4.95" fill="none" stroke="url(#ring)" stroke-width=".5"/>
+
+  <rect x="7.35" y="8.3" width="6.25" height="4.95" rx=".95" fill="url(#panel)"/>
+  <path d="M10.0212 13V10.522H9.06117V10.03H10.0212V9.46C10.0212 9.2 10.1032 8.996 10.2672 8.848C10.4312 8.696 10.6572 8.62 10.9452 8.62H11.9112V9.112H10.9452C10.8212 9.112 10.7252 9.142 10.6572 9.202C10.5932 9.258 10.5612 9.344 10.5612 9.46V10.03H11.9112V10.522H10.5612V13H10.0212Z" fill="white"/>
+</svg>

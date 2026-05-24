@@ -32,8 +32,18 @@ class DreamShaderStructureViewElement(
 
         override fun getIcon(unused: Boolean): Icon? = when (element) {
             is DreamShaderPsiFile -> DreamShaderIcons.FILE
-            is DreamShaderDeclaration -> DreamShaderIcons.FILE
-            is DreamShaderSection -> DreamShaderIcons.FILE
+            is DreamShaderDeclaration -> when {
+                element.keywordText() == "shader" -> DreamShaderIcons.SHADER
+                element.isFunctionLike() -> DreamShaderIcons.FUNCTION
+                else -> DreamShaderIcons.DECLARATION
+            }
+            is DreamShaderSection -> when (element.sectionName()) {
+                "settings" -> DreamShaderIcons.SECTION_SETTINGS
+                "inputs" -> DreamShaderIcons.SECTION_INPUTS
+                "outputs" -> DreamShaderIcons.SECTION_OUTPUTS
+                "graph" -> DreamShaderIcons.SECTION_GRAPH
+                else -> DreamShaderIcons.SECTION
+            }
             else -> null
         }
     }

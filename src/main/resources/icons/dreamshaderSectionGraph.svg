@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <defs>
+    <linearGradient id="panel" x1="8" y1="2" x2="8" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#646A7A"/>
+      <stop offset="1" stop-color="#4E5463"/>
+    </linearGradient>
+    <linearGradient id="wire" x1="3.4" y1="8" x2="12.6" y2="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#89D9F3"/>
+      <stop offset="1" stop-color="#40B6E0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="2" y="2" width="12" height="12" rx="2" fill="url(#panel)"/>
+
+  <path d="M6 3v10M9 3v10M3 6h10M3 9h10" stroke="#737A8B" stroke-width=".45" stroke-linecap="round" opacity=".45"/>
+
+  <path d="M5.1 5.3C5.9 5.3 6.3 6 7 7" stroke="url(#wire)" stroke-width=".8" fill="none" stroke-linecap="round"/>
+  <path d="M5.1 10.7C5.9 10.7 6.3 10 7 9" stroke="url(#wire)" stroke-width=".8" fill="none" stroke-linecap="round"/>
+  <path d="M9 8C10.1 8 10.9 8 11.9 8" stroke="url(#wire)" stroke-width=".8" fill="none" stroke-linecap="round"/>
+
+  <rect x="3.35" y="4.3" width="1.75" height="2" rx=".4" fill="#2F3442" stroke="#AEB4C5" stroke-width=".25"/>
+  <rect x="3.35" y="9.7" width="1.75" height="2" rx=".4" fill="#2F3442" stroke="#AEB4C5" stroke-width=".25"/>
+  <rect x="7" y="7" width="2" height="2" rx=".45" fill="#2F3442" stroke="#AEB4C5" stroke-width=".25"/>
+  <rect x="11.9" y="7.2" width="1.75" height="1.6" rx=".35" fill="#2F3442" stroke="#AEB4C5" stroke-width=".25"/>
+
+  <circle cx="5.1" cy="5.3" r=".3" fill="#40B6E0"/>
+  <circle cx="5.1" cy="10.7" r=".3" fill="#40B6E0"/>
+  <circle cx="7" cy="7" r=".3" fill="#40B6E0"/>
+  <circle cx="7" cy="9" r=".3" fill="#40B6E0"/>
+  <circle cx="9" cy="8" r=".3" fill="#40B6E0"/>
+  <circle cx="11.9" cy="8" r=".3" fill="#CED0D6"/>
+</svg>
