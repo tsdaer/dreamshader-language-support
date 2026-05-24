@@ -172,6 +172,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         annotateUnsupportedGraphBreakContinueDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphReturnDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateMissingOutArgumentDiagnostics(sourceText, tokens, topLevelDeclarations, holder)
+        annotateAssetRootPathDiagnostics(topLevelDeclarations, holder)
         annotateUnresolvedImportDiagnostics(file, tokens, holder)
     }
 
@@ -389,29 +390,42 @@ class DreamShaderSemanticAnnotator : Annotator {
         }
 
         if (keyword == "virtualfunction") {
-            annotateVirtualFunctionAssetOptionRules(groupedByName["options"].orEmpty(), holder)
+            annotateVirtualFunctionAssetOptionRules(
+                optionSections = groupedByName["options"].orEmpty(),
+                settingsAliasSections = groupedByName["settings"].orEmpty(),
+                holder = holder
+            )
         }
     }
 
     private fun annotateVirtualFunctionAssetOptionRules(
         optionSections: List<DreamShaderSection>,
+        settingsAliasSections: List<DreamShaderSection>,
         holder: AnnotationHolder
     ) {
-        optionSections.forEach { section ->
+        var hasAsset = false
+        val candidateSections = optionSections + settingsAliasSections
+        candidateSections.forEach { section ->
             val body = sectionBody(section) ?: return@forEach
-            val matcher = SETTINGS_ASSIGNMENT_PATTERN.matcher(body.text)
+            val matcher = VIRTUAL_FUNCTION_ASSET_ASSIGNMENT_PATTERN.matcher(body.text)
             while (matcher.find()) {
-                val key = matcher.group(1) ?: continue
-                val value = matcher.group(2) ?: continue
-                if (!key.equals("asset", ignoreCase = true)) continue
-                val normalized = value.trim().trim('"').lowercase(Locale.ROOT)
-                if (normalized == "true" || normalized == "false") continue
-                val valueRange = TextRange(body.startOffset + matcher.start(2), body.startOffset + matcher.end(2))
+                hasAsset = true
+                val value = matcher.group(1) ?: continue
+                val trimmed = value.trim()
+                val validationError = validateVirtualFunctionAssetPath(trimmed)
+                if (validationError == null) continue
+                val valueRange = TextRange(body.startOffset + matcher.start(1), body.startOffset + matcher.end(1))
                 holder.newAnnotation(
                     HighlightSeverity.ERROR,
-                    DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequiresBoolean")
+                    validationError
                 ).range(valueRange).create()
             }
+        }
+        if (!hasAsset && candidateSections.isNotEmpty()) {
+            holder.newAnnotation(
+                HighlightSeverity.ERROR,
+                DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequired")
+            ).range(candidateSections.first()).create()
         }
     }
 
@@ -472,10 +486,15 @@ class DreamShaderSemanticAnnotator : Annotator {
         holder: AnnotationHolder
     ) {
         topLevelDeclarations.forEach { declaration ->
+            val declarationKeyword = declaration.keywordText()
             directSectionsOf(declaration)
                 .filter {
                     val sectionName = canonicalSectionName(it.sectionName())
-                    sectionName == "settings" || sectionName == "options"
+                    when {
+                        sectionName == "options" -> false
+                        declarationKeyword == "virtualfunction" && sectionName == "settings" -> false
+                        else -> sectionName == "settings"
+                    }
                 }
                 .forEach { section ->
                     val body = sectionBody(section) ?: return@forEach
@@ -741,6 +760,34 @@ class DreamShaderSemanticAnnotator : Annotator {
         }
     }
 
+    private fun annotateAssetRootPathDiagnostics(
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        topLevelDeclarations.forEach { declaration ->
+            val keyword = declaration.keywordText() ?: return@forEach
+            if (keyword !in ASSET_DECLARATION_KEYWORDS) return@forEach
+            val header = declarationHeaderText(declaration.text) ?: return@forEach
+            val rootAssignment = findNamedAssignmentValue(header, "root") ?: return@forEach
+            val rootValue = rootAssignment.value.trim().trim('"')
+            if (rootValue.isBlank()) return@forEach
+            if (isAllowedAssetRootValue(rootValue)) return@forEach
+
+            val range = TextRange(
+                declaration.textRange.startOffset + rootAssignment.startOffset,
+                declaration.textRange.startOffset + rootAssignment.endOffset
+            )
+            holder.newAnnotation(
+                HighlightSeverity.ERROR,
+                DreamShaderBundle.message(
+                    "diagnostic.assetRootPathRootNotAllowed",
+                    displayDeclarationKeyword(keyword),
+                    rootValue
+                )
+            ).range(range).create()
+        }
+    }
+
     // Call-signature utilities.
     private fun parseDeclarationParameters(declarationText: String): ParsedSignature? {
         val headerEnd = declarationText.indexOf('{').let { if (it >= 0) it else declarationText.length }
@@ -761,6 +808,37 @@ class DreamShaderSemanticAnnotator : Annotator {
             )
         }
         return ParsedSignature(params)
+    }
+
+    private fun declarationHeaderText(declarationText: String): String? {
+        val headerEnd = declarationText.indexOf('{').let { if (it >= 0) it else declarationText.length }
+        val header = declarationText.substring(0, headerEnd).trim()
+        return if (header.isBlank()) null else header
+    }
+
+    private fun findNamedAssignmentValue(headerText: String, key: String): NamedAssignmentMatch? {
+        val match = NAMED_ASSIGNMENT_PATTERN.matcher(headerText)
+        while (match.find()) {
+            val currentKey = match.group(1) ?: continue
+            if (!currentKey.equals(key, ignoreCase = true)) continue
+            val valueStart = match.start(2)
+            val valueEnd = match.end(2)
+            if (valueStart < 0 || valueEnd <= valueStart) continue
+            return NamedAssignmentMatch(
+                key = currentKey,
+                value = headerText.substring(valueStart, valueEnd),
+                startOffset = valueStart,
+                endOffset = valueEnd
+            )
+        }
+        return null
+    }
+
+    private fun isAllowedAssetRootValue(root: String): Boolean {
+        if (root.equals("game", ignoreCase = true)) return true
+        if (root.startsWith("plugin.", ignoreCase = true) && root.length > "plugin.".length) return true
+        if (root.startsWith("plugins.", ignoreCase = true) && root.length > "plugins.".length) return true
+        return false
     }
 
     private fun parseCallArgumentInfo(sourceText: String, leftParenOffset: Int): CallArgumentInfo? {
@@ -994,6 +1072,55 @@ class DreamShaderSemanticAnnotator : Annotator {
         return if (bestDistance <= 3) bestCandidate else null
     }
 
+    private fun validateVirtualFunctionAssetPath(value: String): String? {
+        if (value.isBlank()) {
+            return DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequiresPath")
+        }
+
+        val pathRoot = extractPathRoot(value)
+        if (pathRoot == null) {
+            return DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequiresPath")
+        }
+        if (!isAllowedVirtualFunctionAssetRoot(pathRoot)) {
+            return DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetPathRootNotAllowed", pathRoot)
+        }
+        return null
+    }
+
+    private fun extractPathRoot(value: String): String? {
+        val trimmed = value.trim()
+        if (trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 3) {
+            val unquoted = trimmed.substring(1, trimmed.length - 1).trim()
+            if (unquoted.isEmpty()) return null
+            return when {
+                unquoted.startsWith("/") -> "Game"
+                unquoted.startsWith("Game/") -> "Game"
+                unquoted.startsWith("Engine/") -> "Engine"
+                unquoted.startsWith("Plugin.") -> unquoted.substringBefore('/')
+                unquoted.startsWith("Plugins.") -> unquoted.substringBefore('/')
+                else -> null
+            }
+        }
+
+        val pathMatch = PATH_CALL_PATTERN.matcher(trimmed)
+        if (pathMatch.matches()) {
+            val inside = trimmed.substringAfter('(').substringBeforeLast(')').trim()
+            if (inside.isBlank()) return null
+            val firstArg = splitTopLevel(inside, ',').firstOrNull()?.trim().orEmpty()
+            if (firstArg.isBlank()) return null
+            return firstArg.removePrefix("\"").removeSuffix("\"").trim()
+        }
+        return null
+    }
+
+    private fun isAllowedVirtualFunctionAssetRoot(root: String): Boolean {
+        if (root.equals("game", ignoreCase = true)) return true
+        if (root.equals("engine", ignoreCase = true)) return true
+        if (root.startsWith("plugin.", ignoreCase = true) && root.length > "plugin.".length) return true
+        if (root.startsWith("plugins.", ignoreCase = true) && root.length > "plugins.".length) return true
+        return false
+    }
+
     private fun findClosestCandidate(rawInput: String, candidates: Collection<String>, maxDistance: Int): String? {
         val normalized = rawInput.lowercase(Locale.ROOT)
         if (normalized.isBlank()) return null
@@ -1130,6 +1257,13 @@ class DreamShaderSemanticAnnotator : Annotator {
         val startOffset: Int
     )
 
+    private data class NamedAssignmentMatch(
+        val key: String,
+        val value: String,
+        val startOffset: Int,
+        val endOffset: Int
+    )
+
     companion object {
         // Semantic validation data.
         private val SETTINGS_KEYS = setOf(
@@ -1185,6 +1319,13 @@ class DreamShaderSemanticAnnotator : Annotator {
         private val SETTINGS_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
             "(?m)\\b([A-Za-z_][A-Za-z0-9_.]*)\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|[A-Za-z_][A-Za-z0-9_.]*)"
         )
+        private val NAMED_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
+            "(?is)\\b([A-Za-z_][A-Za-z0-9_.]*)\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|[A-Za-z_][A-Za-z0-9_./-]*)"
+        )
+        private val VIRTUAL_FUNCTION_ASSET_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
+            "(?mis)\\bAsset\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|Path\\s*\\([^\\n;{}]*\\)|[A-Za-z_][A-Za-z0-9_.]*)"
+        )
+        private val PATH_CALL_PATTERN: Pattern = Pattern.compile("(?is)Path\\s*\\(.*\\)")
         private val BASE_MEMBER_PATTERN: Pattern = Pattern.compile("\\bBase\\.([A-Za-z_][A-Za-z0-9_]*)")
         private val TYPED_DECLARATION_PATTERN: Pattern = Pattern.compile(
             "(?m)(?:^|;)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=|;|\\n)"
@@ -1195,6 +1336,12 @@ class DreamShaderSemanticAnnotator : Annotator {
         private val OUT_QUALIFIER_PATTERN: Pattern = Pattern.compile("\\bout\\b")
 
         private val DSH_DISALLOWED_TOP_LEVEL_DECLARATIONS = setOf(
+            "shader",
+            "shaderfunction",
+            "shaderlayer",
+            "shaderlayerblend"
+        )
+        private val ASSET_DECLARATION_KEYWORDS = setOf(
             "shader",
             "shaderfunction",
             "shaderlayer",

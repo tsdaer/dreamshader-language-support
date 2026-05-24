@@ -2,12 +2,9 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.WindowManager
-import com.intellij.openapi.wm.impl.status.widget.StatusBarWidgetSettings
 import com.intellij.codeInsight.hints.ParameterHintsPassFactory
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextField
-import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeStatusBarWidgetFactory
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
@@ -147,7 +144,6 @@ class DreamShaderSettingsConfigurable(
 
     override fun apply() {
         val state = project.getService(DreamShaderProjectSettings::class.java).state
-        val oldShowStatusBar = state.showStatusBar
         val oldEnableCodeLens = state.enableCodeLens
 
         state.projectRoot = projectRootField?.text.orEmpty().trim()
@@ -159,15 +155,6 @@ class DreamShaderSettingsConfigurable(
         state.bridgeRecompileAllCommand = recompileAllCommandField?.text.orEmpty().trim()
         state.bridgeCleanGeneratedShadersCommand = cleanGeneratedCommandField?.text.orEmpty().trim()
 
-        if (oldShowStatusBar != state.showStatusBar) {
-            val settings = StatusBarWidgetSettings.getInstance()
-            val factory = DreamShaderBridgeStatusBarWidgetFactory()
-            settings.setEnabled(factory, state.showStatusBar)
-            WindowManager.getInstance().getStatusBar(project)?.updateWidget(factory.id)
-            if (!state.showStatusBar) {
-                WindowManager.getInstance().getStatusBar(project)?.removeWidget(factory.id)
-            }
-        }
         if (oldEnableCodeLens != state.enableCodeLens) {
             ParameterHintsPassFactory.forceHintsUpdateOnNextPass()
         }

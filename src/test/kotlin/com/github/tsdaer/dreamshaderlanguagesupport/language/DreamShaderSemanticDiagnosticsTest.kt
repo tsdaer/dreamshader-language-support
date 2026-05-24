@@ -29,7 +29,7 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Invalid value 'OpaqueX' for setting 'BlendMode'")
     }
 
-    fun testVirtualFunctionOptionAssetRequiresBoolean() {
+    fun testVirtualFunctionOptionAssetRequiresPath() {
         val text = """
             VirtualFunction BufferWriter {
                 Options {
@@ -38,7 +38,126 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
             }
         """.trimIndent()
         myFixture.configureByText("virtual_function_asset_invalid.dsh", text)
-        assertHasError("VirtualFunction Options.Asset must be true or false")
+        assertHasError("VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))")
+    }
+
+    fun testVirtualFunctionOptionAssetAcceptsPathCall() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = Path(Game, Materials/M_VFAsset);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_path_call.dsh", text)
+        assertNoError("VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))")
+    }
+
+    fun testVirtualFunctionOptionAssetRejectsBareIdentifier() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = true;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_bare_identifier.dsh", text)
+        assertHasError("VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))")
+    }
+
+    fun testVirtualFunctionOptionAssetAcceptsQuotedObjectPath() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = "Game/Materials/M_VFAsset";
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_quoted_object_path.dsh", text)
+        assertNoError("VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))")
+    }
+
+    fun testVirtualFunctionOptionAssetAcceptsEngineRootPathCall() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = Path(Engine, Materials/M_VFAsset);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_engine_path_call.dsh", text)
+        assertNoError("VirtualFunction Options.Asset path root 'Engine' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>")
+    }
+
+    fun testVirtualFunctionOptionAssetRejectsUnknownPathRoot() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = Path(Project, Materials/M_VFAsset);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_unknown_root.dsh", text)
+        assertHasError("VirtualFunction Options.Asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>")
+    }
+
+    fun testVirtualFunctionOptionAssetRequiresOptionEntry() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    bExpose = true;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_required.dsh", text)
+        assertHasError("VirtualFunction requires Asset option in Options (Settings alias is also accepted)")
+    }
+
+    fun testVirtualFunctionOptionAssetAcceptsSettingsAlias() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Settings {
+                    Asset = Path(Game, Materials/M_VFAsset);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_settings_alias_valid.dsh", text)
+        assertNoError("VirtualFunction requires Asset option in Options (Settings alias is also accepted)")
+        assertNoError("Unknown settings key 'Asset'")
+    }
+
+    fun testVirtualFunctionOptionAssetSettingsAliasRejectsUnknownRoot() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Settings {
+                    Asset = Path(Project, Materials/M_VFAsset);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_settings_alias_unknown_root.dsh", text)
+        assertHasError("VirtualFunction Options.Asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>")
+    }
+
+    fun testShaderRootRejectsEngineRoot() {
+        val text = """
+            Shader Root = "Engine", Name="Materials/M_InvalidRoot" {
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("shader_root_engine_invalid.dsm", text)
+        assertHasError("Shader Root value 'Engine' is not allowed. Use Game, Plugin.<Name>, or Plugins.<Name>")
+    }
+
+    fun testShaderRootAcceptsPluginRoot() {
+        val text = """
+            Shader Root = "Plugin.MyPack", Name="Materials/M_ValidRoot" {
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("shader_root_plugin_valid.dsm", text)
+        assertNoError("Shader Root value 'Plugin.MyPack' is not allowed. Use Game, Plugin.<Name>, or Plugins.<Name>")
     }
 
     fun testUnknownBaseOutputMember() {
@@ -232,6 +351,14 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertTrue(
             "Expected error '$message', actual: ${errors.map { it.description }}",
             errors.any { it.description == message }
+        )
+    }
+
+    private fun assertNoError(message: String) {
+        val errors = myFixture.doHighlighting(HighlightSeverity.ERROR)
+        assertTrue(
+            "Expected no error '$message', actual: ${errors.map { it.description }}",
+            errors.none { it.description == message }
         )
     }
 }

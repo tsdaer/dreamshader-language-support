@@ -1,11 +1,11 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language
 
 import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
@@ -163,13 +163,15 @@ private class DreamShaderHubDialog(
             }
         }
         val event = AnActionEvent.createEvent(
-            action,
             context,
             action.templatePresentation.clone(),
-            ActionPlaces.UNKNOWN,
+            "DreamShader.HubDialog",
             ActionUiKind.NONE,
             null
         )
-        action.actionPerformed(event)
+        ActionUtil.performAction(
+            action,
+            event
+        )
     }
 }

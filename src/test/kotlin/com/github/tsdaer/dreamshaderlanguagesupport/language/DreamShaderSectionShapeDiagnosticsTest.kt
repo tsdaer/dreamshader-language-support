@@ -420,7 +420,7 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
                     float OutValue;
                 }
                 Options {
-                    Asset = true;
+                    Asset = Path(Game, Materials/M_VFAsset);
                 }
             }
         """.trimIndent()
