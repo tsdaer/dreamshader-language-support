@@ -74,6 +74,7 @@ Tests:
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionSuggesterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionSuggesterTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderFoldingBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderFoldingBuilderTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiParserTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiParserTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderBundleLocalizationTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderBundleLocalizationTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilderTest.kt)
 - [`src/test/testData/rename/foo.xml`](src/test/testData/rename/foo.xml)
 - [`src/test/testData/rename/foo_after.xml`](src/test/testData/rename/foo_after.xml)
@@ -350,7 +351,7 @@ Implemented in M5:
 | Color settings page | Done | DreamShader color entries available in editor color scheme |
 | Plugin/file icons | Done | Added plugin icon and DreamShader file icon |
 | Token sets/constants | Done | Added token set groups for future completion/diagnostics |
-| Context-aware completion | Done | PSI-first context detection + lexer fallback; top-level/section/type/settings/base-output/UE/HLSL/import completion available |
+| Context-aware completion | Done | PSI-first context detection + lexer fallback; top-level/section/type/settings/base-output/UE/HLSL/import completion available (including quoted enums + unquoted bool/number settings values with typed-prefix filtering) |
 | PSI / Parser foundation | Done | ParserDefinition + PsiParser + typed PSI for declaration/section implemented |
 | Folding | Done | `lang.foldingBuilder` added; supports brace blocks and `// region` / `// endregion` |
 | Semantic tokens | Done | Semantic classification implemented for declaration keywords/names, section names, callable references, `UE` namespace, namespace qualifiers (`Namespace::`), local symbol declaration/usage split, and `Base.*` material output members |
@@ -426,6 +427,10 @@ Acceptance criteria:
 
 Implemented:
 - Settings/Options section key completion and key-specific value completion.
+- `Options` section key completion now follows declaration semantics for `VirtualFunction` (`Asset`, `Description`) instead of generic material settings keys.
+- `VirtualFunction` `Options.Asset` value completion now suggests `Path(...)` templates in unquoted context and object-path templates in quoted context, both with typed-prefix filtering.
+- `VirtualFunction` `Settings` section (compatibility alias for option-style authoring) now reuses the same key/value completion behavior for `Asset` and `Description`.
+- Settings value completion now supports quoted enum values and unquoted scalar forms (`true/false`, `NumCustomizedUVs` `0..8`) with typed-prefix filtering.
 - Material output completion for `Base.*` members with assignment insertion.
 - `UE.*` member completion with snippet-like insert texts (including `UE.Expression(...)` caret positioning).
 - HLSL intrinsic completion in graph-like/function-like contexts.
@@ -469,7 +474,24 @@ Implemented:
 - Reorganized `DreamShaderSemanticAnnotator` internals into grouped diagnostic sections (`bridge`, `syntax`, `section-shape`, `semantic`, `call/import utilities`) and grouped constant/regex blocks to improve maintainability without behavior changes.
 - Extended section-shape diagnostics to declaration-aware schema constraints for `ShaderLayer` / `ShaderLayerBlend` / `Function` / `GraphFunction`, plus declaration-scoped `Results` alias handling (`ShaderFunction` / `VirtualFunction` only).
 - Added semantic rules for `VirtualFunction` `Options.Asset`: required option entry + asset-path validation with root constraints (`Game`, `Engine`, `Plugin.<Name>`, `Plugins.<Name>`).
+- Added `VirtualFunction` `Options/Settings` `Description` quality diagnostics (warning when missing, non-quoted, or empty string).
+- Added quick-fix for missing `VirtualFunction` `Description` (`Add Description option`) to insert a default quoted description entry.
+- Added quick-fix actions for `VirtualFunction` `Description` warnings:
+  - `Quote Description value` for non-quoted descriptions.
+  - `Fill Description with default text` for empty-string descriptions.
 - Added semantic rule for asset declaration `Root` restrictions: `Shader`/`ShaderFunction`/`ShaderLayer`/`ShaderLayerBlend` now validate `Root` against `Game`, `Plugin.<Name>`, `Plugins.<Name>`.
+- Added settings-key quick-fix action for semantic diagnostics:
+  - `Replace with '<SuggestedKey>'` for unknown settings keys with typo suggestions.
+- Added settings-value quick-fix actions for semantic diagnostics:
+  - `Replace with true` for invalid `TwoSided` value.
+  - `Replace with 0` for invalid `NumCustomizedUVs` value.
+- Added semantic-suggestion quick-fix actions for diagnostic typos:
+  - `Replace with 'Base.<SuggestedMember>'` for unknown `Base.*` output members.
+  - `Replace with '<SuggestedType>'` for unknown typed declaration names.
+- Extended unresolved import diagnostics with explicit extension guard: imports ending with unsupported extensions (non `.dsh/.dsf/.dsm`) now report a dedicated semantic error.
+- Refactored unresolved import quick-fix scaffold generation to reuse `DreamShaderTemplateService` templates (`createHeaderTemplate` / `createFunctionTemplate` / `createMaterialTemplate`) for consistency with template actions.
+- Completed `DreamShaderBundle_zh_CN.properties` coverage for newly added diagnostics and quick-fix messages (`VirtualFunction Description` quality diagnostics, settings/semantic suggestion quick fixes).
+- Added localization parity regression test (`DreamShaderBundleLocalizationTest`) to ensure `zh_CN` bundle contains all base bundle keys.
 - Added regression tests in `DreamShaderSemanticTokensTest` for `DSYM-001` and `DSYM-002`, including nested-call/member-like edge cases, array-index symbol usage, and multi-level namespace qualifier classification.
 - Added `DreamShaderSemanticTokenClassifierTest` to validate classifier behavior directly and verify classifier/annotator consistency on representative samples.
 
@@ -556,18 +578,19 @@ Rule format:
 | `DSYN-107` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testDsmDisallowsTopLevelShaderFunction()` |
 | `DSYN-108` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testShaderDisallowsInputsSection()` / `testShaderRequiresGraphSection()` |
 | `DSYN-109` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testShaderDuplicateSectionIsReported()` |
-| `DSYN-201` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownSettingsKey()` |
-| `DSYN-202` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testInvalidSettingsEnumValue()` |
-| `DSYN-203` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownBaseOutputMember()` |
-| `DSYN-204` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownTypeInInputs()` |
-| `DSYN-205` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testMissingOutArgumentInFunctionCall()` |
-| `DSYN-206` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnresolvedImportPath()` |
+| `DSYN-201` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownSettingsKey()` + `testUnknownSettingsKeyQuickFixReplacesWithSuggestion()` |
+| `DSYN-202` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testInvalidSettingsEnumValue()` + `testInvalidBooleanSettingsValue()` + `testValidBooleanSettingsValue()` + `testInvalidNumCustomizedUvsValue()` + `testValidNumCustomizedUvsValue()` + `testInvalidBooleanSettingsValueQuickFixReplacesWithTrue()` + `testInvalidNumCustomizedUvsValueQuickFixReplacesWithZero()` |
+| `DSYN-203` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownBaseOutputMember()` + `testUnknownBaseOutputMemberQuickFixReplacesWithSuggestion()` |
+| `DSYN-204` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownTypeInInputs()` + `testUnknownTypeQuickFixReplacesWithSuggestion()` |
+| `DSYN-205` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testMissingOutArgumentInFunctionCall()` + `testMissingOutArgumentQuickFixAddsPlaceholderArgument()` + `testMissingOutArgumentQuickFixAddsFirstArgumentForEmptyCall()` + `testMissingOutArgumentQuickFixAddsAllMissingOutArguments()` + `testMissingOutArgumentQuickFixAvoidsNameCollision()` + `testMissingOutArgumentQuickFixUsesConfiguredPlaceholderSuffix()` |
+| `DSYN-206` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnresolvedImportPath()` + `testUnresolvedImportPathQuickFixCreatesMissingFile()` + `testUnresolvedImportPathQuickFixCreatesFunctionTemplateForDsf()` + `testUnresolvedImportPathQuickFixCreatesShaderTemplateForDsm()` + `testUnresolvedScopedImportQuickFixCreatesFileUnderPackages()` + `testUnresolvedImportPathUnsupportedExtensionReportsExplicitError()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixChangesToDsh()` |
 | `DSYN-207` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsForLoopStatement()` / `testGraphDisallowsWhileLoopStatement()` / `testGraphDisallowsDoLoopStatement()` |
 | `DSYN-208` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsSwitchStatement()` / `testGraphDisallowsCaseKeyword()` / `testGraphDisallowsDefaultKeyword()` |
 | `DSYN-209` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsBreakStatement()` / `testGraphDisallowsContinueStatement()` |
 | `DSYN-210` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsReturnStatement()` |
-| `DSYN-211` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testVirtualFunctionOptionAssetRequiresPath()` + `testVirtualFunctionOptionAssetRejectsBareIdentifier()` + `testVirtualFunctionOptionAssetAcceptsPathCall()` + `testVirtualFunctionOptionAssetAcceptsQuotedObjectPath()` + `testVirtualFunctionOptionAssetAcceptsEngineRootPathCall()` + `testVirtualFunctionOptionAssetRejectsUnknownPathRoot()` + `testVirtualFunctionOptionAssetRequiresOptionEntry()` |
+| `DSYN-211` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testVirtualFunctionOptionAssetRequiresPath()` + `testVirtualFunctionOptionAssetRejectsBareIdentifier()` + `testVirtualFunctionOptionAssetAcceptsPathCall()` + `testVirtualFunctionOptionAssetAcceptsQuotedObjectPath()` + `testVirtualFunctionOptionAssetAcceptsEngineRootPathCall()` + `testVirtualFunctionOptionAssetRejectsUnknownPathRoot()` + `testVirtualFunctionOptionAssetUnknownRootQuickFixReplacesWithGame()` + `testVirtualFunctionOptionAssetRequiresOptionEntry()` |
 | `DSYN-212` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testShaderRootRejectsEngineRoot()` + `testShaderRootAcceptsPluginRoot()` |
+| `DSYN-213` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testVirtualFunctionOptionDescriptionWarnsWhenNotQuoted()` + `testVirtualFunctionOptionDescriptionNotQuotedQuickFixAddsQuotes()` + `testVirtualFunctionOptionDescriptionWarnsWhenEmpty()` + `testVirtualFunctionOptionDescriptionEmptyQuickFixFillsDefault()` + `testVirtualFunctionOptionDescriptionSettingsAliasAcceptsQuotedText()` + `testVirtualFunctionOptionDescriptionRecommendedWhenMissing()` + `testVirtualFunctionOptionDescriptionRecommendedQuickFixAddsDescription()` |
 
 #### A. Local Parser Diagnostics (`P1`)
 
@@ -796,7 +819,8 @@ VirtualFunction(Name="VF_InvalidAsset") {
 - `VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))`
 - `VirtualFunction Options.Asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>`
 - `VirtualFunction requires Asset option in Options (Settings alias is also accepted)`  
-`Test`: `testVirtualFunctionOptionAssetRequiresPath()` / `testVirtualFunctionOptionAssetRejectsBareIdentifier()` / `testVirtualFunctionOptionAssetAcceptsPathCall()` / `testVirtualFunctionOptionAssetAcceptsQuotedObjectPath()` / `testVirtualFunctionOptionAssetAcceptsEngineRootPathCall()` / `testVirtualFunctionOptionAssetRejectsUnknownPathRoot()` / `testVirtualFunctionOptionAssetRequiresOptionEntry()`
+`QuickFix`: `Replace Path root with Game` rewrites `Path(<UnknownRoot>, ...)` to `Path(Game, ...)`  
+`Test`: `testVirtualFunctionOptionAssetRequiresPath()` / `testVirtualFunctionOptionAssetRejectsBareIdentifier()` / `testVirtualFunctionOptionAssetAcceptsPathCall()` / `testVirtualFunctionOptionAssetAcceptsQuotedObjectPath()` / `testVirtualFunctionOptionAssetAcceptsEngineRootPathCall()` / `testVirtualFunctionOptionAssetRejectsUnknownPathRoot()` / `testVirtualFunctionOptionAssetUnknownRootQuickFixReplacesWithGame()` / `testVirtualFunctionOptionAssetRequiresOptionEntry()`
 
 26. `ID`: `DSYN-212`  
 `Priority`: `P2`  
@@ -809,6 +833,42 @@ Shader Root = "Engine", Name="Materials/M_InvalidRoot" {
 ```
 `Expected`: `Shader Root value 'Engine' is not allowed. Use Game, Plugin.<Name>, or Plugins.<Name>`  
 `Test`: `testShaderRootRejectsEngineRoot()` / `testShaderRootAcceptsPluginRoot()`
+
+27. `ID`: `DSYN-213`  
+`Priority`: `P2`  
+`Rule`: `VirtualFunction` `Options.Description` (including `Settings` alias) is recommended and should be a non-empty quoted string.  
+`Invalid`:
+```c
+VirtualFunction(Name="VF_InvalidDescription") {
+    Options = {
+        Description = BridgeCompatible;
+    }
+}
+```
+`Expected`: `VirtualFunction Options.Description should be a quoted string literal`  
+`Additional invalid`:
+```c
+VirtualFunction(Name="VF_EmptyDescription") {
+    Settings = {
+        Description = "";
+    }
+}
+```
+`Expected`: `VirtualFunction Options.Description should not be empty`  
+`Additional recommended warning`:
+```c
+VirtualFunction(Name="VF_NoDescription") {
+    Options = {
+        Asset = Path(Game, Materials/M_VFAsset);
+    }
+}
+```
+`Expected`: `VirtualFunction should provide Options.Description (Settings alias is also accepted)`  
+`QuickFix`:
+- `Quote Description value` wraps non-quoted values in quotes
+- `Fill Description with default text` replaces empty-string with default description text
+- `Add Description option` inserts `Description = "Bridge-compatible virtual function";` when missing  
+`Test`: `testVirtualFunctionOptionDescriptionWarnsWhenNotQuoted()` / `testVirtualFunctionOptionDescriptionNotQuotedQuickFixAddsQuotes()` / `testVirtualFunctionOptionDescriptionWarnsWhenEmpty()` / `testVirtualFunctionOptionDescriptionEmptyQuickFixFillsDefault()` / `testVirtualFunctionOptionDescriptionSettingsAliasAcceptsQuotedText()` / `testVirtualFunctionOptionDescriptionRecommendedWhenMissing()` / `testVirtualFunctionOptionDescriptionRecommendedQuickFixAddsDescription()`
 
 #### C. Semantic Diagnostics (`P2`)
 
@@ -824,11 +884,12 @@ Shader Main {
 }
 ```
 `Expected`: `Unknown settings key 'DomainX'. Did you mean 'Domain'?`  
-`Test`: `testUnknownSettingsKey()`
+`QuickFix`: `Replace with 'Domain'`  
+`Test`: `testUnknownSettingsKey()` / `testUnknownSettingsKeyQuickFixReplacesWithSuggestion()`
 
 16. `ID`: `DSYN-202`  
 `Priority`: `P2`  
-`Rule`: invalid enum-like `Settings` value should report diagnostic.  
+`Rule`: invalid `Settings` value should report diagnostic (enum-like + scalar bool/int validation).  
 `Invalid`:
 ```c
 Shader Main {
@@ -837,8 +898,23 @@ Shader Main {
     }
 }
 ```
-`Expected`: `Invalid value 'OpaqueX' for setting 'BlendMode'`  
-`Test`: `testInvalidSettingsEnumValue()`
+`Additional invalid examples`:
+```c
+Shader Main {
+    Settings = {
+        TwoSided = "enabled";
+        NumCustomizedUVs = 9;
+    }
+}
+```
+`Expected`:
+- `Invalid value 'OpaqueX' for setting 'BlendMode'`
+- `Invalid value 'enabled' for setting 'TwoSided'`
+- `Invalid value '9' for setting 'NumCustomizedUVs'`  
+`QuickFix`:
+- `Replace with true` for invalid `TwoSided` values
+- `Replace with 0` for invalid `NumCustomizedUVs` values  
+`Test`: `testInvalidSettingsEnumValue()` / `testInvalidBooleanSettingsValue()` / `testValidBooleanSettingsValue()` / `testInvalidNumCustomizedUvsValue()` / `testValidNumCustomizedUvsValue()` / `testInvalidBooleanSettingsValueQuickFixReplacesWithTrue()` / `testInvalidNumCustomizedUvsValueQuickFixReplacesWithZero()`
 
 17. `ID`: `DSYN-203`  
 `Priority`: `P2`  
@@ -852,7 +928,8 @@ Shader Main {
 }
 ```
 `Expected`: `Unknown material output member 'Base.ColorX'. Did you mean 'Base.BaseColor'?`  
-`Test`: `testUnknownBaseOutputMember()`
+`QuickFix`: `Replace with 'Base.BaseColor'`  
+`Test`: `testUnknownBaseOutputMember()` / `testUnknownBaseOutputMemberQuickFixReplacesWithSuggestion()`
 
 18. `ID`: `DSYN-204`  
 `Priority`: `P2`  
@@ -866,7 +943,8 @@ Shader Main {
 }
 ```
 `Expected`: `Unknown type 'float9'. Did you mean 'float'?`  
-`Test`: `testUnknownTypeInInputs()`
+`QuickFix`: `Replace with 'float'`  
+`Test`: `testUnknownTypeInInputs()` / `testUnknownTypeQuickFixReplacesWithSuggestion()`
 
 19. `ID`: `DSYN-205`  
 `Priority`: `P2`  
@@ -884,7 +962,8 @@ Shader Main {
 }
 ```
 `Expected`: `Missing out argument for parameter 'result'`  
-`Test`: `testMissingOutArgumentInFunctionCall()`
+`QuickFix`: `Add missing out arguments` inserts suggested placeholder targets for all missing out params at call site (appends `, <param>Out` list or fills empty arg list with `<param>Out` list), auto-avoids identifier collisions by incrementing suffixes (`<param>Out2`, ...), and uses configurable suffix from settings (`Out Placeholder Suffix`).  
+`Test`: `testMissingOutArgumentInFunctionCall()` / `testMissingOutArgumentQuickFixAddsPlaceholderArgument()` / `testMissingOutArgumentQuickFixAddsFirstArgumentForEmptyCall()` / `testMissingOutArgumentQuickFixAddsAllMissingOutArguments()` / `testMissingOutArgumentQuickFixAvoidsNameCollision()` / `testMissingOutArgumentQuickFixUsesConfiguredPlaceholderSuffix()`
 
 20. `ID`: `DSYN-206`  
 `Priority`: `P2`  
@@ -894,7 +973,13 @@ Shader Main {
 import "NotFound/Nope.dsh";
 ```
 `Expected`: `Cannot resolve import 'NotFound/Nope.dsh'`  
-`Test`: `testUnresolvedImportPath()`
+`Additional invalid`:
+```c
+import "Scripts/Auto.usf";
+```
+`Expected`: `Unsupported import file extension .usf. Only .dsh, .dsf, and .dsm are supported.`  
+`QuickFix`: `Create missing import file: <path>` creates a missing file under project-safe relative path, defaults to `.dsh` when extension is omitted, uses `DreamShaderTemplateService` templates for generated content (`.dsh` header template, `.dsf` function template, `.dsm` material template), opens the created file in editor, and supports scoped package imports by creating under `DShader/Packages/@scope/name/...`; unsupported extensions also provide `Change extension to .dsh`.  
+`Test`: `testUnresolvedImportPath()` / `testUnresolvedImportPathQuickFixCreatesMissingFile()` / `testUnresolvedImportPathQuickFixCreatesFunctionTemplateForDsf()` / `testUnresolvedImportPathQuickFixCreatesShaderTemplateForDsm()` / `testUnresolvedScopedImportQuickFixCreatesFileUnderPackages()` / `testUnresolvedImportPathUnsupportedExtensionReportsExplicitError()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixChangesToDsh()`
 
 21. `ID`: `DSYN-207`  
 `Priority`: `P2`  
@@ -925,7 +1010,13 @@ import "NotFound/Nope.dsh";
 Current test files:
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxDiagnosticsTest.kt` for `DSYN-001` to `DSYN-005`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSectionShapeDiagnosticsTest.kt` for `DSYN-101` to `DSYN-109` plus declaration-schema coverage (`Results` alias scope and function/graphfunction section constraints).
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210` plus `DSYN-211`/`DSYN-212` (`VirtualFunction Options.Asset` required + asset-path root validation, asset declaration `Root` validation).
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210` plus `DSYN-211`/`DSYN-212`/`DSYN-213` (`VirtualFunction Options.Asset` required + asset-path root validation + unknown-root quick-fix, asset declaration `Root` validation, `VirtualFunction` description quality/recommended warnings + quick-fix actions), with extended semantic quick-fix coverage:
+  - `DSYN-201` settings-key suggestion replacement (`Replace with '<SuggestedKey>'`)
+  - `DSYN-202` scalar settings validation (`TwoSided` bool, `NumCustomizedUVs` range) + value quick-fix actions (`Replace with true`, `Replace with 0`)
+  - `DSYN-203` base output suggestion replacement (`Replace with 'Base.<SuggestedMember>'`)
+  - `DSYN-204` type suggestion replacement (`Replace with '<SuggestedType>'`)
+  - `DSYN-205` missing out-argument insertion (`Add missing out arguments`, including name-collision avoidance and configurable `Out Placeholder Suffix`)
+  - `DSYN-206` unresolved import scaffold creation (`Create missing import file: <path>`, default `.dsh` extension when omitted, template content sourced from `DreamShaderTemplateService`, open created file, scoped imports routed to `DShader/Packages/@scope/name/...`) + unsupported-extension semantic guard (`.dsh/.dsf/.dsm` only) + extension quick-fix (`Change extension to .dsh`)
 
 Recommendation:
 - Use the `M4 Audit Matrix` as the source of truth for release checks and regression triage.
@@ -1336,6 +1427,7 @@ Acceptance criteria:
 | `P1` lexer/highlighter tests | `Implemented` | `DreamShaderLexerSyntaxHighlighterTest` |
 | `P1` completion regression tests | `Implemented` | `DreamShaderCompletionContextAnalyzerTest`, `DreamShaderCompletionSuggesterTest` |
 | `P1` navigation/diagnostic tests | `Implemented` | `DreamShaderGotoDeclarationHandlerTest`, `DreamShaderFindReferencesTest`, `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, `DreamShaderSyntaxDiagnosticsTest`, `DreamShaderSectionShapeDiagnosticsTest`, `DreamShaderSemanticDiagnosticsTest` |
+| `P1` localization parity guard | `Implemented` | `DreamShaderBundleLocalizationTest` (base bundle keys must exist in `DreamShaderBundle_zh_CN.properties`) |
 | `P2` large-file performance smoke tests | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest` |
 | `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`, file-based signing env/properties + legacy env fallback), `.github/workflows/build.yml`, `.github/workflows/release.yml` (writes cert/key secrets to temp files and publishes with file-path env) |
 | `P3` changelog aligned with release tags | `Implemented` | `CHANGELOG.md` + release workflow `patchChangelog` step in `.github/workflows/release.yml` |
@@ -1354,11 +1446,13 @@ IDEA/IntelliJ Gradle configuration (project-verified):
 
 This project **must** run Gradle with Java 17+.
 On this machine, system `java` may point to Java 11, so AI/terminal commands should bootstrap JDK 21 explicitly.
+All terminal Gradle operations should also pin Gradle user home to `J:/Gradle`.
 
 Use this before Gradle commands (AI/terminal only):
 ```powershell
 $env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
+$env:GRADLE_USER_HOME="J:/Gradle"
 java -version
 .\gradlew.bat -version
 ```
@@ -1366,6 +1460,7 @@ java -version
 Expected checks:
 - `java -version` shows `21.x`
 - `gradlew -version` reports JVM `21.x`
+- `GRADLE_USER_HOME` points to `J:/Gradle`
 
 Observed failure when using Java 11:
 ```text
@@ -1374,6 +1469,7 @@ Gradle requires JVM 17 or later to run. Your build is currently configured to us
 
 Quick verification command:
 ```powershell
+$env:GRADLE_USER_HOME="J:/Gradle"
 .\gradlew.bat -version
 ```
 
@@ -1384,17 +1480,17 @@ Expected check:
 
 Build:
 ```powershell
-.\gradlew.bat build --no-configuration-cache
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat build --no-configuration-cache
 ```
 
 Test:
 ```powershell
-.\gradlew.bat test --no-configuration-cache
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat test --no-configuration-cache
 ```
 
 Run plugin in sandbox:
 ```powershell
-.\gradlew.bat runIde --no-configuration-cache
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat runIde --no-configuration-cache
 ```
 
 ### Marketplace Signing and Publishing (File-Based)
@@ -1411,7 +1507,7 @@ Default files read from `.secrets/`:
 
 You can override secret directory with Gradle property:
 ```powershell
-.\gradlew.bat publishPlugin -PjetbrainsSecretsDir=.private
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat publishPlugin -PjetbrainsSecretsDir=.private
 ```
 
 `build.gradle.kts` supports multiple signing input modes, with file mode preferred:
@@ -1432,6 +1528,7 @@ Local PowerShell example (no `openssl` required):
 ```powershell
 $env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
+$env:GRADLE_USER_HOME="J:/Gradle"
 
 # Option A: Use project-local .secrets defaults (no extra env vars needed)
 .\gradlew.bat signPlugin
@@ -1530,6 +1627,7 @@ Configurable fields:
 - `Material Manifest Path`
 - `Show DreamShader status bar widget`
 - `Enable DreamShader in-editor code lens hints` (currently controls inlay-parameter-hints behavior, not IntelliJ Code Vision)
+- `Out Placeholder Suffix` (used by missing `out` argument quick-fix placeholder generation; sanitized to identifier-safe form)
 - `Bridge Recompile Current Command`
 - `Bridge Recompile All Command`
 - `Bridge Clean Generated Command`
@@ -1543,21 +1641,22 @@ Bridge command placeholders:
 
 AI/terminal recommended one-liners (with JDK 21 bootstrap):
 ```powershell
-$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; .\gradlew.bat build --no-configuration-cache
+$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; $env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat build --no-configuration-cache
 ```
 
 ```powershell
-$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; .\gradlew.bat test --no-configuration-cache
+$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; $env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat test --no-configuration-cache
 ```
 
 ```powershell
-$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; .\gradlew.bat runIde --no-configuration-cache
+$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; $env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat runIde --no-configuration-cache
 ```
 
 ### Quick Troubleshooting
 
 - If build still reports JVM 11:
 ```powershell
+$env:GRADLE_USER_HOME="J:/Gradle"
 .\gradlew.bat -version
 Get-Command java | Format-List Source
 java -version
@@ -1567,4 +1666,4 @@ Re-run the JDK 21 bootstrap commands above in the same shell session.
 - If Rider IDE can build but terminal cannot:
 Rider uses configured Gradle JVM.
 Terminal uses system `java` from `PATH`.
-Fix terminal by setting `JAVA_HOME` and prepending `$env:JAVA_HOME\bin`.
+Fix terminal by setting `JAVA_HOME`, prepending `$env:JAVA_HOME\bin`, and keeping `$env:GRADLE_USER_HOME="J:/Gradle"`.

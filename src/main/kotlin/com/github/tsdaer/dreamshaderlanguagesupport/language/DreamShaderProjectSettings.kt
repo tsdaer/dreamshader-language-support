@@ -29,6 +29,8 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         var showStatusBar: Boolean = true,
         /** UI toggle for future CodeLens integration. */
         var enableCodeLens: Boolean = true,
+        /** Suffix used when generating placeholder variable names for missing out arguments. */
+        var outArgumentPlaceholderSuffix: String = "Out",
         /** Preferred package index sources (multi-source mode). */
         var packageStoreIndexUrls: MutableList<String> = mutableListOf(),
         /** Backward-compatible single source setting used when list mode is empty. */

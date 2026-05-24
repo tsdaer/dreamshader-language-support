@@ -23,6 +23,109 @@ class DreamShaderCompletionSuggesterTest {
     }
 
     @Test
+    fun `suggests virtual function options keys in options section`() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    
+                }
+            }
+        """.trimIndent()
+        val marker = "Options {\n"
+        val offset = text.indexOf(marker) + marker.length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("Asset"))
+        assertTrue(labels.contains("Description"))
+        assertTrue(!labels.contains("Domain"))
+        assertTrue(!labels.contains("BlendMode"))
+    }
+
+    @Test
+    fun `suggests virtual function options alias keys in settings section`() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Settings {
+                    
+                }
+            }
+        """.trimIndent()
+        val marker = "Settings {\n"
+        val offset = text.indexOf(marker) + marker.length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("Asset"))
+        assertTrue(labels.contains("Description"))
+        assertTrue(!labels.contains("Domain"))
+        assertTrue(!labels.contains("BlendMode"))
+    }
+
+    @Test
+    fun `suggests virtual function asset path templates in options`() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = P
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("Asset = P") + "Asset = P".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("Path(Game, Materials/M_VFAsset)"))
+        assertTrue(labels.contains("Path(Engine, Materials/M_VFAsset)"))
+    }
+
+    @Test
+    fun `suggests quoted object path templates for virtual function asset`() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = "G
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("\"G") + "\"G".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("Game/MaterialFunctions/MF_VFAsset"))
+        assertTrue(!labels.contains("Engine/Functions/Engine_MF"))
+        assertTrue(!labels.contains("Path(Game, Materials/M_VFAsset)"))
+    }
+
+    @Test
+    fun `suggests virtual function asset path templates in settings alias`() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Settings {
+                    Asset = P
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("Asset = P") + "Asset = P".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("Path(Game, Materials/M_VFAsset)"))
+        assertTrue(labels.contains("Path(Engine, Materials/M_VFAsset)"))
+    }
+
+    @Test
+    fun `suggests virtual function description templates in settings alias`() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Settings {
+                    Description = "B
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("\"B") + "\"B".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("Bridge-compatible virtual function"))
+        assertTrue(!labels.contains("Existing material function asset"))
+    }
+
+    @Test
     fun `suggests settings value mappings for domain`() {
         val text = """
             Shader MySurface {
@@ -35,7 +138,41 @@ class DreamShaderCompletionSuggesterTest {
 
         val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
         assertTrue(labels.contains("Surface"))
-        assertTrue(labels.contains("PostProcess"))
+        assertTrue(!labels.contains("PostProcess"))
+        assertTrue(!labels.contains("DeferredDecal"))
+    }
+
+    @Test
+    fun `suggests boolean settings values without quotes`() {
+        val text = """
+            Shader MySurface {
+                Settings {
+                    TwoSided = t
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("TwoSided = t") + "TwoSided = t".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("true"))
+        assertTrue(!labels.contains("false"))
+    }
+
+    @Test
+    fun `suggests num customized uvs values without quotes`() {
+        val text = """
+            Shader MySurface {
+                Settings {
+                    NumCustomizedUVs = 1
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("NumCustomizedUVs = 1") + "NumCustomizedUVs = 1".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("1"))
+        assertTrue(!labels.contains("0"))
+        assertTrue(!labels.contains("8"))
     }
 
     @Test

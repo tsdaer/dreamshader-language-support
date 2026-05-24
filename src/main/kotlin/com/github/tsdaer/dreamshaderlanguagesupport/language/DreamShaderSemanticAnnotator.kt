@@ -3,15 +3,30 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
+import com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateService
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeDiagnosticsRepository
+import com.intellij.codeInsight.intention.IntentionAction
+import com.intellij.codeInsight.FileModificationService
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiFile
+import com.intellij.psi.SmartPointerManager
+import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.PsiTreeUtil
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.Locale
 import java.util.regex.Pattern
+import kotlin.io.path.invariantSeparatorsPathString
 
 /**
  * Central diagnostics and semantic-highlighting annotator.
@@ -171,7 +186,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         annotateUnsupportedGraphSwitchDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphBreakContinueDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphReturnDiagnostics(sourceText, topLevelDeclarations, holder)
-        annotateMissingOutArgumentDiagnostics(sourceText, tokens, topLevelDeclarations, holder)
+        annotateMissingOutArgumentDiagnostics(file, sourceText, tokens, topLevelDeclarations, holder)
         annotateAssetRootPathDiagnostics(topLevelDeclarations, holder)
         annotateUnresolvedImportDiagnostics(file, tokens, holder)
     }
@@ -395,6 +410,11 @@ class DreamShaderSemanticAnnotator : Annotator {
                 settingsAliasSections = groupedByName["settings"].orEmpty(),
                 holder = holder
             )
+            annotateVirtualFunctionDescriptionOptionRules(
+                optionSections = groupedByName["options"].orEmpty(),
+                settingsAliasSections = groupedByName["settings"].orEmpty(),
+                holder = holder
+            )
         }
     }
 
@@ -415,10 +435,16 @@ class DreamShaderSemanticAnnotator : Annotator {
                 val validationError = validateVirtualFunctionAssetPath(trimmed)
                 if (validationError == null) continue
                 val valueRange = TextRange(body.startOffset + matcher.start(1), body.startOffset + matcher.end(1))
-                holder.newAnnotation(
+                val pathRoot = extractPathRoot(trimmed)
+                val isUnknownRoot = pathRoot != null && !isAllowedVirtualFunctionAssetRoot(pathRoot)
+                val annotation = holder.newAnnotation(
                     HighlightSeverity.ERROR,
                     validationError
-                ).range(valueRange).create()
+                ).range(valueRange)
+                if (isUnknownRoot) {
+                    annotation.withFix(createReplaceVirtualFunctionAssetRootWithGameQuickFix(section, valueRange, trimmed))
+                }
+                annotation.create()
             }
         }
         if (!hasAsset && candidateSections.isNotEmpty()) {
@@ -427,6 +453,257 @@ class DreamShaderSemanticAnnotator : Annotator {
                 DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequired")
             ).range(candidateSections.first()).create()
         }
+    }
+
+    private fun annotateVirtualFunctionDescriptionOptionRules(
+        optionSections: List<DreamShaderSection>,
+        settingsAliasSections: List<DreamShaderSection>,
+        holder: AnnotationHolder
+    ) {
+        val candidateSections = optionSections + settingsAliasSections
+        var hasDescription = false
+        candidateSections.forEach { section ->
+            val body = sectionBody(section) ?: return@forEach
+            val matcher = VIRTUAL_FUNCTION_DESCRIPTION_ASSIGNMENT_PATTERN.matcher(body.text)
+            while (matcher.find()) {
+                hasDescription = true
+                val value = matcher.group(1) ?: continue
+                val trimmed = value.trim()
+                val valueRange = TextRange(body.startOffset + matcher.start(1), body.startOffset + matcher.end(1))
+                if (!isQuotedStringLiteral(trimmed)) {
+                    holder.newAnnotation(
+                        HighlightSeverity.WARNING,
+                        DreamShaderBundle.message("diagnostic.virtualFunctionOptionDescriptionMustBeQuoted")
+                    ).range(valueRange)
+                        .withFix(createQuoteVirtualFunctionDescriptionQuickFix(section, valueRange, trimmed))
+                        .create()
+                    continue
+                }
+
+                val description = trimmed.substring(1, trimmed.length - 1).trim()
+                if (description.isNotEmpty()) continue
+                holder.newAnnotation(
+                    HighlightSeverity.WARNING,
+                    DreamShaderBundle.message("diagnostic.virtualFunctionOptionDescriptionEmpty")
+                ).range(valueRange)
+                    .withFix(createFillVirtualFunctionDescriptionQuickFix(section, valueRange))
+                    .create()
+            }
+        }
+        if (!hasDescription && candidateSections.isNotEmpty()) {
+            val fallbackSection = candidateSections.first()
+            holder.newAnnotation(
+                HighlightSeverity.WARNING,
+                DreamShaderBundle.message("diagnostic.virtualFunctionOptionDescriptionRecommended")
+            ).range(fallbackSection)
+                .withFix(createAddVirtualFunctionDescriptionQuickFix(fallbackSection))
+                .create()
+        }
+    }
+
+    private fun createAddVirtualFunctionDescriptionQuickFix(section: DreamShaderSection): IntentionAction {
+        val pointer: SmartPsiElementPointer<DreamShaderSection> = SmartPointerManager.createPointer(section)
+        return object : IntentionAction {
+            override fun getText(): String =
+                DreamShaderBundle.message("quickfix.virtualFunctionOptionDescriptionAdd")
+
+            override fun getFamilyName(): String =
+                DreamShaderBundle.message("quickfix.family.virtualFunction")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                return pointer.element?.isValid == true
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetSection = pointer.element ?: return
+                val targetFile = targetSection.containingFile ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetSection)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                val body = sectionBody(targetSection) ?: return
+                val insertionOffset = descriptionInsertionOffset(body)
+                val insertionText = buildDescriptionInsertionText(targetSection, body, targetFile.text)
+                document.insertString(insertionOffset, insertionText)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun createQuoteVirtualFunctionDescriptionQuickFix(
+        section: DreamShaderSection,
+        valueRange: TextRange,
+        rawValue: String
+    ): IntentionAction {
+        val sectionPointer: SmartPsiElementPointer<DreamShaderSection> = SmartPointerManager.createPointer(section)
+        val relativeRange = TextRange(
+            valueRange.startOffset - section.textRange.startOffset,
+            valueRange.endOffset - section.textRange.startOffset
+        )
+        return object : IntentionAction {
+            override fun getText(): String =
+                DreamShaderBundle.message("quickfix.virtualFunctionOptionDescriptionQuote")
+
+            override fun getFamilyName(): String =
+                DreamShaderBundle.message("quickfix.family.virtualFunction")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                return sectionPointer.element?.isValid == true
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetSection = sectionPointer.element ?: return
+                val targetFile = targetSection.containingFile ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetSection)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                val replacement = "\"" + rawValue.trim().trim('"') + "\""
+                replaceSectionRelativeRange(document, targetSection, relativeRange, replacement)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun createReplaceVirtualFunctionAssetRootWithGameQuickFix(
+        section: DreamShaderSection,
+        valueRange: TextRange,
+        rawValue: String
+    ): IntentionAction {
+        val sectionPointer: SmartPsiElementPointer<DreamShaderSection> = SmartPointerManager.createPointer(section)
+        val relativeRange = TextRange(
+            valueRange.startOffset - section.textRange.startOffset,
+            valueRange.endOffset - section.textRange.startOffset
+        )
+        return object : IntentionAction {
+            override fun getText(): String =
+                DreamShaderBundle.message("quickfix.virtualFunctionOptionAssetReplaceRootWithGame")
+
+            override fun getFamilyName(): String =
+                DreamShaderBundle.message("quickfix.family.virtualFunction")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                return sectionPointer.element?.isValid == true
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetSection = sectionPointer.element ?: return
+                val targetFile = targetSection.containingFile ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetSection)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                val replacement = replaceVirtualFunctionAssetRootWithGame(rawValue) ?: return
+                replaceSectionRelativeRange(document, targetSection, relativeRange, replacement)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun replaceVirtualFunctionAssetRootWithGame(rawValue: String): String? {
+        val trimmed = rawValue.trim()
+        val matcher = PATH_CALL_WITH_CAPTURE_PATTERN.matcher(trimmed)
+        if (!matcher.matches()) return null
+        val prefix = matcher.group(1) ?: return null
+        val inside = matcher.group(2) ?: return null
+        val suffix = matcher.group(3) ?: ")"
+        val args = splitTopLevel(inside, ',').map { it.trim() }.toMutableList()
+        if (args.isEmpty()) return null
+        val firstArg = args[0]
+        args[0] = if (firstArg.startsWith("\"") && firstArg.endsWith("\"")) "\"Game\"" else "Game"
+        return prefix + args.joinToString(", ") + suffix
+    }
+
+    private fun createFillVirtualFunctionDescriptionQuickFix(
+        section: DreamShaderSection,
+        valueRange: TextRange
+    ): IntentionAction {
+        val sectionPointer: SmartPsiElementPointer<DreamShaderSection> = SmartPointerManager.createPointer(section)
+        val relativeRange = TextRange(
+            valueRange.startOffset - section.textRange.startOffset,
+            valueRange.endOffset - section.textRange.startOffset
+        )
+        return object : IntentionAction {
+            override fun getText(): String =
+                DreamShaderBundle.message("quickfix.virtualFunctionOptionDescriptionFillDefault")
+
+            override fun getFamilyName(): String =
+                DreamShaderBundle.message("quickfix.family.virtualFunction")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                return sectionPointer.element?.isValid == true
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetSection = sectionPointer.element ?: return
+                val targetFile = targetSection.containingFile ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetSection)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                replaceSectionRelativeRange(
+                    document = document,
+                    section = targetSection,
+                    relativeRange = relativeRange,
+                    replacement = "\"Bridge-compatible virtual function\""
+                )
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun replaceSectionRelativeRange(
+        document: com.intellij.openapi.editor.Document,
+        section: DreamShaderSection,
+        relativeRange: TextRange,
+        replacement: String
+    ) {
+        val sectionStart = section.textRange.startOffset
+        val start = (sectionStart + relativeRange.startOffset).coerceIn(0, document.textLength)
+        val end = (sectionStart + relativeRange.endOffset).coerceIn(start, document.textLength)
+        document.replaceString(start, end, replacement)
+    }
+
+    private fun descriptionInsertionOffset(body: SectionBody): Int {
+        val trailingTriviaLength = body.text
+            .takeLastWhile { it == ' ' || it == '\t' || it == '\r' || it == '\n' }
+            .length
+        return body.startOffset + body.text.length - trailingTriviaLength
+    }
+
+    private fun buildDescriptionInsertionText(
+        section: DreamShaderSection,
+        body: SectionBody,
+        fileText: String
+    ): String {
+        val bodyText = body.text
+        val trailingTriviaLength = bodyText
+            .takeLastWhile { it == ' ' || it == '\t' || it == '\r' || it == '\n' }
+            .length
+        val bodyContent = bodyText.dropLast(trailingTriviaLength)
+        val sectionIndent = lineIndentAt(fileText, section.textRange.startOffset)
+        val entryIndent = firstBodyEntryIndent(bodyText) ?: "$sectionIndent    "
+        val needsLeadingNewline = bodyContent.isNotEmpty() && !bodyContent.endsWith('\n') && !bodyContent.endsWith('\r')
+        return buildString {
+            if (needsLeadingNewline) append('\n')
+            append(entryIndent)
+            append("Description = \"Bridge-compatible virtual function\";")
+        }
+    }
+
+    private fun firstBodyEntryIndent(bodyText: String): String? {
+        val lines = bodyText.lineSequence()
+        for (line in lines) {
+            if (line.isBlank()) continue
+            return line.takeWhile { it == ' ' || it == '\t' }
+        }
+        return null
+    }
+
+    private fun lineIndentAt(text: String, offset: Int): String {
+        val safeOffset = offset.coerceIn(0, text.length)
+        val lineStart = text.lastIndexOf('\n', (safeOffset - 1).coerceAtLeast(0)).let { if (it < 0) 0 else it + 1 }
+        return text.substring(lineStart, safeOffset).takeWhile { it == ' ' || it == '\t' }
     }
 
     private fun annotateNamespaceRules(tokens: List<LexedToken>, holder: AnnotationHolder) {
@@ -514,25 +791,119 @@ class DreamShaderSemanticAnnotator : Annotator {
                             } else {
                                 DreamShaderBundle.message("diagnostic.unknownSettingsKey", key)
                             }
-                            holder.newAnnotation(
+                            val annotation = holder.newAnnotation(
                                 HighlightSeverity.ERROR,
                                 message
-                            ).range(keyRange).create()
+                            ).range(keyRange)
+                            if (suggestion != null) {
+                                annotation.withFix(
+                                    createReplaceSettingsKeyQuickFix(
+                                        section = section,
+                                        keyRange = keyRange,
+                                        replacement = suggestion
+                                    )
+                                )
+                            }
+                            annotation.create()
                             continue
                         }
 
-                        val validValues = SETTING_VALUE_MAPPINGS[keyLower] ?: continue
                         val rawValue = matcher.group(2) ?: continue
                         val value = rawValue.trim().trim('"')
-                        if (value !in validValues) {
+                        val validator = SETTING_VALUE_VALIDATORS[keyLower] ?: continue
+                        if (!validator(value)) {
                             val valueRange = TextRange(body.startOffset + matcher.start(2), body.startOffset + matcher.end(2))
-                            holder.newAnnotation(
+                            val annotation = holder.newAnnotation(
                                 HighlightSeverity.ERROR,
                                 DreamShaderBundle.message("diagnostic.invalidSettingValue", value, key)
-                            ).range(valueRange).create()
+                            ).range(valueRange)
+                            when (keyLower) {
+                                "twosided" -> annotation.withFix(
+                                    createReplaceSettingsValueQuickFix(
+                                        section = section,
+                                        valueRange = valueRange,
+                                        replacement = "true",
+                                        messageKey = "quickfix.settingsReplaceWithTrue"
+                                    )
+                                )
+                                "numcustomizeduvs" -> annotation.withFix(
+                                    createReplaceSettingsValueQuickFix(
+                                        section = section,
+                                        valueRange = valueRange,
+                                        replacement = "0",
+                                        messageKey = "quickfix.settingsReplaceWithZero"
+                                    )
+                                )
+                            }
+                            annotation.create()
                         }
                     }
                 }
+        }
+    }
+
+    private fun createReplaceSettingsKeyQuickFix(
+        section: DreamShaderSection,
+        keyRange: TextRange,
+        replacement: String
+    ): IntentionAction {
+        val sectionPointer: SmartPsiElementPointer<DreamShaderSection> = SmartPointerManager.createPointer(section)
+        val relativeRange = TextRange(
+            keyRange.startOffset - section.textRange.startOffset,
+            keyRange.endOffset - section.textRange.startOffset
+        )
+        return object : IntentionAction {
+            override fun getText(): String = DreamShaderBundle.message("quickfix.settingsReplaceWithSuggestion", replacement)
+
+            override fun getFamilyName(): String = DreamShaderBundle.message("quickfix.family.settings")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                return sectionPointer.element?.isValid == true
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetSection = sectionPointer.element ?: return
+                val targetFile = targetSection.containingFile ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetSection)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                replaceSectionRelativeRange(document, targetSection, relativeRange, replacement)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun createReplaceSettingsValueQuickFix(
+        section: DreamShaderSection,
+        valueRange: TextRange,
+        replacement: String,
+        messageKey: String
+    ): IntentionAction {
+        val sectionPointer: SmartPsiElementPointer<DreamShaderSection> = SmartPointerManager.createPointer(section)
+        val relativeRange = TextRange(
+            valueRange.startOffset - section.textRange.startOffset,
+            valueRange.endOffset - section.textRange.startOffset
+        )
+        return object : IntentionAction {
+            override fun getText(): String = DreamShaderBundle.message(messageKey)
+
+            override fun getFamilyName(): String = DreamShaderBundle.message("quickfix.family.settings")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                return sectionPointer.element?.isValid == true
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetSection = sectionPointer.element ?: return
+                val targetFile = targetSection.containingFile ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetSection)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                replaceSectionRelativeRange(document, targetSection, relativeRange, replacement)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
         }
     }
 
@@ -563,10 +934,22 @@ class DreamShaderSemanticAnnotator : Annotator {
                         } else {
                             DreamShaderBundle.message("diagnostic.unknownBaseOutputMember", member)
                         }
-                        holder.newAnnotation(
+                        val annotation = holder.newAnnotation(
                             HighlightSeverity.ERROR,
                             message
-                        ).range(range).create()
+                        ).range(range)
+                        if (suggestion != null) {
+                            annotation.withFix(
+                                createReplaceSectionRangeQuickFix(
+                                    section = section,
+                                    targetRange = range,
+                                    replacement = "Base.$suggestion",
+                                    text = DreamShaderBundle.message("quickfix.baseOutputReplaceWithSuggestion", suggestion),
+                                    family = DreamShaderBundle.message("quickfix.family.semantic")
+                                )
+                            )
+                        }
+                        annotation.create()
                     }
                 }
         }
@@ -596,12 +979,58 @@ class DreamShaderSemanticAnnotator : Annotator {
                         } else {
                             DreamShaderBundle.message("diagnostic.unknownType", type)
                         }
-                        holder.newAnnotation(
+                        val annotation = holder.newAnnotation(
                             HighlightSeverity.ERROR,
                             message
-                        ).range(range).create()
+                        ).range(range)
+                        if (suggestion != null) {
+                            annotation.withFix(
+                                createReplaceSectionRangeQuickFix(
+                                    section = section,
+                                    targetRange = range,
+                                    replacement = suggestion,
+                                    text = DreamShaderBundle.message("quickfix.typeReplaceWithSuggestion", suggestion),
+                                    family = DreamShaderBundle.message("quickfix.family.semantic")
+                                )
+                            )
+                        }
+                        annotation.create()
                     }
                 }
+        }
+    }
+
+    private fun createReplaceSectionRangeQuickFix(
+        section: DreamShaderSection,
+        targetRange: TextRange,
+        replacement: String,
+        text: String,
+        family: String
+    ): IntentionAction {
+        val sectionPointer: SmartPsiElementPointer<DreamShaderSection> = SmartPointerManager.createPointer(section)
+        val relativeRange = TextRange(
+            targetRange.startOffset - section.textRange.startOffset,
+            targetRange.endOffset - section.textRange.startOffset
+        )
+        return object : IntentionAction {
+            override fun getText(): String = text
+
+            override fun getFamilyName(): String = family
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                return sectionPointer.element?.isValid == true
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetSection = sectionPointer.element ?: return
+                val targetFile = targetSection.containingFile ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetSection)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                replaceSectionRelativeRange(document, targetSection, relativeRange, replacement)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
         }
     }
 
@@ -699,6 +1128,7 @@ class DreamShaderSemanticAnnotator : Annotator {
 
     // Semantic diagnostics: call/import validations.
     private fun annotateMissingOutArgumentDiagnostics(
+        file: DreamShaderPsiFile,
         sourceText: String,
         tokens: List<LexedToken>,
         topLevelDeclarations: List<DreamShaderDeclaration>,
@@ -731,10 +1161,64 @@ class DreamShaderSemanticAnnotator : Annotator {
                 ?.value
                 ?: return@forEach
 
-            holder.newAnnotation(
+            val annotation = holder.newAnnotation(
                 HighlightSeverity.ERROR,
                 DreamShaderBundle.message("diagnostic.missingOutArgumentForParameter", missingOutParam.name)
-            ).range(token.range).create()
+            ).range(token.range)
+            annotation.withFix(
+                createAddMissingOutArgumentsQuickFix(
+                    file = file,
+                    call = call,
+                    signature = signature
+                )
+            )
+            annotation.create()
+        }
+    }
+
+    private fun createAddMissingOutArgumentsQuickFix(
+        file: DreamShaderPsiFile,
+        call: CallArgumentInfo,
+        signature: ParsedSignature
+    ): IntentionAction {
+        val filePointer: SmartPsiElementPointer<DreamShaderPsiFile> = SmartPointerManager.createPointer(file)
+        val missingOutParams = signature.params.withIndex()
+            .filter { (index, param) -> param.isOut && index >= call.argumentCount }
+            .map { it.value.name }
+        return object : IntentionAction {
+            override fun getText(): String =
+                DreamShaderBundle.message("quickfix.callAddMissingOutArguments")
+
+            override fun getFamilyName(): String = DreamShaderBundle.message("quickfix.family.call")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                val targetFile = filePointer.element ?: return false
+                return missingOutParams.isNotEmpty() && call.rightParenOffset in 0 until targetFile.textLength
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetFile = filePointer.element ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetFile)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                val insertionOffset = call.rightParenOffset.coerceIn(0, document.textLength)
+                val fileText = document.text
+                val occupied = collectIdentifierNames(fileText).toMutableSet()
+                val generated = mutableSetOf<String>()
+                val suffix = normalizedOutArgumentPlaceholderSuffix(project)
+                val suggestedTargets = missingOutParams.map { paramName ->
+                    generateUniqueOutTargetName("$paramName$suffix", occupied, generated)
+                }
+                val insertionText = when {
+                    suggestedTargets.isEmpty() -> ""
+                    call.argumentCount > 0 -> ", ${suggestedTargets.joinToString(", ")}"
+                    else -> suggestedTargets.joinToString(", ")
+                }
+                if (insertionText.isBlank()) return
+                document.insertString(insertionOffset, insertionText)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
         }
     }
 
@@ -751,13 +1235,208 @@ class DreamShaderSemanticAnnotator : Annotator {
             if (token.text.length < 2 || !token.text.startsWith('"') || !token.text.endsWith('"')) return@forEach
             val importPath = token.text.substring(1, token.text.length - 1).trim()
             if (importPath.isBlank()) return@forEach
+            detectUnsupportedImportExtension(importPath)?.let { unsupportedExtension ->
+                val annotation = holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    DreamShaderBundle.message("diagnostic.importUnsupportedExtension", unsupportedExtension)
+                ).range(token.range)
+                createReplaceImportExtensionQuickFix(file, token.range, importPath, ".dsh")?.let { annotation.withFix(it) }
+                annotation.create()
+                return@forEach
+            }
             if (DreamShaderImportResolver.resolveImport(file, importPath) != null) return@forEach
 
-            holder.newAnnotation(
+            val annotation = holder.newAnnotation(
                 HighlightSeverity.ERROR,
                 DreamShaderBundle.message("diagnostic.cannotResolveImport", importPath)
-            ).range(token.range).create()
+            ).range(token.range)
+            createCreateMissingImportFileQuickFix(file, importPath)?.let { annotation.withFix(it) }
+            annotation.create()
         }
+    }
+
+    private fun createReplaceImportExtensionQuickFix(
+        file: DreamShaderPsiFile,
+        importStringRange: TextRange,
+        importPath: String,
+        replacementExtension: String
+    ): IntentionAction? {
+        if (!replacementExtension.startsWith(".")) return null
+        val fixedImportPath = replaceImportExtension(importPath, replacementExtension) ?: return null
+        val filePointer: SmartPsiElementPointer<DreamShaderPsiFile> = SmartPointerManager.createPointer(file)
+        return object : IntentionAction {
+            override fun getText(): String =
+                DreamShaderBundle.message("quickfix.importChangeExtension", replacementExtension)
+
+            override fun getFamilyName(): String = DreamShaderBundle.message("quickfix.family.import")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                val targetFile = filePointer.element ?: return false
+                return importStringRange.startOffset >= 0 &&
+                    importStringRange.endOffset <= targetFile.textLength &&
+                    importStringRange.length > 1
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetFile = filePointer.element ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetFile)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                val start = importStringRange.startOffset.coerceIn(0, document.textLength)
+                val end = importStringRange.endOffset.coerceIn(start, document.textLength)
+                if (end - start < 2) return
+                document.replaceString(start, end, "\"$fixedImportPath\"")
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun createCreateMissingImportFileQuickFix(
+        file: DreamShaderPsiFile,
+        importPath: String
+    ): IntentionAction? {
+        val filePointer: SmartPsiElementPointer<DreamShaderPsiFile> = SmartPointerManager.createPointer(file)
+        val creationPlan = buildImportCreationPlan(importPath) ?: return null
+        return object : IntentionAction {
+            override fun getText(): String = DreamShaderBundle.message("quickfix.importCreateMissingFile", creationPlan.relativePath)
+
+            override fun getFamilyName(): String = DreamShaderBundle.message("quickfix.family.import")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                val targetFile = filePointer.element ?: return false
+                return resolveImportCreationTarget(targetFile, creationPlan)?.let { !Files.exists(it) } == true
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetFile = filePointer.element ?: return
+                val targetPath = resolveImportCreationTarget(targetFile, creationPlan) ?: return
+                if (Files.exists(targetPath)) return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetFile)) return
+
+                val templateService = DreamShaderTemplateService(project)
+                val result = when (targetPath.fileName.toString().substringAfterLast('.', "").lowercase(Locale.ROOT)) {
+                    "dsm" -> templateService.createMaterialTemplate(targetPath.invariantSeparatorsPathString)
+                    "dsf" -> templateService.createFunctionTemplate(targetPath.invariantSeparatorsPathString)
+                    else -> templateService.createHeaderTemplate(targetPath.invariantSeparatorsPathString)
+                }
+                if (!result.success) return
+                val createdPath = result.targetPath ?: return
+                val created = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(createdPath) ?: return
+                OpenFileDescriptor(project, created, 0, 0).navigate(true)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun buildImportCreationPlan(importPath: String): ImportCreationPlan? {
+        val normalized = importPath.trim().replace('\\', '/')
+        if (normalized.isBlank()) return null
+        if (normalized.contains("://")) return null
+        if (isAbsolutePath(normalized)) return null
+        val isScoped = normalized.startsWith("@")
+        val parts = normalized.split('/').filter { it.isNotBlank() }
+        if (parts.isEmpty()) return null
+        if (parts.any { it == "." || it == ".." }) return null
+        if (isScoped && parts.size < 2) return null
+        val last = parts.last()
+        if (last.contains('.')) {
+            val extension = last.substringAfterLast('.', "").lowercase(Locale.ROOT)
+            if (extension !in IMPORT_FILE_EXTENSIONS) return null
+        }
+        val pathWithExtension = if (parts.last().contains('.')) parts.joinToString("/") else "${parts.joinToString("/")}.dsh"
+        return ImportCreationPlan(
+            relativePath = pathWithExtension,
+            isScopedPackageImport = isScoped
+        )
+    }
+
+    private fun resolveImportCreationTarget(file: DreamShaderPsiFile, creationPlan: ImportCreationPlan): Path? {
+        val containingDirectory = file.virtualFile?.parent ?: return null
+        val projectBasePath = file.project.basePath ?: return null
+        val projectRoot = runCatching { Paths.get(projectBasePath).normalize().toAbsolutePath() }.getOrNull() ?: return null
+        val containingPath = runCatching { Paths.get(containingDirectory.path).normalize().toAbsolutePath() }.getOrNull()
+        val basePath = if (creationPlan.isScopedPackageImport) {
+            projectRoot.resolve("DShader").resolve("Packages")
+        } else {
+            containingPath?.takeIf { it.startsWith(projectRoot) } ?: projectRoot
+        }
+        var target = basePath
+        creationPlan.relativePath.split('/').forEach { segment ->
+            if (segment.isBlank()) return@forEach
+            target = target.resolve(segment)
+        }
+        val normalizedTarget = target.normalize().toAbsolutePath()
+        return if (normalizedTarget.startsWith(projectRoot)) normalizedTarget else null
+    }
+
+    private fun isAbsolutePath(path: String): Boolean {
+        if (path.startsWith("/") || path.startsWith("\\")) return true
+        return runCatching { Paths.get(path).isAbsolute }.getOrDefault(false)
+    }
+
+    private fun detectUnsupportedImportExtension(importPath: String): String? {
+        val normalized = importPath.trim().replace('\\', '/')
+        val lastSegment = normalized.substringAfterLast('/', "")
+        if (lastSegment.isBlank()) return null
+        val dotIndex = lastSegment.lastIndexOf('.')
+        if (dotIndex <= 0 || dotIndex >= lastSegment.length - 1) return null
+        val extension = lastSegment.substring(dotIndex + 1).lowercase(Locale.ROOT)
+        return if (extension in IMPORT_FILE_EXTENSIONS) null else ".${extension}"
+    }
+
+    private fun replaceImportExtension(importPath: String, replacementExtension: String): String? {
+        val normalized = importPath.trim().replace('\\', '/')
+        if (normalized.isBlank()) return null
+        val slashIndex = normalized.lastIndexOf('/')
+        val lastSegment = if (slashIndex >= 0) normalized.substring(slashIndex + 1) else normalized
+        val dotIndex = lastSegment.lastIndexOf('.')
+        if (dotIndex <= 0) return null
+        val prefix = if (slashIndex >= 0) normalized.substring(0, slashIndex + 1) else ""
+        val stem = lastSegment.substring(0, dotIndex)
+        if (stem.isBlank()) return null
+        return "$prefix$stem$replacementExtension"
+    }
+
+    private fun collectIdentifierNames(text: String): Set<String> {
+        val matcher = IDENTIFIER_PATTERN.matcher(text)
+        val result = linkedSetOf<String>()
+        while (matcher.find()) {
+            matcher.group()?.let { result.add(it) }
+        }
+        return result
+    }
+
+    private fun generateUniqueOutTargetName(
+        base: String,
+        occupied: MutableSet<String>,
+        generated: MutableSet<String>
+    ): String {
+        if (base !in occupied && base !in generated) {
+            generated.add(base)
+            occupied.add(base)
+            return base
+        }
+        var suffix = 2
+        while (true) {
+            val candidate = "$base$suffix"
+            if (candidate !in occupied && candidate !in generated) {
+                generated.add(candidate)
+                occupied.add(candidate)
+                return candidate
+            }
+            suffix++
+        }
+    }
+
+    private fun normalizedOutArgumentPlaceholderSuffix(project: Project): String {
+        val raw = project.getService(DreamShaderProjectSettings::class.java).state.outArgumentPlaceholderSuffix
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) return "Out"
+        val cleaned = trimmed.replace(Regex("[^A-Za-z0-9_]"), "_")
+        if (cleaned.isBlank()) return "Out"
+        return if (cleaned.first().isDigit()) "_$cleaned" else cleaned
     }
 
     private fun annotateAssetRootPathDiagnostics(
@@ -880,7 +1559,10 @@ class DreamShaderSemanticAnnotator : Annotator {
                 ')' -> {
                     if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
                         val argumentCount = if (!sawArgumentToken) 0 else commaCount + 1
-                        return CallArgumentInfo(argumentCount)
+                        return CallArgumentInfo(
+                            argumentCount = argumentCount,
+                            rightParenOffset = index
+                        )
                     }
                     if (parenDepth > 0) parenDepth--
                 }
@@ -1087,6 +1769,11 @@ class DreamShaderSemanticAnnotator : Annotator {
         return null
     }
 
+    private fun isQuotedStringLiteral(value: String): Boolean {
+        if (value.length < 2) return false
+        return value.startsWith("\"") && value.endsWith("\"")
+    }
+
     private fun extractPathRoot(value: String): String? {
         val trimmed = value.trim()
         if (trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 3) {
@@ -1249,7 +1936,8 @@ class DreamShaderSemanticAnnotator : Annotator {
     )
 
     private data class CallArgumentInfo(
-        val argumentCount: Int
+        val argumentCount: Int,
+        val rightParenOffset: Int
     )
 
     private data class SectionBody(
@@ -1262,6 +1950,11 @@ class DreamShaderSemanticAnnotator : Annotator {
         val value: String,
         val startOffset: Int,
         val endOffset: Int
+    )
+
+    private data class ImportCreationPlan(
+        val relativePath: String,
+        val isScopedPackageImport: Boolean
     )
 
     companion object {
@@ -1288,6 +1981,34 @@ class DreamShaderSemanticAnnotator : Annotator {
             "blendmode" to setOf("Opaque", "Masked", "Cutout", "Translucent", "Transparent", "Additive", "Modulate", "AlphaComposite", "AlphaHoldout"),
             "rendertype" to setOf("Opaque", "Masked", "Cutout", "Translucent", "Transparent", "Additive", "Modulate", "AlphaComposite", "AlphaHoldout")
         )
+        private val BOOLEAN_SETTING_KEYS = setOf(
+            "twosided",
+            "wireframe",
+            "ditheredlodtransition",
+            "ditheropacitymask",
+            "allownegativeemissivecolor",
+            "castdynamicshadowasmasked",
+            "responsiveaa",
+            "screenspacereflections",
+            "contactshadows",
+            "disabledepthtest",
+            "outputtranslucentvelocity",
+            "tangentspacenormal",
+            "fullyrough",
+            "issky",
+            "thinsurface"
+        )
+        private val SETTING_VALUE_VALIDATORS: Map<String, (String) -> Boolean> = buildMap {
+            SETTING_VALUE_MAPPINGS.forEach { (key, values) ->
+                put(key) { value -> value in values }
+            }
+            BOOLEAN_SETTING_KEYS.forEach { key ->
+                put(key) { value -> value.equals("true", ignoreCase = true) || value.equals("false", ignoreCase = true) }
+            }
+            put("numcustomizeduvs") { value ->
+                value.toIntOrNull()?.let { it in 0..8 } == true
+            }
+        }
 
         private val BASE_OUTPUT_MEMBERS = setOf(
             "materialattributes", "attributes", "basecolor", "emissivecolor", "emissive", "opacity", "opacitymask",
@@ -1317,7 +2038,7 @@ class DreamShaderSemanticAnnotator : Annotator {
 
         // Regex: settings/output/type diagnostics.
         private val SETTINGS_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
-            "(?m)\\b([A-Za-z_][A-Za-z0-9_.]*)\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|[A-Za-z_][A-Za-z0-9_.]*)"
+            "(?m)\\b([A-Za-z_][A-Za-z0-9_.]*)\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|-?\\d+(?:\\.\\d+)?|[A-Za-z_][A-Za-z0-9_.]*)"
         )
         private val NAMED_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
             "(?is)\\b([A-Za-z_][A-Za-z0-9_.]*)\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|[A-Za-z_][A-Za-z0-9_./-]*)"
@@ -1325,7 +2046,15 @@ class DreamShaderSemanticAnnotator : Annotator {
         private val VIRTUAL_FUNCTION_ASSET_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
             "(?mis)\\bAsset\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|Path\\s*\\([^\\n;{}]*\\)|[A-Za-z_][A-Za-z0-9_.]*)"
         )
+        private val VIRTUAL_FUNCTION_DESCRIPTION_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
+            "(?mis)\\bDescription\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|[^;\\n{}]+)"
+        )
+        private val PATH_CALL_WITH_CAPTURE_PATTERN: Pattern = Pattern.compile(
+            "(?is)^(\\s*Path\\s*\\()(.*)(\\)\\s*)$"
+        )
+        private val IDENTIFIER_PATTERN: Pattern = Pattern.compile("\\b[A-Za-z_][A-Za-z0-9_]*\\b")
         private val PATH_CALL_PATTERN: Pattern = Pattern.compile("(?is)Path\\s*\\(.*\\)")
+        private val IMPORT_FILE_EXTENSIONS = setOf("dsh", "dsf", "dsm")
         private val BASE_MEMBER_PATTERN: Pattern = Pattern.compile("\\bBase\\.([A-Za-z_][A-Za-z0-9_]*)")
         private val TYPED_DECLARATION_PATTERN: Pattern = Pattern.compile(
             "(?m)(?:^|;)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=|;|\\n)"

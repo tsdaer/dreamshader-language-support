@@ -20,6 +20,7 @@ class DreamShaderSettingsConfigurable(
     private var manifestPathField: JBTextField? = null
     private var showStatusBarBox: JBCheckBox? = null
     private var enableCodeLensBox: JBCheckBox? = null
+    private var outArgumentPlaceholderSuffixField: JBTextField? = null
     private var packageSearchGitHubTokenField: JBTextField? = null
     private var recompileCurrentCommandField: JBTextField? = null
     private var recompileAllCommandField: JBTextField? = null
@@ -71,6 +72,7 @@ class DreamShaderSettingsConfigurable(
         manifestPathField = JBTextField()
         showStatusBarBox = JBCheckBox(DreamShaderBundle.message("settings.showStatusBar.checkbox"))
         enableCodeLensBox = JBCheckBox(DreamShaderBundle.message("settings.enableCodeLens.checkbox"))
+        outArgumentPlaceholderSuffixField = JBTextField()
         packageSearchGitHubTokenField = JBTextField()
         recompileCurrentCommandField = JBTextField()
         recompileAllCommandField = JBTextField()
@@ -93,6 +95,11 @@ class DreamShaderSettingsConfigurable(
         addCheckBox(
             enableCodeLensBox as JBCheckBox,
             DreamShaderBundle.message("settings.enableCodeLens.tooltip")
+        )
+        addLabelAndField(
+            DreamShaderBundle.message("settings.outArgumentPlaceholderSuffix.label"),
+            outArgumentPlaceholderSuffixField as JBTextField,
+            DreamShaderBundle.message("settings.outArgumentPlaceholderSuffix.tooltip")
         )
         addLabelAndField(
             DreamShaderBundle.message("settings.packageSearchGitHubToken.label"),
@@ -136,6 +143,7 @@ class DreamShaderSettingsConfigurable(
             manifestPathField?.text.orEmpty() != state.materialExpressionManifestPath ||
             showStatusBarBox?.isSelected != state.showStatusBar ||
             enableCodeLensBox?.isSelected != state.enableCodeLens ||
+            outArgumentPlaceholderSuffixField?.text.orEmpty() != state.outArgumentPlaceholderSuffix ||
             packageSearchGitHubTokenField?.text.orEmpty() != state.packageStoreGitHubToken ||
             recompileCurrentCommandField?.text.orEmpty() != state.bridgeRecompileCurrentCommand ||
             recompileAllCommandField?.text.orEmpty() != state.bridgeRecompileAllCommand ||
@@ -150,6 +158,7 @@ class DreamShaderSettingsConfigurable(
         state.materialExpressionManifestPath = manifestPathField?.text.orEmpty().trim()
         state.showStatusBar = showStatusBarBox?.isSelected ?: true
         state.enableCodeLens = enableCodeLensBox?.isSelected ?: true
+        state.outArgumentPlaceholderSuffix = normalizeOutPlaceholderSuffix(outArgumentPlaceholderSuffixField?.text.orEmpty())
         state.packageStoreGitHubToken = packageSearchGitHubTokenField?.text.orEmpty().trim()
         state.bridgeRecompileCurrentCommand = recompileCurrentCommandField?.text.orEmpty().trim()
         state.bridgeRecompileAllCommand = recompileAllCommandField?.text.orEmpty().trim()
@@ -166,6 +175,7 @@ class DreamShaderSettingsConfigurable(
         manifestPathField?.text = state.materialExpressionManifestPath
         showStatusBarBox?.isSelected = state.showStatusBar
         enableCodeLensBox?.isSelected = state.enableCodeLens
+        outArgumentPlaceholderSuffixField?.text = state.outArgumentPlaceholderSuffix
         packageSearchGitHubTokenField?.text = state.packageStoreGitHubToken
         recompileCurrentCommandField?.text = state.bridgeRecompileCurrentCommand
         recompileAllCommandField?.text = state.bridgeRecompileAllCommand
@@ -178,9 +188,20 @@ class DreamShaderSettingsConfigurable(
         manifestPathField = null
         showStatusBarBox = null
         enableCodeLensBox = null
+        outArgumentPlaceholderSuffixField = null
         packageSearchGitHubTokenField = null
         recompileCurrentCommandField = null
         recompileAllCommandField = null
         cleanGeneratedCommandField = null
     }
+
+    private fun normalizeOutPlaceholderSuffix(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) return "Out"
+        val cleaned = trimmed.replace(Regex("[^A-Za-z0-9_]"), "_")
+        if (cleaned.isBlank()) return "Out"
+        return if (cleaned.first().isDigit()) "_$cleaned" else cleaned
+    }
+
+    internal fun testNormalizeOutPlaceholderSuffix(raw: String): String = normalizeOutPlaceholderSuffix(raw)
 }

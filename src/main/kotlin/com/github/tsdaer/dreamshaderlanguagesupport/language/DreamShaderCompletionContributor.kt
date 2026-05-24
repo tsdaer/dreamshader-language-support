@@ -316,7 +316,9 @@ internal data class DreamShaderCompletionItem(
 )
 
 private data class DreamShaderSettingValueContext(
-    val settingKey: String
+    val settingKey: String,
+    val valuePrefix: String,
+    val isQuotedValueContext: Boolean
 )
 
 private data class DreamShaderExpressionClassValueContext(
@@ -351,66 +353,118 @@ private object DreamShaderCompletionData {
         "RefractionMethod",
         "RefractionMode"
     )
-
-    val settingValueMappings = mapOf(
-        "materialdomain" to listOf(
-            "Surface",
-            "DeferredDecal",
-            "LightFunction",
-            "PostProcess",
-            "UserInterface",
-            "UI",
-            "VirtualTexture"
-        ),
-        "domain" to listOf(
-            "Surface",
-            "DeferredDecal",
-            "LightFunction",
-            "PostProcess",
-            "UserInterface",
-            "UI",
-            "VirtualTexture"
-        ),
-        "shadingmodel" to listOf(
-            "DefaultLit",
-            "Lit",
-            "Unlit",
-            "Subsurface",
-            "PreintegratedSkin",
-            "ClearCoat",
-            "SubsurfaceProfile",
-            "TwoSidedFoliage",
-            "Hair",
-            "Cloth",
-            "Eye",
-            "SingleLayerWater",
-            "ThinTranslucent",
-            "Substrate",
-            "Strata"
-        ),
-        "blendmode" to listOf(
-            "Opaque",
-            "Masked",
-            "Cutout",
-            "Translucent",
-            "Transparent",
-            "Additive",
-            "Modulate",
-            "AlphaComposite",
-            "AlphaHoldout"
-        ),
-        "rendertype" to listOf(
-            "Opaque",
-            "Masked",
-            "Cutout",
-            "Translucent",
-            "Transparent",
-            "Additive",
-            "Modulate",
-            "AlphaComposite",
-            "AlphaHoldout"
-        )
+    val virtualFunctionOptionsKeys = listOf(
+        "Asset",
+        "Description"
     )
+    val virtualFunctionAssetPathTemplates = listOf(
+        "Path(Game, Materials/M_VFAsset)",
+        "Path(Engine, Materials/M_VFAsset)",
+        "Path(Plugin.MyPlugin, MaterialFunctions/MF_VFAsset)",
+        "Path(Plugins.MyPlugin, MaterialFunctions/MF_VFAsset)"
+    )
+    val virtualFunctionAssetObjectPathTemplates = listOf(
+        "Game/MaterialFunctions/MF_VFAsset",
+        "Engine/Functions/Engine_MF",
+        "Plugin.MyPlugin/MaterialFunctions/MF_VFAsset",
+        "Plugins.MyPlugin/MaterialFunctions/MF_VFAsset"
+    )
+    val virtualFunctionDescriptionTemplates = listOf(
+        "Existing material function asset",
+        "Bridge-compatible virtual function"
+    )
+
+    val settingValueMappings = buildMap {
+        put(
+            "materialdomain", listOf(
+                "Surface",
+                "DeferredDecal",
+                "LightFunction",
+                "PostProcess",
+                "UserInterface",
+                "UI",
+                "VirtualTexture"
+            )
+        )
+        put(
+            "domain", listOf(
+                "Surface",
+                "DeferredDecal",
+                "LightFunction",
+                "PostProcess",
+                "UserInterface",
+                "UI",
+                "VirtualTexture"
+            )
+        )
+        put(
+            "shadingmodel", listOf(
+                "DefaultLit",
+                "Lit",
+                "Unlit",
+                "Subsurface",
+                "PreintegratedSkin",
+                "ClearCoat",
+                "SubsurfaceProfile",
+                "TwoSidedFoliage",
+                "Hair",
+                "Cloth",
+                "Eye",
+                "SingleLayerWater",
+                "ThinTranslucent",
+                "Substrate",
+                "Strata"
+            )
+        )
+        put(
+            "blendmode", listOf(
+                "Opaque",
+                "Masked",
+                "Cutout",
+                "Translucent",
+                "Transparent",
+                "Additive",
+                "Modulate",
+                "AlphaComposite",
+                "AlphaHoldout"
+            )
+        )
+        put(
+            "rendertype", listOf(
+                "Opaque",
+                "Masked",
+                "Cutout",
+                "Translucent",
+                "Transparent",
+                "Additive",
+                "Modulate",
+                "AlphaComposite",
+                "AlphaHoldout"
+            )
+        )
+
+        val booleanValues = listOf("true", "false")
+        listOf(
+            "twosided",
+            "wireframe",
+            "ditheredlodtransition",
+            "ditheropacitymask",
+            "allownegativeemissivecolor",
+            "castdynamicshadowasmasked",
+            "responsiveaa",
+            "screenspacereflections",
+            "contactshadows",
+            "disabledepthtest",
+            "outputtranslucentvelocity",
+            "tangentspacenormal",
+            "fullyrough",
+            "issky",
+            "thinsurface"
+        ).forEach { key ->
+            put(key, booleanValues)
+        }
+        put("numcustomizeduvs", (0..8).map { it.toString() })
+    }
 
     val baseOutputMembers = listOf(
         "MaterialAttributes",
@@ -631,9 +685,26 @@ internal object DreamShaderCompletionSuggester {
         val settingValueContext = extractSettingValueContext(linePrefix, text, offset)
         if (settingValueContext != null) {
             val key = settingValueContext.settingKey.lowercase(Locale.ROOT)
-            DreamShaderCompletionData.settingValueMappings[key].orEmpty().forEach { value ->
-                add(DreamShaderCompletionItem(label = value, insertText = value, detail = "$key value"))
+            val valuePrefix = settingValueContext.valuePrefix.lowercase(Locale.ROOT)
+            val isVirtualFunctionOptionsAliasContext =
+                context.declarationKeyword == "virtualfunction" &&
+                    (context.currentSectionName == OPTIONS_SECTION || context.currentSectionName == SETTINGS_SECTION)
+            val values = when {
+                isVirtualFunctionOptionsAliasContext &&
+                    key == "asset" &&
+                    settingValueContext.isQuotedValueContext -> DreamShaderCompletionData.virtualFunctionAssetObjectPathTemplates
+                isVirtualFunctionOptionsAliasContext &&
+                    key == "asset" -> DreamShaderCompletionData.virtualFunctionAssetPathTemplates
+                isVirtualFunctionOptionsAliasContext &&
+                    key == "description" &&
+                    settingValueContext.isQuotedValueContext -> DreamShaderCompletionData.virtualFunctionDescriptionTemplates
+                else -> DreamShaderCompletionData.settingValueMappings[key].orEmpty()
             }
+            values
+                .filter { value -> value.lowercase(Locale.ROOT).startsWith(valuePrefix) }
+                .forEach { value ->
+                    add(DreamShaderCompletionItem(label = value, insertText = value, detail = "$key value"))
+                }
             if (suggestions.isNotEmpty()) {
                 return suggestions.values.toList()
             }
@@ -643,10 +714,16 @@ internal object DreamShaderCompletionSuggester {
 
         if (context.isInSettingsOrOptionsSection) {
             if (isSettingsKeyContext(linePrefix)) {
-                DreamShaderCompletionData.settingsKeys.forEach { key ->
+                val keys = when {
+                    (context.currentSectionName == OPTIONS_SECTION || context.currentSectionName == SETTINGS_SECTION) &&
+                        context.declarationKeyword == "virtualfunction" -> DreamShaderCompletionData.virtualFunctionOptionsKeys
+                    context.currentSectionName == SETTINGS_SECTION -> DreamShaderCompletionData.settingsKeys
+                    else -> emptyList()
+                }
+                keys.forEach { key ->
                     add(DreamShaderCompletionItem(label = key))
                 }
-                return suggestions.values.toList()
+                if (suggestions.isNotEmpty()) return suggestions.values.toList()
             }
         }
 
@@ -740,13 +817,27 @@ internal object DreamShaderCompletionSuggester {
         if (eqIndex <= 0) return null
         val lineStart = offset - linePrefix.length
         val valueSegmentStart = (lineStart + eqIndex + 1).coerceIn(0, text.length)
-        val valuePrefix = text.substring(valueSegmentStart, offset.coerceIn(valueSegmentStart, text.length))
-        val quoteCount = valuePrefix.count { it == '"' }
-        if (quoteCount % 2 == 0) return null
+        val rawValuePrefix = text.substring(valueSegmentStart, offset.coerceIn(valueSegmentStart, text.length))
+        val trimmedValuePrefix = rawValuePrefix.trimStart()
+        val isQuotedValueContext = trimmedValuePrefix.startsWith('"')
+        if (isQuotedValueContext) {
+            val quoteCount = rawValuePrefix.count { it == '"' }
+            if (quoteCount % 2 == 0) return null
+        } else if (trimmedValuePrefix.contains(';')) {
+            return null
+        }
 
         val keyPart = linePrefix.substring(0, eqIndex)
         val keyMatch = Regex("""([A-Za-z_][A-Za-z0-9_.]*)\s*$""").find(keyPart) ?: return null
-        return DreamShaderSettingValueContext(settingKey = keyMatch.groupValues[1])
+        val normalizedValuePrefix = when {
+            trimmedValuePrefix.startsWith('"') -> trimmedValuePrefix.removePrefix("\"")
+            else -> trimmedValuePrefix
+        }.trim()
+        return DreamShaderSettingValueContext(
+            settingKey = keyMatch.groupValues[1],
+            valuePrefix = normalizedValuePrefix,
+            isQuotedValueContext = isQuotedValueContext
+        )
     }
 
     private fun isSettingsKeyContext(linePrefix: String): Boolean {

@@ -29,4 +29,11 @@ class DreamShaderSettingsToggleTest : BasePlatformTestCase() {
             .flatMap { provider.getParameterHints(it) }
         assertTrue("Expected no hints when enableCodeLens=false", disabledHints.isEmpty())
     }
+
+    fun testOutArgumentPlaceholderSuffixNormalization() {
+        val configurable = DreamShaderSettingsConfigurable(project)
+        assertTrue(configurable.testNormalizeOutPlaceholderSuffix("").equals("Out"))
+        assertTrue(configurable.testNormalizeOutPlaceholderSuffix("123").equals("_123"))
+        assertTrue(configurable.testNormalizeOutPlaceholderSuffix("out-suffix").equals("out_suffix"))
+    }
 }
