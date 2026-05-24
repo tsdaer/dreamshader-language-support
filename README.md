@@ -463,7 +463,8 @@ Implemented:
 - Refactored semantic-token classification logic into `DreamShaderSemanticTokenClassifier` so `DreamShaderSemanticAnnotator` focuses on annotation emission + diagnostics pipeline aggregation.
 - Reorganized `DreamShaderSemanticAnnotator` internals into grouped diagnostic sections (`bridge`, `syntax`, `section-shape`, `semantic`, `call/import utilities`) and grouped constant/regex blocks to improve maintainability without behavior changes.
 - Extended section-shape diagnostics to declaration-aware schema constraints for `ShaderLayer` / `ShaderLayerBlend` / `Function` / `GraphFunction`, plus declaration-scoped `Results` alias handling (`ShaderFunction` / `VirtualFunction` only).
-- Added semantic rule for `VirtualFunction` `Options.Asset` boolean validation.
+- Added semantic rules for `VirtualFunction` `Options.Asset`: required option entry + asset-path validation with root constraints (`Game`, `Engine`, `Plugin.<Name>`, `Plugins.<Name>`).
+- Added semantic rule for asset declaration `Root` restrictions: `Shader`/`ShaderFunction`/`ShaderLayer`/`ShaderLayerBlend` now validate `Root` against `Game`, `Plugin.<Name>`, `Plugins.<Name>`.
 - Added regression tests in `DreamShaderSemanticTokensTest` for `DSYM-001` and `DSYM-002`, including nested-call/member-like edge cases, array-index symbol usage, and multi-level namespace qualifier classification.
 - Added `DreamShaderSemanticTokenClassifierTest` to validate classifier behavior directly and verify classifier/annotator consistency on representative samples.
 
@@ -560,7 +561,8 @@ Rule format:
 | `DSYN-208` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsSwitchStatement()` / `testGraphDisallowsCaseKeyword()` / `testGraphDisallowsDefaultKeyword()` |
 | `DSYN-209` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsBreakStatement()` / `testGraphDisallowsContinueStatement()` |
 | `DSYN-210` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsReturnStatement()` |
-| `DSYN-211` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testVirtualFunctionOptionAssetRequiresBoolean()` |
+| `DSYN-211` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testVirtualFunctionOptionAssetRequiresPath()` + `testVirtualFunctionOptionAssetRejectsBareIdentifier()` + `testVirtualFunctionOptionAssetAcceptsPathCall()` + `testVirtualFunctionOptionAssetAcceptsQuotedObjectPath()` + `testVirtualFunctionOptionAssetAcceptsEngineRootPathCall()` + `testVirtualFunctionOptionAssetRejectsUnknownPathRoot()` + `testVirtualFunctionOptionAssetRequiresOptionEntry()` |
+| `DSYN-212` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testShaderRootRejectsEngineRoot()` + `testShaderRootAcceptsPluginRoot()` |
 
 #### A. Local Parser Diagnostics (`P1`)
 
@@ -775,17 +777,33 @@ Shader Main {
 
 25. `ID`: `DSYN-211`  
 `Priority`: `P2`  
-`Rule`: `VirtualFunction` `Options.Asset` must use boolean value (`true` / `false`).  
+`Rule`: `VirtualFunction` `Options.Asset` must use asset-path form (`Path(...)` or quoted object path).  
+`Rule+`: `Asset` is required when `Options` section exists; path root must be one of `Game`, `Engine`, `Plugin.<Name>`, `Plugins.<Name>`.  
 `Invalid`:
 ```c
 VirtualFunction(Name="VF_InvalidAsset") {
     Options = {
-        Asset = "invalid";
+        Asset = Path(Project, Materials/M_VFAsset);
     }
 }
 ```
-`Expected`: `VirtualFunction Options.Asset must be true or false`  
-`Test`: `testVirtualFunctionOptionAssetRequiresBoolean()`
+`Expected`:
+- `VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))`
+- `VirtualFunction Options.Asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>`
+- `VirtualFunction requires Asset option in Options (Settings alias is also accepted)`  
+`Test`: `testVirtualFunctionOptionAssetRequiresPath()` / `testVirtualFunctionOptionAssetRejectsBareIdentifier()` / `testVirtualFunctionOptionAssetAcceptsPathCall()` / `testVirtualFunctionOptionAssetAcceptsQuotedObjectPath()` / `testVirtualFunctionOptionAssetAcceptsEngineRootPathCall()` / `testVirtualFunctionOptionAssetRejectsUnknownPathRoot()` / `testVirtualFunctionOptionAssetRequiresOptionEntry()`
+
+26. `ID`: `DSYN-212`  
+`Priority`: `P2`  
+`Rule`: asset declarations (`Shader` / `ShaderFunction` / `ShaderLayer` / `ShaderLayerBlend`) must reject unsupported `Root` values.  
+`Invalid`:
+```c
+Shader Root = "Engine", Name="Materials/M_InvalidRoot" {
+    Graph = { }
+}
+```
+`Expected`: `Shader Root value 'Engine' is not allowed. Use Game, Plugin.<Name>, or Plugins.<Name>`  
+`Test`: `testShaderRootRejectsEngineRoot()` / `testShaderRootAcceptsPluginRoot()`
 
 #### C. Semantic Diagnostics (`P2`)
 
@@ -902,7 +920,7 @@ import "NotFound/Nope.dsh";
 Current test files:
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxDiagnosticsTest.kt` for `DSYN-001` to `DSYN-005`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSectionShapeDiagnosticsTest.kt` for `DSYN-101` to `DSYN-109` plus declaration-schema coverage (`Results` alias scope and function/graphfunction section constraints).
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210` plus `DSYN-211` (`VirtualFunction Options.Asset` boolean validation).
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210` plus `DSYN-211`/`DSYN-212` (`VirtualFunction Options.Asset` required + asset-path root validation, asset declaration `Root` validation).
 
 Recommendation:
 - Use the `M4 Audit Matrix` as the source of truth for release checks and regression triage.
@@ -1314,7 +1332,7 @@ Acceptance criteria:
 | `P1` completion regression tests | `Implemented` | `DreamShaderCompletionContextAnalyzerTest`, `DreamShaderCompletionSuggesterTest` |
 | `P1` navigation/diagnostic tests | `Implemented` | `DreamShaderGotoDeclarationHandlerTest`, `DreamShaderFindReferencesTest`, `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, `DreamShaderSyntaxDiagnosticsTest`, `DreamShaderSectionShapeDiagnosticsTest`, `DreamShaderSemanticDiagnosticsTest` |
 | `P2` large-file performance smoke tests | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest` |
-| `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`), `.github/workflows/build.yml`, `.github/workflows/release.yml` |
+| `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`, file-based signing env/properties + legacy env fallback), `.github/workflows/build.yml`, `.github/workflows/release.yml` (writes cert/key secrets to temp files and publishes with file-path env) |
 | `P3` changelog aligned with release tags | `Implemented` | `CHANGELOG.md` + release workflow `patchChangelog` step in `.github/workflows/release.yml` |
 
 ## Development
@@ -1373,6 +1391,76 @@ Run plugin in sandbox:
 ```powershell
 .\gradlew.bat runIde --no-configuration-cache
 ```
+
+### Marketplace Signing and Publishing (File-Based)
+
+Default local secret directory (project-relative):
+- `.secrets/`
+- This folder is git-ignored and intended for local signing/publishing credentials only.
+
+Default files read from `.secrets/`:
+- `.secrets/jetbrains-chain.crt`
+- `.secrets/jetbrains-private.pem`
+- `.secrets/jetbrains-private-key-password.txt`
+- `.secrets/jetbrains-publish-token.txt`
+
+You can override secret directory with Gradle property:
+```powershell
+.\gradlew.bat publishPlugin -PjetbrainsSecretsDir=.private
+```
+
+`build.gradle.kts` supports multiple signing input modes, with file mode preferred:
+- `JETBRAINS_CERTIFICATE_CHAIN_FILE` / `jetbrainsCertificateChainFile`
+- `JETBRAINS_PRIVATE_KEY_FILE` / `jetbrainsPrivateKeyFile`
+- `JETBRAINS_PRIVATE_KEY_PASSWORD` / `jetbrainsPrivateKeyPassword`
+- `JETBRAINS_PUBLISH_TOKEN` / `jetbrainsPublishToken`
+- `JETBRAINS_PRIVATE_KEY_PASSWORD_FILE` / `jetbrainsPrivateKeyPasswordFile`
+- `JETBRAINS_PUBLISH_TOKEN_FILE` / `jetbrainsPublishTokenFile`
+
+Compatibility fallback is also enabled:
+- `CERTIFICATE_CHAIN_FILE`, `PRIVATE_KEY_FILE`
+- `CERTIFICATE_CHAIN`, `PRIVATE_KEY`
+- `PRIVATE_KEY_PASSWORD`, `PUBLISH_TOKEN`
+- `PRIVATE_KEY_PASSWORD_FILE`, `PUBLISH_TOKEN_FILE`
+
+Local PowerShell example (no `openssl` required):
+```powershell
+$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+
+# Option A: Use project-local .secrets defaults (no extra env vars needed)
+.\gradlew.bat signPlugin
+.\gradlew.bat publishPlugin
+
+# Option B: Explicit file paths via env vars
+$env:JETBRAINS_CERTIFICATE_CHAIN_FILE="C:\secrets\jetbrains-chain.crt"
+$env:JETBRAINS_PRIVATE_KEY_FILE="C:\secrets\jetbrains-private.pem"
+$env:JETBRAINS_PRIVATE_KEY_PASSWORD_FILE="C:\secrets\jetbrains-private-key-password.txt"
+$env:JETBRAINS_PUBLISH_TOKEN_FILE="C:\secrets\jetbrains-publish-token.txt"
+.\gradlew.bat signPlugin
+.\gradlew.bat publishPlugin
+```
+
+If you only have text secrets, save them directly as files (no OpenSSL conversion step):
+```powershell
+@'
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+'@ | Set-Content -Path C:\secrets\jetbrains-chain.crt -NoNewline
+
+@'
+-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+'@ | Set-Content -Path C:\secrets\jetbrains-private.pem -NoNewline
+```
+
+CI release workflow (`.github/workflows/release.yml`) already uses file mode:
+- Reads `CERTIFICATE_CHAIN` and `PRIVATE_KEY` from GitHub Secrets
+- Writes them to `$RUNNER_TEMP/*.crt|*.pem`
+- Exports `JETBRAINS_CERTIFICATE_CHAIN_FILE` and `JETBRAINS_PRIVATE_KEY_FILE`
+- Executes `./gradlew publishPlugin`
 
 ### Package Tools Actions (Rider)
 
