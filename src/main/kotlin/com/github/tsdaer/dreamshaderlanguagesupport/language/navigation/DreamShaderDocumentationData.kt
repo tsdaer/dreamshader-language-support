@@ -1,26 +1,28 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
-import java.util.Locale
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import java.util.*
 
+/**
+ * $name 信息模型。
+ */
 internal data class DreamShaderSettingInfo(
     val key: String,
     val description: String,
     val commonValues: List<String> = emptyList()
 )
 
+/**
+ * $name 信息模型。
+ */
 internal data class DreamShaderBuiltinInfo(
     val name: String,
     val signature: String,
     val description: String
 )
 
+/**
+ * $name 单例对象。
+ */
 internal object DreamShaderDocumentationData {
     val declarationKeywordDescriptions: Map<String, String> = mapOf(
         "shader" to DreamShaderBundle.message("docs.declaration.shader"),

@@ -1,31 +1,13 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.ActionUiKind
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
 import java.nio.file.Paths
 
 class DreamShaderBridgeActionsTest : BasePlatformTestCase() {

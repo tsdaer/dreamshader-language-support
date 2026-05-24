@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.openapi.project.Project
@@ -14,15 +6,16 @@ import com.intellij.openapi.vfs.VirtualFile
 import java.io.File
 
 /**
- * Resolves project root and Bridge directory used by DreamShader diagnostics
- * and manifest integration.
+ * Bridge 路径解析器。
  *
- * Fallback order for project root:
- * 1. Explicit setting `projectRoot`
- * 2. Project base path when active file is inside project
- * 3. Active file path prefix before `/DShader/`
- * 4. Project base path
- * 5. Active file parent directory
+ * 负责解析 DreamShader 诊断与相关集成所使用的项目根与 Bridge 目录。
+ *
+ * 项目根回退顺序：
+ * 1. 设置项 `projectRoot`
+ * 2. 当活动文件位于项目内时使用 `project.basePath`
+ * 3. 活动文件路径中 `/DShader/` 之前的前缀
+ * 4. `project.basePath`
+ * 5. 活动文件父目录
  */
 internal object DreamShaderBridgePathResolver {
     private const val BRIDGE_RELATIVE_PATH = "Saved/DreamShader/Bridge"

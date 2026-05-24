@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.intellij.openapi.project.Project
@@ -21,7 +13,9 @@ import kotlin.io.path.isRegularFile
 import kotlin.streams.asSequence
 
 /**
- * Package lifecycle manager (install/update/remove/open folder + lock lifecycle).
+ * 包生命周期管理器。
+ *
+ * 负责安装、更新、移除、打开包目录，以及 lock 文件读写与维护。
  */
 internal class DreamShaderPackageManager(
     private val project: Project,
@@ -218,7 +212,7 @@ internal class DreamShaderPackageManager(
     }
 
     private fun parsePackageMetadata(file: Path): DreamShaderPackageMetadata? {
-        val raw = runCatching { Files.readString(file, StandardCharsets.UTF_8) }.getOrNull() ?: return null
+        val raw = runCatching { com.intellij.platform.eel.fs.EelFiles.readString(file, StandardCharsets.UTF_8) }.getOrNull() ?: return null
         val name = findStringField(raw, listOf("name"))?.trim().orEmpty()
         if (name.isBlank()) return null
         val version = findStringField(raw, listOf("version"))?.trim()
@@ -229,7 +223,7 @@ internal class DreamShaderPackageManager(
     private fun readLockEntries(): List<DreamShaderPackageLockEntry> {
         val lockFile = lockFilePath()
         if (!lockFile.exists() || !lockFile.isRegularFile()) return emptyList()
-        val raw = runCatching { Files.readString(lockFile, StandardCharsets.UTF_8) }.getOrNull() ?: return emptyList()
+        val raw = runCatching { com.intellij.platform.eel.fs.EelFiles.readString(lockFile, StandardCharsets.UTF_8) }.getOrNull() ?: return emptyList()
         val array = extractArrayField(raw, "packages") ?: return emptyList()
         return extractTopLevelObjects(array).mapNotNull { parseLockEntry(it) }
     }
@@ -432,6 +426,9 @@ internal class DreamShaderPackageManager(
     }
 }
 
+/**
+ * 包生命周期操作结果。
+ */
 internal data class DreamShaderPackageOperationResult(
     val success: Boolean,
     val message: String,
@@ -439,6 +436,9 @@ internal data class DreamShaderPackageOperationResult(
     val installPath: String? = null
 )
 
+/**
+ * lock 文件中的单个包记录。
+ */
 internal data class DreamShaderPackageLockEntry(
     val name: String,
     val version: String,
@@ -447,12 +447,18 @@ internal data class DreamShaderPackageLockEntry(
     val installPath: String
 )
 
+/**
+ * 包元数据最小模型。
+ */
 internal data class DreamShaderPackageMetadata(
     val name: String,
     val version: String?,
     val repository: String?
 )
 
+/**
+ * Git 客户端抽象，便于测试替身注入。
+ */
 internal interface DreamShaderGitClient {
     fun isAvailable(): Boolean
     fun clone(source: String, targetDir: Path): DreamShaderGitCommandResult
@@ -460,11 +466,17 @@ internal interface DreamShaderGitClient {
     fun currentCommit(repoDir: Path): String?
 }
 
+/**
+ * Git 命令执行结果。
+ */
 internal data class DreamShaderGitCommandResult(
     val success: Boolean,
     val message: String? = null
 )
 
+/**
+ * 基于系统进程的 Git 客户端实现。
+ */
 internal class DreamShaderProcessGitClient : DreamShaderGitClient {
     override fun isAvailable(): Boolean {
         val result = runGitCommand(null, listOf("git", "--version"))

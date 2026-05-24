@@ -1,18 +1,15 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.codeInsight.hints.HintInfo
 import com.intellij.codeInsight.hints.InlayInfo
 import com.intellij.codeInsight.hints.InlayParameterHintsProvider
 import com.intellij.psi.PsiElement
-import java.util.Locale
+import java.util.*
 
+/**
+ * $name 提供器实现。
+ */
 class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     override fun getParameterHints(element: PsiElement): List<InlayInfo> {
         val settings = element.project.getService(DreamShaderProjectSettings::class.java)?.state
@@ -201,7 +198,7 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     private fun extractParameterNames(presentableSignature: String): List<String> {
         val leftParen = presentableSignature.indexOf('(')
         val rightParen = presentableSignature.lastIndexOf(')')
-        if (leftParen < 0 || rightParen <= leftParen) return emptyList()
+        if (leftParen !in 0..<rightParen) return emptyList()
 
         val body = presentableSignature.substring(leftParen + 1, rightParen)
         if (body.isBlank()) return emptyList()
@@ -300,11 +297,17 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
 
     private fun isNameChar(ch: Char): Boolean = ch == '_' || ch == '.' || ch.isLetterOrDigit()
 
+    /**
+     * $name 解析结果模型。
+     */
     private data class ParsedCall(
         val functionName: String,
         val arguments: List<ArgumentSegment>
     )
 
+    /**
+     * $name 类型定义。
+     */
     private data class ArgumentSegment(
         val text: String,
         val startOffset: Int

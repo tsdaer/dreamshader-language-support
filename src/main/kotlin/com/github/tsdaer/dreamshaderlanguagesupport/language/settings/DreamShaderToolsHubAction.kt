@@ -1,17 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionUiKind
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.actionSystem.DataContext
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.DumbAwareAction
@@ -21,13 +10,11 @@ import com.intellij.openapi.wm.ToolWindowManager
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
-import javax.swing.BoxLayout
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.SwingConstants
+import javax.swing.*
 
+/**
+ * $name 动作实现。
+ */
 class DreamShaderOpenHubAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.Tools.OpenHub.text")
@@ -40,6 +27,9 @@ class DreamShaderOpenHubAction : DumbAwareAction() {
     }
 }
 
+/**
+ * $name 对话框实现。
+ */
 private class DreamShaderHubDialog(
     private val project: Project
 ) : DialogWrapper(project) {

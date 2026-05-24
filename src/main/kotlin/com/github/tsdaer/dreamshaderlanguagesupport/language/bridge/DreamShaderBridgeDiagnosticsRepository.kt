@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
@@ -16,14 +8,19 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 
 /**
- * Project service that reads `Saved/DreamShader/Bridge/diagnostics.json`,
- * normalizes entries, and exposes per-file diagnostics snapshots.
+ * Bridge 诊断仓库（项目级服务）。
  *
- * Parser accepts two upstream JSON shapes:
- * - array root: `[ {...}, ... ]`
- * - object root containing `"diagnostics": [ ... ]`
+ * 负责读取 `Saved/DreamShader/Bridge/diagnostics.json`，将诊断项归一化后缓存，
+ * 并按文件路径提供过滤后的诊断快照。
+ *
+ * 支持两种上游 JSON 结构：
+ * - 数组根：`[ {...}, ... ]`
+ * - 对象根：`{ "diagnostics": [ ... ] }`
  */
 @Service(Service.Level.PROJECT)
+/**
+ * $name 仓库实现。
+ */
 class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
     @Volatile
     private var snapshot: DreamShaderBridgeDiagnosticsSnapshot = DreamShaderBridgeDiagnosticsSnapshot(

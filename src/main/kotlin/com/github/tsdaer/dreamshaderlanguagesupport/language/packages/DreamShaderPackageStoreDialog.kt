@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.intellij.openapi.progress.ProcessCanceledException
@@ -24,16 +16,13 @@ import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.DefaultListCellRenderer
-import javax.swing.DefaultListModel
-import javax.swing.JButton
-import javax.swing.JCheckBox
-import javax.swing.JList
-import javax.swing.JPanel
-import javax.swing.JSplitPane
-import javax.swing.ListSelectionModel
-import javax.swing.SwingConstants
+import javax.swing.*
 
+/**
+ * 包商店对话框。
+ *
+ * 提供包列表浏览、筛选、安装/更新/移除、源管理与 GitHub 搜索入口。
+ */
 internal class DreamShaderPackageStoreDialog(
     private val project: Project
 ) : DialogWrapper(project) {

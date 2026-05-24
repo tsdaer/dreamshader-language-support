@@ -1,29 +1,22 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import java.io.File
 import java.net.URI
-import java.net.URL
 import java.nio.charset.StandardCharsets
 
 /**
- * Loads package store index data from configured local/remote sources.
+ * 包索引加载器。
  *
- * Key behaviors:
- * - source resolution: multi-source setting -> legacy single-source -> default upstream
- * - payload compatibility: supports array root and object root with `"packages"`
- * - failure isolation: malformed or unreadable source does not block other sources
- * - install source resolution: prefer local `path` when resolvable, otherwise fallback to `repository`
+ * 负责从本地/远程索引源读取包列表，并做统一解析与错误隔离。
+ *
+ * 关键行为：
+ * - 源解析顺序：多源配置 -> 旧单源配置 -> 默认上游索引
+ * - 载荷兼容：支持数组根与 `{ "packages": [...] }` 对象根
+ * - 失败隔离：单源损坏不会阻断其他源
+ * - 安装源解析：优先可解析的本地 `path`，否则回退 `repository`
  */
 internal object DreamShaderPackageIndexLoader {
     private const val DEFAULT_INDEX_URL =

@@ -1,12 +1,9 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.integration
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionSuggester
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderParserDefinition
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderPsiParser
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.testFramework.fixtures.BasePlatformTestCase

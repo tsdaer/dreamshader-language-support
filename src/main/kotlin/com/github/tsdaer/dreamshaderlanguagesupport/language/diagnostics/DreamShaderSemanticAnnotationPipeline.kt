@@ -1,19 +1,20 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeDiagnosticsPass
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMaterialExpressionManifest
+import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.DreamShaderSemanticTokenClassifier
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
+import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderPackageRootImportAnalysis
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateService
-import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInsight.FileModificationService
+import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.editor.Editor
@@ -21,28 +22,27 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiFile
-import com.intellij.psi.SmartPointerManager
-import com.intellij.psi.SmartPsiElementPointer
+import com.intellij.psi.*
 import com.intellij.psi.util.PsiTreeUtil
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.Locale
+import java.util.*
 import java.util.regex.Pattern
 import kotlin.io.path.invariantSeparatorsPathString
 
 /**
- * 中央诊断和语义标注器。
+ * DreamShader 诊断与语义高亮的中心流水线。
  *
- * 本类有意结合多层诊断，因此每行一PSI
- * 可以生成所有面向用户的结果：
- * - 语法层级检查（未闭字量、大括号平衡、错误的壳）
- * - section-shape 规则（文件-角色/声明-形状约束）
- * - 语义检查（设置/基础输出/类型/导入/调用出场 args）
- * - 外部桥接诊断映射
+ * 执行顺序与职责：
+ * 1. 语法诊断（字符串/注释未闭合、结构错误、花括号平衡）
+ * 2. Section 形状诊断（文件角色与声明结构约束）
+ * 3. 语义诊断（设置项、输出成员、类型、调用签名、导入解析）
+ * 4. Bridge 诊断映射
+ * 5. 对非文件级 PSI 元素追加语义 token 标注
+ *
+ * 本流水线也负责相关 quick fix，包括导入目标创建、
+ * 包根导入恢复，以及语义拼写建议修复。
  */
 internal class DreamShaderSemanticAnnotationPipeline {
     fun annotate(element: PsiElement, holder: AnnotationHolder) {
@@ -68,7 +68,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         DreamShaderBridgeDiagnosticsPass.annotate(file, holder)
     }
 
-    // Section-shape diagnostics.
+    // Section 形状诊断：文件角色规则与声明级结构规则。
     private fun annotateSectionShapeDiagnostics(
         file: DreamShaderPsiFile,
         sourceText: String,
@@ -142,7 +142,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateNamespaceRules(tokens, holder)
     }
 
-    // Semantic diagnostics.
+    // 语义诊断：设置项、类型、输出、表达式、调用与导入校验。
     private fun annotateSemanticDiagnostics(
         file: DreamShaderPsiFile,
         sourceText: String,
@@ -163,7 +163,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateUnresolvedImportDiagnostics(file, tokens, holder)
     }
 
-    // Section-shape diagnostics: declaration-level constraints.
+    // Section 形状诊断：声明作用域下的 section 兼容性与必需项检查。
     private fun annotateVirtualFunctionRules(
         sourceText: String,
         declaration: DreamShaderDeclaration,
@@ -295,8 +295,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 hasAsset = true
                 val value = matcher.group(1) ?: continue
                 val trimmed = value.trim()
-                val validationError = validateVirtualFunctionAssetPath(trimmed)
-                if (validationError == null) continue
+                val validationError = validateVirtualFunctionAssetPath(trimmed) ?: continue
                 val valueRange = TextRange(body.startOffset + matcher.start(1), body.startOffset + matcher.end(1))
                 val pathRoot = extractPathRoot(trimmed)
                 val isUnknownRoot = pathRoot != null && !isAllowedVirtualFunctionAssetRoot(pathRoot)
@@ -620,7 +619,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         return namespaceKeywordIndex
     }
 
-    // Semantic diagnostics: settings/material outputs/types.
+    // 语义诊断：设置项、Base 输出成员、类型名与表达式类检查。
     private fun annotateSettingsDiagnostics(
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
@@ -1015,7 +1014,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         argumentEndOffset: Int,
         key: String
     ): ExpressionClassArgument? {
-        if (argumentStartOffset < 0 || argumentEndOffset <= argumentStartOffset || argumentEndOffset > sourceText.length) {
+        if (argumentStartOffset !in 0..<argumentEndOffset || argumentEndOffset > sourceText.length) {
             return null
         }
         val argumentsText = sourceText.substring(argumentStartOffset, argumentEndOffset)
@@ -1032,7 +1031,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
             break
         }
         if (rawValue.isNullOrBlank()) return null
-        if (valueStart < 0 || valueEnd <= valueStart || valueEnd > sourceText.length) return null
+        if (valueStart !in 0..<valueEnd || valueEnd > sourceText.length) return null
 
         val quoted = isQuotedStringLiteral(rawValue)
         val normalized = if (quoted) rawValue.substring(1, rawValue.length - 1).trim() else rawValue
@@ -1231,7 +1230,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
-    // Semantic diagnostics: call/import validations.
+    // 语义诊断：调用签名检查、导入解析与导入 quick fix。
     private fun annotateMissingOutArgumentDiagnostics(
         file: DreamShaderPsiFile,
         sourceText: String,
@@ -1351,11 +1350,21 @@ internal class DreamShaderSemanticAnnotationPipeline {
             }
             if (DreamShaderImportResolver.resolveImport(file, importPath) != null) return@forEach
 
-            val annotation = holder.newAnnotation(
-                HighlightSeverity.ERROR,
-                DreamShaderBundle.message("diagnostic.cannotResolveImport", importPath)
-            ).range(token.range)
-            createCreateMissingImportFileQuickFix(file, importPath)?.let { annotation.withFix(it) }
+            val packageRootAnalysis = file.project.basePath?.let { basePath ->
+                DreamShaderImportResolver.analyzePackageRootImport(basePath, importPath)
+            }
+            val diagnosticMessage = packageRootAnalysis?.let { analysis ->
+                when {
+                    analysis.resolvedEntryRelativePath == null && !analysis.manifestEntryValid ->
+                        DreamShaderBundle.message("diagnostic.packageRootImportInvalidEntry", importPath, analysis.manifestEntryRaw.orEmpty())
+                    analysis.resolvedEntryRelativePath == null ->
+                        DreamShaderBundle.message("diagnostic.packageRootImportEntryMissing", importPath, analysis.suggestedEntryRelativePath)
+                    else -> DreamShaderBundle.message("diagnostic.cannotResolveImport", importPath)
+                }
+            } ?: DreamShaderBundle.message("diagnostic.cannotResolveImport", importPath)
+
+            val annotation = holder.newAnnotation(HighlightSeverity.ERROR, diagnosticMessage).range(token.range)
+            createCreateMissingImportFileQuickFix(file, importPath, packageRootAnalysis)?.let { annotation.withFix(it) }
             annotation.create()
         }
     }
@@ -1399,10 +1408,11 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
     private fun createCreateMissingImportFileQuickFix(
         file: DreamShaderPsiFile,
-        importPath: String
+        importPath: String,
+        packageRootAnalysis: DreamShaderPackageRootImportAnalysis?
     ): IntentionAction? {
         val filePointer: SmartPsiElementPointer<DreamShaderPsiFile> = SmartPointerManager.createPointer(file)
-        val creationPlan = buildImportCreationPlan(importPath) ?: return null
+        val creationPlan = buildImportCreationPlan(importPath, packageRootAnalysis) ?: return null
         return object : IntentionAction {
             override fun getText(): String = DreamShaderBundle.message("quickfix.importCreateMissingFile", creationPlan.relativePath)
 
@@ -1455,6 +1465,22 @@ internal class DreamShaderSemanticAnnotationPipeline {
             relativePath = pathWithExtension,
             isScopedPackageImport = isScoped
         )
+    }
+
+    private fun buildImportCreationPlan(
+        importPath: String,
+        packageRootAnalysis: DreamShaderPackageRootImportAnalysis?
+    ): ImportCreationPlan? {
+        val packageRootCandidate = packageRootAnalysis?.takeIf {
+            it.resolvedEntryRelativePath == null
+        }?.let { analysis ->
+            ImportCreationPlan(
+                relativePath = "${analysis.packageImportPath}/${analysis.suggestedEntryRelativePath}",
+                isScopedPackageImport = true
+            )
+        }
+        if (packageRootCandidate != null) return packageRootCandidate
+        return buildImportCreationPlan(importPath)
     }
 
     private fun resolveImportCreationTarget(file: DreamShaderPsiFile, creationPlan: ImportCreationPlan): Path? {
@@ -1572,13 +1598,13 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
-    // Call-signature utilities.
+    // 工具函数：函数签名提取与调用参数分析。
     private fun parseDeclarationParameters(declarationText: String): ParsedSignature? {
         val headerEnd = declarationText.indexOf('{').let { if (it >= 0) it else declarationText.length }
         val header = declarationText.substring(0, headerEnd)
         val leftParen = header.indexOf('(')
         val rightParen = header.lastIndexOf(')')
-        if (leftParen < 0 || rightParen <= leftParen) return null
+        if (leftParen !in 0..<rightParen) return null
         val rawParams = header.substring(leftParen + 1, rightParen)
         val params = splitTopLevel(rawParams, ',').mapNotNull { rawParam ->
             val trimmed = rawParam.trim()
@@ -1597,7 +1623,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     private fun declarationHeaderText(declarationText: String): String? {
         val headerEnd = declarationText.indexOf('{').let { if (it >= 0) it else declarationText.length }
         val header = declarationText.substring(0, headerEnd).trim()
-        return if (header.isBlank()) null else header
+        return header.ifBlank { null }
     }
 
     private fun findNamedAssignmentValue(headerText: String, key: String): NamedAssignmentMatch? {
@@ -1607,7 +1633,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
             if (!currentKey.equals(key, ignoreCase = true)) continue
             val valueStart = match.start(2)
             val valueEnd = match.end(2)
-            if (valueStart < 0 || valueEnd <= valueStart) continue
+            if (valueStart !in 0..<valueEnd) continue
             return NamedAssignmentMatch(
                 key = currentKey,
                 value = headerText.substring(valueStart, valueEnd),
@@ -1732,7 +1758,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         return result
     }
 
-    // PSI/token traversal helpers.
+    // 工具函数：PSI/token 遍历与文本范围辅助处理。
     private fun topLevelDeclarations(file: DreamShaderPsiFile): List<DreamShaderDeclaration> {
         return PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java)
             .filter { PsiTreeUtil.getParentOfType(it, DreamShaderDeclaration::class.java, true) == null }
@@ -1792,7 +1818,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val text = section.text
         val start = text.indexOf('{')
         val end = text.lastIndexOf('}')
-        if (start < 0 || end <= start) return null
+        if (start !in 0..<end) return null
         return SectionBody(
             text = text.substring(start + 1, end),
             startOffset = section.textRange.startOffset + start + 1
@@ -1802,7 +1828,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     private fun sectionBodyText(sectionText: String): String? {
         val start = sectionText.indexOf('{')
         val end = sectionText.lastIndexOf('}')
-        if (start < 0 || end <= start) return null
+        if (start !in 0..<end) return null
         return sectionText.substring(start + 1, end)
     }
 
@@ -1865,9 +1891,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
 
         val pathRoot = extractPathRoot(value)
-        if (pathRoot == null) {
-            return DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequiresPath")
-        }
+            ?: return DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequiresPath")
         if (!isAllowedVirtualFunctionAssetRoot(pathRoot)) {
             return DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetPathRootNotAllowed", pathRoot)
         }
@@ -2008,25 +2032,40 @@ internal class DreamShaderSemanticAnnotationPipeline {
         return result
     }
 
+    /**
+     * $name 解析结果模型。
+     */
     private data class ParsedParam(
         val name: String,
         val isOut: Boolean
     )
 
+    /**
+     * $name 解析结果模型。
+     */
     private data class ParsedSignature(
         val params: List<ParsedParam>
     )
 
+    /**
+     * $name 信息模型。
+     */
     private data class CallArgumentInfo(
         val argumentCount: Int,
         val rightParenOffset: Int
     )
 
+    /**
+     * $name 类型定义。
+     */
     private data class SectionBody(
         val text: String,
         val startOffset: Int
     )
 
+    /**
+     * $name 类型定义。
+     */
     private data class NamedAssignmentMatch(
         val key: String,
         val value: String,
@@ -2034,19 +2073,25 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val endOffset: Int
     )
 
+    /**
+     * $name 类型定义。
+     */
     private data class ExpressionClassArgument(
         val value: String,
         val range: TextRange,
         val quoted: Boolean
     )
 
+    /**
+     * $name 类型定义。
+     */
     private data class ImportCreationPlan(
         val relativePath: String,
         val isScopedPackageImport: Boolean
     )
 
     companion object {
-        // Semantic validation data.
+        // 语义校验字典与建议修复的规范候选集。
         private val SETTINGS_KEYS = setOf(
             "materialdomain", "domain", "shadingmodel", "blendmode", "rendertype", "translucencylightingmode",
             "lightingmode", "twosided", "wireframe", "ditheredlodtransition", "ditheropacitymask",
@@ -2119,14 +2164,14 @@ internal class DreamShaderSemanticAnnotationPipeline {
             "MOOAEncodedAttribute2", "MOOAEncodedAttribute3", "MOOAEncodedAttribute4", "Anisotropy", "Tangent"
         )
 
-        // Type validation data.
+        // 类型校验集合：声明类型与 UE.Expression 的 OutputType。
         private val KNOWN_TYPES = DreamShaderLexer.TYPES.map { it.lowercase(Locale.ROOT) }.toSet()
         private val KNOWN_TYPES_CANONICAL = DreamShaderLexer.TYPES.toList()
         private val UE_EXPRESSION_OUTPUT_TYPES = KNOWN_TYPES
         private val UE_EXPRESSION_OUTPUT_TYPES_CANONICAL = KNOWN_TYPES_CANONICAL
         private val TYPE_QUALIFIERS = setOf("in", "out", "inout", "const", "static", "opt")
 
-        // Regex: settings/output/type diagnostics.
+        // 正则模式：设置项/输出/类型/导入相关诊断。
         private val SETTINGS_ASSIGNMENT_PATTERN: Pattern = Pattern.compile(
             "(?m)\\b([A-Za-z_][A-Za-z0-9_.]*)\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|-?\\d+(?:\\.\\d+)?|[A-Za-z_][A-Za-z0-9_.]*)"
         )
@@ -2150,7 +2195,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
             "(?m)(?:^|;)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=|;|\\n)"
         )
 
-        // Regex: call-signature diagnostics.
+        // 正则模式：调用签名相关诊断。
         private val PARAM_NAME_PATTERN: Pattern = Pattern.compile("([A-Za-z_][A-Za-z0-9_]*)\\s*$")
         private val OUT_QUALIFIER_PATTERN: Pattern = Pattern.compile("\\bout\\b")
 

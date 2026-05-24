@@ -1,17 +1,11 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.intellij.codeInsight.hints.ParameterHintsPassFactory
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
-import com.intellij.codeInsight.hints.ParameterHintsPassFactory
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextField
+import com.intellij.util.ui.JBUI
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
@@ -19,6 +13,9 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 
+/**
+ * $name 设置面板实现。
+ */
 class DreamShaderSettingsConfigurable(
     private val project: Project
 ) : Configurable {
@@ -46,7 +43,7 @@ class DreamShaderSettingsConfigurable(
                 gridx = 0
                 gridy = row
                 anchor = GridBagConstraints.WEST
-                insets = Insets(4, 4, 2, 8)
+                insets = JBUI.insets(4, 4, 2, 8)
             }
             root.add(JLabel(label), labelConstraints)
 
@@ -55,7 +52,7 @@ class DreamShaderSettingsConfigurable(
                 gridy = row
                 weightx = 1.0
                 fill = GridBagConstraints.HORIZONTAL
-                insets = Insets(4, 0, 2, 4)
+                insets = JBUI.insets(4, 0, 2, 4)
             }
             field.toolTipText = tooltip
             root.add(field, fieldConstraints)
@@ -68,7 +65,7 @@ class DreamShaderSettingsConfigurable(
                 gridy = row
                 gridwidth = 2
                 anchor = GridBagConstraints.WEST
-                insets = Insets(4, 4, 2, 4)
+                insets = JBUI.insets(4, 4, 2, 4)
             }
             box.toolTipText = tooltip
             root.add(box, constraints)

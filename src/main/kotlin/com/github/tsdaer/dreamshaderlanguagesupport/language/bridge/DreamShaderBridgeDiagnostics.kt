@@ -1,15 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 /**
- * Single Bridge diagnostic item mapped to source location.
+ * 单条 Bridge 诊断项，映射到源码位置。
  */
 internal data class DreamShaderBridgeDiagnostic(
     val sourcePath: String,
@@ -20,7 +12,7 @@ internal data class DreamShaderBridgeDiagnostic(
 )
 
 /**
- * Immutable snapshot produced by the diagnostics repository on each refresh.
+ * 诊断仓库每次刷新后产出的不可变快照。
  */
 internal data class DreamShaderBridgeDiagnosticsSnapshot(
     val diagnostics: List<DreamShaderBridgeDiagnostic>,

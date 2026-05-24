@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -248,6 +240,26 @@ class DreamShaderCompletionSuggesterTest {
         assertTrue(labels.contains("Common/Core.dsh"))
         assertTrue(labels.contains("Common/Lighting.dsf"))
         assertTrue(!labels.contains("UI/Widget.dsh"))
+    }
+
+    @Test
+    fun `suggests package root imports in import string`() {
+        val text = """import "@typed"""
+        val offset = text.length
+        val importCandidates = listOf(
+            "@typedreammoon/dream-noise",
+            "@typedreammoon/dream-sdf",
+            "Common/Core.dsh"
+        )
+
+        val labels = DreamShaderCompletionSuggester
+            .suggest(text, offset, importCandidates = importCandidates)
+            .map { it.label }
+            .toSet()
+
+        assertTrue(labels.contains("@typedreammoon/dream-noise"))
+        assertTrue(labels.contains("@typedreammoon/dream-sdf"))
+        assertTrue(!labels.contains("Common/Core.dsh"))
     }
 
     @Test

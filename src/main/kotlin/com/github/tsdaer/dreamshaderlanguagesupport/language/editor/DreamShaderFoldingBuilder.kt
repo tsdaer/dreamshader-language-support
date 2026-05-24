@@ -1,12 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.intellij.lang.ASTNode
 import com.intellij.lang.folding.FoldingBuilderEx
 import com.intellij.lang.folding.FoldingDescriptor
@@ -15,7 +9,11 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import java.util.Locale
+import kotlin.collections.ArrayDeque
 
+/**
+ * $name 类型定义。
+ */
 class DreamShaderFoldingBuilder : FoldingBuilderEx(), DumbAware {
     override fun buildFoldRegions(root: PsiElement, document: Document, quick: Boolean): Array<FoldingDescriptor> {
         val astRoot = root.node ?: return emptyArray()
@@ -70,6 +68,9 @@ class DreamShaderFoldingBuilder : FoldingBuilderEx(), DumbAware {
         text: String,
         out: MutableList<FoldingDescriptor>
     ) {
+        /**
+         * $name 类型定义。
+         */
         data class RegionStart(val offset: Int, val placeholder: String)
 
         val starts = ArrayDeque<RegionStart>()

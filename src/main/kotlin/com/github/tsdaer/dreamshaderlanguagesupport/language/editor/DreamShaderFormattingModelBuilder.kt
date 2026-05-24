@@ -1,23 +1,8 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
-import com.intellij.formatting.Alignment
-import com.intellij.formatting.Block
-import com.intellij.formatting.ChildAttributes
-import com.intellij.formatting.FormattingContext
-import com.intellij.formatting.FormattingModel
-import com.intellij.formatting.FormattingModelBuilder
-import com.intellij.formatting.FormattingModelProvider
-import com.intellij.formatting.Indent
-import com.intellij.formatting.Spacing
-import com.intellij.formatting.Wrap
-import com.intellij.formatting.WrapType
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.intellij.formatting.*
 import com.intellij.lang.ASTNode
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.TokenType
@@ -25,8 +10,11 @@ import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings
 import com.intellij.psi.formatter.FormatterUtil
 import com.intellij.psi.formatter.common.AbstractBlock
-import java.util.Locale
+import java.util.*
 
+/**
+ * $name 类型定义。
+ */
 class DreamShaderFormattingModelBuilder : FormattingModelBuilder {
     override fun createModel(formattingContext: FormattingContext): FormattingModel {
         val psiFile = formattingContext.containingFile
@@ -46,6 +34,9 @@ class DreamShaderFormattingModelBuilder : FormattingModelBuilder {
     ): TextRange? = null
 }
 
+/**
+ * $name 块模型。
+ */
 private class DreamShaderFormattingBlock(
     node: ASTNode,
     private val settings: CodeStyleSettings,

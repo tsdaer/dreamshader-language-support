@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
@@ -19,15 +11,20 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiDocumentManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDocumentManager
 import java.awt.Desktop
 import java.io.File
 
 private const val DREAMSHADER_NOTIFICATIONS = "DreamShader Notifications"
 private val DREAMSHADER_EXTENSIONS = setOf("dsm", "dsf", "dsh")
 
+/**
+ * Bridge 动作测试钩子。
+ *
+ * 用于在单元测试中替换通知发送与命令执行行为，避免依赖真实 UI/进程环境。
+ */
 internal object DreamShaderBridgeActionTestHooks {
     @Volatile
     var notificationSink: ((project: Project, type: NotificationType, title: String, content: String) -> Unit)? = null
@@ -46,6 +43,11 @@ internal object DreamShaderBridgeActionTestHooks {
     }
 }
 
+/**
+ * Bridge 统一通知入口。
+ *
+ * 优先走测试钩子；未注入钩子时，回退到 IDE NotificationGroup。
+ */
 private object DreamShaderBridgeNotifier {
     fun info(project: Project, title: String, content: String) {
         DreamShaderBridgeActionTestHooks.notificationSink?.invoke(project, NotificationType.INFORMATION, title, content)
@@ -106,6 +108,9 @@ private fun activeDreamShaderFile(project: Project, event: AnActionEvent): Virtu
     return if (vf.extension?.lowercase() in DREAMSHADER_EXTENSIONS) vf else null
 }
 
+/**
+ * 刷新 Bridge 诊断动作。
+ */
 class DreamShaderRefreshBridgeDiagnosticsAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.BridgeTools.RefreshDiagnostics.text")
@@ -135,6 +140,9 @@ class DreamShaderRefreshBridgeDiagnosticsAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 打开 Bridge 目录动作。
+ */
 class DreamShaderOpenBridgeDirectoryAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.BridgeTools.OpenBridgeDirectory.text")
@@ -186,6 +194,9 @@ class DreamShaderOpenBridgeDirectoryAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 打开 Bridge `diagnostics.json` 文件动作。
+ */
 class DreamShaderOpenBridgeDiagnosticsFileAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.BridgeTools.OpenDiagnosticsFile.text")
@@ -226,6 +237,9 @@ class DreamShaderOpenBridgeDiagnosticsFileAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 打开首条 Bridge 诊断定位动作。
+ */
 class DreamShaderOpenFirstBridgeDiagnosticLocationAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.BridgeTools.OpenFirstDiagnosticLocation.text")
@@ -274,6 +288,9 @@ class DreamShaderOpenFirstBridgeDiagnosticLocationAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 触发“重编译当前文件”Bridge 命令动作。
+ */
 class DreamShaderRecompileCurrentAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.BridgeTools.RecompileCurrent.text")
@@ -317,6 +334,9 @@ class DreamShaderRecompileCurrentAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 触发“重编译全部”Bridge 命令动作。
+ */
 class DreamShaderRecompileAllAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.BridgeTools.RecompileAll.text")
@@ -351,6 +371,9 @@ class DreamShaderRecompileAllAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 触发“清理生成 Shader”Bridge 命令动作。
+ */
 class DreamShaderCleanGeneratedShadersAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.BridgeTools.CleanGeneratedShaders.text")

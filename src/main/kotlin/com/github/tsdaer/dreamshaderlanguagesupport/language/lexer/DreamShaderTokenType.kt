@@ -1,17 +1,16 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.lexer
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.intellij.psi.TokenType
 import com.intellij.psi.tree.IElementType
 
+/**
+ * $name Token 模型。
+ */
 class DreamShaderTokenType(debugName: String) : IElementType(debugName, DreamShaderLanguage)
 
+/**
+ * $name 常量定义对象。
+ */
 object DreamShaderTokenTypes {
     @JvmField
     val KEYWORD = DreamShaderTokenType("KEYWORD")

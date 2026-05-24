@@ -1,16 +1,10 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgePathResolver
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderPackageIndexLoader
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderPackageStoreService
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.codeInsight.codeVision.CodeVisionRelativeOrdering
 import com.intellij.codeInsight.hints.codeVision.CodeVisionProviderBase
 import com.intellij.openapi.editor.Editor
@@ -20,6 +14,9 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import java.awt.event.MouseEvent
 
+/**
+ * $name 提供器实现。
+ */
 class DreamShaderCodeVisionProvider : CodeVisionProviderBase() {
     override fun acceptsFile(file: PsiFile): Boolean {
         if (file.language != DreamShaderLanguage) return false

@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
@@ -21,6 +13,11 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
 
+/**
+ * Bridge 状态栏组件工厂。
+ *
+ * 根据项目设置决定是否显示组件，并创建对应 widget 实例。
+ */
 internal class DreamShaderBridgeStatusBarWidgetFactory : StatusBarWidgetFactory {
     override fun getId(): String = WIDGET_ID
 
@@ -42,6 +39,11 @@ internal class DreamShaderBridgeStatusBarWidgetFactory : StatusBarWidgetFactory 
     override fun canBeEnabledOn(statusBar: StatusBar): Boolean = true
 }
 
+/**
+ * Bridge 状态栏组件。
+ *
+ * 展示当前诊断错误/警告计数，点击后触发一次刷新。
+ */
 private class DreamShaderBridgeStatusBarWidget(
     private val project: Project
 ) : CustomStatusBarWidget {

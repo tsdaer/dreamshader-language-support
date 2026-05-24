@@ -1,15 +1,8 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderInlayParameterHintsProvider
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import org.junit.Assert.assertTrue
 
 class DreamShaderSettingsToggleTest : BasePlatformTestCase() {
     fun testEnableCodeLensToggleControlsInlayHintsProviderOutput() {
@@ -39,8 +32,8 @@ class DreamShaderSettingsToggleTest : BasePlatformTestCase() {
 
     fun testOutArgumentPlaceholderSuffixNormalization() {
         val configurable = DreamShaderSettingsConfigurable(project)
-        assertTrue(configurable.testNormalizeOutPlaceholderSuffix("").equals("Out"))
-        assertTrue(configurable.testNormalizeOutPlaceholderSuffix("123").equals("_123"))
-        assertTrue(configurable.testNormalizeOutPlaceholderSuffix("out-suffix").equals("out_suffix"))
+        assertTrue(configurable.testNormalizeOutPlaceholderSuffix("") == "Out")
+        assertTrue(configurable.testNormalizeOutPlaceholderSuffix("123") == "_123")
+        assertTrue(configurable.testNormalizeOutPlaceholderSuffix("out-suffix") == "out_suffix")
     }
 }

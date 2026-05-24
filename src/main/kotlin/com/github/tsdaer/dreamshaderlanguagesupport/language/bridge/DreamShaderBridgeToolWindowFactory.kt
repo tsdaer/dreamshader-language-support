@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.intellij.notification.NotificationGroupManager
@@ -24,14 +16,13 @@ import com.intellij.ui.content.ContentFactory
 import java.awt.BorderLayout
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.DefaultListModel
-import javax.swing.JButton
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.ListSelectionModel
+import javax.swing.*
 
 private const val DREAMSHADER_BRIDGE_NOTIFICATIONS = "DreamShader Notifications"
 
+/**
+ * Bridge 诊断工具窗口工厂。
+ */
 internal class DreamShaderBridgeToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val panel = DreamShaderBridgeDiagnosticsPanel(project)
@@ -40,6 +31,11 @@ internal class DreamShaderBridgeToolWindowFactory : ToolWindowFactory, DumbAware
     }
 }
 
+/**
+ * Bridge 诊断面板。
+ *
+ * 提供刷新、打开选中项、打开首条诊断等基础交互。
+ */
 private class DreamShaderBridgeDiagnosticsPanel(
     private val project: Project
 ) : JPanel(BorderLayout(8, 8)) {

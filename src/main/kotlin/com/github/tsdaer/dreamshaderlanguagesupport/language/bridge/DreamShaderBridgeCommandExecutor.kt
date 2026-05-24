@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.intellij.execution.configurations.GeneralCommandLine
@@ -15,12 +7,20 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.SystemInfo
 import java.io.File
 
+/**
+ * Bridge 命令执行结果。
+ */
 internal data class DreamShaderBridgeCommandResult(
     val success: Boolean,
     val message: String,
     val exitCode: Int? = null
 )
 
+/**
+ * Bridge 命令执行器。
+ *
+ * 负责占位符替换、平台命令封装、超时控制和结果归一化。
+ */
 internal object DreamShaderBridgeCommandExecutor {
     private const val PLACEHOLDER_FILE = "%file%"
     private const val PLACEHOLDER_PROJECT = "%projectRoot%"
@@ -67,7 +67,7 @@ internal object DreamShaderBridgeCommandExecutor {
                 val stdout = output.stdout.trim()
                 DreamShaderBridgeCommandResult(
                     false,
-                    if (stderr.isNotBlank()) stderr else stdout.ifBlank { DreamShaderBundle.message("bridge.command.failedDefault") },
+                    stderr.ifBlank { stdout.ifBlank { DreamShaderBundle.message("bridge.command.failedDefault") } },
                     output.exitCode
                 )
             }

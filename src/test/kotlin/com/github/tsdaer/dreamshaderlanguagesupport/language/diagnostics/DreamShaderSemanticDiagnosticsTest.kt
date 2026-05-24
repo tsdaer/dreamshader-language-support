@@ -1,17 +1,11 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import org.junit.Assert.assertTrue
 
 class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
     fun testUnknownSettingsKey() {
@@ -729,6 +723,79 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         val content = created!!.inputStream.bufferedReader().use { it.readText() }
         assertTrue(content.contains("Namespace Noise"))
         assertNoError("Cannot resolve import '@typedreammoon/dream-noise/Library/Noise'")
+    }
+
+    fun testPackageRootImportEntryMissingReportsDedicatedError() {
+        val packageName = "@typedreammoon/dream-noise-root-missing"
+        val packageRoot = "${project.basePath!!.replace('\\', '/')}/DShader/Packages/@typedreammoon/dream-noise-root-missing"
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(packageRoot)
+            val metadata = parent.findOrCreateChildData(this, "dreamshader.package.json")
+            VfsUtil.saveText(
+                metadata,
+                """
+                {
+                  "name": "$packageName",
+                  "dreamshader": { "entry": "Library/NoiseMain.dsh" }
+                }
+                """.trimIndent()
+            )
+        }
+
+        val text = """import "<caret>$packageName";"""
+        myFixture.configureByText("unresolved_scoped_package_root_missing_entry.dsm", text)
+        assertHasError("Cannot resolve package root import '$packageName': package entry file is missing. Expected entry: 'Library/NoiseMain.dsh'")
+    }
+
+    fun testPackageRootImportEntryMissingQuickFixCreatesSuggestedEntryFile() {
+        val packageName = "@typedreammoon/dream-noise-root-missing-fix"
+        val packageRoot = "${project.basePath!!.replace('\\', '/')}/DShader/Packages/@typedreammoon/dream-noise-root-missing-fix"
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(packageRoot)
+            val metadata = parent.findOrCreateChildData(this, "dreamshader.package.json")
+            VfsUtil.saveText(
+                metadata,
+                """
+                {
+                  "name": "$packageName",
+                  "dreamshader": { "entry": "Library/NoiseMain.dsh" }
+                }
+                """.trimIndent()
+            )
+        }
+
+        val text = """import "<caret>$packageName";"""
+        myFixture.configureByText("unresolved_scoped_package_root_missing_entry_fix.dsm", text)
+        val action = myFixture.findSingleIntention("Create missing import file: $packageName/Library/NoiseMain.dsh")
+        myFixture.launchAction(action)
+
+        val created = LocalFileSystem.getInstance().findFileByPath(
+            "${project.basePath!!.replace('\\', '/')}/DShader/Packages/@typedreammoon/dream-noise-root-missing-fix/Library/NoiseMain.dsh"
+        )
+        assertTrue("Expected created package entry file", created != null && created.exists())
+        assertNoError("Cannot resolve package root import '$packageName': package entry file is missing. Expected entry: 'Library/NoiseMain.dsh'")
+    }
+
+    fun testPackageRootImportInvalidEntryReportsDedicatedError() {
+        val packageName = "@typedreammoon/dream-noise-root-invalid"
+        val packageRoot = "${project.basePath!!.replace('\\', '/')}/DShader/Packages/@typedreammoon/dream-noise-root-invalid"
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(packageRoot)
+            val metadata = parent.findOrCreateChildData(this, "dreamshader.package.json")
+            VfsUtil.saveText(
+                metadata,
+                """
+                {
+                  "name": "$packageName",
+                  "dreamshader": { "entry": "../Outside.dsh" }
+                }
+                """.trimIndent()
+            )
+        }
+
+        val text = """import "<caret>$packageName";"""
+        myFixture.configureByText("unresolved_scoped_package_root_invalid_entry.dsm", text)
+        assertHasError("Cannot resolve package root import '$packageName': package metadata entry '../Outside.dsh' is invalid or unsafe.")
     }
 
     fun testUnresolvedImportPathUnsupportedExtensionReportsExplicitError() {

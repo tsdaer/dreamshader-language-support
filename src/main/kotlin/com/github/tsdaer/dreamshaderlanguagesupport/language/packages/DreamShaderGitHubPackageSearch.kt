@@ -1,22 +1,22 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.charset.StandardCharsets
 
+/**
+ * GitHub 包搜索结果。
+ */
 internal data class DreamShaderGitHubSearchResult(
     val entries: List<DreamShaderPackageIndexEntry>,
     val errorMessage: String? = null
 )
 
+/**
+ * DreamShader GitHub 包搜索器。
+ *
+ * 基于 GitHub Search API 查询仓库并转换为包索引条目视图。
+ */
 internal object DreamShaderGitHubPackageSearch {
     private const val SEARCH_URL = "https://api.github.com/search/repositories"
 
@@ -72,6 +72,9 @@ internal object DreamShaderGitHubPackageSearch {
         )
     }
 
+    /**
+     * $name 类型定义。
+     */
     private data class HttpResponse(
         val statusCode: Int,
         val body: String

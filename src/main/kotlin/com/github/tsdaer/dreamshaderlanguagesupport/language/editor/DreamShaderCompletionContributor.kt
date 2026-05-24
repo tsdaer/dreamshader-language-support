@@ -1,24 +1,19 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderParserDefinition
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderPsiParser
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
-import com.intellij.codeInsight.completion.InsertHandler
-import com.intellij.codeInsight.completion.InsertionContext
-import com.intellij.codeInsight.completion.CompletionContributor
-import com.intellij.codeInsight.completion.CompletionParameters
-import com.intellij.codeInsight.completion.CompletionProvider
-import com.intellij.codeInsight.completion.CompletionResultSet
-import com.intellij.codeInsight.completion.CompletionType
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
+import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiFile
@@ -27,7 +22,8 @@ import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
-import java.util.Locale
+import java.nio.charset.StandardCharsets
+import java.util.*
 
 private val TYPE_KEYWORDS = DreamShaderLexer.TYPES.sorted()
 private val PARSER_DEFINITION = DreamShaderParserDefinition()
@@ -48,11 +44,17 @@ private enum class BlockKind {
     OTHER
 }
 
+/**
+ * $name 类型定义。
+ */
 private data class BlockContext(
     val kind: BlockKind,
     val name: String? = null
 )
 
+/**
+ * $name 类型定义。
+ */
 internal data class DreamShaderCompletionContext(
     val isTopLevel: Boolean,
     val isInDeclarationBody: Boolean,
@@ -156,7 +158,7 @@ internal object DreamShaderCompletionContextAnalyzer {
     }
 
     private fun com.intellij.openapi.util.TextRange.containsOffsetForCompletion(offset: Int): Boolean {
-        return offset >= startOffset && offset <= endOffset
+        return offset in startOffset..endOffset
     }
 
     private fun analyzeWithLexer(text: String, offset: Int): DreamShaderCompletionContext {
@@ -315,6 +317,9 @@ internal object DreamShaderCompletionContextAnalyzer {
     }
 }
 
+/**
+ * $name 类型定义。
+ */
 internal data class DreamShaderCompletionItem(
     val label: String,
     val insertText: String = label,
@@ -322,16 +327,25 @@ internal data class DreamShaderCompletionItem(
     val caretOffset: Int? = null
 )
 
+/**
+ * $name 类型定义。
+ */
 private data class DreamShaderSettingValueContext(
     val settingKey: String,
     val valuePrefix: String,
     val isQuotedValueContext: Boolean
 )
 
+/**
+ * $name 类型定义。
+ */
 private data class DreamShaderExpressionClassValueContext(
     val prefix: String
 )
 
+/**
+ * $name 单例对象。
+ */
 private object DreamShaderCompletionData {
     val settingsKeys = listOf(
         "MaterialDomain",
@@ -643,6 +657,9 @@ private object DreamShaderCompletionData {
     )
 }
 
+/**
+ * $name 单例对象。
+ */
 internal object DreamShaderCompletionSuggester {
     /**
      * Produces context-aware suggestions for declarations, sections, settings,
@@ -675,10 +692,8 @@ internal object DreamShaderCompletionSuggester {
         val linePrefix = linePrefix(text, offset)
         val expressionClassContext = extractExpressionClassValueContext(text, offset)
         if (expressionClassContext != null) {
-            val candidates = if (expressionClassCandidates.isEmpty()) {
+            val candidates = expressionClassCandidates.ifEmpty {
                 DreamShaderCompletionData.defaultExpressionClasses
-            } else {
-                expressionClassCandidates
             }
             candidates
                 .filter { it.lowercase(Locale.ROOT).startsWith(expressionClassContext.prefix.lowercase(Locale.ROOT)) }
@@ -875,6 +890,9 @@ internal object DreamShaderCompletionSuggester {
     }
 }
 
+/**
+ * $name 类型定义。
+ */
 private class DreamShaderInsertTextHandler(
     private val insertText: String,
     private val caretOffset: Int?
@@ -904,13 +922,13 @@ private fun collectProjectImportCandidates(file: PsiFile): List<String> {
     collectByExtension("dsf")
 
     val basePath = project.basePath?.replace('\\', '/')
-    return files.values
+    val pathCandidates = files.values
         .asSequence()
         .filter { it != file.virtualFile }
         .map { vf ->
             val normalizedPath = vf.path.replace('\\', '/')
-            if (basePath != null && normalizedPath.startsWith(basePath + "/")) {
-                normalizedPath.removePrefix(basePath + "/")
+            if (basePath != null && normalizedPath.startsWith("$basePath/")) {
+                normalizedPath.removePrefix("$basePath/")
             } else {
                 vf.name
             }
@@ -918,6 +936,52 @@ private fun collectProjectImportCandidates(file: PsiFile): List<String> {
         .distinct()
         .sorted()
         .toList()
+
+    val packageRootCandidates = collectPackageRootImportCandidates(file)
+    return (pathCandidates + packageRootCandidates)
+        .distinct()
+        .sorted()
+}
+
+private fun collectPackageRootImportCandidates(file: PsiFile): List<String> {
+    val projectBase = file.project.basePath ?: return emptyList()
+    val packagesRoot = LocalFileSystem.getInstance()
+        .findFileByPath("${projectBase.replace('\\', '/')}/DShader/Packages")
+        ?: return emptyList()
+    if (!packagesRoot.isDirectory) return emptyList()
+
+    val results = linkedSetOf<String>()
+    val scopedRoots = packagesRoot.children.filter { it.isDirectory && it.name.startsWith("@") }
+    scopedRoots.forEach { scopeDir ->
+        scopeDir.children
+            .filter { it.isDirectory }
+            .forEach { packageDir ->
+                results.add("${scopeDir.name}/${packageDir.name}")
+            }
+    }
+
+    packagesRoot.children
+        .filter { it.isDirectory && !it.name.startsWith("@") }
+        .forEach { packageDir ->
+            results.add(packageDir.name)
+        }
+
+    // Prefer manifest name when available to respect canonical package naming.
+    (scopedRoots + packagesRoot.children.filter { it.isDirectory && !it.name.startsWith("@") }).forEach { dir ->
+        val packageDirs = if (dir.name.startsWith("@")) dir.children.filter { it.isDirectory } else listOf(dir)
+        packageDirs.forEach { packageDir ->
+            readPackageManifestName(packageDir)?.let { results.add(it) }
+        }
+    }
+    return results.toList()
+}
+
+private fun readPackageManifestName(packageDir: VirtualFile): String? {
+    val metadata = packageDir.findChild("dreamshader.package.json") ?: return null
+    if (!metadata.isValid || metadata.isDirectory) return null
+    val content = runCatching { String(metadata.contentsToByteArray(), StandardCharsets.UTF_8) }.getOrNull() ?: return null
+    val match = Regex(""""name"\s*:\s*"((?:[^"\\]|\\.)*)"""", setOf(RegexOption.IGNORE_CASE)).find(content) ?: return null
+    return match.groupValues[1].trim().takeIf { it.isNotBlank() }
 }
 
 private fun collectMaterialExpressionClassCandidates(file: PsiFile): List<String> {
@@ -928,6 +992,9 @@ private fun collectMaterialExpressionClassCandidates(file: PsiFile): List<String
     )
 }
 
+/**
+ * $name 类型定义。
+ */
 class DreamShaderCompletionContributor : CompletionContributor() {
     /**
      * IntelliJ completion entrypoint that delegates all domain logic to

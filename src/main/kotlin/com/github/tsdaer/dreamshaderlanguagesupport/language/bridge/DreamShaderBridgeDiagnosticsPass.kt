@@ -1,18 +1,15 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.util.TextRange
 
+/**
+ * Bridge 诊断注入 pass。
+ *
+ * 从项目级 Bridge 诊断仓库读取当前文件诊断，并以编辑器注解形式渲染。
+ */
 internal object DreamShaderBridgeDiagnosticsPass {
     fun annotate(file: DreamShaderPsiFile, holder: AnnotationHolder) {
         val repository = file.project.getService(DreamShaderBridgeDiagnosticsRepository::class.java) ?: return
@@ -48,4 +45,3 @@ internal object DreamShaderBridgeDiagnosticsPass {
         return offset.coerceIn(0, text.length)
     }
 }
-

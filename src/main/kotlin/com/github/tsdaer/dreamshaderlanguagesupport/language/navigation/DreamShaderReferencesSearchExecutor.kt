@@ -1,12 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
@@ -43,8 +36,8 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
     }
 
     private fun isInsideDeclarationTree(element: PsiElement): Boolean {
-        val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false)
-        if (declaration == null) return false
+        val declaration =
+            PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return false
         val tokenType = element.node?.elementType
         return tokenType != DreamShaderTokenTypes.LINE_COMMENT &&
             tokenType != DreamShaderTokenTypes.BLOCK_COMMENT &&

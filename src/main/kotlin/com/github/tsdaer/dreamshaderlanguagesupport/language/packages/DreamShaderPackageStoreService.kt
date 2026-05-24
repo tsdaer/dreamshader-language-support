@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
@@ -14,12 +6,17 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import java.io.File
 import java.net.URI
-import java.util.Locale
+import java.util.*
 
 /**
- * Package store source management and searchable store data model.
+ * 包商店服务。
+ *
+ * 负责索引源增删、商店数据加载与关键词搜索（含 GitHub 搜索入口）。
  */
 @Service(Service.Level.PROJECT)
+/**
+ * $name 服务实现。
+ */
 internal class DreamShaderPackageStoreService(private val project: Project) {
     fun addIndexSource(source: String): DreamShaderPackageSourceMutationResult {
         val normalized = normalizeSource(source) ?: return DreamShaderPackageSourceMutationResult(
@@ -143,12 +140,18 @@ internal class DreamShaderPackageStoreService(private val project: Project) {
     }
 }
 
+/**
+ * 包商店快照（源列表、条目列表、错误列表）。
+ */
 internal data class DreamShaderPackageStoreSnapshot(
     val sources: List<String>,
     val entries: List<DreamShaderPackageIndexEntry>,
     val errors: List<DreamShaderPackageIndexLoadError>
 )
 
+/**
+ * 索引源变更结果。
+ */
 internal data class DreamShaderPackageSourceMutationResult(
     val changed: Boolean,
     val message: String

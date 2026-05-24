@@ -1,15 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 /**
- * Normalized package record loaded from a package store index source.
+ * 从包索引源归一化后的包条目。
  */
 internal data class DreamShaderPackageIndexEntry(
     val name: String,
@@ -23,7 +15,7 @@ internal data class DreamShaderPackageIndexEntry(
 )
 
 /**
- * Resolved install source for a package entry.
+ * 包条目的安装源解析结果。
  */
 internal data class DreamShaderPackageInstallSource(
     val sourcePathOrUrl: String,
@@ -31,7 +23,9 @@ internal data class DreamShaderPackageInstallSource(
 )
 
 /**
- * Per-source load/parse error, kept non-fatal so other sources can still load.
+ * 单个索引源的加载/解析错误。
+ *
+ * 该错误是非致命的，不会阻断其它源继续加载。
  */
 internal data class DreamShaderPackageIndexLoadError(
     val source: String,
@@ -39,7 +33,7 @@ internal data class DreamShaderPackageIndexLoadError(
 )
 
 /**
- * Aggregated package index load result across all configured sources.
+ * 多索引源聚合后的加载结果。
  */
 internal data class DreamShaderPackageIndexLoadResult(
     val entries: List<DreamShaderPackageIndexEntry>,

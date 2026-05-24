@@ -1,12 +1,4 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
-import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.intellij.notification.NotificationGroupManager
@@ -19,6 +11,9 @@ import java.awt.Desktop
 
 private const val NOTIFICATION_GROUP_ID = "DreamShader Notifications"
 
+/**
+ * 包工具通知器。
+ */
 internal object DreamShaderPackageNotifier {
     fun info(project: Project, title: String, content: String) {
         NotificationGroupManager.getInstance()
@@ -35,6 +30,9 @@ internal object DreamShaderPackageNotifier {
     }
 }
 
+/**
+ * 从 GitHub 安装包动作。
+ */
 class DreamShaderInstallPackageFromGitHubAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.PackageTools.InstallFromGitHub.text")
@@ -60,6 +58,9 @@ class DreamShaderInstallPackageFromGitHubAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 更新已安装包动作。
+ */
 class DreamShaderUpdateInstalledPackageAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.PackageTools.UpdateInstalled.text")
@@ -85,6 +86,9 @@ class DreamShaderUpdateInstalledPackageAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 移除已安装包动作。
+ */
 class DreamShaderRemoveInstalledPackageAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.PackageTools.RemoveInstalled.text")
@@ -110,6 +114,9 @@ class DreamShaderRemoveInstalledPackageAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 打开 `DShader/Packages` 目录动作。
+ */
 class DreamShaderOpenPackagesFolderAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.PackageTools.OpenPackagesFolder.text")
@@ -134,6 +141,9 @@ class DreamShaderOpenPackagesFolderAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 添加包索引源动作。
+ */
 class DreamShaderAddPackageIndexSourceAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.PackageTools.AddIndexSource.text")
@@ -159,6 +169,9 @@ class DreamShaderAddPackageIndexSourceAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 移除包索引源动作。
+ */
 class DreamShaderRemovePackageIndexSourceAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.PackageTools.RemoveIndexSource.text")
@@ -184,6 +197,9 @@ class DreamShaderRemovePackageIndexSourceAction : DumbAwareAction() {
     }
 }
 
+/**
+ * 打开包商店对话框动作。
+ */
 class DreamShaderBrowsePackageStoreAction : DumbAwareAction() {
     init {
         templatePresentation.text = DreamShaderBundle.message("action.DreamShader.PackageTools.BrowseStore.text")
