@@ -18,6 +18,44 @@ dependencies {
 }
 
 intellijPlatform {
+    val secretsDirPath = providers.gradleProperty("jetbrainsSecretsDir")
+        .orElse(".secrets")
+
+    val defaultCertificateChainFilePath = secretsDirPath.map { "$it/jetbrains-chain.crt" }
+    val defaultPrivateKeyFilePath = secretsDirPath.map { "$it/jetbrains-private.pem" }
+    val defaultPrivateKeyPasswordFilePath = secretsDirPath.map { "$it/jetbrains-private-key-password.txt" }
+    val defaultPublishTokenFilePath = secretsDirPath.map { "$it/jetbrains-publish-token.txt" }
+
+    val certificateChainFromFile = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN_FILE")
+        .orElse(providers.environmentVariable("CERTIFICATE_CHAIN_FILE"))
+        .orElse(providers.gradleProperty("jetbrainsCertificateChainFile"))
+        .orElse(defaultCertificateChainFilePath)
+        .map { path -> file(path.trim()).readText() }
+
+    val privateKeyFromFile = providers.environmentVariable("JETBRAINS_PRIVATE_KEY_FILE")
+        .orElse(providers.environmentVariable("PRIVATE_KEY_FILE"))
+        .orElse(providers.gradleProperty("jetbrainsPrivateKeyFile"))
+        .orElse(defaultPrivateKeyFilePath)
+        .map { path -> file(path.trim()).readText() }
+
+    val certificateChainFromEnv = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN")
+        .orElse(providers.environmentVariable("CERTIFICATE_CHAIN"))
+
+    val privateKeyFromEnv = providers.environmentVariable("JETBRAINS_PRIVATE_KEY")
+        .orElse(providers.environmentVariable("PRIVATE_KEY"))
+
+    val privateKeyPasswordFromFile = providers.environmentVariable("JETBRAINS_PRIVATE_KEY_PASSWORD_FILE")
+        .orElse(providers.environmentVariable("PRIVATE_KEY_PASSWORD_FILE"))
+        .orElse(providers.gradleProperty("jetbrainsPrivateKeyPasswordFile"))
+        .orElse(defaultPrivateKeyPasswordFilePath)
+        .map { path -> file(path.trim()).readText().trim() }
+
+    val publishTokenFromFile = providers.environmentVariable("JETBRAINS_PUBLISH_TOKEN_FILE")
+        .orElse(providers.environmentVariable("PUBLISH_TOKEN_FILE"))
+        .orElse(providers.gradleProperty("jetbrainsPublishTokenFile"))
+        .orElse(defaultPublishTokenFilePath)
+        .map { path -> file(path.trim()).readText().trim() }
+
     pluginConfiguration {
         id = providers.gradleProperty("pluginGroup").zip(providers.gradleProperty("pluginName")) { group, name ->
             "$group.$name"
@@ -52,13 +90,29 @@ intellijPlatform {
     }
 
     signing {
-        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
-        privateKey = providers.environmentVariable("PRIVATE_KEY")
-        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+        certificateChain.set(
+            certificateChainFromFile.orElse(
+                certificateChainFromEnv
+            )
+        )
+        privateKey.set(
+            privateKeyFromFile.orElse(
+                privateKeyFromEnv
+            )
+        )
+        password.set(
+            providers.environmentVariable("JETBRAINS_PRIVATE_KEY_PASSWORD")
+                .orElse(providers.environmentVariable("PRIVATE_KEY_PASSWORD"))
+                .orElse(providers.gradleProperty("jetbrainsPrivateKeyPassword"))
+                .orElse(privateKeyPasswordFromFile)
+        )
     }
 
     publishing {
-        token = providers.environmentVariable("PUBLISH_TOKEN")
+        token = providers.environmentVariable("JETBRAINS_PUBLISH_TOKEN")
+            .orElse(providers.environmentVariable("PUBLISH_TOKEN"))
+            .orElse(providers.gradleProperty("jetbrainsPublishToken"))
+            .orElse(publishTokenFromFile)
         channels = providers.gradleProperty("pluginPublishChannels").map { raw ->
             raw.split(',').map { it.trim() }.filter { it.isNotBlank() }
         }.orElse(listOf("default"))
