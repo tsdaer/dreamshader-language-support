@@ -3,7 +3,7 @@ import com.intellij.extapi.psi.PsiFileBase
 import com.intellij.psi.FileViewProvider
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderPsiFile.
  */
 class DreamShaderPsiFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, DreamShaderLanguage) {
     override fun getFileType() = DreamShaderFileType.INSTANCE

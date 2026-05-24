@@ -8,7 +8,7 @@ import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderPsiElementFactory.
  */
 object DreamShaderPsiElementFactory {
     fun createElement(node: ASTNode): PsiElement {

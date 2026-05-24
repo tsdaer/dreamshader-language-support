@@ -9,7 +9,7 @@ import java.nio.file.Path
 import kotlin.io.path.*
 
 /**
- * $name 服务实现。
+ * Service implementation for DreamShaderTemplateService.
  */
 internal class DreamShaderTemplateService(
     private val project: Project
@@ -292,7 +292,7 @@ internal class DreamShaderTemplateService(
 }
 
 /**
- * $name 结果模型。
+ * Data model for DreamShaderTemplateOperationResult.
  */
 internal data class DreamShaderTemplateOperationResult(
     val success: Boolean,

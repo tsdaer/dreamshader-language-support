@@ -6,7 +6,7 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderMaterialExpressionManifest.
  */
 internal object DreamShaderMaterialExpressionManifest {
     private const val BUNDLED_RESOURCE_PATH = "/messages/material-expression-manifest.json"

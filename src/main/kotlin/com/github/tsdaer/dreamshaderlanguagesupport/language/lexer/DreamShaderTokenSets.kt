@@ -2,7 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.lexer
 import com.intellij.psi.tree.TokenSet
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderTokenSets.
  */
 object DreamShaderTokenSets {
     @JvmField

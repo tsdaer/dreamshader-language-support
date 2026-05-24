@@ -4,7 +4,7 @@ import com.intellij.openapi.editor.HighlighterColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
 
 /**
- * $name 常量定义对象。
+ * Singleton for DreamShaderTextAttributes.
  */
 object DreamShaderTextAttributes {
     @JvmField

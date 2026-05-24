@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets
  */
 @Service(Service.Level.PROJECT)
 /**
- * $name 仓库实现。
+ * Implementation of DreamShaderBridgeDiagnosticsRepository.
  */
 class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
     @Volatile

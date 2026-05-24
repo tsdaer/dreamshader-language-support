@@ -4,7 +4,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.tree.IElementType
 
 /**
- * $name Token 模型。
+ * Data model for DreamShaderLexedToken.
  */
 internal data class DreamShaderLexedToken(
     val type: IElementType,

@@ -1,7 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.lexer
 
 /**
- * $name 常量定义对象。
+ * Singleton for DreamShaderLanguageKeywords.
  */
 internal object DreamShaderLanguageKeywords {
     val TOP_LEVEL_KEYWORDS = listOf(

@@ -14,7 +14,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 
 /**
- * $name 设置面板实现。
+ * Implementation of DreamShaderSettingsConfigurable.
  */
 class DreamShaderSettingsConfigurable(
     private val project: Project

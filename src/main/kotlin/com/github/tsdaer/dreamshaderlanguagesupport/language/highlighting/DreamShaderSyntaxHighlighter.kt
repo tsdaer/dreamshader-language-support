@@ -7,7 +7,7 @@ import com.intellij.openapi.fileTypes.SyntaxHighlighterBase
 import com.intellij.psi.tree.IElementType
 
 /**
- * $name 语法高亮实现。
+ * Implementation of DreamShaderSyntaxHighlighter.
  */
 class DreamShaderSyntaxHighlighter : SyntaxHighlighterBase() {
     override fun getHighlightingLexer(): Lexer = DreamShaderLexer()

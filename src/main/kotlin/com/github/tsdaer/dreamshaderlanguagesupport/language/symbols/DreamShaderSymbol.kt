@@ -3,7 +3,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.symbols
 import com.intellij.openapi.util.TextRange
 
 /**
- * $name 类型定义。
+ * Data model for DreamShaderSymbol.
  */
 data class DreamShaderSymbol(
     val name: String,

@@ -3,7 +3,7 @@ import com.intellij.openapi.util.IconLoader
 import javax.swing.Icon
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderIcons.
  */
 object DreamShaderIcons {
     @JvmField

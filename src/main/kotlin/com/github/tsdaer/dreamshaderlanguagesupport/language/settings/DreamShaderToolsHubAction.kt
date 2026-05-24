@@ -13,7 +13,7 @@ import java.awt.FlowLayout
 import javax.swing.*
 
 /**
- * $name 动作实现。
+ * Action implementation for DreamShaderOpenHubAction.
  */
 class DreamShaderOpenHubAction : DumbAwareAction() {
     init {
@@ -28,7 +28,7 @@ class DreamShaderOpenHubAction : DumbAwareAction() {
 }
 
 /**
- * $name 对话框实现。
+ * Dialog implementation for DreamShaderHubDialog.
  */
 private class DreamShaderHubDialog(
     private val project: Project

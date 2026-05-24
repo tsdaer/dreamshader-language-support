@@ -8,7 +8,7 @@ import com.intellij.psi.PsiElement
 import java.util.*
 
 /**
- * $name 提供器实现。
+ * Provider implementation for DreamShaderInlayParameterHintsProvider.
  */
 class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     override fun getParameterHints(element: PsiElement): List<InlayInfo> {
@@ -298,7 +298,7 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     private fun isNameChar(ch: Char): Boolean = ch == '_' || ch == '.' || ch.isLetterOrDigit()
 
     /**
-     * $name 解析结果模型。
+     * Data model for ParsedCall.
      */
     private data class ParsedCall(
         val functionName: String,
@@ -306,7 +306,7 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     )
 
     /**
-     * $name 类型定义。
+     * Data model for ArgumentSegment.
      */
     private data class ArgumentSegment(
         val text: String,

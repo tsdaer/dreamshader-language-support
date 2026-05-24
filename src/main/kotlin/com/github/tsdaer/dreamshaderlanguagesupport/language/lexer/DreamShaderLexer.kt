@@ -4,7 +4,7 @@ import com.intellij.psi.tree.IElementType
 import java.util.*
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderLexer.
  */
 class DreamShaderLexer : LexerBase() {
     private var buffer: CharSequence = ""

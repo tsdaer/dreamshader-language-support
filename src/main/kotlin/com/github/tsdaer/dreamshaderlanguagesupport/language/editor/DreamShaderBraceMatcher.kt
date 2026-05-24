@@ -6,7 +6,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.tree.IElementType
 
 /**
- * $name 匹配器实现。
+ * Implementation of DreamShaderBraceMatcher.
  */
 class DreamShaderBraceMatcher : PairedBraceMatcher {
     override fun getPairs(): Array<BracePair> {

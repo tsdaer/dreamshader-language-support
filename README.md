@@ -116,7 +116,7 @@ This plugin currently follows a layered architecture:
 
 7. Project-level persistent settings
 - `DreamShaderProjectSettings` stores project-scoped configuration for Bridge and package tooling.
-- Current keys: `projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `packageStoreGitHubToken`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`.
+- Current keys: `projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`, `outArgumentPlaceholderSuffix`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `packageStoreGitHubToken`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`.
 
 Detailed architecture doc:
 - [`docs/architecture.md`](docs/architecture.md)
@@ -1064,7 +1064,7 @@ Rule format:
 | `DBRG-102` | `Implemented` | `DreamShaderManifestCompletionTest.testUsesConfiguredMaterialExpressionManifestPath()`                                                                                                                                                                      |
 | `DBRG-103` | `Implemented` | `DreamShaderManifestCompletionTest.testInvalidManifestPathFallsBackGracefully()`                                                                                                                                                                            |
 | `DBRG-104` | `Implemented` | `DreamShaderStatusBarVisibilityTest.testStatusBarVisibilitySetting()`                                                                                                                                                                                       |
-| `DBRG-105` | `Implemented` | `DreamShaderSettingsToggleTest.testEnableCodeLensToggleControlsInlayHintsProviderOutput()`                                                                                                                                                                  |
+| `DBRG-105` | `Implemented` | `DreamShaderSettingsToggleTest.testEnableCodeLensToggleControlsInlayHintsProviderOutput()` + `testCodeVisionRespectsEnableCodeLensSetting()`                                                                                                              |
 | `DTPL-001` | `Implemented` | `DreamShaderTemplateCommandsTest.testCreateMaterialTemplateProducesValidDsm()`                                                                                                                                                                              |
 | `DTPL-002` | `Implemented` | `DreamShaderTemplateCommandsTest.testCreateFunctionFileTemplateProducesValidDsf()`                                                                                                                                                                          |
 | `DTPL-003` | `Implemented` | `DreamShaderTemplateCommandsTest.testCreateHeaderTemplateProducesValidDsh()`                                                                                                                                                                                |
@@ -1130,9 +1130,9 @@ Rule format:
 
 10. `ID`: `DBRG-105`  
 `Priority`: `P2`  
-`Rule`: `enableCodeLens` currently toggles DreamShader inlay-parameter-hints output (CodeLens-like UX), not IntelliJ Code Vision actions.  
-`Expected`: inlay hints appear/disappear without restart when setting changes  
-`Test`: `testEnableCodeLensToggleControlsInlayHintsProviderOutput()`
+`Rule`: `enableCodeLens` currently toggles both DreamShader inlay-parameter-hints output and IntelliJ Code Vision hints.  
+`Expected`: inlay hints and Code Vision hints appear/disappear without restart when setting changes  
+`Test`: `testEnableCodeLensToggleControlsInlayHintsProviderOutput()`, `testCodeVisionRespectsEnableCodeLensSetting()`
 
 #### C. Authoring Template / Scaffold Commands
 
@@ -1626,7 +1626,7 @@ Configurable fields:
 - `Project Root`
 - `Material Manifest Path`
 - `Show DreamShader status bar widget`
-- `Enable DreamShader in-editor code lens hints` (currently controls inlay-parameter-hints behavior, not IntelliJ Code Vision)
+- `Enable DreamShader in-editor code lens hints` (currently controls both inlay-parameter-hints output and IntelliJ Code Vision hints)
 - `Out Placeholder Suffix` (used by missing `out` argument quick-fix placeholder generation; sanitized to identifier-safe form)
 - `Bridge Recompile Current Command`
 - `Bridge Recompile All Command`

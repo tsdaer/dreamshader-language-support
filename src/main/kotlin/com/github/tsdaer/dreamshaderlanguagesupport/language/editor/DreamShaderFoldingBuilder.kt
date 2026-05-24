@@ -12,7 +12,7 @@ import java.util.Locale
 import kotlin.collections.ArrayDeque
 
 /**
- * $name 类型定义。
+ * Builder implementation for DreamShaderFoldingBuilder.
  */
 class DreamShaderFoldingBuilder : FoldingBuilderEx(), DumbAware {
     override fun buildFoldRegions(root: PsiElement, document: Document, quick: Boolean): Array<FoldingDescriptor> {
@@ -69,7 +69,7 @@ class DreamShaderFoldingBuilder : FoldingBuilderEx(), DumbAware {
         out: MutableList<FoldingDescriptor>
     ) {
         /**
-         * $name 类型定义。
+         * Data model for RegionStart.
          */
         data class RegionStart(val offset: Int, val placeholder: String)
 

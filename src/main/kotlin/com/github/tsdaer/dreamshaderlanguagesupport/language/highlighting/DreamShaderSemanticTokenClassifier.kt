@@ -8,7 +8,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import java.util.*
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderSemanticTokenClassifier.
  */
 internal object DreamShaderSemanticTokenClassifier {
     /**

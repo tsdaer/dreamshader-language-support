@@ -7,7 +7,7 @@ import com.intellij.ide.util.treeView.smartTree.Sorter
 import com.intellij.openapi.editor.Editor
 
 /**
- * $name 模型定义。
+ * Model implementation for DreamShaderStructureViewModel.
  */
 class DreamShaderStructureViewModel(
     psiFile: DreamShaderPsiFile,

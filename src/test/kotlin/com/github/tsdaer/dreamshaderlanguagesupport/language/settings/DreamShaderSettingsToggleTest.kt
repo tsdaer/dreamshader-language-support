@@ -1,4 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCodeVisionProvider
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderInlayParameterHintsProvider
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.intellij.psi.util.PsiTreeUtil
@@ -35,5 +36,26 @@ class DreamShaderSettingsToggleTest : BasePlatformTestCase() {
         assertTrue(configurable.testNormalizeOutPlaceholderSuffix("") == "Out")
         assertTrue(configurable.testNormalizeOutPlaceholderSuffix("123") == "_123")
         assertTrue(configurable.testNormalizeOutPlaceholderSuffix("out-suffix") == "out_suffix")
+    }
+
+    fun testCodeVisionRespectsEnableCodeLensSetting() {
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        val provider = DreamShaderCodeVisionProvider()
+        val file = myFixture.configureByText(
+            "code_vision_toggle.dsm",
+            """
+            Shader Main {
+                Graph {
+                    float2 uv = UE.TexCoord(0);
+                }
+            }
+            """.trimIndent()
+        )
+
+        settings.enableCodeLens = true
+        assertTrue("Expected Code Vision enabled when enableCodeLens=true", provider.acceptsFile(file))
+
+        settings.enableCodeLens = false
+        assertFalse("Expected Code Vision disabled when enableCodeLens=false", provider.acceptsFile(file))
     }
 }

@@ -212,7 +212,7 @@ internal class DreamShaderPackageManager(
     }
 
     private fun parsePackageMetadata(file: Path): DreamShaderPackageMetadata? {
-        val raw = runCatching { com.intellij.platform.eel.fs.EelFiles.readString(file, StandardCharsets.UTF_8) }.getOrNull() ?: return null
+        val raw = runCatching { Files.readString(file, StandardCharsets.UTF_8) }.getOrNull() ?: return null
         val name = findStringField(raw, listOf("name"))?.trim().orEmpty()
         if (name.isBlank()) return null
         val version = findStringField(raw, listOf("version"))?.trim()
@@ -223,7 +223,7 @@ internal class DreamShaderPackageManager(
     private fun readLockEntries(): List<DreamShaderPackageLockEntry> {
         val lockFile = lockFilePath()
         if (!lockFile.exists() || !lockFile.isRegularFile()) return emptyList()
-        val raw = runCatching { com.intellij.platform.eel.fs.EelFiles.readString(lockFile, StandardCharsets.UTF_8) }.getOrNull() ?: return emptyList()
+        val raw = runCatching { Files.readString(lockFile, StandardCharsets.UTF_8) }.getOrNull() ?: return emptyList()
         val array = extractArrayField(raw, "packages") ?: return emptyList()
         return extractTopLevelObjects(array).mapNotNull { parseLockEntry(it) }
     }

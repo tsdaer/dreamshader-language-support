@@ -9,7 +9,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import java.util.*
 
 /**
- * $name 提供器实现。
+ * Provider implementation for DreamShaderDocumentationProvider.
  */
 class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
     override fun getQuickNavigateInfo(element: PsiElement, originalElement: PsiElement?): String? {

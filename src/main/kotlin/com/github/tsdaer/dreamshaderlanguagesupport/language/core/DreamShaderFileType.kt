@@ -3,7 +3,7 @@ import com.intellij.openapi.fileTypes.LanguageFileType
 import javax.swing.Icon
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderFileType.
  */
 class DreamShaderFileType private constructor() : LanguageFileType(DreamShaderLanguage) {
     override fun getName(): String = "DreamShaderLang"

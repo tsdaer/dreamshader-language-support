@@ -15,7 +15,7 @@ import java.util.*
  */
 @Service(Service.Level.PROJECT)
 /**
- * $name 服务实现。
+ * Service implementation for DreamShaderPackageStoreService.
  */
 internal class DreamShaderPackageStoreService(private val project: Project) {
     fun addIndexSource(source: String): DreamShaderPackageSourceMutationResult {

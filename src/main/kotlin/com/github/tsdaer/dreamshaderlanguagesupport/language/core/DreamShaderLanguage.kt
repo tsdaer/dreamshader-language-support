@@ -2,7 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.core
 import com.intellij.lang.Language
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderLanguage.
  */
 object DreamShaderLanguage : Language("DreamShaderLang") {
     @Suppress("unused")

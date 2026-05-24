@@ -2,7 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 import com.intellij.lang.Commenter
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderCommenter.
  */
 class DreamShaderCommenter : Commenter {
     override fun getLineCommentPrefix(): String = "//"

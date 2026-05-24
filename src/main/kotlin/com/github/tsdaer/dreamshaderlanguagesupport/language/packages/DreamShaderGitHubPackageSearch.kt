@@ -73,7 +73,7 @@ internal object DreamShaderGitHubPackageSearch {
     }
 
     /**
-     * $name 类型定义。
+     * Data model for HttpResponse.
      */
     private data class HttpResponse(
         val statusCode: Int,

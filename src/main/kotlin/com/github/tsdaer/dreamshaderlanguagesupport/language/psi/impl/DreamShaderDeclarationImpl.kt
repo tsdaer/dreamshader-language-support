@@ -14,7 +14,7 @@ import com.intellij.util.IncorrectOperationException
 import java.util.*
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderDeclarationImpl.
  */
 class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), DreamShaderDeclaration {
     override fun keywordText(): String? {

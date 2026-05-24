@@ -8,7 +8,7 @@ import org.jetbrains.annotations.PropertyKey
 private const val BUNDLE = "messages.DreamShaderBundle"
 
 /**
- * $name 单例对象。
+ * Singleton bundle accessor for localized DreamShader plugin messages.
  */
 internal object DreamShaderBundle {
     private val INSTANCE = DynamicBundle(DreamShaderBundle::class.java, BUNDLE)

@@ -16,7 +16,7 @@ private fun notifyTemplateResult(project: Project, result: DreamShaderTemplateOp
 }
 
 /**
- * $name 动作实现。
+ * Action implementation for DreamShaderCreateMaterialTemplateAction.
  */
 class DreamShaderCreateMaterialTemplateAction : DumbAwareAction() {
     init {
@@ -40,7 +40,7 @@ class DreamShaderCreateMaterialTemplateAction : DumbAwareAction() {
 }
 
 /**
- * $name 动作实现。
+ * Action implementation for DreamShaderCreateFunctionTemplateAction.
  */
 class DreamShaderCreateFunctionTemplateAction : DumbAwareAction() {
     init {
@@ -64,7 +64,7 @@ class DreamShaderCreateFunctionTemplateAction : DumbAwareAction() {
 }
 
 /**
- * $name 动作实现。
+ * Action implementation for DreamShaderCreateHeaderTemplateAction.
  */
 class DreamShaderCreateHeaderTemplateAction : DumbAwareAction() {
     init {
@@ -88,7 +88,7 @@ class DreamShaderCreateHeaderTemplateAction : DumbAwareAction() {
 }
 
 /**
- * $name 动作实现。
+ * Action implementation for DreamShaderCreatePackageScaffoldAction.
  */
 class DreamShaderCreatePackageScaffoldAction : DumbAwareAction() {
     init {

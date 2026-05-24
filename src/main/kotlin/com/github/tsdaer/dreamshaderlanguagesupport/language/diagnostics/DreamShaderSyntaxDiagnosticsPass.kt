@@ -8,7 +8,7 @@ import com.intellij.openapi.util.TextRange
 import java.util.*
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderSyntaxDiagnosticsPass.
  */
 internal object DreamShaderSyntaxDiagnosticsPass {
     fun annotate(

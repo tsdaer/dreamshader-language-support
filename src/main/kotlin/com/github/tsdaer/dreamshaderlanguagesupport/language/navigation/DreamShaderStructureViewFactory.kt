@@ -8,7 +8,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiFile
 
 /**
- * $name 工厂实现。
+ * Factory implementation for DreamShaderStructureViewFactory.
  */
 class DreamShaderStructureViewFactory : PsiStructureViewFactory {
     override fun getStructureViewBuilder(psiFile: PsiFile): StructureViewBuilder? {

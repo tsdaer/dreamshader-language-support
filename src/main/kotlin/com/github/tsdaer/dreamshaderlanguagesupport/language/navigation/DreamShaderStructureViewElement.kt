@@ -12,7 +12,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import javax.swing.Icon
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderStructureViewElement.
  */
 class DreamShaderStructureViewElement(
     private val element: PsiElement

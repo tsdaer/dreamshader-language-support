@@ -45,7 +45,7 @@ private enum class BlockKind {
 }
 
 /**
- * $name 类型定义。
+ * Data model for BlockContext.
  */
 private data class BlockContext(
     val kind: BlockKind,
@@ -53,7 +53,7 @@ private data class BlockContext(
 )
 
 /**
- * $name 类型定义。
+ * Data model for DreamShaderCompletionContext.
  */
 internal data class DreamShaderCompletionContext(
     val isTopLevel: Boolean,
@@ -68,8 +68,8 @@ internal data class DreamShaderCompletionContext(
 )
 
 /**
- * 计算完备上下文，采用弹性策略：
- * 先用PSI，第二用解析文本的备回，最后是仅用词法表的备用。
+ * Computes completion context with a resilient fallback chain:
+ * PSI -> parser-backed text analysis -> lexer-only fallback.
  */
 internal object DreamShaderCompletionContextAnalyzer {
     fun analyze(text: String, offset: Int): DreamShaderCompletionContext {
@@ -318,7 +318,7 @@ internal object DreamShaderCompletionContextAnalyzer {
 }
 
 /**
- * $name 类型定义。
+ * Data model for DreamShaderCompletionItem.
  */
 internal data class DreamShaderCompletionItem(
     val label: String,
@@ -328,7 +328,7 @@ internal data class DreamShaderCompletionItem(
 )
 
 /**
- * $name 类型定义。
+ * Data model for DreamShaderSettingValueContext.
  */
 private data class DreamShaderSettingValueContext(
     val settingKey: String,
@@ -337,14 +337,14 @@ private data class DreamShaderSettingValueContext(
 )
 
 /**
- * $name 类型定义。
+ * Data model for DreamShaderExpressionClassValueContext.
  */
 private data class DreamShaderExpressionClassValueContext(
     val prefix: String
 )
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderCompletionData.
  */
 private object DreamShaderCompletionData {
     val settingsKeys = listOf(
@@ -658,7 +658,7 @@ private object DreamShaderCompletionData {
 }
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderCompletionSuggester.
  */
 internal object DreamShaderCompletionSuggester {
     /**
@@ -891,7 +891,7 @@ internal object DreamShaderCompletionSuggester {
 }
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderInsertTextHandler.
  */
 private class DreamShaderInsertTextHandler(
     private val insertText: String,
@@ -993,7 +993,7 @@ private fun collectMaterialExpressionClassCandidates(file: PsiFile): List<String
 }
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderCompletionContributor.
  */
 class DreamShaderCompletionContributor : CompletionContributor() {
     /**

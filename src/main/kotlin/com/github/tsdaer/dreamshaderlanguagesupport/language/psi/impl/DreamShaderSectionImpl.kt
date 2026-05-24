@@ -8,7 +8,7 @@ import com.intellij.openapi.util.TextRange
 import java.util.*
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderSectionImpl.
  */
 class DreamShaderSectionImpl(node: ASTNode) : ASTWrapperPsiElement(node), DreamShaderSection {
     override fun sectionName(): String? {

@@ -15,7 +15,7 @@ import com.intellij.psi.PsiFile
 import java.awt.event.MouseEvent
 
 /**
- * $name 提供器实现。
+ * Provider implementation for DreamShaderCodeVisionProvider.
  */
 class DreamShaderCodeVisionProvider : CodeVisionProviderBase() {
     override fun acceptsFile(file: PsiFile): Boolean {

@@ -2033,7 +2033,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     /**
-     * $name 解析结果模型。
+     * Data model for ParsedParam.
      */
     private data class ParsedParam(
         val name: String,
@@ -2041,14 +2041,14 @@ internal class DreamShaderSemanticAnnotationPipeline {
     )
 
     /**
-     * $name 解析结果模型。
+     * Data model for ParsedSignature.
      */
     private data class ParsedSignature(
         val params: List<ParsedParam>
     )
 
     /**
-     * $name 信息模型。
+     * Data model for CallArgumentInfo.
      */
     private data class CallArgumentInfo(
         val argumentCount: Int,
@@ -2056,7 +2056,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     )
 
     /**
-     * $name 类型定义。
+     * Data model for SectionBody.
      */
     private data class SectionBody(
         val text: String,
@@ -2064,7 +2064,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     )
 
     /**
-     * $name 类型定义。
+     * Data model for NamedAssignmentMatch.
      */
     private data class NamedAssignmentMatch(
         val key: String,
@@ -2074,7 +2074,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     )
 
     /**
-     * $name 类型定义。
+     * Data model for ExpressionClassArgument.
      */
     private data class ExpressionClassArgument(
         val value: String,
@@ -2083,7 +2083,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     )
 
     /**
-     * $name 类型定义。
+     * Data model for ImportCreationPlan.
      */
     private data class ImportCreationPlan(
         val relativePath: String,

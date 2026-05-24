@@ -3,7 +3,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBun
 import java.util.*
 
 /**
- * $name 信息模型。
+ * Data model for DreamShaderSettingInfo.
  */
 internal data class DreamShaderSettingInfo(
     val key: String,
@@ -12,7 +12,7 @@ internal data class DreamShaderSettingInfo(
 )
 
 /**
- * $name 信息模型。
+ * Data model for DreamShaderBuiltinInfo.
  */
 internal data class DreamShaderBuiltinInfo(
     val name: String,
@@ -21,7 +21,7 @@ internal data class DreamShaderBuiltinInfo(
 )
 
 /**
- * $name 单例对象。
+ * Singleton for DreamShaderDocumentationData.
  */
 internal object DreamShaderDocumentationData {
     val declarationKeywordDescriptions: Map<String, String> = mapOf(

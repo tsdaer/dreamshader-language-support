@@ -3,12 +3,12 @@ import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderElementType.
  */
 class DreamShaderElementType(debugName: String) : IElementType(debugName, DreamShaderLanguage)
 
 /**
- * $name 常量定义对象。
+ * Singleton for DreamShaderElementTypes.
  */
 object DreamShaderElementTypes {
     @JvmField

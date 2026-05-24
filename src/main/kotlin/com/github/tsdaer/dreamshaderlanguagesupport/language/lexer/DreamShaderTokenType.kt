@@ -4,12 +4,12 @@ import com.intellij.psi.TokenType
 import com.intellij.psi.tree.IElementType
 
 /**
- * $name Token 模型。
+ * Implementation of DreamShaderTokenType.
  */
 class DreamShaderTokenType(debugName: String) : IElementType(debugName, DreamShaderLanguage)
 
 /**
- * $name 常量定义对象。
+ * Singleton for DreamShaderTokenTypes.
  */
 object DreamShaderTokenTypes {
     @JvmField

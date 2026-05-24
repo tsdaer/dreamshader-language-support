@@ -27,7 +27,7 @@ private val COLOR_ATTRIBUTES = arrayOf(
 )
 
 /**
- * $name 类型定义。
+ * Implementation of DreamShaderColorSettingsPage.
  */
 class DreamShaderColorSettingsPage : ColorSettingsPage {
     override fun getDisplayName(): String = "DreamShaderLang"

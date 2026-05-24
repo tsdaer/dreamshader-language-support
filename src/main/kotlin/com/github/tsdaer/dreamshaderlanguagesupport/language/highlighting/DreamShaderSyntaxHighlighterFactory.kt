@@ -3,7 +3,7 @@ import com.intellij.openapi.fileTypes.SingleLazyInstanceSyntaxHighlighterFactory
 import com.intellij.openapi.fileTypes.SyntaxHighlighter
 
 /**
- * $name 工厂实现。
+ * Factory implementation for DreamShaderSyntaxHighlighterFactory.
  */
 class DreamShaderSyntaxHighlighterFactory : SingleLazyInstanceSyntaxHighlighterFactory() {
     override fun createHighlighter(): SyntaxHighlighter = DreamShaderSyntaxHighlighter()

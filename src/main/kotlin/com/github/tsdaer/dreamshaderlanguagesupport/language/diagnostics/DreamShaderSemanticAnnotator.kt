@@ -4,7 +4,7 @@ import com.intellij.lang.annotation.Annotator
 import com.intellij.psi.PsiElement
 
 /**
- * $name 标注器实现。
+ * Implementation of DreamShaderSemanticAnnotator.
  */
 class DreamShaderSemanticAnnotator : Annotator {
     private val pipeline = DreamShaderSemanticAnnotationPipeline()

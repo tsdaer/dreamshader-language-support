@@ -5,7 +5,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiNameIdentifierOwner
 
 /**
- * $name 接口。
+ * Contract for DreamShaderDeclaration.
  */
 interface DreamShaderDeclaration : PsiElement, PsiNameIdentifierOwner {
     fun keywordText(): String?

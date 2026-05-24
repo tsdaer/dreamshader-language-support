@@ -13,7 +13,7 @@ import com.intellij.psi.formatter.common.AbstractBlock
 import java.util.*
 
 /**
- * $name 类型定义。
+ * Builder implementation for DreamShaderFormattingModelBuilder.
  */
 class DreamShaderFormattingModelBuilder : FormattingModelBuilder {
     override fun createModel(formattingContext: FormattingContext): FormattingModel {
@@ -35,7 +35,7 @@ class DreamShaderFormattingModelBuilder : FormattingModelBuilder {
 }
 
 /**
- * $name 块模型。
+ * Implementation of DreamShaderFormattingBlock.
  */
 private class DreamShaderFormattingBlock(
     node: ASTNode,
