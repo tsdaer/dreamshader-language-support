@@ -739,7 +739,7 @@ Shader Main {
     }
 }
 ```
-`Expected`: `Unknown settings key 'DomainX'`  
+`Expected`: `Unknown settings key 'DomainX'. Did you mean 'Domain'?`  
 `Test`: `testUnknownSettingsKey()`
 
 16. `ID`: `DSYN-202`  
@@ -767,7 +767,7 @@ Shader Main {
     }
 }
 ```
-`Expected`: `Unknown material output member 'Base.ColorX'`  
+`Expected`: `Unknown material output member 'Base.ColorX'. Did you mean 'Base.BaseColor'?`  
 `Test`: `testUnknownBaseOutputMember()`
 
 18. `ID`: `DSYN-204`  
@@ -781,7 +781,7 @@ Shader Main {
     }
 }
 ```
-`Expected`: `Unknown type 'float9'`  
+`Expected`: `Unknown type 'float9'. Did you mean 'float'?`  
 `Test`: `testUnknownTypeInInputs()`
 
 19. `ID`: `DSYN-205`  
@@ -1170,7 +1170,7 @@ Current test files:
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageBridgeInteropTest.kt` for `DPKG-401`.
 
 Planned additional tests:
-- Extend `DBRG-005` from action registration/invocation safety to richer success/error message assertions.
+- Extend `DBRG-005` from action registration/invocation safety to richer success/error message assertions. (Completed on 2026-05-24)
 
 Recommendation:
 - Implement `DPKG-001` to `DPKG-006` first to stabilize data model and source handling before UI/actions.

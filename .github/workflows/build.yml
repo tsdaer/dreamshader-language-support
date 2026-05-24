@@ -98,6 +98,10 @@ jobs:
       - name: Run Tests
         run: ./gradlew check
 
+      # Validate i18n key parity between base and zh_CN bundles
+      - name: Check i18n keys
+        run: pwsh ./scripts/check_i18n_keys.ps1
+
       # Collect Tests Result of failed tests
       - name: Collect Tests Result
         if: ${{ failure() }}

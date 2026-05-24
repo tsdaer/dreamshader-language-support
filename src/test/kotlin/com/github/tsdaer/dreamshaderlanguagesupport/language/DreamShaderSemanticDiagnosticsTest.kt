@@ -14,7 +14,7 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
             }
         """.trimIndent()
         myFixture.configureByText("unknown_settings_key.dsm", text)
-        assertHasError("Unknown settings key 'DomainX'")
+        assertHasError("Unknown settings key 'DomainX'. Did you mean 'Domain'?")
     }
 
     fun testInvalidSettingsEnumValue() {
@@ -38,7 +38,7 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
             }
         """.trimIndent()
         myFixture.configureByText("unknown_base_member.dsm", text)
-        assertHasError("Unknown material output member 'Base.ColorX'")
+        assertHasError("Unknown material output member 'Base.ColorX'. Did you mean 'Base.BaseColor'?")
     }
 
     fun testUnknownTypeInInputs() {
@@ -50,7 +50,19 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
             }
         """.trimIndent()
         myFixture.configureByText("unknown_type.dsm", text)
-        assertHasError("Unknown type 'float9'")
+        assertHasError("Unknown type 'float9'. Did you mean 'float'?")
+    }
+
+    fun testUnknownTypeWithoutSuggestionWhenTooFar() {
+        val text = """
+            Shader Main {
+                Inputs {
+                    zzzzq VeryBad;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("unknown_type_no_suggestion.dsm", text)
+        assertHasError("Unknown type 'zzzzq'")
     }
 
     fun testMissingOutArgumentInFunctionCall() {

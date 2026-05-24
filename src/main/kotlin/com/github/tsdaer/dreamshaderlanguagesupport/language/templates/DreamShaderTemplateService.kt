@@ -196,7 +196,10 @@ internal class DreamShaderTemplateService(
         }.getOrElse { error ->
             DreamShaderTemplateOperationResult(
                 false,
-                DreamShaderBundle.message("templates.error.createFailed", error.message ?: "unknown")
+                DreamShaderBundle.message(
+                    "templates.error.createFailed",
+                    error.message ?: DreamShaderBundle.message("common.unknown")
+                )
             )
         }
     }
@@ -216,7 +219,10 @@ internal class DreamShaderTemplateService(
         }.getOrElse { error ->
             DreamShaderTemplateOperationResult(
                 false,
-                DreamShaderBundle.message("templates.error.createFailed", error.message ?: "unknown")
+                DreamShaderBundle.message(
+                    "templates.error.createFailed",
+                    error.message ?: DreamShaderBundle.message("common.unknown")
+                )
             )
         }
     }

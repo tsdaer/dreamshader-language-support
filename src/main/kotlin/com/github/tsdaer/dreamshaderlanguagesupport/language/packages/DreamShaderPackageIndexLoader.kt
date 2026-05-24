@@ -40,7 +40,12 @@ internal object DreamShaderPackageIndexLoader {
         for (source in deduplicateSources(sources)) {
             val payload = readSourceText(source)
             if (payload == null) {
-                errors.add(DreamShaderPackageIndexLoadError(source, "Failed to read package index: $source"))
+                errors.add(
+                    DreamShaderPackageIndexLoadError(
+                        source,
+                        errorMessage("package.loader.failedToReadIndex", source)
+                    )
+                )
                 continue
             }
 
@@ -50,7 +55,11 @@ internal object DreamShaderPackageIndexLoader {
                 errors.add(
                     DreamShaderPackageIndexLoadError(
                         source,
-                        "Failed to parse package index: $source (${throwable?.message ?: "unknown error"})"
+                        errorMessage(
+                            "package.loader.failedToParseIndex",
+                            source,
+                            throwable?.message ?: "unknown error"
+                        )
                     )
                 )
                 continue
@@ -286,5 +295,16 @@ internal object DreamShaderPackageIndexLoader {
             .replace("\\n", "\n")
             .replace("\\r", "\r")
             .replace("\\t", "\t")
+    }
+
+    private fun errorMessage(key: String, vararg args: Any): String {
+        return runCatching { com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderBundle.message(key, *args) }
+            .getOrElse {
+                when (key) {
+                    "package.loader.failedToReadIndex" -> "Failed to read package index: ${args[0]}"
+                    "package.loader.failedToParseIndex" -> "Failed to parse package index: ${args[0]} (${args[1]})"
+                    else -> "Package index error"
+                }
+            }
     }
 }

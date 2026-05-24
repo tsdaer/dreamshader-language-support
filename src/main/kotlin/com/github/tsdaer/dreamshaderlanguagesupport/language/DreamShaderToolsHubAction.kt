@@ -61,7 +61,7 @@ private class DreamShaderHubDialog(
                     },
                     button("hub.button.openBridgePanel") {
                         ToolWindowManager.getInstance(project)
-                            .getToolWindow("DreamShader Bridge Diagnostics")
+                            .getToolWindow(DreamShaderBundle.message("toolwindow.dreamshader.bridge.displayName"))
                             ?.show()
                     },
                     button("hub.button.refreshBridgeDiagnostics") {

@@ -98,7 +98,10 @@ class DreamShaderSemanticAnnotator : Annotator {
                     val declarationKeyword = DISPLAY_DECLARATION_KEYWORDS[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
                     holder.newAnnotation(
                         HighlightSeverity.ERROR,
-                        "Top-level $declarationKeyword declaration is not allowed in .dsf files"
+                        DreamShaderBundle.message(
+                            "diagnostic.topLevelDeclarationNotAllowedInDsf",
+                            declarationKeyword
+                        )
                     ).range(declaration.nameIdentifier ?: declaration).create()
                 }
 
@@ -109,7 +112,7 @@ class DreamShaderSemanticAnnotator : Annotator {
             }.forEach { token ->
                 holder.newAnnotation(
                     HighlightSeverity.ERROR,
-                    "Top-level Namespace declaration is not allowed in .dsf files"
+                    DreamShaderBundle.message("diagnostic.topLevelNamespaceNotAllowedInDsf")
                 ).range(token.range).create()
             }
         }
@@ -120,7 +123,10 @@ class DreamShaderSemanticAnnotator : Annotator {
                     val declarationKeyword = DISPLAY_DECLARATION_KEYWORDS[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
                     holder.newAnnotation(
                         HighlightSeverity.ERROR,
-                        "Top-level $declarationKeyword declaration is not allowed in .dsm files"
+                        DreamShaderBundle.message(
+                            "diagnostic.topLevelDeclarationNotAllowedInDsm",
+                            declarationKeyword
+                        )
                     ).range(declaration.nameIdentifier ?: declaration).create()
                 }
         }
@@ -131,7 +137,10 @@ class DreamShaderSemanticAnnotator : Annotator {
                     val declarationKeyword = DISPLAY_DECLARATION_KEYWORDS[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
                     holder.newAnnotation(
                         HighlightSeverity.ERROR,
-                        "Top-level $declarationKeyword declaration is not allowed in .dsh files"
+                        DreamShaderBundle.message(
+                            "diagnostic.topLevelDeclarationNotAllowedInDsh",
+                            declarationKeyword
+                        )
                     ).range(declaration.nameIdentifier ?: declaration).create()
                 }
         }
@@ -170,12 +179,18 @@ class DreamShaderSemanticAnnotator : Annotator {
     private fun annotateUnclosedLiteralDiagnostics(tokens: List<LexedToken>, holder: AnnotationHolder) {
         tokens.forEach { token ->
             if (token.type == DreamShaderTokenTypes.STRING && !token.text.endsWith("\"")) {
-                holder.newAnnotation(HighlightSeverity.ERROR, "Unclosed string literal")
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    DreamShaderBundle.message("diagnostic.unclosedStringLiteral")
+                )
                     .range(token.range)
                     .create()
             }
             if (token.type == DreamShaderTokenTypes.BLOCK_COMMENT && !token.text.endsWith("*/")) {
-                holder.newAnnotation(HighlightSeverity.ERROR, "Unclosed block comment")
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    DreamShaderBundle.message("diagnostic.unclosedBlockComment")
+                )
                     .range(token.range)
                     .create()
             }
@@ -193,7 +208,10 @@ class DreamShaderSemanticAnnotator : Annotator {
                 DreamShaderTokenTypes.LBRACE -> openingBraces.add(token)
                 DreamShaderTokenTypes.RBRACE -> {
                     if (openingBraces.isEmpty()) {
-                        holder.newAnnotation(HighlightSeverity.ERROR, "Unmatched brace")
+                        holder.newAnnotation(
+                            HighlightSeverity.ERROR,
+                            DreamShaderBundle.message("diagnostic.unmatchedBrace")
+                        )
                             .range(token.range)
                             .create()
                     } else {
@@ -207,7 +225,10 @@ class DreamShaderSemanticAnnotator : Annotator {
             val unmatched = openingBraces.last()
             val markerStart = unmatched.range.startOffset.coerceAtLeast(0)
             val markerEnd = (markerStart + 1).coerceAtMost(fileLength)
-            holder.newAnnotation(HighlightSeverity.ERROR, "Unmatched brace")
+            holder.newAnnotation(
+                HighlightSeverity.ERROR,
+                DreamShaderBundle.message("diagnostic.unmatchedBrace")
+            )
                 .range(TextRange(markerStart, markerEnd))
                 .create()
         }
@@ -228,7 +249,7 @@ class DreamShaderSemanticAnnotator : Annotator {
             if (malformed) {
                 holder.newAnnotation(
                     HighlightSeverity.ERROR,
-                    "Malformed declaration: expected declaration name or argument list"
+                    DreamShaderBundle.message("diagnostic.malformedDeclarationExpectedNameOrArgs")
                 ).range(token.range).create()
             }
         }
@@ -253,7 +274,10 @@ class DreamShaderSemanticAnnotator : Annotator {
                 else -> false
             }
             if (!valid) {
-                holder.newAnnotation(HighlightSeverity.ERROR, "Malformed section: expected '{'")
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    DreamShaderBundle.message("diagnostic.malformedSectionExpectedLBrace")
+                )
                     .range(token.range)
                     .create()
             }
@@ -272,7 +296,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         if (graphSection != null || codeSectionRange != null) {
             val annotation = holder.newAnnotation(
                 HighlightSeverity.ERROR,
-                "VirtualFunction does not support Graph/Code sections"
+                DreamShaderBundle.message("diagnostic.virtualFunctionDisallowsGraphOrCode")
             )
             if (graphSection != null) {
                 annotation.range(graphSection)
@@ -294,7 +318,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         if (!hasSingleMaterialAttributesOutput) {
             holder.newAnnotation(
                 HighlightSeverity.ERROR,
-                "ShaderLayer/ShaderLayerBlend must declare exactly one MaterialAttributes output"
+                DreamShaderBundle.message("diagnostic.layerRequiresSingleMaterialAttributesOutput")
             ).range(outputsSection ?: declaration).create()
         }
 
@@ -305,7 +329,7 @@ class DreamShaderSemanticAnnotator : Annotator {
             if (inputsMaterialAttributesCount < 2) {
                 holder.newAnnotation(
                     HighlightSeverity.ERROR,
-                    "ShaderLayerBlend requires at least two MaterialAttributes inputs"
+                    DreamShaderBundle.message("diagnostic.layerBlendRequiresTwoMaterialAttributesInputs")
                 ).range(inputsSection ?: declaration).create()
             }
         }
@@ -329,7 +353,11 @@ class DreamShaderSemanticAnnotator : Annotator {
             entries.drop(1).forEach { section ->
                 holder.newAnnotation(
                     HighlightSeverity.ERROR,
-                    "Duplicate section '${displaySectionName(sectionName)}' in ${displayDeclarationKeyword(keyword)} declaration"
+                    DreamShaderBundle.message(
+                        "diagnostic.duplicateSectionInDeclaration",
+                        displaySectionName(sectionName),
+                        displayDeclarationKeyword(keyword)
+                    )
                 ).range(section).create()
             }
         }
@@ -339,7 +367,11 @@ class DreamShaderSemanticAnnotator : Annotator {
             if (sectionName !in allowedSections) {
                 holder.newAnnotation(
                     HighlightSeverity.ERROR,
-                    "Section '${displaySectionName(sectionName)}' is not allowed in ${displayDeclarationKeyword(keyword)} declarations"
+                    DreamShaderBundle.message(
+                        "diagnostic.sectionNotAllowedInDeclarations",
+                        displaySectionName(sectionName),
+                        displayDeclarationKeyword(keyword)
+                    )
                 ).range(section).create()
             }
         }
@@ -348,7 +380,11 @@ class DreamShaderSemanticAnnotator : Annotator {
             if (groupedByName.containsKey(requiredSection)) return@forEach
             holder.newAnnotation(
                 HighlightSeverity.ERROR,
-                "${displayDeclarationKeyword(keyword)} declaration requires ${displaySectionName(requiredSection)} section"
+                DreamShaderBundle.message(
+                    "diagnostic.declarationRequiresSection",
+                    displayDeclarationKeyword(keyword),
+                    displaySectionName(requiredSection)
+                )
             ).range(declaration.nameIdentifier ?: declaration).create()
         }
     }
@@ -395,7 +431,7 @@ class DreamShaderSemanticAnnotator : Annotator {
                 if (keyword in DreamShaderLanguageKeywords.DECLARATION_KEYWORDS && keyword !in allowedDeclarationKeywords) {
                     holder.newAnnotation(
                         HighlightSeverity.ERROR,
-                        "Namespace can only contain Function or GraphFunction declarations"
+                        DreamShaderBundle.message("diagnostic.namespaceAllowsOnlyFunctionOrGraphFunction")
                     ).range(token.range).create()
                 }
             }
@@ -420,9 +456,19 @@ class DreamShaderSemanticAnnotator : Annotator {
                         val keyLower = key.lowercase(Locale.ROOT)
                         val keyRange = TextRange(body.startOffset + matcher.start(1), body.startOffset + matcher.end(1))
                         if (keyLower !in SETTINGS_KEYS) {
+                            val suggestion = suggestSettingsKey(key)
+                            val message = if (suggestion != null) {
+                                DreamShaderBundle.message(
+                                    "diagnostic.unknownSettingsKeyWithSuggestion",
+                                    key,
+                                    suggestion
+                                )
+                            } else {
+                                DreamShaderBundle.message("diagnostic.unknownSettingsKey", key)
+                            }
                             holder.newAnnotation(
                                 HighlightSeverity.ERROR,
-                                "Unknown settings key '$key'"
+                                message
                             ).range(keyRange).create()
                             continue
                         }
@@ -434,7 +480,7 @@ class DreamShaderSemanticAnnotator : Annotator {
                             val valueRange = TextRange(body.startOffset + matcher.start(2), body.startOffset + matcher.end(2))
                             holder.newAnnotation(
                                 HighlightSeverity.ERROR,
-                                "Invalid value '$value' for setting '$key'"
+                                DreamShaderBundle.message("diagnostic.invalidSettingValue", value, key)
                             ).range(valueRange).create()
                         }
                     }
@@ -456,9 +502,19 @@ class DreamShaderSemanticAnnotator : Annotator {
                         val member = matcher.group(1) ?: continue
                         if (member.lowercase(Locale.ROOT) in BASE_OUTPUT_MEMBERS) continue
                         val range = TextRange(body.startOffset + matcher.start(), body.startOffset + matcher.end())
+                        val suggestion = suggestBaseOutputMember(member)
+                        val message = if (suggestion != null) {
+                            DreamShaderBundle.message(
+                                "diagnostic.unknownBaseOutputMemberWithSuggestion",
+                                member,
+                                suggestion
+                            )
+                        } else {
+                            DreamShaderBundle.message("diagnostic.unknownBaseOutputMember", member)
+                        }
                         holder.newAnnotation(
                             HighlightSeverity.ERROR,
-                            "Unknown material output member 'Base.$member'"
+                            message
                         ).range(range).create()
                     }
                 }
@@ -480,9 +536,15 @@ class DreamShaderSemanticAnnotator : Annotator {
                         val lower = type.lowercase(Locale.ROOT)
                         if (lower in KNOWN_TYPES || lower in TYPE_QUALIFIERS) continue
                         val range = TextRange(body.startOffset + matcher.start(1), body.startOffset + matcher.end(1))
+                        val suggestion = suggestTypeName(type)
+                        val message = if (suggestion != null) {
+                            DreamShaderBundle.message("diagnostic.unknownTypeWithSuggestion", type, suggestion)
+                        } else {
+                            DreamShaderBundle.message("diagnostic.unknownType", type)
+                        }
                         holder.newAnnotation(
                             HighlightSeverity.ERROR,
-                            "Unknown type '$type'"
+                            message
                         ).range(range).create()
                     }
                 }
@@ -505,7 +567,7 @@ class DreamShaderSemanticAnnotator : Annotator {
                         if (token.text !in UNSUPPORTED_GRAPH_LOOP_KEYWORDS) return@forEach
                         holder.newAnnotation(
                             HighlightSeverity.ERROR,
-                            "Graph section does not support loop statement '${token.text}'"
+                            DreamShaderBundle.message("diagnostic.graphDisallowsLoopStatement", token.text)
                         ).range(token.range).create()
                     }
                 }
@@ -528,7 +590,7 @@ class DreamShaderSemanticAnnotator : Annotator {
                         if (token.text !in UNSUPPORTED_GRAPH_SWITCH_KEYWORDS) return@forEach
                         holder.newAnnotation(
                             HighlightSeverity.ERROR,
-                            "Graph section does not support switch statement '${token.text}'"
+                            DreamShaderBundle.message("diagnostic.graphDisallowsSwitchStatement", token.text)
                         ).range(token.range).create()
                     }
                 }
@@ -551,7 +613,7 @@ class DreamShaderSemanticAnnotator : Annotator {
                         if (token.text !in UNSUPPORTED_GRAPH_FLOW_KEYWORDS) return@forEach
                         holder.newAnnotation(
                             HighlightSeverity.ERROR,
-                            "Graph section does not support control statement '${token.text}'"
+                            DreamShaderBundle.message("diagnostic.graphDisallowsControlStatement", token.text)
                         ).range(token.range).create()
                     }
                 }
@@ -574,7 +636,7 @@ class DreamShaderSemanticAnnotator : Annotator {
                         if (token.text != UNSUPPORTED_GRAPH_RETURN_KEYWORD) return@forEach
                         holder.newAnnotation(
                             HighlightSeverity.ERROR,
-                            "Graph section does not support return statement"
+                            DreamShaderBundle.message("diagnostic.graphDisallowsReturnStatement")
                         ).range(token.range).create()
                     }
                 }
@@ -617,7 +679,7 @@ class DreamShaderSemanticAnnotator : Annotator {
 
             holder.newAnnotation(
                 HighlightSeverity.ERROR,
-                "Missing out argument for parameter '${missingOutParam.name}'"
+                DreamShaderBundle.message("diagnostic.missingOutArgumentForParameter", missingOutParam.name)
             ).range(token.range).create()
         }
     }
@@ -639,7 +701,7 @@ class DreamShaderSemanticAnnotator : Annotator {
 
             holder.newAnnotation(
                 HighlightSeverity.ERROR,
-                "Cannot resolve import '$importPath'"
+                DreamShaderBundle.message("diagnostic.cannotResolveImport", importPath)
             ).range(token.range).create()
         }
     }
@@ -852,6 +914,79 @@ class DreamShaderSemanticAnnotator : Annotator {
         return DISPLAY_DECLARATION_KEYWORDS[keyword] ?: keyword.replaceFirstChar { it.uppercase(Locale.ROOT) }
     }
 
+    private fun suggestSettingsKey(rawKey: String): String? {
+        return findClosestCandidate(rawKey, SETTINGS_KEY_CANONICAL, maxDistance = 2)
+    }
+
+    private fun suggestTypeName(rawType: String): String? {
+        return findClosestCandidate(rawType, KNOWN_TYPES_CANONICAL, maxDistance = 2)
+    }
+
+    private fun suggestBaseOutputMember(rawMember: String): String? {
+        val normalized = rawMember.lowercase(Locale.ROOT)
+        if (normalized.isBlank()) return null
+
+        var bestDistance = Int.MAX_VALUE
+        var bestCandidate: String? = null
+        BASE_OUTPUT_MEMBERS_CANONICAL.forEach { candidate ->
+            val candidateLower = candidate.lowercase(Locale.ROOT)
+            val directDistance = levenshteinDistance(normalized, candidateLower)
+            val strippedDistance = if (candidateLower.startsWith("base") && candidateLower.length > 4) {
+                levenshteinDistance(normalized, candidateLower.removePrefix("base"))
+            } else {
+                Int.MAX_VALUE
+            }
+            val score = minOf(directDistance, strippedDistance)
+            if (score < bestDistance) {
+                bestDistance = score
+                bestCandidate = candidate
+            }
+        }
+        if (bestCandidate == null) return null
+        return if (bestDistance <= 3) bestCandidate else null
+    }
+
+    private fun findClosestCandidate(rawInput: String, candidates: Collection<String>, maxDistance: Int): String? {
+        val normalized = rawInput.lowercase(Locale.ROOT)
+        if (normalized.isBlank()) return null
+        var bestDistance = Int.MAX_VALUE
+        var bestCandidate: String? = null
+        candidates.forEach { candidate ->
+            val distance = levenshteinDistance(normalized, candidate.lowercase(Locale.ROOT))
+            if (distance < bestDistance) {
+                bestDistance = distance
+                bestCandidate = candidate
+            }
+        }
+        if (bestCandidate == null) return null
+        return if (bestDistance <= maxDistance) bestCandidate else null
+    }
+
+    private fun levenshteinDistance(a: String, b: String): Int {
+        if (a == b) return 0
+        if (a.isEmpty()) return b.length
+        if (b.isEmpty()) return a.length
+
+        var previous = IntArray(b.length + 1) { it }
+        var current = IntArray(b.length + 1)
+
+        for (i in a.indices) {
+            current[0] = i + 1
+            for (j in b.indices) {
+                val substitutionCost = if (a[i] == b[j]) 0 else 1
+                current[j + 1] = minOf(
+                    current[j] + 1,
+                    previous[j + 1] + 1,
+                    previous[j] + substitutionCost
+                )
+            }
+            val tmp = previous
+            previous = current
+            current = tmp
+        }
+        return previous[b.length]
+    }
+
     private fun nextSignificantTokenIndex(tokens: List<LexedToken>, index: Int): Int? {
         var i = index + 1
         while (i < tokens.size) {
@@ -956,6 +1091,13 @@ class DreamShaderSemanticAnnotator : Annotator {
             "contactshadows", "disabledepthtest", "outputtranslucentvelocity", "tangentspacenormal", "fullyrough",
             "issky", "thinsurface", "numcustomizeduvs", "refractionmethod", "refractionmode"
         )
+        private val SETTINGS_KEY_CANONICAL = listOf(
+            "MaterialDomain", "Domain", "ShadingModel", "BlendMode", "RenderType", "TranslucencyLightingMode",
+            "LightingMode", "TwoSided", "Wireframe", "DitheredLODTransition", "DitherOpacityMask",
+            "AllowNegativeEmissiveColor", "CastDynamicShadowAsMasked", "ResponsiveAA", "ScreenSpaceReflections",
+            "ContactShadows", "DisableDepthTest", "OutputTranslucentVelocity", "TangentSpaceNormal", "FullyRough",
+            "IsSky", "ThinSurface", "NumCustomizedUVs", "RefractionMethod", "RefractionMode"
+        )
 
         private val SETTING_VALUE_MAPPINGS = mapOf(
             "materialdomain" to setOf("Surface", "DeferredDecal", "LightFunction", "PostProcess", "UserInterface", "UI", "VirtualTexture"),
@@ -975,9 +1117,20 @@ class DreamShaderSemanticAnnotator : Annotator {
             "customizeduvs5", "customizeduvs6", "customizeduvs7", "mooaencodedattribute0", "mooaencodedattribute1",
             "mooaencodedattribute2", "mooaencodedattribute3", "mooaencodedattribute4", "anisotropy", "tangent"
         )
+        private val BASE_OUTPUT_MEMBERS_CANONICAL = listOf(
+            "MaterialAttributes", "Attributes", "BaseColor", "EmissiveColor", "Emissive", "Opacity", "OpacityMask",
+            "Metallic", "Specular", "Roughness", "Normal", "AmbientOcclusion", "AO", "Refraction", "WorldPositionOffset",
+            "WPO", "PixelDepthOffset", "PDO", "SubsurfaceColor", "ClearCoat", "ClearCoatRoughness", "CustomData0",
+            "CustomData1", "DiffuseColor", "SpecularColor", "SurfaceThickness", "Displacement", "CustomizedUV0",
+            "CustomizedUV1", "CustomizedUV2", "CustomizedUV3", "CustomizedUV4", "CustomizedUV5", "CustomizedUV6",
+            "CustomizedUV7", "CustomizedUVs0", "CustomizedUVs1", "CustomizedUVs2", "CustomizedUVs3", "CustomizedUVs4",
+            "CustomizedUVs5", "CustomizedUVs6", "CustomizedUVs7", "MOOAEncodedAttribute0", "MOOAEncodedAttribute1",
+            "MOOAEncodedAttribute2", "MOOAEncodedAttribute3", "MOOAEncodedAttribute4", "Anisotropy", "Tangent"
+        )
 
         // Type validation data.
         private val KNOWN_TYPES = DreamShaderLexer.TYPES.map { it.lowercase(Locale.ROOT) }.toSet()
+        private val KNOWN_TYPES_CANONICAL = DreamShaderLexer.TYPES.toList()
         private val TYPE_QUALIFIERS = setOf("in", "out", "inout", "const", "static", "opt")
 
         // Regex: settings/output/type diagnostics.

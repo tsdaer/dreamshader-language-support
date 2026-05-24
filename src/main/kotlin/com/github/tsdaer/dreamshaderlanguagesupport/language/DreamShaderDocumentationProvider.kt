@@ -41,7 +41,7 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         val keyword = declaration.keywordText() ?: return null
         val name = declaration.declarationName().orEmpty().ifBlank { "<anonymous>" }
         val kind = DreamShaderDocumentationData.declarationKeywordDescriptions[keyword]
-            ?: "DreamShader declaration symbol."
+            ?: DreamShaderBundle.message("docs.declaration.default")
 
         return buildString {
             append("<b>")
@@ -58,12 +58,16 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         val info = DreamShaderDocumentationData.settings[token.lowercase(Locale.ROOT)] ?: return null
 
         return buildString {
-            append("<b>Settings Key: ")
+            append("<b>")
+            append(DreamShaderBundle.message("docs.label.settingsKey"))
+            append(": ")
             append(info.key)
             append("</b><br/>")
             append(info.description)
             if (info.commonValues.isNotEmpty()) {
-                append("<br/>Common values: ")
+                append("<br/>")
+                append(DreamShaderBundle.message("docs.label.commonValues"))
+                append(": ")
                 append(info.commonValues.joinToString(", "))
             }
         }
@@ -78,10 +82,13 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         if (owners.isEmpty()) return null
 
         return buildString {
-            append("<b>Setting Value: ")
+            append("<b>")
+            append(DreamShaderBundle.message("docs.label.settingValue"))
+            append(": ")
             append(value)
             append("</b><br/>")
-            append("Used by: ")
+            append(DreamShaderBundle.message("docs.label.usedBy"))
+            append(": ")
             append(owners.joinToString(", "))
         }
     }

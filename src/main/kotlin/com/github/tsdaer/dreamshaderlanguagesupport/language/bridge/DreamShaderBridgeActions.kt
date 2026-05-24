@@ -5,6 +5,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderProjectS
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
@@ -17,38 +18,84 @@ import java.awt.Desktop
 import java.io.File
 
 private const val DREAMSHADER_NOTIFICATIONS = "DreamShader Notifications"
+private val DREAMSHADER_EXTENSIONS = setOf("dsm", "dsf", "dsh")
 
-private object DreamShaderBridgeNotifier {
-    fun info(project: Project, title: String, content: String) {
-        NotificationGroupManager.getInstance()
-            .getNotificationGroup(DREAMSHADER_NOTIFICATIONS)
-            .createNotification(title, content, NotificationType.INFORMATION)
-            .notify(project)
-    }
+internal object DreamShaderBridgeActionTestHooks {
+    @Volatile
+    var notificationSink: ((project: Project, type: NotificationType, title: String, content: String) -> Unit)? = null
 
-    fun warning(project: Project, title: String, content: String) {
-        NotificationGroupManager.getInstance()
-            .getNotificationGroup(DREAMSHADER_NOTIFICATIONS)
-            .createNotification(title, content, NotificationType.WARNING)
-            .notify(project)
-    }
+    @Volatile
+    var commandExecutor: ((
+        project: Project,
+        commandTemplate: String,
+        activeFilePath: String?,
+        bridgeDirectoryPath: String?
+    ) -> DreamShaderBridgeCommandResult)? = null
 
-    fun error(project: Project, title: String, content: String) {
-        NotificationGroupManager.getInstance()
-            .getNotificationGroup(DREAMSHADER_NOTIFICATIONS)
-            .createNotification(title, content, NotificationType.ERROR)
-            .notify(project)
+    fun reset() {
+        notificationSink = null
+        commandExecutor = null
     }
 }
 
-private fun activeDreamShaderFile(project: Project): VirtualFile? {
+private object DreamShaderBridgeNotifier {
+    fun info(project: Project, title: String, content: String) {
+        DreamShaderBridgeActionTestHooks.notificationSink?.invoke(project, NotificationType.INFORMATION, title, content)
+            ?: NotificationGroupManager.getInstance()
+                .getNotificationGroup(DREAMSHADER_NOTIFICATIONS)
+                .createNotification(title, content, NotificationType.INFORMATION)
+                .notify(project)
+    }
+
+    fun warning(project: Project, title: String, content: String) {
+        DreamShaderBridgeActionTestHooks.notificationSink?.invoke(project, NotificationType.WARNING, title, content)
+            ?: NotificationGroupManager.getInstance()
+                .getNotificationGroup(DREAMSHADER_NOTIFICATIONS)
+                .createNotification(title, content, NotificationType.WARNING)
+                .notify(project)
+    }
+
+    fun error(project: Project, title: String, content: String) {
+        DreamShaderBridgeActionTestHooks.notificationSink?.invoke(project, NotificationType.ERROR, title, content)
+            ?: NotificationGroupManager.getInstance()
+                .getNotificationGroup(DREAMSHADER_NOTIFICATIONS)
+                .createNotification(title, content, NotificationType.ERROR)
+                .notify(project)
+    }
+}
+
+private fun executeBridgeCommand(
+    project: Project,
+    commandTemplate: String,
+    activeFilePath: String?,
+    bridgeDirectoryPath: String?
+): DreamShaderBridgeCommandResult {
+    return DreamShaderBridgeActionTestHooks.commandExecutor?.invoke(
+        project,
+        commandTemplate,
+        activeFilePath,
+        bridgeDirectoryPath
+    ) ?: DreamShaderBridgeCommandExecutor.execute(
+        project = project,
+        commandTemplate = commandTemplate,
+        activeFilePath = activeFilePath,
+        bridgeDirectoryPath = bridgeDirectoryPath
+    )
+}
+
+private fun activeDreamShaderFile(project: Project, event: AnActionEvent): VirtualFile? {
+    val contextFile = event.getData(CommonDataKeys.VIRTUAL_FILE)
+    if (contextFile != null && contextFile.extension?.lowercase() in DREAMSHADER_EXTENSIONS) {
+        return contextFile
+    }
+
     val selected = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
-    if (selected != null && selected.extension?.lowercase() in setOf("dsm", "dsf", "dsh")) return selected
+    if (selected != null && selected.extension?.lowercase() in DREAMSHADER_EXTENSIONS) return selected
 
     val editor = EditorFactory.getInstance().allEditors.firstOrNull { it.project == project } ?: return null
     val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return null
     val vf = psiFile.virtualFile ?: return null
-    return if (vf.extension?.lowercase() in setOf("dsm", "dsf", "dsh")) vf else null
+    return if (vf.extension?.lowercase() in DREAMSHADER_EXTENSIONS) vf else null
 }
 
 class DreamShaderRefreshBridgeDiagnosticsAction : DumbAwareAction() {
@@ -59,7 +106,7 @@ class DreamShaderRefreshBridgeDiagnosticsAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val activeFile = activeDreamShaderFile(project)
+        val activeFile = activeDreamShaderFile(project, e)
         val repository = project.getService(DreamShaderBridgeDiagnosticsRepository::class.java)
         val snapshot = repository.refresh(activeFile)
         val path = snapshot.loadedFromPath ?: DreamShaderBundle.message("bridge.toolwindow.unresolvedPath")
@@ -89,7 +136,7 @@ class DreamShaderOpenBridgeDirectoryAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val title = DreamShaderBundle.message("bridge.title")
-        val activeFile = activeDreamShaderFile(project)
+        val activeFile = activeDreamShaderFile(project, e)
         val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, activeFile)
         if (bridgeDir.isNullOrBlank()) {
             DreamShaderBridgeNotifier.error(
@@ -116,7 +163,10 @@ class DreamShaderOpenBridgeDirectoryAction : DumbAwareAction() {
             DreamShaderBridgeNotifier.error(
                 project,
                 title,
-                DreamShaderBundle.message("bridge.notification.openDirFailed", it.message ?: "unknown error")
+                DreamShaderBundle.message(
+                    "bridge.notification.openDirFailed",
+                    it.message ?: DreamShaderBundle.message("common.unknownError")
+                )
             )
             return
         }
@@ -137,7 +187,7 @@ class DreamShaderOpenBridgeDiagnosticsFileAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val title = DreamShaderBundle.message("bridge.title")
-        val activeFile = activeDreamShaderFile(project)
+        val activeFile = activeDreamShaderFile(project, e)
         val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, activeFile)
         if (bridgeDir.isNullOrBlank()) {
             DreamShaderBridgeNotifier.error(
@@ -177,7 +227,7 @@ class DreamShaderOpenFirstBridgeDiagnosticLocationAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val title = DreamShaderBundle.message("bridge.title")
-        val activeFile = activeDreamShaderFile(project)
+        val activeFile = activeDreamShaderFile(project, e)
         val repository = project.getService(DreamShaderBridgeDiagnosticsRepository::class.java)
         val snapshot = repository.refresh(activeFile)
         val first = snapshot.diagnostics.firstOrNull()
@@ -225,7 +275,7 @@ class DreamShaderRecompileCurrentAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val title = DreamShaderBundle.message("bridge.title")
-        val activeFile = activeDreamShaderFile(project)
+        val activeFile = activeDreamShaderFile(project, e)
         if (activeFile == null) {
             DreamShaderBridgeNotifier.error(
                 project,
@@ -245,7 +295,7 @@ class DreamShaderRecompileCurrentAction : DumbAwareAction() {
             return
         }
         val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, activeFile)
-        val result = DreamShaderBridgeCommandExecutor.execute(
+        val result = executeBridgeCommand(
             project = project,
             commandTemplate = template,
             activeFilePath = activeFile.path.replace('\\', '/'),
@@ -278,8 +328,8 @@ class DreamShaderRecompileAllAction : DumbAwareAction() {
             )
             return
         }
-        val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, activeDreamShaderFile(project))
-        val result = DreamShaderBridgeCommandExecutor.execute(
+        val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, activeDreamShaderFile(project, e))
+        val result = executeBridgeCommand(
             project = project,
             commandTemplate = template,
             activeFilePath = null,
@@ -312,8 +362,8 @@ class DreamShaderCleanGeneratedShadersAction : DumbAwareAction() {
             )
             return
         }
-        val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, activeDreamShaderFile(project))
-        val result = DreamShaderBridgeCommandExecutor.execute(
+        val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, activeDreamShaderFile(project, e))
+        val result = executeBridgeCommand(
             project = project,
             commandTemplate = template,
             activeFilePath = null,
