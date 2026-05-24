@@ -20,23 +20,23 @@ Core plugin config:
 - [`gradle.properties`](gradle.properties)
 
 Language registration:
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLanguage.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLanguage.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderFileType.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderFileType.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderLanguage.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderLanguage.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderFileType.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderFileType.kt)
 - [`src/main/resources/META-INF/plugin.xml`](src/main/resources/META-INF/plugin.xml)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderIcons.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderIcons.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderIcons.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderIcons.kt)
 
 Lexing layer:
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderTokenType.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderTokenType.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderTokenSets.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderTokenSets.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLanguageKeywords.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLanguageKeywords.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLexer.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLexer.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/lexer/DreamShaderTokenType.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/lexer/DreamShaderTokenType.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/lexer/DreamShaderTokenSets.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/lexer/DreamShaderTokenSets.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/lexer/DreamShaderLanguageKeywords.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/lexer/DreamShaderLanguageKeywords.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/lexer/DreamShaderLexer.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/lexer/DreamShaderLexer.kt)
 
 Parser and PSI infra:
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderParserDefinition.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderParserDefinition.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiParser.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiParser.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderElementType.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderElementType.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiFile.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiFile.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiElement.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiElement.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderParserDefinition.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderParserDefinition.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParser.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParser.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderElementType.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderElementType.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderPsiFile.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderPsiFile.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderPsiElement.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderPsiElement.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/psi/DreamShaderPsiElementFactory.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/psi/DreamShaderPsiElementFactory.kt)
 
 Typed PSI nodes:
@@ -52,29 +52,29 @@ Symbol model:
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilder.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilder.kt)
 
 Completion and editor features:
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContributor.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContributor.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokenClassifier.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokenClassifier.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxHighlighter.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxHighlighter.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxHighlighterFactory.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxHighlighterFactory.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderTextAttributes.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderTextAttributes.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderColorSettingsPage.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderColorSettingsPage.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCommenter.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCommenter.kt)
-- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderBraceMatcher.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderBraceMatcher.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContributor.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContributor.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokenClassifier.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokenClassifier.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSyntaxHighlighter.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSyntaxHighlighter.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSyntaxHighlighterFactory.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSyntaxHighlighterFactory.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderTextAttributes.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderTextAttributes.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderColorSettingsPage.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderColorSettingsPage.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCommenter.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCommenter.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderBraceMatcher.kt`](src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderBraceMatcher.kt)
 
 Icons/resources:
 - [`src/main/resources/META-INF/pluginIcon.svg`](src/main/resources/META-INF/pluginIcon.svg)
 - [`src/main/resources/icons/dreamshaderFile.svg`](src/main/resources/icons/dreamshaderFile.svg)
 
 Tests:
-- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLexerSyntaxHighlighterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLexerSyntaxHighlighterTest.kt)
-- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLargeFilePerformanceSmokeTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderLargeFilePerformanceSmokeTest.kt)
-- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokenClassifierTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokenClassifierTest.kt)
-- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt)
-- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContextAnalyzerTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionContextAnalyzerTest.kt)
-- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionSuggesterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderCompletionSuggesterTest.kt)
-- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderFoldingBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderFoldingBuilderTest.kt)
-- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiParserTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderPsiParserTest.kt)
-- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderBundleLocalizationTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderBundleLocalizationTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderLexerSyntaxHighlighterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderLexerSyntaxHighlighterTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/integration/DreamShaderLargeFilePerformanceSmokeTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/integration/DreamShaderLargeFilePerformanceSmokeTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokenClassifierTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokenClassifierTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContextAnalyzerTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContextAnalyzerTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionSuggesterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionSuggesterTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderFoldingBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderFoldingBuilderTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParserTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParserTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderBundleLocalizationTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderBundleLocalizationTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilderTest.kt)
 - [`src/test/testData/rename/foo.xml`](src/test/testData/rename/foo.xml)
 - [`src/test/testData/rename/foo_after.xml`](src/test/testData/rename/foo_after.xml)
@@ -1008,9 +1008,9 @@ import "Scripts/Auto.usf";
 #### D. Test Harness Mapping
 
 Current test files:
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxDiagnosticsTest.kt` for `DSYN-001` to `DSYN-005`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSectionShapeDiagnosticsTest.kt` for `DSYN-101` to `DSYN-109` plus declaration-schema coverage (`Results` alias scope and function/graphfunction section constraints).
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210` plus `DSYN-211`/`DSYN-212`/`DSYN-213` (`VirtualFunction Options.Asset` required + asset-path root validation + unknown-root quick-fix, asset declaration `Root` validation, `VirtualFunction` description quality/recommended warnings + quick-fix actions), with extended semantic quick-fix coverage:
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/diagnostics/DreamShaderSyntaxDiagnosticsTest.kt` for `DSYN-001` to `DSYN-005`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/diagnostics/DreamShaderSectionShapeDiagnosticsTest.kt` for `DSYN-101` to `DSYN-109` plus declaration-schema coverage (`Results` alias scope and function/graphfunction section constraints).
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/diagnostics/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210` plus `DSYN-211`/`DSYN-212`/`DSYN-213` (`VirtualFunction Options.Asset` required + asset-path root validation + unknown-root quick-fix, asset declaration `Root` validation, `VirtualFunction` description quality/recommended warnings + quick-fix actions), with extended semantic quick-fix coverage:
   - `DSYN-201` settings-key suggestion replacement (`Replace with '<SuggestedKey>'`)
   - `DSYN-202` scalar settings validation (`TwoSided` bool, `NumCustomizedUVs` range) + value quick-fix actions (`Replace with true`, `Replace with 0`)
   - `DSYN-203` base output suggestion replacement (`Replace with 'Base.<SuggestedMember>'`)
@@ -1060,7 +1060,7 @@ Rule format:
 | `DBRG-003` | `Implemented` | `DreamShaderBridgeDiagnosticsTest.testBridgeDiagnosticNavigationToExactLocation()` |
 | `DBRG-004` | `Implemented` | `DreamShaderBridgeDiagnosticsTest.testRefreshBridgeDiagnosticsSyncsPanelAndEditor()` |
 | `DBRG-005` | `Implemented` | `DreamShaderBridgeActionsTest.testBridgeActionCommandSetAvailability()` and `testBridgeActionCommandSetReturnsExpectedSuccessAndErrorMessages()` |
-| `DBRG-101` | `Implemented` | `DreamShaderManifestCompletionTest.testUeExpressionClassCompletionWithManifestAndFallback()` |
+| `DBRG-101` | `Implemented` | `DreamShaderManifestCompletionTest.testUeExpressionClassCompletionWithManifestAndFallback()` + `DreamShaderSemanticDiagnosticsTest` (`testUnknownExpressionClassInUeExpressionCall`, `testUeExpressionClassRequired`, `testUeExpressionOutputTypeRequired`) |
 | `DBRG-102` | `Implemented` | `DreamShaderManifestCompletionTest.testUsesConfiguredMaterialExpressionManifestPath()` |
 | `DBRG-103` | `Implemented` | `DreamShaderManifestCompletionTest.testInvalidManifestPathFallsBackGracefully()` |
 | `DBRG-104` | `Implemented` | `DreamShaderStatusBarVisibilityTest.testStatusBarVisibilitySetting()` |
@@ -1106,9 +1106,9 @@ Rule format:
 
 6. `ID`: `DBRG-101`  
 `Priority`: `P2`  
-`Rule`: `UE.Expression(Class="...")` class completion merges bridge-manifest classes and bundled fallback entries.  
-`Expected`: reflected classes appear when manifest exists; baseline completions remain available without manifest  
-`Test`: `testUeExpressionClassCompletionWithManifestAndFallback()`
+`Rule`: `UE.Expression(Class="...")` completion and semantic validation use bridge-manifest classes and bundled fallback entries.  
+`Expected`: reflected classes appear when manifest exists; baseline completions remain available without manifest; missing/invalid `Class` and missing/invalid `OutputType` surface actionable diagnostics and quick-fix suggestions  
+`Test`: `testUeExpressionClassCompletionWithManifestAndFallback()`, plus semantic tests in `DreamShaderSemanticDiagnosticsTest`
 
 7. `ID`: `DBRG-102`  
 `Priority`: `P2`  
@@ -1375,14 +1375,14 @@ Rule format:
 #### F. Test Harness Mapping
 
 Current test files:
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt` for `DSYM-001` to `DSYM-002`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderInlayParameterHintsProviderTest.kt` for `DSYM-003` to `DSYM-004`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt` for `DSYM-001` to `DSYM-002`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderInlayParameterHintsProviderTest.kt` for `DSYM-003` to `DSYM-004`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgePathResolverTest.kt` for `DBRG-001` to `DBRG-002`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeDiagnosticsTest.kt` for `DBRG-003` to `DBRG-004`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeActionsTest.kt` for `DBRG-005`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderManifestCompletionTest.kt` for `DBRG-101` to `DBRG-103`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderManifestCompletionTest.kt` for `DBRG-101` to `DBRG-103`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderStatusBarVisibilityTest.kt` for `DBRG-104`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSettingsToggleTest.kt` for `DBRG-105`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/settings/DreamShaderSettingsToggleTest.kt` for `DBRG-105`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/templates/DreamShaderTemplateCommandsTest.kt` for `DTPL-001` to `DTPL-004`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageIndexTest.kt` for `DPKG-001` to `DPKG-006`.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageLifecycleTest.kt` for `DPKG-101` to `DPKG-110`.
@@ -1401,8 +1401,8 @@ Recommendation:
 #### G. M3 Test Harness Mapping
 
 Current test files:
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt` for `DSYM-001` to `DSYM-002`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderInlayParameterHintsProviderTest.kt` for `DSYM-003` to `DSYM-004`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt` for `DSYM-001` to `DSYM-002`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderInlayParameterHintsProviderTest.kt` for `DSYM-003` to `DSYM-004`.
 
 Recommendation:
 - Use `M3 Audit Matrix` as the canonical gate for semantic-token and inlay-hint regressions.

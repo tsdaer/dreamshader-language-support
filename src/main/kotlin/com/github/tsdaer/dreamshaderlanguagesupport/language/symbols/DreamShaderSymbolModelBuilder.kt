@@ -1,9 +1,17 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.symbols
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
-import com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderElementTypes
-import com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderLexer
-import com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderParserDefinition
-import com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderPsiParser
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderParserDefinition
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderPsiParser
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.intellij.lang.ASTNode

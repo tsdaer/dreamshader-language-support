@@ -14,62 +14,62 @@
         <fileType
                 name="DreamShaderLang"
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderFileType"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileType"
                 fieldName="INSTANCE"
                 extensions="dsm;dsf;dsh"/>
         <lang.syntaxHighlighterFactory
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderSyntaxHighlighterFactory"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.DreamShaderSyntaxHighlighterFactory"/>
         <lang.parserDefinition
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderParserDefinition"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderParserDefinition"/>
         <lang.formatter
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderFormattingModelBuilder"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderFormattingModelBuilder"/>
         <lang.commenter
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderCommenter"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCommenter"/>
         <lang.braceMatcher
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderBraceMatcher"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderBraceMatcher"/>
         <lang.foldingBuilder
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderFoldingBuilder"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderFoldingBuilder"/>
         <lang.psiStructureViewFactory
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderStructureViewFactory"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderStructureViewFactory"/>
         <referencesSearch
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderReferencesSearchExecutor"/>
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderReferencesSearchExecutor"/>
         <gotoDeclarationHandler
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderGotoDeclarationHandler"/>
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoDeclarationHandler"/>
         <lang.findUsagesProvider
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderFindUsagesProvider"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderFindUsagesProvider"/>
         <lang.documentationProvider
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderDocumentationProvider"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationProvider"/>
         <annotator
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderSemanticAnnotator"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticAnnotator"/>
         <completion.contributor
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderCompletionContributor"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionContributor"/>
         <codeInsight.daemonBoundCodeVisionProvider
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderCodeVisionProvider"/>
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCodeVisionProvider"/>
         <codeInsight.parameterInfo
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderParameterInfoHandler"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderParameterInfoHandler"/>
         <codeInsight.parameterNameHints
                 language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderInlayParameterHintsProvider"/>
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderInlayParameterHintsProvider"/>
         <colorSettingsPage
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderColorSettingsPage"/>
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.DreamShaderColorSettingsPage"/>
         <projectConfigurable
                 id="dreamshader.settings"
                 groupId="tools"
                 key="projectConfigurable.dreamshader.displayName"
                 bundle="messages.DreamShaderBundle"
-                instance="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderSettingsConfigurable"/>
+                instance="com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderSettingsConfigurable"/>
         <notificationGroup id="DreamShader Notifications" displayType="BALLOON"/>
         <toolWindow id="DreamShader Bridge Diagnostics"
                     anchor="bottom"
@@ -89,7 +89,7 @@
             <add-to-group group-id="ToolsMenu" anchor="last"/>
 
             <action id="DreamShader.Tools.OpenHub"
-                    class="com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderOpenHubAction"/>
+                    class="com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderOpenHubAction"/>
 
             <separator/>
 

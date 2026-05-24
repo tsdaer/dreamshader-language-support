@@ -1,0 +1,56 @@
+package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.intellij.ide.structureView.TreeBasedStructureViewBuilder
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+
+class DreamShaderStructureViewModelTest : BasePlatformTestCase() {
+    fun testStructureViewContainsDeclarationsAndSections() {
+        val file = myFixture.configureByText(
+            "structure.dsf",
+            """
+            Shader SurfaceMain {
+                Inputs {
+                    float2 UV;
+                }
+                Outputs {
+                    float3 Color;
+                }
+            }
+            Function Util {
+                Graph {
+                    float3 a = float3(0.0, 1.0, 0.0);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val factory = DreamShaderStructureViewFactory()
+        val builder = factory.getStructureViewBuilder(file)
+        assertTrue("Expected structure view builder for DreamShader file", builder != null)
+
+        val treeBuilder = builder as TreeBasedStructureViewBuilder
+        val model = treeBuilder.createStructureViewModel(myFixture.editor) as DreamShaderStructureViewModel
+        val root = model.root as DreamShaderStructureViewElement
+        val topChildren = root.children.map { it as DreamShaderStructureViewElement }
+
+        assertEquals(2, topChildren.size)
+        val topNames = topChildren.mapNotNull { it.presentation.presentableText }.sorted()
+        assertEquals(listOf("function Util", "shader SurfaceMain"), topNames)
+
+        val shaderNode = topChildren.first { it.presentation.presentableText == "shader SurfaceMain" }
+        val shaderSectionNames = shaderNode.children
+            .map { it as DreamShaderStructureViewElement }
+            .mapNotNull { it.presentation.presentableText }
+            .sorted()
+        assertEquals(listOf("inputs", "outputs"), shaderSectionNames)
+    }
+}

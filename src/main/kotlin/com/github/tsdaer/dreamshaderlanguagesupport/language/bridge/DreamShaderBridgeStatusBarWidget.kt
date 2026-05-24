@@ -1,7 +1,15 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
 
-import com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderBundle
-import com.github.tsdaer.dreamshaderlanguagesupport.language.DreamShaderProjectSettings
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.CustomStatusBarWidget

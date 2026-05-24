@@ -1,0 +1,43 @@
+package com.github.tsdaer.dreamshaderlanguagesupport.language.core
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.*
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.*
+import com.intellij.openapi.util.IconLoader
+import javax.swing.Icon
+
+object DreamShaderIcons {
+    @JvmField
+    val FILE: Icon = IconLoader.getIcon("/icons/dreamshaderFile.svg", DreamShaderIcons::class.java)
+
+    @JvmField
+    val DECLARATION: Icon = IconLoader.getIcon("/icons/dreamshaderDeclaration.svg", DreamShaderIcons::class.java)
+
+    @JvmField
+    val FUNCTION: Icon = IconLoader.getIcon("/icons/dreamshaderFunction.svg", DreamShaderIcons::class.java)
+
+    @JvmField
+    val SHADER: Icon = IconLoader.getIcon("/icons/dreamshaderShader.svg", DreamShaderIcons::class.java)
+
+    @JvmField
+    val SECTION: Icon = IconLoader.getIcon("/icons/dreamshaderSection.svg", DreamShaderIcons::class.java)
+
+    @JvmField
+    val SECTION_SETTINGS: Icon = IconLoader.getIcon("/icons/dreamshaderSectionSettings.svg", DreamShaderIcons::class.java)
+
+    @JvmField
+    val SECTION_INPUTS: Icon = IconLoader.getIcon("/icons/dreamshaderSectionInputs.svg", DreamShaderIcons::class.java)
+
+    @JvmField
+    val SECTION_OUTPUTS: Icon = IconLoader.getIcon("/icons/dreamshaderSectionOutputs.svg", DreamShaderIcons::class.java)
+
+    @JvmField
+    val SECTION_GRAPH: Icon = IconLoader.getIcon("/icons/dreamshaderSectionGraph.svg", DreamShaderIcons::class.java)
+
+    @JvmField
+    val TOOL_WINDOW: Icon = IconLoader.getIcon("/icons/dreamshaderToolWindow.svg", DreamShaderIcons::class.java)
+}
