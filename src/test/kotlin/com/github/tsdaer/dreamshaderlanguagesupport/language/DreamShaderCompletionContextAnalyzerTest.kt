@@ -101,6 +101,19 @@ class DreamShaderCompletionContextAnalyzerTest {
         val outputsOffset = outputsText.indexOf(outputsMarker) + outputsMarker.length
         val outputsContext = DreamShaderCompletionContextAnalyzer.analyze(outputsText, outputsOffset)
         assertTrue(outputsContext.isTypeCompletionContext)
+
+        val resultsText = """
+            Shader MySurface {
+                Results {
+
+                }
+            }
+        """.trimIndent()
+        val resultsMarker = "Results {\n"
+        val resultsOffset = resultsText.indexOf(resultsMarker) + resultsMarker.length
+        val resultsContext = DreamShaderCompletionContextAnalyzer.analyze(resultsText, resultsOffset)
+        assertTrue(resultsContext.isTypeCompletionContext)
+        assertTrue(resultsContext.currentSectionName == "results")
     }
 
     @Test

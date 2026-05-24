@@ -17,6 +17,9 @@ class DreamShaderLexerSyntaxHighlighterTest {
                     float3 BaseColor = float3(1.0f, 0.5, .25);
                     stringName = "UE.TexCoord(\"uv\")";
                 }
+                Results {
+                    float3 ResultColor;
+                }
                 @
             }
         """.trimIndent()
@@ -28,6 +31,7 @@ class DreamShaderLexerSyntaxHighlighterTest {
         assertTrue(tokens.any { it.first == DreamShaderTokenTypes.BLOCK_COMMENT })
         assertTrue(tokens.any { it.first == DreamShaderTokenTypes.KEYWORD && it.second == "Shader" })
         assertTrue(tokens.any { it.first == DreamShaderTokenTypes.SECTION && it.second == "Properties" })
+        assertTrue(tokens.any { it.first == DreamShaderTokenTypes.SECTION && it.second == "Results" })
         assertTrue(tokens.any { it.first == DreamShaderTokenTypes.TYPE && it.second == "float3" })
         assertTrue(tokens.any { it.first == DreamShaderTokenTypes.STRING && it.second.contains("TexCoord") })
         assertTrue(tokens.any { it.first == DreamShaderTokenTypes.NUMBER && it.second == "1.0f" })

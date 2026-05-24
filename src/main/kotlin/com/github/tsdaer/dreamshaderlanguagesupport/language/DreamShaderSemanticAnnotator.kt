@@ -291,7 +291,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         holder: AnnotationHolder
     ) {
         val sections = directSectionsOf(declaration)
-        val graphSection = sections.firstOrNull { it.sectionName() == "graph" }
+        val graphSection = sections.firstOrNull { canonicalSectionName(it.sectionName()) == "graph" }
         val codeSectionRange = topLevelSectionHeaderRange(sourceText, declaration.bodyTextRange(), "code")
         if (graphSection != null || codeSectionRange != null) {
             val annotation = holder.newAnnotation(
@@ -311,7 +311,7 @@ class DreamShaderSemanticAnnotator : Annotator {
 
     private fun annotateLayerRules(declaration: DreamShaderDeclaration, holder: AnnotationHolder) {
         val sections = directSectionsOf(declaration)
-        val outputsSection = sections.firstOrNull { it.sectionName() == "outputs" }
+        val outputsSection = sections.firstOrNull { canonicalSectionName(it.sectionName()) == "outputs" }
         val outputDeclarations = topLevelTypedDeclarations(outputsSection)
         val hasSingleMaterialAttributesOutput =
             outputDeclarations.size == 1 && outputDeclarations.single().equals("materialattributes", ignoreCase = true)
@@ -323,7 +323,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         }
 
         if (declaration.keywordText() == "shaderlayerblend") {
-            val inputsSection = sections.firstOrNull { it.sectionName() == "inputs" }
+            val inputsSection = sections.firstOrNull { canonicalSectionName(it.sectionName()) == "inputs" }
             val inputsMaterialAttributesCount = topLevelTypedDeclarations(inputsSection)
                 .count { it.equals("materialattributes", ignoreCase = true) }
             if (inputsMaterialAttributesCount < 2) {
@@ -345,7 +345,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         val sections = directSectionsOf(declaration)
 
         val groupedByName = sections
-            .mapNotNull { section -> section.sectionName()?.let { name -> name to section } }
+            .mapNotNull { section -> canonicalSectionNameForDeclaration(keyword, section.sectionName())?.let { name -> name to section } }
             .groupBy({ it.first }, { it.second })
 
         groupedByName.forEach { (sectionName, entries) ->
@@ -363,7 +363,7 @@ class DreamShaderSemanticAnnotator : Annotator {
         }
 
         sections.forEach { section ->
-            val sectionName = section.sectionName() ?: return@forEach
+            val sectionName = canonicalSectionNameForDeclaration(keyword, section.sectionName()) ?: return@forEach
             if (sectionName !in allowedSections) {
                 holder.newAnnotation(
                     HighlightSeverity.ERROR,
@@ -372,9 +372,9 @@ class DreamShaderSemanticAnnotator : Annotator {
                         displaySectionName(sectionName),
                         displayDeclarationKeyword(keyword)
                     )
-                ).range(section).create()
+                    ).range(section).create()
+                }
             }
-        }
 
         requiredSections.forEach { requiredSection ->
             if (groupedByName.containsKey(requiredSection)) return@forEach
@@ -386,6 +386,32 @@ class DreamShaderSemanticAnnotator : Annotator {
                     displaySectionName(requiredSection)
                 )
             ).range(declaration.nameIdentifier ?: declaration).create()
+        }
+
+        if (keyword == "virtualfunction") {
+            annotateVirtualFunctionAssetOptionRules(groupedByName["options"].orEmpty(), holder)
+        }
+    }
+
+    private fun annotateVirtualFunctionAssetOptionRules(
+        optionSections: List<DreamShaderSection>,
+        holder: AnnotationHolder
+    ) {
+        optionSections.forEach { section ->
+            val body = sectionBody(section) ?: return@forEach
+            val matcher = SETTINGS_ASSIGNMENT_PATTERN.matcher(body.text)
+            while (matcher.find()) {
+                val key = matcher.group(1) ?: continue
+                val value = matcher.group(2) ?: continue
+                if (!key.equals("asset", ignoreCase = true)) continue
+                val normalized = value.trim().trim('"').lowercase(Locale.ROOT)
+                if (normalized == "true" || normalized == "false") continue
+                val valueRange = TextRange(body.startOffset + matcher.start(2), body.startOffset + matcher.end(2))
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequiresBoolean")
+                ).range(valueRange).create()
+            }
         }
     }
 
@@ -447,7 +473,10 @@ class DreamShaderSemanticAnnotator : Annotator {
     ) {
         topLevelDeclarations.forEach { declaration ->
             directSectionsOf(declaration)
-                .filter { it.sectionName() == "settings" || it.sectionName() == "options" }
+                .filter {
+                    val sectionName = canonicalSectionName(it.sectionName())
+                    sectionName == "settings" || sectionName == "options"
+                }
                 .forEach { section ->
                     val body = sectionBody(section) ?: return@forEach
                     val matcher = SETTINGS_ASSIGNMENT_PATTERN.matcher(body.text)
@@ -494,7 +523,10 @@ class DreamShaderSemanticAnnotator : Annotator {
     ) {
         topLevelDeclarations.forEach { declaration ->
             directSectionsOf(declaration)
-                .filter { it.sectionName() == "outputs" || it.sectionName() == "graph" }
+                .filter {
+                    val sectionName = canonicalSectionName(it.sectionName())
+                    sectionName == "outputs" || sectionName == "graph"
+                }
                 .forEach { section ->
                     val body = sectionBody(section) ?: return@forEach
                     val matcher = BASE_MEMBER_PATTERN.matcher(body.text)
@@ -527,7 +559,10 @@ class DreamShaderSemanticAnnotator : Annotator {
     ) {
         topLevelDeclarations.forEach { declaration ->
             directSectionsOf(declaration)
-                .filter { it.sectionName() == "inputs" || it.sectionName() == "outputs" || it.sectionName() == "properties" }
+                .filter {
+                    val sectionName = canonicalSectionName(it.sectionName())
+                    sectionName == "inputs" || sectionName == "outputs" || sectionName == "properties"
+                }
                 .forEach { section ->
                     val body = sectionBody(section) ?: return@forEach
                     val matcher = TYPED_DECLARATION_PATTERN.matcher(body.text)
@@ -558,7 +593,7 @@ class DreamShaderSemanticAnnotator : Annotator {
     ) {
         topLevelDeclarations.forEach { declaration ->
             directSectionsOf(declaration)
-                .filter { it.sectionName() == "graph" }
+                .filter { canonicalSectionName(it.sectionName()) == "graph" }
                 .forEach { section ->
                     val body = sectionBody(section) ?: return@forEach
                     val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
@@ -581,7 +616,7 @@ class DreamShaderSemanticAnnotator : Annotator {
     ) {
         topLevelDeclarations.forEach { declaration ->
             directSectionsOf(declaration)
-                .filter { it.sectionName() == "graph" }
+                .filter { canonicalSectionName(it.sectionName()) == "graph" }
                 .forEach { section ->
                     val body = sectionBody(section) ?: return@forEach
                     val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
@@ -604,7 +639,7 @@ class DreamShaderSemanticAnnotator : Annotator {
     ) {
         topLevelDeclarations.forEach { declaration ->
             directSectionsOf(declaration)
-                .filter { it.sectionName() == "graph" }
+                .filter { canonicalSectionName(it.sectionName()) == "graph" }
                 .forEach { section ->
                     val body = sectionBody(section) ?: return@forEach
                     val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
@@ -627,7 +662,7 @@ class DreamShaderSemanticAnnotator : Annotator {
     ) {
         topLevelDeclarations.forEach { declaration ->
             directSectionsOf(declaration)
-                .filter { it.sectionName() == "graph" }
+                .filter { canonicalSectionName(it.sectionName()) == "graph" }
                 .forEach { section ->
                     val body = sectionBody(section) ?: return@forEach
                     val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
@@ -910,6 +945,19 @@ class DreamShaderSemanticAnnotator : Annotator {
         return DISPLAY_SECTION_NAMES[sectionName] ?: sectionName.replaceFirstChar { it.uppercase(Locale.ROOT) }
     }
 
+    private fun canonicalSectionName(sectionName: String?): String? {
+        if (sectionName == null) return null
+        return SECTION_NAME_ALIASES[sectionName] ?: sectionName
+    }
+
+    private fun canonicalSectionNameForDeclaration(declarationKeyword: String, sectionName: String?): String? {
+        val name = canonicalSectionName(sectionName) ?: return null
+        if (sectionName == "results" && declarationKeyword !in DECLARATIONS_ALLOW_RESULTS_ALIAS) {
+            return sectionName
+        }
+        return name
+    }
+
     private fun displayDeclarationKeyword(keyword: String): String {
         return DISPLAY_DECLARATION_KEYWORDS[keyword] ?: keyword.replaceFirstChar { it.uppercase(Locale.ROOT) }
     }
@@ -1180,20 +1228,36 @@ class DreamShaderSemanticAnnotator : Annotator {
             "properties" to "Properties",
             "inputs" to "Inputs",
             "outputs" to "Outputs",
+            "results" to "Results",
             "settings" to "Settings",
             "options" to "Options",
             "graph" to "Graph"
         )
 
+        private val SECTION_NAME_ALIASES = mapOf(
+            "results" to "outputs"
+        )
+
+        private val DECLARATIONS_ALLOW_RESULTS_ALIAS = setOf(
+            "shaderfunction",
+            "virtualfunction"
+        )
+
         private val DECLARATION_ALLOWED_SECTIONS = mapOf(
             "shader" to setOf("properties", "outputs", "settings", "graph"),
             "shaderfunction" to setOf("properties", "inputs", "outputs", "settings", "graph"),
-            "virtualfunction" to setOf("properties", "inputs", "outputs", "settings", "options")
+            "shaderlayer" to setOf("properties", "inputs", "outputs", "settings", "graph"),
+            "shaderlayerblend" to setOf("properties", "inputs", "outputs", "settings", "graph"),
+            "virtualfunction" to setOf("properties", "inputs", "outputs", "settings", "options"),
+            "function" to emptySet(),
+            "graphfunction" to emptySet()
         )
 
         private val DECLARATION_REQUIRED_SECTIONS = mapOf(
             "shader" to setOf("graph"),
-            "shaderfunction" to setOf("graph")
+            "shaderfunction" to setOf("graph"),
+            "shaderlayer" to setOf("outputs"),
+            "shaderlayerblend" to setOf("inputs", "outputs")
         )
 
         private val UNSUPPORTED_GRAPH_LOOP_KEYWORDS = setOf("for", "while", "do")

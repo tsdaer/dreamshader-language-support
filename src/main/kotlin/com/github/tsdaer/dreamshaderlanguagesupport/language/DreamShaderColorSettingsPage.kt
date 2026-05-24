@@ -50,7 +50,7 @@ class DreamShaderColorSettingsPage : ColorSettingsPage {
             Outputs {
                 Base.BaseColor = float4(Albedo, 1.0f);
             }
-        
+
             Graph {
                 // simple graph body
                 float n = 1.0f;

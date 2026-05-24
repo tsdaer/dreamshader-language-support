@@ -29,6 +29,18 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Invalid value 'OpaqueX' for setting 'BlendMode'")
     }
 
+    fun testVirtualFunctionOptionAssetRequiresBoolean() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = "invalid";
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_invalid.dsh", text)
+        assertHasError("VirtualFunction Options.Asset must be true or false")
+    }
+
     fun testUnknownBaseOutputMember() {
         val text = """
             Shader Main {

@@ -215,6 +215,7 @@ class DreamShaderLexer : LexerBase() {
             "properties",
             "inputs",
             "outputs",
+            "results",
             "settings",
             "options",
             "graph"

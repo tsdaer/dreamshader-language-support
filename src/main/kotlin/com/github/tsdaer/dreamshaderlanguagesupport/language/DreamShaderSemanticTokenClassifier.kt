@@ -135,7 +135,7 @@ internal object DreamShaderSemanticTokenClassifier {
         val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false)
         val parentSection = PsiTreeUtil.getParentOfType(element, DreamShaderSection::class.java, false)
         val sectionName = parentSection?.sectionName()
-        val allowedBySection = sectionName == "graph" || sectionName == "outputs" || sectionName == "inputs"
+        val allowedBySection = sectionName == "graph" || sectionName == "outputs" || sectionName == "results" || sectionName == "inputs"
         val allowedByFunctionBody = declaration?.isFunctionLike() == true
         if (!allowedBySection && !allowedByFunctionBody) return false
         if (looksLikeCallableReference(element.text, element)) return false

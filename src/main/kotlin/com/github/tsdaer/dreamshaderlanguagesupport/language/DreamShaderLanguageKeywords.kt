@@ -17,6 +17,7 @@ internal object DreamShaderLanguageKeywords {
         "Properties",
         "Inputs",
         "Outputs",
+        "Results",
         "Settings",
         "Options",
         "Graph"

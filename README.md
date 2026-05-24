@@ -218,11 +218,12 @@ Already implemented in this plugin:
 - File type association (`.dsm`, `.dsf`, `.dsh`).
 - Top-level declaration and section tokenization/parsing foundations.
 - File-role declaration constraints baseline (`.dsf` uses top-level declaration whitelist; `.dsm` disallow top-level `ShaderFunction`/`ShaderLayer`/`ShaderLayerBlend`; `.dsh` disallow asset-generating top-level declarations).
+- Declaration section-shape diagnostics baseline with alias/compat behavior (`Results` compatibility for `ShaderFunction`/`VirtualFunction`, declaration-specific allowed/required section checks, duplicate section detection).
 - Context-aware completion for sections, types, settings values, `UE.*`, HLSL intrinsics, imports.
 - Navigation/symbols/folding/references/hover/signature help basics.
 
 Not fully implemented yet (tracked in milestones below):
-- Full section-shape validation per declaration and per file type.
+- Full section-shape parity with all upstream declaration edge cases and future syntax revisions.
 - Full semantic diagnostics for invalid settings/outputs/types.
 - Full Graph grammar validation beyond current permissive parser stage.
 - Formatting rules aligned with DreamShader structure conventions.
@@ -461,6 +462,8 @@ Implemented:
 - Added semantic token classification in `DreamShaderSemanticAnnotator` for declaration keywords/names, section names, callable references, `UE` namespace, namespace qualifiers (`Namespace::`), local symbol declaration/usage split, and `Base.*` material output members.
 - Refactored semantic-token classification logic into `DreamShaderSemanticTokenClassifier` so `DreamShaderSemanticAnnotator` focuses on annotation emission + diagnostics pipeline aggregation.
 - Reorganized `DreamShaderSemanticAnnotator` internals into grouped diagnostic sections (`bridge`, `syntax`, `section-shape`, `semantic`, `call/import utilities`) and grouped constant/regex blocks to improve maintainability without behavior changes.
+- Extended section-shape diagnostics to declaration-aware schema constraints for `ShaderLayer` / `ShaderLayerBlend` / `Function` / `GraphFunction`, plus declaration-scoped `Results` alias handling (`ShaderFunction` / `VirtualFunction` only).
+- Added semantic rule for `VirtualFunction` `Options.Asset` boolean validation.
 - Added regression tests in `DreamShaderSemanticTokensTest` for `DSYM-001` and `DSYM-002`, including nested-call/member-like edge cases, array-index symbol usage, and multi-level namespace qualifier classification.
 - Added `DreamShaderSemanticTokenClassifierTest` to validate classifier behavior directly and verify classifier/annotator consistency on representative samples.
 
@@ -471,6 +474,15 @@ Rule format:
 - `Priority`: milestone priority
 - `Expected`: expected behavior
 - `Test`: suggested test name
+
+#### M3 Audit Matrix (Checked on `2026-05-24`)
+
+| ID | Status | Test mapping |
+| --- | --- | --- |
+| `DSYM-001` | `Implemented` | `DreamShaderSemanticTokensTest.testSemanticTokensForDeclarationAndSectionScopes()` |
+| `DSYM-002` | `Implemented` | `DreamShaderSemanticTokensTest.testSemanticTokensInGraphAndFunctionBodies()` + subcases `testSemanticTokensForNestedCallsAndMemberLikeSyntax()` / `testSemanticTokensForArrayIndexAndMultiLevelNamespaceQualifier()` |
+| `DSYM-003` | `Implemented` | `DreamShaderInlayParameterHintsProviderTest.testProducesHintsForUeAndIntrinsicCalls()` |
+| `DSYM-004` | `Implemented` | `DreamShaderInlayParameterHintsProviderTest.testSkipsNamedArguments()` |
 
 1. `ID`: `DSYM-001`  
 `Priority`: `P2`  
@@ -519,6 +531,36 @@ Rule format:
 - `Priority`: maps to milestone priority
 - `Expected`: recommended diagnostic text
 - `Test`: suggested test method name
+
+#### M4 Audit Matrix (Checked on `2026-05-24`)
+
+| ID | Status | Test mapping |
+| --- | --- | --- |
+| `DSYN-001` | `Implemented` | `DreamShaderSyntaxDiagnosticsTest.testUnclosedStringLiteral()` |
+| `DSYN-002` | `Implemented` | `DreamShaderSyntaxDiagnosticsTest.testUnclosedBlockComment()` |
+| `DSYN-003` | `Implemented` | `DreamShaderSyntaxDiagnosticsTest.testUnmatchedBraceInGraph()` |
+| `DSYN-004` | `Implemented` | `DreamShaderSyntaxDiagnosticsTest.testMalformedTopLevelDeclaration()` |
+| `DSYN-005` | `Implemented` | `DreamShaderSyntaxDiagnosticsTest.testMalformedSectionHeader()` |
+| `DSYN-101` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testDsfDisallowsTopLevelShader()` / `testDsfDisallowsTopLevelNamespace()` |
+| `DSYN-102` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testVirtualFunctionDisallowsGraphSection()` |
+| `DSYN-103` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testNamespaceAllowsOnlyFunctionDeclarations()` |
+| `DSYN-104` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testLayerRequiresSingleMaterialAttributesOutput()` |
+| `DSYN-105` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testLayerBlendRequiresTwoMaterialAttributesInputs()` |
+| `DSYN-106` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testDshDisallowsTopLevelShaderFunction()` |
+| `DSYN-107` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testDsmDisallowsTopLevelShaderFunction()` |
+| `DSYN-108` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testShaderDisallowsInputsSection()` / `testShaderRequiresGraphSection()` |
+| `DSYN-109` | `Implemented` | `DreamShaderSectionShapeDiagnosticsTest.testShaderDuplicateSectionIsReported()` |
+| `DSYN-201` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownSettingsKey()` |
+| `DSYN-202` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testInvalidSettingsEnumValue()` |
+| `DSYN-203` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownBaseOutputMember()` |
+| `DSYN-204` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownTypeInInputs()` |
+| `DSYN-205` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testMissingOutArgumentInFunctionCall()` |
+| `DSYN-206` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnresolvedImportPath()` |
+| `DSYN-207` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsForLoopStatement()` / `testGraphDisallowsWhileLoopStatement()` / `testGraphDisallowsDoLoopStatement()` |
+| `DSYN-208` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsSwitchStatement()` / `testGraphDisallowsCaseKeyword()` / `testGraphDisallowsDefaultKeyword()` |
+| `DSYN-209` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsBreakStatement()` / `testGraphDisallowsContinueStatement()` |
+| `DSYN-210` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsReturnStatement()` |
+| `DSYN-211` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testVirtualFunctionOptionAssetRequiresBoolean()` |
 
 #### A. Local Parser Diagnostics (`P1`)
 
@@ -713,6 +755,11 @@ Shader Main {
 - `Shader declaration requires Graph section`  
 `Test`: `testShaderDisallowsInputsSection()` / `testShaderRequiresGraphSection()`
 
+`Current coverage additions`:
+- `Results` is accepted as an `Outputs` compatibility alias for `ShaderFunction` and `VirtualFunction`.
+- `Results` remains invalid for declarations without alias support (for example `ShaderLayerBlend`).
+- `Function` / `GraphFunction` declaration bodies currently use non-section body grammar in this plugin and reject section blocks by schema diagnostics.
+
 14. `ID`: `DSYN-109`  
 `Priority`: `P1`  
 `Rule`: duplicate sections in one declaration must report diagnostics.  
@@ -725,6 +772,20 @@ Shader Main {
 ```
 `Expected`: `Duplicate section 'Graph' in Shader declaration`  
 `Test`: `testShaderDuplicateSectionIsReported()`
+
+25. `ID`: `DSYN-211`  
+`Priority`: `P2`  
+`Rule`: `VirtualFunction` `Options.Asset` must use boolean value (`true` / `false`).  
+`Invalid`:
+```c
+VirtualFunction(Name="VF_InvalidAsset") {
+    Options = {
+        Asset = "invalid";
+    }
+}
+```
+`Expected`: `VirtualFunction Options.Asset must be true or false`  
+`Test`: `testVirtualFunctionOptionAssetRequiresBoolean()`
 
 #### C. Semantic Diagnostics (`P2`)
 
@@ -838,13 +899,13 @@ import "NotFound/Nope.dsh";
 
 #### D. Test Harness Mapping
 
-Recommended new test files:
+Current test files:
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSyntaxDiagnosticsTest.kt` for `DSYN-001` to `DSYN-005`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSectionShapeDiagnosticsTest.kt` for `DSYN-101` to `DSYN-109`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSectionShapeDiagnosticsTest.kt` for `DSYN-101` to `DSYN-109` plus declaration-schema coverage (`Results` alias scope and function/graphfunction section constraints).
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210` plus `DSYN-211` (`VirtualFunction Options.Asset` boolean validation).
 
 Recommendation:
-- Implement rules in id order and keep diagnostic messages stable to reduce snapshot churn.
+- Use the `M4 Audit Matrix` as the source of truth for release checks and regression triage.
 
 ### Milestone M5: Bridge Integration and Package Tooling
 
@@ -875,6 +936,25 @@ Rule format:
 - `Priority`: milestone priority
 - `Expected`: expected outcome or error text
 - `Test`: suggested test name
+
+#### M5 Bridge/Tooling Audit Matrix (Checked on `2026-05-24`)
+
+| ID | Status | Test mapping |
+| --- | --- | --- |
+| `DBRG-001` | `Implemented` | `DreamShaderBridgePathResolverTest.testAutoDetectsProjectRootFromActiveFile()` |
+| `DBRG-002` | `Implemented` | `DreamShaderBridgePathResolverTest.testProjectRootSettingOverridesAutoDetect()` |
+| `DBRG-003` | `Implemented` | `DreamShaderBridgeDiagnosticsTest.testBridgeDiagnosticNavigationToExactLocation()` |
+| `DBRG-004` | `Implemented` | `DreamShaderBridgeDiagnosticsTest.testRefreshBridgeDiagnosticsSyncsPanelAndEditor()` |
+| `DBRG-005` | `Implemented` | `DreamShaderBridgeActionsTest.testBridgeActionCommandSetAvailability()` and `testBridgeActionCommandSetReturnsExpectedSuccessAndErrorMessages()` |
+| `DBRG-101` | `Implemented` | `DreamShaderManifestCompletionTest.testUeExpressionClassCompletionWithManifestAndFallback()` |
+| `DBRG-102` | `Implemented` | `DreamShaderManifestCompletionTest.testUsesConfiguredMaterialExpressionManifestPath()` |
+| `DBRG-103` | `Implemented` | `DreamShaderManifestCompletionTest.testInvalidManifestPathFallsBackGracefully()` |
+| `DBRG-104` | `Implemented` | `DreamShaderStatusBarVisibilityTest.testStatusBarVisibilitySetting()` |
+| `DBRG-105` | `Implemented` | `DreamShaderSettingsToggleTest.testEnableCodeLensToggleControlsInlayHintsProviderOutput()` |
+| `DTPL-001` | `Implemented` | `DreamShaderTemplateCommandsTest.testCreateMaterialTemplateProducesValidDsm()` |
+| `DTPL-002` | `Implemented` | `DreamShaderTemplateCommandsTest.testCreateFunctionFileTemplateProducesValidDsf()` |
+| `DTPL-003` | `Implemented` | `DreamShaderTemplateCommandsTest.testCreateHeaderTemplateProducesValidDsh()` |
+| `DTPL-004` | `Implemented` | `DreamShaderTemplateCommandsTest.testCreatePackageScaffoldLayout()` |
 
 #### A. Project Root / Bridge Diagnostics
 
@@ -973,6 +1053,34 @@ Rule format:
 - `Priority`: milestone priority
 - `Expected`: expected outcome or error text
 - `Test`: suggested test name
+
+#### M5 Package Audit Matrix (Checked on `2026-05-24`)
+
+| ID | Status | Test mapping |
+| --- | --- | --- |
+| `DPKG-001` | `Implemented` | `DreamShaderPackageIndexTest.testLoadsAndMergesMultipleIndexSources()` |
+| `DPKG-002` | `Implemented` | `DreamShaderPackageIndexTest.testLegacySingleSourceIndexCompatibility()` |
+| `DPKG-003` | `Implemented` | `DreamShaderPackageIndexTest.testParsesArrayAndObjectIndexShapes()` |
+| `DPKG-004` | `Implemented` | `DreamShaderPackageIndexTest.testMalformedIndexDoesNotBreakOtherSources()` |
+| `DPKG-005` | `Implemented` | `DreamShaderPackageIndexTest.testResolvesLocalPathRelativeToIndexFile()` |
+| `DPKG-006` | `Implemented` | `DreamShaderPackageIndexTest.testFallsBackToRepositoryWhenLocalPathMissing()` |
+| `DPKG-101` | `Implemented` | `DreamShaderPackageLifecycleTest.testInstallFromGithubShorthand()` |
+| `DPKG-102` | `Implemented` | `DreamShaderPackageLifecycleTest.testInstallFromGithubUrl()` |
+| `DPKG-103` | `Implemented` | `DreamShaderPackageLifecycleTest.testInstallFailsWhenMetadataMissing()` |
+| `DPKG-104` | `Implemented` | `DreamShaderPackageLifecycleTest.testInstallFailsWhenNameMissing()` |
+| `DPKG-105` | `Implemented` | `DreamShaderPackageLifecycleTest.testInstallWritesLockFileEntry()` |
+| `DPKG-106` | `Implemented` | `DreamShaderPackageLifecycleTest.testUpdateRefreshesLockFileEntry()` |
+| `DPKG-107` | `Implemented` | `DreamShaderPackageLifecycleTest.testRemovePackageAndPruneLockEntry()` |
+| `DPKG-108` | `Implemented` | `DreamShaderPackageLifecycleTest.testRemoveNonInstalledPackageFailsClearly()` |
+| `DPKG-109` | `Implemented` | `DreamShaderPackageLifecycleTest.testOpenPackagesFolderCreatesWhenMissing()` |
+| `DPKG-110` | `Implemented` | `DreamShaderPackageLifecycleTest.testInstallFailsWhenGitUnavailable()` |
+| `DPKG-201` | `Implemented` | `DreamShaderPackageImportResolutionTest.testResolvesScopedImportWithExtension()` |
+| `DPKG-202` | `Implemented` | `DreamShaderPackageImportResolutionTest.testResolvesScopedImportWithoutExtension()` |
+| `DPKG-203` | `Implemented` | `DreamShaderPackageImportResolutionTest.testImportResolutionPrecedenceForPackagePaths()` |
+| `DPKG-301` | `Implemented` | `DreamShaderPackageStoreUiModelTest.testAddIndexSourceDeduplicates()` |
+| `DPKG-302` | `Implemented` | `DreamShaderPackageStoreUiModelTest.testRemoveIndexSourceRefreshesStoreData()` |
+| `DPKG-303` | `Implemented` | `DreamShaderPackageStoreUiModelTest.testStoreSearchMatchesNameDescriptionAndTags()` |
+| `DPKG-401` | `Implemented` | `DreamShaderPackageBridgeInteropTest.testBridgeDiagnosticsMapToInstalledPackageSource()` |
 
 #### A. Package Index Source and Parsing
 
@@ -1169,11 +1277,21 @@ Current test files:
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderGitHubPackageSearchTest.kt` for GitHub discovery integration.
 - `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageBridgeInteropTest.kt` for `DPKG-401`.
 
-Planned additional tests:
-- Extend `DBRG-005` from action registration/invocation safety to richer success/error message assertions. (Completed on 2026-05-24)
+Additional implemented tests:
+- Extended `DBRG-005` from registration/invocation safety to explicit success/error message assertions (`DreamShaderBridgeActionsTest.testBridgeActionCommandSetReturnsExpectedSuccessAndErrorMessages()`).
+- Added package GitHub search parser unit tests (`DreamShaderGitHubPackageSearchTest`).
 
 Recommendation:
-- Implement `DPKG-001` to `DPKG-006` first to stabilize data model and source handling before UI/actions.
+- Use `M5 Bridge/Tooling Audit Matrix` and `M5 Package Audit Matrix` as release gates for Bridge/package functionality.
+
+#### G. M3 Test Harness Mapping
+
+Current test files:
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderSemanticTokensTest.kt` for `DSYM-001` to `DSYM-002`.
+- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/DreamShaderInlayParameterHintsProviderTest.kt` for `DSYM-003` to `DSYM-004`.
+
+Recommendation:
+- Use `M3 Audit Matrix` as the canonical gate for semantic-token and inlay-hint regressions.
 
 ### Milestone M6: Quality, Tests, and Release
 
@@ -1187,6 +1305,17 @@ Recommendation:
 Acceptance criteria:
 - CI covers core language behaviors and prevents regressions.
 - Plugin is publishable to JetBrains Marketplace.
+
+#### M6 Audit Matrix (Checked on `2026-05-24`)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| `P1` lexer/highlighter tests | `Implemented` | `DreamShaderLexerSyntaxHighlighterTest` |
+| `P1` completion regression tests | `Implemented` | `DreamShaderCompletionContextAnalyzerTest`, `DreamShaderCompletionSuggesterTest` |
+| `P1` navigation/diagnostic tests | `Implemented` | `DreamShaderGotoDeclarationHandlerTest`, `DreamShaderFindReferencesTest`, `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, `DreamShaderSyntaxDiagnosticsTest`, `DreamShaderSectionShapeDiagnosticsTest`, `DreamShaderSemanticDiagnosticsTest` |
+| `P2` large-file performance smoke tests | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest` |
+| `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`), `.github/workflows/build.yml`, `.github/workflows/release.yml` |
+| `P3` changelog aligned with release tags | `Implemented` | `CHANGELOG.md` + release workflow `patchChangelog` step in `.github/workflows/release.yml` |
 
 ## Development
 

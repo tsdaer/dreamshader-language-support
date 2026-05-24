@@ -321,6 +321,114 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Duplicate section 'Graph' in Shader declaration")
     }
 
+    fun testShaderFunctionResultsSectionIsAcceptedAsOutputsAlias() {
+        val text = """
+            ShaderFunction BuildNoise {
+                Results {
+                    float Out = 0.0;
+                }
+                Graph {
+                    Out = 1.0;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("shader_function_results_alias.dsf", text)
+
+        assertNoError(
+            "Section 'Results' is not allowed in ShaderFunction declarations",
+            "ShaderFunction declaration requires Graph section"
+        )
+    }
+
+    fun testShaderLayerBlendResultsSectionDoesNotAliasOutputs() {
+        val text = """
+            ShaderLayerBlend BlendA {
+                Inputs {
+                    MaterialAttributes A;
+                    MaterialAttributes B;
+                }
+                Results {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("layer_blend_results_alias.dsf", text)
+
+        assertHasError("Section 'Results' is not allowed in ShaderLayerBlend declarations")
+    }
+
+    fun testShaderLayerBlendRequiresInputsSectionBySchema() {
+        val text = """
+            ShaderLayerBlend BlendA {
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("layer_blend_missing_inputs_schema.dsf", text)
+
+        assertHasError("ShaderLayerBlend declaration requires Inputs section")
+    }
+
+    fun testFunctionDisallowsSettingsSection() {
+        val text = """
+            Function ApplyTint(in float3 InColor, out float3 OutColor) {
+                Settings {
+                    Domain = Surface;
+                }
+                Graph {
+                    OutColor = InColor;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("function_disallow_settings.dsh", text)
+
+        assertHasError("Section 'Settings' is not allowed in Function declarations")
+    }
+
+    fun testFunctionDisallowsAnySectionBySchema() {
+        val text = """
+            Function ApplyTint(in float3 InColor, out float3 OutColor) {
+                Graph {
+                    OutColor = InColor;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("function_disallow_graph_section.dsh", text)
+
+        assertHasError("Section 'Graph' is not allowed in Function declarations")
+    }
+
+    fun testGraphFunctionDisallowsAnySectionBySchema() {
+        val text = """
+            GraphFunction BuildNoise(in float X, out float OutValue) {
+                Inputs {
+                    float Seed;
+                }
+                OutValue = X + Seed;
+            }
+        """.trimIndent()
+        myFixture.configureByText("graph_function_disallow_section.dsh", text)
+
+        assertHasError("Section 'Inputs' is not allowed in GraphFunction declarations")
+    }
+
+    fun testVirtualFunctionResultsSectionIsAcceptedAsOutputsAlias() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Results {
+                    float OutValue;
+                }
+                Options {
+                    Asset = true;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_results_alias.dsh", text)
+
+        assertNoError("Section 'Results' is not allowed in VirtualFunction declarations")
+    }
+
     private fun assertHasError(message: String) {
         val errors = myFixture.doHighlighting(HighlightSeverity.ERROR)
         assertTrue(
