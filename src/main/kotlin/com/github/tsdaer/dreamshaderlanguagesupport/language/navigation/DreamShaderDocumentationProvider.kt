@@ -44,7 +44,9 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
 
         val keyword = declaration.keywordText() ?: return null
         val name = declaration.declarationName().orEmpty().ifBlank { "<anonymous>" }
-        val kind = DreamShaderDocumentationData.declarationKeywordDescriptions[keyword]
+        val overrideKey = "declaration.$keyword.description"
+        val kind = overrideDoc(element, overrideKey)
+            ?: DreamShaderDocumentationData.declarationDescription(keyword)
             ?: DreamShaderBundle.message("docs.declaration.default")
 
         return buildString {
@@ -59,7 +61,9 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
 
     private fun settingsKeyDocumentation(element: PsiElement, token: String): String? {
         if (!isInSettingsOrOptionsSection(element)) return null
-        val info = DreamShaderDocumentationData.settings[token.lowercase(Locale.ROOT)] ?: return null
+        val info = DreamShaderDocumentationData.settingInfo(token) ?: return null
+        val overrideKey = "settings.${info.key.lowercase(Locale.ROOT)}.description"
+        val description = overrideDoc(element, overrideKey) ?: info.description
 
         return buildString {
             append("<b>")
@@ -67,7 +71,7 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             append(": ")
             append(info.key)
             append("</b><br/>")
-            append(info.description)
+            append(description)
             if (info.commonValues.isNotEmpty()) {
                 append("<br/>")
                 append(DreamShaderBundle.message("docs.label.commonValues"))
@@ -99,13 +103,15 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
 
     private fun ueBuiltinDocumentation(element: PsiElement, token: String): String? {
         if (!isGraphLikeContext(element)) return null
-        val builtin = DreamShaderDocumentationData.ueBuiltins[token.lowercase(Locale.ROOT)] ?: return null
+        val builtin = DreamShaderDocumentationData.ueBuiltinInfo(token) ?: return null
+        val overrideKey = "ueBuiltins.${builtin.name.lowercase(Locale.ROOT)}.description"
+        val description = overrideDoc(element, overrideKey) ?: builtin.description
 
         return buildString {
             append("<b>")
             append(builtin.signature)
             append("</b><br/>")
-            append(builtin.description)
+            append(description)
         }
     }
 
@@ -126,5 +132,9 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
 
     private fun normalizeTokenText(text: String): String {
         return text.trim().trim('"')
+    }
+
+    private fun overrideDoc(element: PsiElement, key: String): String? {
+        return DreamShaderHoverOverrideService.resolve(element.project, key)
     }
 }

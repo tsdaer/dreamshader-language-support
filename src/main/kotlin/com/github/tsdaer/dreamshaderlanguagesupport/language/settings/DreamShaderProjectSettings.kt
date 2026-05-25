@@ -36,6 +36,8 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         var packageStoreIndexUrl: String = "",
         /** Optional GitHub token for package search API requests. */
         var packageStoreGitHubToken: String = "",
+        /** Optional hover doc override entries, one per line: key=value. */
+        var hoverDocumentationOverrides: String = "",
         /** External command template for recompiling current DreamShader asset. */
         var bridgeRecompileCurrentCommand: String = "",
         /** External command template for recompiling all DreamShader assets. */

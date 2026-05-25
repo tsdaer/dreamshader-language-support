@@ -24,92 +24,123 @@ internal data class DreamShaderBuiltinInfo(
  * Singleton for DreamShaderDocumentationData.
  */
 internal object DreamShaderDocumentationData {
-    val declarationKeywordDescriptions: Map<String, String> = mapOf(
-        "shader" to DreamShaderBundle.message("docs.declaration.shader"),
-        "shaderfunction" to DreamShaderBundle.message("docs.declaration.shaderfunction"),
-        "shaderlayer" to DreamShaderBundle.message("docs.declaration.shaderlayer"),
-        "shaderlayerblend" to DreamShaderBundle.message("docs.declaration.shaderlayerblend"),
-        "virtualfunction" to DreamShaderBundle.message("docs.declaration.virtualfunction"),
-        "function" to DreamShaderBundle.message("docs.declaration.function"),
-        "graphfunction" to DreamShaderBundle.message("docs.declaration.graphfunction"),
-        "namespace" to DreamShaderBundle.message("docs.declaration.namespace"),
-        "import" to DreamShaderBundle.message("docs.declaration.import")
+    private val data: Map<String, Any> = mapOf(
+        "declaration.shader.description" to DreamShaderBundle.message("docs.declaration.shader"),
+        "declaration.shaderfunction.description" to DreamShaderBundle.message("docs.declaration.shaderfunction"),
+        "declaration.shaderlayer.description" to DreamShaderBundle.message("docs.declaration.shaderlayer"),
+        "declaration.shaderlayerblend.description" to DreamShaderBundle.message("docs.declaration.shaderlayerblend"),
+        "declaration.virtualfunction.description" to DreamShaderBundle.message("docs.declaration.virtualfunction"),
+        "declaration.function.description" to DreamShaderBundle.message("docs.declaration.function"),
+        "declaration.graphfunction.description" to DreamShaderBundle.message("docs.declaration.graphfunction"),
+        "declaration.namespace.description" to DreamShaderBundle.message("docs.declaration.namespace"),
+        "declaration.import.description" to DreamShaderBundle.message("docs.declaration.import"),
+
+        "settings.domain.key" to "Domain",
+        "settings.domain.description" to DreamShaderBundle.message("docs.settings.domain.description"),
+        "settings.domain.commonValues" to listOf("Surface", "DeferredDecal", "LightFunction", "PostProcess", "UserInterface"),
+        "settings.materialdomain.key" to "MaterialDomain",
+        "settings.materialdomain.description" to DreamShaderBundle.message("docs.settings.materialdomain.description"),
+        "settings.materialdomain.commonValues" to listOf("Surface", "DeferredDecal", "LightFunction", "PostProcess", "UserInterface"),
+        "settings.shadingmodel.key" to "ShadingModel",
+        "settings.shadingmodel.description" to DreamShaderBundle.message("docs.settings.shadingmodel.description"),
+        "settings.shadingmodel.commonValues" to listOf("DefaultLit", "Unlit", "ClearCoat", "Subsurface", "Hair"),
+        "settings.blendmode.key" to "BlendMode",
+        "settings.blendmode.description" to DreamShaderBundle.message("docs.settings.blendmode.description"),
+        "settings.blendmode.commonValues" to listOf("Opaque", "Masked", "Translucent", "Additive", "Modulate"),
+        "settings.rendertype.key" to "RenderType",
+        "settings.rendertype.description" to DreamShaderBundle.message("docs.settings.rendertype.description"),
+        "settings.rendertype.commonValues" to listOf("Opaque", "Masked", "Translucent", "Additive", "Modulate"),
+        "settings.lightingmode.key" to "LightingMode",
+        "settings.lightingmode.description" to DreamShaderBundle.message("docs.settings.lightingmode.description"),
+        "settings.twosided.key" to "TwoSided",
+        "settings.twosided.description" to DreamShaderBundle.message("docs.settings.twosided.description"),
+        "settings.twosided.commonValues" to listOf("true", "false"),
+        "settings.wireframe.key" to "Wireframe",
+        "settings.wireframe.description" to DreamShaderBundle.message("docs.settings.wireframe.description"),
+        "settings.wireframe.commonValues" to listOf("true", "false"),
+
+        "ueBuiltins.texcoord.name" to "TexCoord",
+        "ueBuiltins.texcoord.signature" to "UE.TexCoord(Index=0)",
+        "ueBuiltins.texcoord.description" to DreamShaderBundle.message("docs.ueBuiltin.texcoord.description"),
+        "ueBuiltins.time.name" to "Time",
+        "ueBuiltins.time.signature" to "UE.Time(Period=4.0)",
+        "ueBuiltins.time.description" to DreamShaderBundle.message("docs.ueBuiltin.time.description"),
+        "ueBuiltins.panner.name" to "Panner",
+        "ueBuiltins.panner.signature" to "UE.Panner(Coordinate=UV, Time=UE.Time(), Speed=float2(0.1, 0.0))",
+        "ueBuiltins.panner.description" to DreamShaderBundle.message("docs.ueBuiltin.panner.description"),
+        "ueBuiltins.worldposition.name" to "WorldPosition",
+        "ueBuiltins.worldposition.signature" to "UE.WorldPosition()",
+        "ueBuiltins.worldposition.description" to DreamShaderBundle.message("docs.ueBuiltin.worldposition.description"),
+        "ueBuiltins.expression.name" to "Expression",
+        "ueBuiltins.expression.signature" to "UE.Expression(Class=\"Sine\", OutputType=\"float1\", Input=UE.Time())",
+        "ueBuiltins.expression.description" to DreamShaderBundle.message("docs.ueBuiltin.expression.description")
     )
 
-    val settings: Map<String, DreamShaderSettingInfo> = listOf(
-        DreamShaderSettingInfo(
-            key = "Domain",
-            description = DreamShaderBundle.message("docs.settings.domain.description"),
-            commonValues = listOf("Surface", "DeferredDecal", "LightFunction", "PostProcess", "UserInterface")
-        ),
-        DreamShaderSettingInfo(
-            key = "MaterialDomain",
-            description = DreamShaderBundle.message("docs.settings.materialdomain.description"),
-            commonValues = listOf("Surface", "DeferredDecal", "LightFunction", "PostProcess", "UserInterface")
-        ),
-        DreamShaderSettingInfo(
-            key = "ShadingModel",
-            description = DreamShaderBundle.message("docs.settings.shadingmodel.description"),
-            commonValues = listOf("DefaultLit", "Unlit", "ClearCoat", "Subsurface", "Hair")
-        ),
-        DreamShaderSettingInfo(
-            key = "BlendMode",
-            description = DreamShaderBundle.message("docs.settings.blendmode.description"),
-            commonValues = listOf("Opaque", "Masked", "Translucent", "Additive", "Modulate")
-        ),
-        DreamShaderSettingInfo(
-            key = "RenderType",
-            description = DreamShaderBundle.message("docs.settings.rendertype.description"),
-            commonValues = listOf("Opaque", "Masked", "Translucent", "Additive", "Modulate")
-        ),
-        DreamShaderSettingInfo(
-            key = "LightingMode",
-            description = DreamShaderBundle.message("docs.settings.lightingmode.description")
-        ),
-        DreamShaderSettingInfo(
-            key = "TwoSided",
-            description = DreamShaderBundle.message("docs.settings.twosided.description"),
-            commonValues = listOf("true", "false")
-        ),
-        DreamShaderSettingInfo(
-            key = "Wireframe",
-            description = DreamShaderBundle.message("docs.settings.wireframe.description"),
-            commonValues = listOf("true", "false")
-        )
-    ).associateBy { it.key.lowercase(Locale.ROOT) }
+    fun declarationDescription(keyword: String): String? =
+        readString("declaration.${keyword.lowercase(Locale.ROOT)}.description")
 
-    val ueBuiltins: Map<String, DreamShaderBuiltinInfo> = listOf(
-        DreamShaderBuiltinInfo(
-            name = "TexCoord",
-            signature = "UE.TexCoord(Index=0)",
-            description = DreamShaderBundle.message("docs.ueBuiltin.texcoord.description")
-        ),
-        DreamShaderBuiltinInfo(
-            name = "Time",
-            signature = "UE.Time(Period=4.0)",
-            description = DreamShaderBundle.message("docs.ueBuiltin.time.description")
-        ),
-        DreamShaderBuiltinInfo(
-            name = "Panner",
-            signature = "UE.Panner(Coordinate=UV, Time=UE.Time(), Speed=float2(0.1, 0.0))",
-            description = DreamShaderBundle.message("docs.ueBuiltin.panner.description")
-        ),
-        DreamShaderBuiltinInfo(
-            name = "WorldPosition",
-            signature = "UE.WorldPosition()",
-            description = DreamShaderBundle.message("docs.ueBuiltin.worldposition.description")
-        ),
-        DreamShaderBuiltinInfo(
-            name = "Expression",
-            signature = "UE.Expression(Class=\"Sine\", OutputType=\"float1\", Input=UE.Time())",
-            description = DreamShaderBundle.message("docs.ueBuiltin.expression.description")
-        )
-    ).associateBy { it.name.lowercase(Locale.ROOT) }
+    fun settingInfo(token: String): DreamShaderSettingInfo? {
+        val id = settingsByKey[token.lowercase(Locale.ROOT)] ?: return null
+        return readSettingInfo(id)
+    }
+
+    fun ueBuiltinInfo(token: String): DreamShaderBuiltinInfo? {
+        val id = builtinsByName[token.lowercase(Locale.ROOT)] ?: return null
+        return readBuiltinInfo(id)
+    }
+
+    private val settingsByKey: Map<String, String> by lazy {
+        settingIds().mapNotNull { id ->
+            val key = readString("settings.$id.key") ?: return@mapNotNull null
+            key.lowercase(Locale.ROOT) to id
+        }.toMap()
+    }
+
+    private val builtinsByName: Map<String, String> by lazy {
+        builtinIds().mapNotNull { id ->
+            val name = readString("ueBuiltins.$id.name") ?: return@mapNotNull null
+            name.lowercase(Locale.ROOT) to id
+        }.toMap()
+    }
+
+    private fun readSettingInfo(id: String): DreamShaderSettingInfo? {
+        val key = readString("settings.$id.key") ?: return null
+        val description = readString("settings.$id.description") ?: return null
+        val commonValues = readStringList("settings.$id.commonValues")
+        return DreamShaderSettingInfo(key = key, description = description, commonValues = commonValues)
+    }
+
+    private fun readBuiltinInfo(id: String): DreamShaderBuiltinInfo? {
+        val name = readString("ueBuiltins.$id.name") ?: return null
+        val signature = readString("ueBuiltins.$id.signature") ?: return null
+        val description = readString("ueBuiltins.$id.description") ?: return null
+        return DreamShaderBuiltinInfo(name = name, signature = signature, description = description)
+    }
+
+    private fun settingIds(): Set<String> = collectIds("settings")
+
+    private fun builtinIds(): Set<String> = collectIds("ueBuiltins")
+
+    private fun collectIds(prefix: String): Set<String> {
+        val rootPrefix = "$prefix."
+        return data.keys.asSequence()
+            .filter { it.startsWith(rootPrefix) }
+            .map { it.removePrefix(rootPrefix).substringBefore('.') }
+            .toSet()
+    }
+
+    private fun readString(path: String): String? = data[path] as? String
+
+    private fun readStringList(path: String): List<String> {
+        val value = data[path] as? List<*> ?: return emptyList()
+        return value.mapNotNull { it as? String }
+    }
 
     fun valueOwners(valueLiteral: String): List<String> {
         if (valueLiteral.isBlank()) return emptyList()
         val lowered = valueLiteral.lowercase(Locale.ROOT)
-        return settings.values
+        val settings = settingIds().mapNotNull { readSettingInfo(it) }
+        return settings
             .filter { info -> info.commonValues.any { it.equals(valueLiteral, ignoreCase = true) } }
             .map { it.key }
             .sortedBy { it.lowercase(Locale.ROOT) }

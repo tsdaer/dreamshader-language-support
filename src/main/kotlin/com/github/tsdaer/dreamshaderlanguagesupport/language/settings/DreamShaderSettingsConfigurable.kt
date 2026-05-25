@@ -4,6 +4,7 @@ import com.intellij.codeInsight.hints.ParameterHintsPassFactory
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import java.awt.GridBagConstraints
@@ -25,6 +26,7 @@ class DreamShaderSettingsConfigurable(
     private var enableCodeLensBox: JBCheckBox? = null
     private var outArgumentPlaceholderSuffixField: JBTextField? = null
     private var packageSearchGitHubTokenField: JBTextField? = null
+    private var hoverDocumentationOverridesArea: JBTextArea? = null
     private var recompileCurrentCommandField: JBTextField? = null
     private var recompileAllCommandField: JBTextField? = null
     private var cleanGeneratedCommandField: JBTextField? = null
@@ -71,12 +73,43 @@ class DreamShaderSettingsConfigurable(
             row++
         }
 
+        fun addLabelAndTextArea(label: String, area: JBTextArea, tooltip: String? = null) {
+            val labelConstraints = GridBagConstraints().apply {
+                gridx = 0
+                gridy = row
+                anchor = GridBagConstraints.NORTHWEST
+                insets = JBUI.insets(4, 4, 2, 8)
+            }
+            root.add(JLabel(label), labelConstraints)
+
+            val scrollPane = com.intellij.ui.components.JBScrollPane(area).apply {
+                border = JBUI.Borders.empty()
+                toolTipText = tooltip
+                preferredSize = JBUI.size(320, 120)
+            }
+
+            val areaConstraints = GridBagConstraints().apply {
+                gridx = 1
+                gridy = row
+                weightx = 1.0
+                fill = GridBagConstraints.BOTH
+                insets = JBUI.insets(4, 0, 2, 4)
+            }
+            area.toolTipText = tooltip
+            root.add(scrollPane, areaConstraints)
+            row++
+        }
+
         projectRootField = JBTextField()
         manifestPathField = JBTextField()
         showStatusBarBox = JBCheckBox(DreamShaderBundle.message("settings.showStatusBar.checkbox"))
         enableCodeLensBox = JBCheckBox(DreamShaderBundle.message("settings.enableCodeLens.checkbox"))
         outArgumentPlaceholderSuffixField = JBTextField()
         packageSearchGitHubTokenField = JBTextField()
+        hoverDocumentationOverridesArea = JBTextArea().apply {
+            lineWrap = true
+            wrapStyleWord = false
+        }
         recompileCurrentCommandField = JBTextField()
         recompileAllCommandField = JBTextField()
         cleanGeneratedCommandField = JBTextField()
@@ -108,6 +141,11 @@ class DreamShaderSettingsConfigurable(
             DreamShaderBundle.message("settings.packageSearchGitHubToken.label"),
             packageSearchGitHubTokenField as JBTextField,
             DreamShaderBundle.message("settings.packageSearchGitHubToken.tooltip")
+        )
+        addLabelAndTextArea(
+            DreamShaderBundle.message("settings.hoverDocsOverrides.label"),
+            hoverDocumentationOverridesArea as JBTextArea,
+            DreamShaderBundle.message("settings.hoverDocsOverrides.tooltip")
         )
         addLabelAndField(
             DreamShaderBundle.message("settings.bridgeRecompileCurrent.label"),
@@ -148,6 +186,7 @@ class DreamShaderSettingsConfigurable(
             enableCodeLensBox?.isSelected != state.enableCodeLens ||
             outArgumentPlaceholderSuffixField?.text.orEmpty() != state.outArgumentPlaceholderSuffix ||
             packageSearchGitHubTokenField?.text.orEmpty() != state.packageStoreGitHubToken ||
+            hoverDocumentationOverridesArea?.text.orEmpty() != state.hoverDocumentationOverrides ||
             recompileCurrentCommandField?.text.orEmpty() != state.bridgeRecompileCurrentCommand ||
             recompileAllCommandField?.text.orEmpty() != state.bridgeRecompileAllCommand ||
             cleanGeneratedCommandField?.text.orEmpty() != state.bridgeCleanGeneratedShadersCommand
@@ -163,6 +202,7 @@ class DreamShaderSettingsConfigurable(
         state.enableCodeLens = enableCodeLensBox?.isSelected ?: true
         state.outArgumentPlaceholderSuffix = normalizeOutPlaceholderSuffix(outArgumentPlaceholderSuffixField?.text.orEmpty())
         state.packageStoreGitHubToken = packageSearchGitHubTokenField?.text.orEmpty().trim()
+        state.hoverDocumentationOverrides = hoverDocumentationOverridesArea?.text.orEmpty().trim()
         state.bridgeRecompileCurrentCommand = recompileCurrentCommandField?.text.orEmpty().trim()
         state.bridgeRecompileAllCommand = recompileAllCommandField?.text.orEmpty().trim()
         state.bridgeCleanGeneratedShadersCommand = cleanGeneratedCommandField?.text.orEmpty().trim()
@@ -180,6 +220,7 @@ class DreamShaderSettingsConfigurable(
         enableCodeLensBox?.isSelected = state.enableCodeLens
         outArgumentPlaceholderSuffixField?.text = state.outArgumentPlaceholderSuffix
         packageSearchGitHubTokenField?.text = state.packageStoreGitHubToken
+        hoverDocumentationOverridesArea?.text = state.hoverDocumentationOverrides
         recompileCurrentCommandField?.text = state.bridgeRecompileCurrentCommand
         recompileAllCommandField?.text = state.bridgeRecompileAllCommand
         cleanGeneratedCommandField?.text = state.bridgeCleanGeneratedShadersCommand
@@ -193,6 +234,7 @@ class DreamShaderSettingsConfigurable(
         enableCodeLensBox = null
         outArgumentPlaceholderSuffixField = null
         packageSearchGitHubTokenField = null
+        hoverDocumentationOverridesArea = null
         recompileCurrentCommandField = null
         recompileAllCommandField = null
         cleanGeneratedCommandField = null

@@ -467,6 +467,7 @@ Implemented:
 - Added `DreamShaderFindUsagesProvider` and `PsiNameIdentifierOwner` support on `DreamShaderDeclaration`.
 - Added regression tests in `DreamShaderFindReferencesTest` and `DreamShaderDeclarationRenameTest`.
 - Added `DreamShaderDocumentationProvider` via `lang.documentationProvider` for hover docs on declarations, settings keys/values, and `UE.*` builtins.
+- Refactored hover documentation data storage/lookup to dot-path form (`path.path`), centralized in `DreamShaderDocumentationData` (for example `settings.domain.description`, `ueBuiltins.texcoord.signature`) and consumed through path-based accessors.
 - Added `DreamShaderParameterInfoHandler` via `codeInsight.parameterInfo` for signature help on `UE.*` builtins, common HLSL intrinsics, and same-file declared callable signatures (`Function`/`GraphFunction`/`VirtualFunction`).
 - Extended inlay-parameter-hint signature resolution to reuse same-file declared callable signatures and suppress declaration-head false positives (avoid duplicate hints on declaration parameter lists).
 - Added regression tests in `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, and `DreamShaderInlayParameterHintsProviderTest`.
@@ -1629,6 +1630,7 @@ Configurable fields:
 - `Show DreamShader status bar widget`
 - `Enable DreamShader in-editor code lens hints` (currently controls both inlay-parameter-hints output and IntelliJ Code Vision hints)
 - `Out Placeholder Suffix` (used by missing `out` argument quick-fix placeholder generation; sanitized to identifier-safe form)
+- `Hover Docs Overrides` (manual hover text overrides; one per line in `path.path=value` format)
 - `Bridge Recompile Current Command`
 - `Bridge Recompile All Command`
 - `Bridge Clean Generated Command`
