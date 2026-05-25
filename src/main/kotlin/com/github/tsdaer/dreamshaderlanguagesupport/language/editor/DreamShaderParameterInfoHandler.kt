@@ -17,7 +17,7 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
         val file = context.file
         if (file.language != DreamShaderLanguage) return null
         val call = DreamShaderSignatureHelpAnalyzer.findCallContext(file.text, context.offset) ?: return null
-        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName)
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName, file.text)
         if (signatures.isEmpty()) return null
         context.itemsToShow = signatures.toTypedArray()
         context.highlightedElement = file.findElementAt(call.nameStartOffset)
@@ -49,7 +49,7 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
             return
         }
 
-        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName)
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName, element.text)
         if (signatures.isEmpty()) {
             context.removeHint()
             return

@@ -358,7 +358,7 @@ Implemented in M5:
 | Diagnostics                                    | Done   | Local parser + section-shape + semantic diagnostics implemented with tests                                                                                                                                                               |
 | Go to Definition / References                  | Done   | Go to Definition + Find References implemented for top-level declaration symbols                                                                                                                                                         |
 | Document symbols / structure                   | Done   | Structure view integrated for top-level declarations and sections                                                                                                                                                                        |
-| Inlay hints                                    | Done   | Parameter name hints implemented with callable-context filtering and settings toggle (`enableCodeLens` controls this inlay-hints layer)                                                                                                  |
+| Inlay hints                                    | Done   | Parameter name hints implemented with callable-context filtering and settings toggle (`enableCodeLens` controls this inlay-hints layer), including same-file declared callable signatures (`Function`/`GraphFunction`/`VirtualFunction`) |
 | Formatting                                     | Done   | Basic formatter implemented (`lang.formatter`): indentation, operator spacing, braces/section layout                                                                                                                                     |
 | Bridge diagnostics panel                       | Done   | Tool window added with refresh/list/open-location baseline                                                                                                                                                                               |
 | Bridge actions                                 | Done   | Refresh/open-location/open bridge path + configurable recompile/clean command execution                                                                                                                                                  |
@@ -467,8 +467,9 @@ Implemented:
 - Added `DreamShaderFindUsagesProvider` and `PsiNameIdentifierOwner` support on `DreamShaderDeclaration`.
 - Added regression tests in `DreamShaderFindReferencesTest` and `DreamShaderDeclarationRenameTest`.
 - Added `DreamShaderDocumentationProvider` via `lang.documentationProvider` for hover docs on declarations, settings keys/values, and `UE.*` builtins.
-- Added `DreamShaderParameterInfoHandler` via `codeInsight.parameterInfo` for signature help on `UE.*` builtins and common HLSL intrinsics.
-- Added regression tests in `DreamShaderDocumentationProviderTest` and `DreamShaderSignatureHelpAnalyzerTest`.
+- Added `DreamShaderParameterInfoHandler` via `codeInsight.parameterInfo` for signature help on `UE.*` builtins, common HLSL intrinsics, and same-file declared callable signatures (`Function`/`GraphFunction`/`VirtualFunction`).
+- Extended inlay-parameter-hint signature resolution to reuse same-file declared callable signatures and suppress declaration-head false positives (avoid duplicate hints on declaration parameter lists).
+- Added regression tests in `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, and `DreamShaderInlayParameterHintsProviderTest`.
 - Added semantic token classification in `DreamShaderSemanticAnnotator` for declaration keywords/names, section names, callable references, `UE` namespace, namespace qualifiers (`Namespace::`), local symbol declaration/usage split, and `Base.*` material output members.
 - Refactored semantic-token classification logic into `DreamShaderSemanticTokenClassifier` so `DreamShaderSemanticAnnotator` focuses on annotation emission + diagnostics pipeline aggregation.
 - Reorganized `DreamShaderSemanticAnnotator` internals into grouped diagnostic sections (`bridge`, `syntax`, `section-shape`, `semantic`, `call/import utilities`) and grouped constant/regex blocks to improve maintainability without behavior changes.
@@ -503,13 +504,13 @@ Rule format:
 - `Expected`: expected behavior
 - `Test`: suggested test name
 
-#### M3 Audit Matrix (Checked on `2026-05-24`)
+#### M3 Audit Matrix (Checked on `2026-05-26`)
 
 | ID         | Status        | Test mapping                                                                                                                                                                                                         |
 |------------|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `DSYM-001` | `Implemented` | `DreamShaderSemanticTokensTest.testSemanticTokensForDeclarationAndSectionScopes()`                                                                                                                                   |
 | `DSYM-002` | `Implemented` | `DreamShaderSemanticTokensTest.testSemanticTokensInGraphAndFunctionBodies()` + subcases `testSemanticTokensForNestedCallsAndMemberLikeSyntax()` / `testSemanticTokensForArrayIndexAndMultiLevelNamespaceQualifier()` |
-| `DSYM-003` | `Implemented` | `DreamShaderInlayParameterHintsProviderTest.testProducesHintsForUeAndIntrinsicCalls()`                                                                                                                               |
+| `DSYM-003` | `Implemented` | `DreamShaderInlayParameterHintsProviderTest.testProducesHintsForUeAndIntrinsicCalls()` + `DreamShaderInlayParameterHintsProviderTest.testProducesHintsForUserDeclaredFunctionCall()`                                                  |
 | `DSYM-004` | `Implemented` | `DreamShaderInlayParameterHintsProviderTest.testSkipsNamedArguments()`                                                                                                                                               |
 
 1. `ID`: `DSYM-001`  
@@ -532,7 +533,7 @@ Rule format:
 `Priority`: `P2`  
 `Rule`: inlay hints show callable signature/output context where invocation is ambiguous.  
 `Expected`: hint text reflects callable parameter/output ordering and updates when signature changes  
-`Test`: `testProducesHintsForUeAndIntrinsicCalls()`
+`Test`: `testProducesHintsForUeAndIntrinsicCalls()` + `testProducesHintsForUserDeclaredFunctionCall()`
 
 4. `ID`: `DSYM-004`  
 `Priority`: `P2`  

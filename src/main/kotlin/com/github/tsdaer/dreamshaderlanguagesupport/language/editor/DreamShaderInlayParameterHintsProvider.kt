@@ -1,4 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.codeInsight.hints.HintInfo
@@ -18,7 +19,7 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
         if (element.node.elementType != DreamShaderTokenTypes.IDENTIFIER) return emptyList()
 
         val callInfo = findCallAtIdentifier(element) ?: return emptyList()
-        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(callInfo.functionName)
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(callInfo.functionName, element.containingFile.text)
         if (signatures.isEmpty()) return emptyList()
 
         val parameterNames = extractParameterNames(signatures.first().presentableText)
@@ -45,7 +46,7 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
         if (settings != null && !settings.enableCodeLens) return null
 
         val callInfo = findCallAtIdentifier(element) ?: return null
-        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(callInfo.functionName)
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(callInfo.functionName, element.containingFile.text)
         if (signatures.isEmpty()) return null
         val parameterNames = extractParameterNames(signatures.first().presentableText)
         return HintInfo.MethodInfo(callInfo.functionName.lowercase(Locale.ROOT), parameterNames)
@@ -90,9 +91,21 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
         if (functionName.isBlank()) return null
 
         val rightParen = findMatchingRightParen(fileText, i) ?: return null
+        if (isDeclarationHead(fileText, left)) return null
         val arguments = parseArguments(fileText, i + 1, rightParen)
 
         return ParsedCall(functionName = functionName, arguments = arguments)
+    }
+
+    private fun isDeclarationHead(text: String, functionNameStartOffset: Int): Boolean {
+        var i = functionNameStartOffset - 1
+        while (i >= 0 && text[i].isWhitespace()) i--
+        if (i < 0 || !isIdentifierChar(text[i])) return false
+
+        var end = i + 1
+        while (i >= 0 && isIdentifierChar(text[i])) i--
+        val token = text.substring(i + 1, end).lowercase(Locale.ROOT)
+        return token in DreamShaderLanguageKeywords.DECLARATION_KEYWORDS
     }
 
     private fun findMatchingRightParen(text: String, leftParenOffset: Int): Int? {
@@ -296,6 +309,7 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     }
 
     private fun isNameChar(ch: Char): Boolean = ch == '_' || ch == '.' || ch.isLetterOrDigit()
+    private fun isIdentifierChar(ch: Char): Boolean = ch == '_' || ch.isLetterOrDigit()
 
     /**
      * Data model for ParsedCall.

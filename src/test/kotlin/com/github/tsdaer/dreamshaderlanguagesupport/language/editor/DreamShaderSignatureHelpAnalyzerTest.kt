@@ -47,4 +47,53 @@ class DreamShaderSignatureHelpAnalyzerTest {
         val call = DreamShaderSignatureHelpAnalyzer.findCallContext(text, offset)
         assertEquals(null, call)
     }
+
+    @Test
+    fun `resolves signatures from user function declarations`() {
+        val text = """
+            Function ApplyTint(in vec3 color, in vec3 tint, out vec3 result) {
+                result = color * tint;
+            }
+
+            Shader Main {
+                Graph {
+                    ApplyTint(float3(1,1,1), float3(1,0,0), finalColor);
+                }
+            }
+        """.trimIndent()
+
+        val callOffset = text.indexOf("float3(1,1,1)")
+        val call = DreamShaderSignatureHelpAnalyzer.findCallContext(text, callOffset)
+        assertNotNull(call)
+        assertEquals("ApplyTint", call!!.functionName)
+
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName, text)
+        assertEquals(1, signatures.size)
+        assertEquals("ApplyTint(color, tint, result)", signatures.first().presentableText)
+    }
+
+    @Test
+    fun `resolves signatures from namespaced calls using declared function`() {
+        val text = """
+            Function Blend(in float a, in float b, out float result) {
+                result = lerp(a, b, 0.5);
+            }
+
+            Shader Main {
+                Graph {
+                    float outValue;
+                    Utils::Blend(0.2, 0.6, outValue);
+                }
+            }
+        """.trimIndent()
+
+        val callOffset = text.indexOf("0.2")
+        val call = DreamShaderSignatureHelpAnalyzer.findCallContext(text, callOffset)
+        assertNotNull(call)
+        assertEquals("Blend", call!!.functionName)
+
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName, text)
+        assertEquals(1, signatures.size)
+        assertEquals("Blend(a, b, result)", signatures.first().presentableText)
+    }
 }

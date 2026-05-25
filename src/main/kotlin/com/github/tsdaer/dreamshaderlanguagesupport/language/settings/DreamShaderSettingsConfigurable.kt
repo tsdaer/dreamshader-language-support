@@ -8,7 +8,6 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
-import java.awt.Insets
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel

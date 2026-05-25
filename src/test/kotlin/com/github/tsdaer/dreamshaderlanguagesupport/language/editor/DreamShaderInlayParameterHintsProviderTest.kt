@@ -53,4 +53,40 @@ class DreamShaderInlayParameterHintsProviderTest : BasePlatformTestCase() {
 
         assertTrue("Named argument call should not emit redundant hint", hints.isEmpty())
     }
+
+    fun testProducesHintsForUserDeclaredFunctionCall() {
+        val file = myFixture.configureByText(
+            "inlay_user_declared_call.dsm",
+            """
+            Function ApplyTint(in vec3 color, in vec3 tint, out vec3 result) {
+                result = color * tint;
+            }
+
+            Shader Main {
+                Graph {
+                    ApplyTint(float3(1,1,1), float3(1,0,0), finalColor);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers
+            .flatMap { provider.getParameterHints(it) }
+            .sortedBy { it.offset }
+
+        assertEquals(listOf("color:", "tint:", "result:"), hints.map { it.text })
+        assertTrue(
+            "Expected inlay at first argument",
+            hints.any { it.text == "color:" && file.text.substring(it.offset).startsWith("float3(1,1,1)") }
+        )
+        assertTrue(
+            "Expected inlay at second argument",
+            hints.any { it.text == "tint:" && file.text.substring(it.offset).startsWith("float3(1,0,0)") }
+        )
+        assertTrue(
+            "Expected inlay at third argument",
+            hints.any { it.text == "result:" && file.text.substring(it.offset).startsWith("finalColor") }
+        )
+    }
 }

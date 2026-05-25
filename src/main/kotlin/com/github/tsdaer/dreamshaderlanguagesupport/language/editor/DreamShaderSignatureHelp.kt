@@ -1,4 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
+import java.util.regex.Pattern
 import java.util.*
 
 /**
@@ -118,7 +119,10 @@ object DreamShaderSignatureHelpAnalyzer {
         put("tan", listOf(signature("tan(x)", "x")))
     }
 
-    fun resolveSignatures(functionName: String): List<DreamShaderCallSignature> {
+    fun resolveSignatures(functionName: String, sourceText: String? = null): List<DreamShaderCallSignature> {
+        val declaredSignatures = resolveDeclaredSignatures(functionName, sourceText)
+        if (declaredSignatures.isNotEmpty()) return declaredSignatures
+
         val key = functionName.lowercase(Locale.ROOT)
         return signatureLookup[key].orEmpty()
     }
@@ -235,4 +239,165 @@ object DreamShaderSignatureHelpAnalyzer {
             parameterRanges = ranges
         )
     }
+
+    private fun resolveDeclaredSignatures(functionName: String, sourceText: String?): List<DreamShaderCallSignature> {
+        if (sourceText.isNullOrBlank()) return emptyList()
+
+        val declarationSignaturesByName = parseDeclaredFunctionSignatures(sourceText)
+        if (declarationSignaturesByName.isEmpty()) return emptyList()
+
+        val lookupCandidates = buildLookupCandidates(functionName)
+        val resolved = linkedSetOf<DreamShaderCallSignature>()
+        lookupCandidates.forEach { candidate ->
+            declarationSignaturesByName[candidate]?.let { resolved.add(it) }
+        }
+        return resolved.toList()
+    }
+
+    private fun parseDeclaredFunctionSignatures(sourceText: String): Map<String, DreamShaderCallSignature> {
+        val signatures = linkedMapOf<String, DreamShaderCallSignature>()
+        val matcher = USER_FUNCTION_DECLARATION_HEAD_PATTERN.matcher(sourceText)
+        while (matcher.find()) {
+            val functionName = matcher.group(2)?.trim().orEmpty()
+            if (functionName.isBlank()) continue
+
+            val leftParenOffset = matcher.end() - 1
+            val rightParenOffset = findMatchingRightParen(sourceText, leftParenOffset) ?: continue
+            val rawParameters = sourceText.substring(leftParenOffset + 1, rightParenOffset)
+            val parameterNames = splitTopLevelCommaSegments(rawParameters)
+                .mapNotNull { extractDeclaredParameterName(it) }
+
+            val presentableText = buildString {
+                append(functionName)
+                append("(")
+                append(parameterNames.joinToString(", "))
+                append(")")
+            }
+            signatures[functionName.lowercase(Locale.ROOT)] = signature(presentableText, *parameterNames.toTypedArray())
+        }
+        return signatures
+    }
+
+    private fun splitTopLevelCommaSegments(text: String): List<String> {
+        val parts = mutableListOf<String>()
+        var start = 0
+        var i = 0
+        var parenDepth = 0
+        var bracketDepth = 0
+        var braceDepth = 0
+        var inString = false
+        var escaped = false
+
+        while (i < text.length) {
+            val ch = text[i]
+            if (inString) {
+                if (escaped) {
+                    escaped = false
+                } else if (ch == '\\') {
+                    escaped = true
+                } else if (ch == '"') {
+                    inString = false
+                }
+                i++
+                continue
+            }
+
+            when (ch) {
+                '"' -> inString = true
+                '(' -> parenDepth++
+                ')' -> if (parenDepth > 0) parenDepth--
+                '[' -> bracketDepth++
+                ']' -> if (bracketDepth > 0) bracketDepth--
+                '{' -> braceDepth++
+                '}' -> if (braceDepth > 0) braceDepth--
+                ',' -> {
+                    if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+                        parts.add(text.substring(start, i))
+                        start = i + 1
+                    }
+                }
+            }
+            i++
+        }
+        parts.add(text.substring(start))
+        return parts
+    }
+
+    private fun findMatchingRightParen(text: String, leftParenOffset: Int): Int? {
+        if (leftParenOffset !in text.indices || text[leftParenOffset] != '(') return null
+
+        var parenDepth = 1
+        var bracketDepth = 0
+        var braceDepth = 0
+        var inString = false
+        var escaped = false
+        var i = leftParenOffset + 1
+
+        while (i < text.length) {
+            val ch = text[i]
+            if (inString) {
+                if (escaped) {
+                    escaped = false
+                } else if (ch == '\\') {
+                    escaped = true
+                } else if (ch == '"') {
+                    inString = false
+                }
+                i++
+                continue
+            }
+
+            when (ch) {
+                '"' -> inString = true
+                '(' -> parenDepth++
+                ')' -> {
+                    parenDepth--
+                    if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0) return i
+                }
+                '[' -> bracketDepth++
+                ']' -> if (bracketDepth > 0) bracketDepth--
+                '{' -> braceDepth++
+                '}' -> if (braceDepth > 0) braceDepth--
+            }
+            i++
+        }
+        return null
+    }
+
+    private fun extractDeclaredParameterName(rawParameter: String): String? {
+        val head = rawParameter.substringBefore('=').trim()
+        if (head.isBlank()) return null
+
+        val identifiers = mutableListOf<String>()
+        val matcher = DECLARATION_IDENTIFIER_PATTERN.matcher(head)
+        while (matcher.find()) {
+            matcher.group()?.let { identifiers.add(it) }
+        }
+        if (identifiers.isEmpty()) return null
+
+        val name = identifiers.last()
+        if (identifiers.size == 1 && name.lowercase(Locale.ROOT) in PARAMETER_QUALIFIERS) return null
+        return name
+    }
+
+    private fun buildLookupCandidates(functionName: String): List<String> {
+        val trimmed = functionName.trim()
+        if (trimmed.isBlank()) return emptyList()
+
+        val candidates = linkedSetOf<String>()
+        candidates.add(trimmed.lowercase(Locale.ROOT))
+        trimmed.substringAfterLast("::", missingDelimiterValue = "").takeIf { it.isNotBlank() }?.let {
+            candidates.add(it.lowercase(Locale.ROOT))
+        }
+        trimmed.substringAfterLast('.', missingDelimiterValue = "").takeIf { it.isNotBlank() }?.let {
+            candidates.add(it.lowercase(Locale.ROOT))
+        }
+        return candidates.toList()
+    }
+
+    private val USER_FUNCTION_DECLARATION_HEAD_PATTERN: Pattern = Pattern.compile(
+        "(?is)\\b(function|graphfunction|virtualfunction)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\("
+    )
+    private val DECLARATION_IDENTIFIER_PATTERN: Pattern = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*")
+    private val PARAMETER_QUALIFIERS = setOf("in", "out", "inout", "const", "static", "opt")
 }
