@@ -72,6 +72,7 @@ Tests:
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContextAnalyzerTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContextAnalyzerTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionSuggesterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionSuggesterTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderImportPathNormalizationTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderImportPathNormalizationTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderFoldingBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderFoldingBuilderTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParserTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParserTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderBundleLocalizationTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderBundleLocalizationTest.kt)
@@ -419,7 +420,7 @@ Current staged scope:
 - [x] `P1` Material output completion (`Base.*` members).
 - [x] `P1` `UE.*` completion and snippet insertion (including `UE.Expression(...)`).
 - [x] `P1` HLSL intrinsic completion in function/graph-like code blocks.
-- [x] `P1` Import path completion for `.dsh` and `.dsf`.
+- [x] `P1` Import path completion for `.dsh`, `.dsf`, and `.dsm`.
 
 Acceptance criteria:
 - Completion proposals are context-sensitive and match major VS Code behaviors.
@@ -434,7 +435,8 @@ Implemented:
 - Material output completion for `Base.*` members with assignment insertion.
 - `UE.*` member completion with snippet-like insert texts (including `UE.Expression(...)` caret positioning).
 - HLSL intrinsic completion in graph-like/function-like contexts.
-- Import path completion for project `.dsh` / `.dsf` files.
+- Import path completion for project `.dsh` / `.dsf` / `.dsm` files and package files under `DShader/Packages`.
+- Import candidate path normalization now converts package physical paths (`DShader/Packages/...`) to import-ready package syntax (`@scope/name/...` or `name/...`) before completion display/insertion.
 
 ### Milestone M3: Navigation and Symbols
 
@@ -466,7 +468,8 @@ Implemented:
 - Added `DreamShaderReferencesSearchExecutor` via `referencesSearch` extension for declaration usage discovery.
 - Added `DreamShaderFindUsagesProvider` and `PsiNameIdentifierOwner` support on `DreamShaderDeclaration`.
 - Added regression tests in `DreamShaderFindReferencesTest` and `DreamShaderDeclarationRenameTest`.
-- Added `DreamShaderDocumentationProvider` via `lang.documentationProvider` for hover docs on declarations, settings keys/values, and `UE.*` builtins.
+- Added `DreamShaderDocumentationProvider` via `lang.documentationProvider` for hover docs on declarations, settings keys/values, `UE.*` builtins, function call signatures, and local variables (name/type/scope).
+- Hover resolution now prefers caret/original token context before resolved declaration target, so call-site and local-variable hovers are not shadowed by declaration fallback in IDE mouse hover flows.
 - Refactored hover documentation data storage/lookup to dot-path form (`path.path`), centralized in `DreamShaderDocumentationData` (for example `settings.domain.description`, `ueBuiltins.texcoord.signature`) and consumed through path-based accessors.
 - Added `DreamShaderParameterInfoHandler` via `codeInsight.parameterInfo` for signature help on `UE.*` builtins, common HLSL intrinsics, and same-file declared callable signatures (`Function`/`GraphFunction`/`VirtualFunction`).
 - Extended inlay-parameter-hint signature resolution to reuse same-file declared callable signatures and suppress declaration-head false positives (avoid duplicate hints on declaration parameter lists).
@@ -1007,22 +1010,6 @@ import "Scripts/Auto.usf";
 `Expected`: `Graph section does not support return statement`  
 `Test`: `testGraphDisallowsReturnStatement()`
 
-#### D. Test Harness Mapping
-
-Current test files:
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/diagnostics/DreamShaderSyntaxDiagnosticsTest.kt` for `DSYN-001` to `DSYN-005`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/diagnostics/DreamShaderSectionShapeDiagnosticsTest.kt` for `DSYN-101` to `DSYN-109` plus declaration-schema coverage (`Results` alias scope and function/graphfunction section constraints).
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/diagnostics/DreamShaderSemanticDiagnosticsTest.kt` for `DSYN-201` to `DSYN-210` plus `DSYN-211`/`DSYN-212`/`DSYN-213` (`VirtualFunction Options.Asset` required + asset-path root validation + unknown-root quick-fix, asset declaration `Root` validation, `VirtualFunction` description quality/recommended warnings + quick-fix actions), with extended semantic quick-fix coverage:
-  - `DSYN-201` settings-key suggestion replacement (`Replace with '<SuggestedKey>'`)
-  - `DSYN-202` scalar settings validation (`TwoSided` bool, `NumCustomizedUVs` range) + value quick-fix actions (`Replace with true`, `Replace with 0`)
-  - `DSYN-203` base output suggestion replacement (`Replace with 'Base.<SuggestedMember>'`)
-  - `DSYN-204` type suggestion replacement (`Replace with '<SuggestedType>'`)
-  - `DSYN-205` missing out-argument insertion (`Add missing out arguments`, including name-collision avoidance and configurable `Out Placeholder Suffix`)
-  - `DSYN-206` unresolved import scaffold creation (`Create missing import file: <path>`, default `.dsh` extension when omitted, template content sourced from `DreamShaderTemplateService`, open created file, scoped imports routed to `DShader/Packages/@scope/name/...`) + unsupported-extension semantic guard (`.dsh/.dsf/.dsm` only) + extension quick-fix (`Change extension to .dsh`)
-
-Recommendation:
-- Use the `M4 Audit Matrix` as the source of truth for release checks and regression triage.
-
 ### Milestone M5: Bridge Integration and Package Tooling
 
 - [x] `P2` Detect project root and bridge directory resolution.
@@ -1373,41 +1360,6 @@ Rule format:
 `Rule`: package-related bridge diagnostics map to originating source path under `DShader/Packages`.  
 `Expected`: diagnostic navigation opens exact file/line in installed package  
 `Test`: `testBridgeDiagnosticsMapToInstalledPackageSource()`
-
-#### F. Test Harness Mapping
-
-Current test files:
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt` for `DSYM-001` to `DSYM-002`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderInlayParameterHintsProviderTest.kt` for `DSYM-003` to `DSYM-004`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgePathResolverTest.kt` for `DBRG-001` to `DBRG-002`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeDiagnosticsTest.kt` for `DBRG-003` to `DBRG-004`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeActionsTest.kt` for `DBRG-005`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderManifestCompletionTest.kt` for `DBRG-101` to `DBRG-103`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderStatusBarVisibilityTest.kt` for `DBRG-104`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/settings/DreamShaderSettingsToggleTest.kt` for `DBRG-105`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/templates/DreamShaderTemplateCommandsTest.kt` for `DTPL-001` to `DTPL-004`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageIndexTest.kt` for `DPKG-001` to `DPKG-006`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageLifecycleTest.kt` for `DPKG-101` to `DPKG-110`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageImportResolutionTest.kt` for `DPKG-201` to `DPKG-203`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageStoreUiModelTest.kt` for `DPKG-301` to `DPKG-303`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderGitHubPackageSearchTest.kt` for GitHub discovery integration.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageBridgeInteropTest.kt` for `DPKG-401`.
-
-Additional implemented tests:
-- Extended `DBRG-005` from registration/invocation safety to explicit success/error message assertions (`DreamShaderBridgeActionsTest.testBridgeActionCommandSetReturnsExpectedSuccessAndErrorMessages()`).
-- Added package GitHub search parser unit tests (`DreamShaderGitHubPackageSearchTest`).
-
-Recommendation:
-- Use `M5 Bridge/Tooling Audit Matrix` and `M5 Package Audit Matrix` as release gates for Bridge/package functionality.
-
-#### G. M3 Test Harness Mapping
-
-Current test files:
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt` for `DSYM-001` to `DSYM-002`.
-- `src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderInlayParameterHintsProviderTest.kt` for `DSYM-003` to `DSYM-004`.
-
-Recommendation:
-- Use `M3 Audit Matrix` as the canonical gate for semantic-token and inlay-hint regressions.
 
 ### Milestone M6: Quality, Tests, and Release
 

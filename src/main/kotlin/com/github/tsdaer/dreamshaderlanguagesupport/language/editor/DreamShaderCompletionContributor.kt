@@ -920,17 +920,18 @@ private fun collectProjectImportCandidates(file: PsiFile): List<String> {
     }
     collectByExtension("dsh")
     collectByExtension("dsf")
+    collectByExtension("dsm")
 
     val basePath = project.basePath?.replace('\\', '/')
     val pathCandidates = files.values
         .asSequence()
         .filter { it != file.virtualFile }
-        .map { vf ->
+        .flatMap { vf ->
             val normalizedPath = vf.path.replace('\\', '/')
             if (basePath != null && normalizedPath.startsWith("$basePath/")) {
-                normalizedPath.removePrefix("$basePath/")
+                normalizeProjectRelativeImportCandidates(normalizedPath.removePrefix("$basePath/")).asSequence()
             } else {
-                vf.name
+                sequenceOf(vf.name)
             }
         }
         .distinct()
@@ -941,6 +942,28 @@ private fun collectProjectImportCandidates(file: PsiFile): List<String> {
     return (pathCandidates + packageRootCandidates)
         .distinct()
         .sorted()
+}
+
+internal fun normalizeProjectRelativeImportCandidates(projectRelativePath: String): List<String> {
+    val normalized = projectRelativePath.replace('\\', '/').trimStart('/')
+    if (normalized.isBlank()) return emptyList()
+
+    val packagePrefix = "DShader/Packages/"
+    if (normalized.startsWith(packagePrefix)) {
+        val packageImportPath = normalized.removePrefix(packagePrefix).trimStart('/')
+        return if (packageImportPath.isNotBlank()) listOf(packageImportPath) else emptyList()
+    }
+
+    val dshaderPrefix = "DShader/"
+    if (normalized.startsWith(dshaderPrefix)) {
+        val fromDShaderRoot = normalized.removePrefix(dshaderPrefix).trimStart('/')
+        return listOfNotNull(
+            fromDShaderRoot.takeIf { it.isNotBlank() },
+            normalized
+        ).distinct()
+    }
+
+    return listOf(normalized)
 }
 
 private fun collectPackageRootImportCandidates(file: PsiFile): List<String> {

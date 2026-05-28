@@ -89,6 +89,88 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
         assertTrue(doc.contains("UV"))
     }
 
+    fun testFunctionCallProvidesHoverDoc() {
+        val file = myFixture.configureByText(
+            "hover_function_call.dsf",
+            """
+            Function Blend(in float a, in float b, out float result) {
+                result = lerp(a, b, 0.5);
+            }
+
+            Shader Main {
+                Graph {
+                    float x = 0.2;
+                    float y = 0.8;
+                    float outValue = 0.0;
+                    Blend(x, y, outValue);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val offset = file.text.lastIndexOf("Blend(")
+        val element = file.findElementAt(offset)
+        val doc = provider.generateDoc(element, element)
+
+        assertNotNull(doc)
+        assertTrue(doc!!.contains("Function Call: Blend"))
+        assertTrue(doc.contains("Blend(a, b, result)"))
+    }
+
+    fun testFunctionCallHoverUsesOriginalElementWhenResolveTargetDiffers() {
+        val file = myFixture.configureByText(
+            "hover_function_call_original_element.dsf",
+            """
+            Function Blend(in float a, in float b, out float result) {
+                result = lerp(a, b, 0.5);
+            }
+
+            Shader Main {
+                Graph {
+                    float x = 0.2;
+                    float y = 0.8;
+                    float outValue = 0.0;
+                    Blend(x, y, outValue);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val callOffset = file.text.lastIndexOf("Blend(")
+        val declarationOffset = file.text.indexOf("Function Blend") + "Function ".length
+        val callElement = file.findElementAt(callOffset)
+        val declarationElement = file.findElementAt(declarationOffset)
+        val doc = provider.generateDoc(declarationElement, callElement)
+
+        assertNotNull(doc)
+        assertTrue(doc!!.contains("Function Call: Blend"))
+        assertTrue(doc.contains("Blend(a, b, result)"))
+    }
+
+    fun testLocalVariableProvidesHoverDoc() {
+        val file = myFixture.configureByText(
+            "hover_local_variable.dsf",
+            """
+            Shader Main {
+                Graph {
+                    float2 uv = UE.TexCoord(Index=0);
+                    float n = saturate(uv.x);
+                    float finalValue = n;
+                }
+            }
+            """.trimIndent()
+        )
+
+        val offset = file.text.lastIndexOf("n;")
+        val element = file.findElementAt(offset)
+        val doc = provider.generateDoc(element, element)
+
+        assertNotNull(doc)
+        assertTrue(doc!!.contains("Local Variable: n"))
+        assertTrue(doc.contains("Type: float"))
+        assertTrue(doc.contains("Scope: Graph"))
+    }
+
     fun testSettingsKeyHoverCanBeOverriddenFromProjectSettings() {
         val settings = project.getService(DreamShaderProjectSettings::class.java).state
         settings.hoverDocumentationOverrides = """

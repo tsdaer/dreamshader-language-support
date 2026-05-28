@@ -229,6 +229,7 @@ class DreamShaderCompletionSuggesterTest {
         val importCandidates = listOf(
             "Common/Core.dsh",
             "Common/Lighting.dsf",
+            "Common/Material.dsm",
             "UI/Widget.dsh"
         )
 
@@ -239,6 +240,7 @@ class DreamShaderCompletionSuggesterTest {
 
         assertTrue(labels.contains("Common/Core.dsh"))
         assertTrue(labels.contains("Common/Lighting.dsf"))
+        assertTrue(labels.contains("Common/Material.dsm"))
         assertTrue(!labels.contains("UI/Widget.dsh"))
     }
 
