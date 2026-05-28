@@ -1344,7 +1344,10 @@ internal class DreamShaderSemanticAnnotationPipeline {
                     HighlightSeverity.ERROR,
                     DreamShaderBundle.message("diagnostic.importUnsupportedExtension", unsupportedExtension)
                 ).range(token.range)
-                createReplaceImportExtensionQuickFix(file, token.range, importPath, ".dsh")?.let { annotation.withFix(it) }
+                suggestedImportExtensionReplacements(file, importPath).forEach { suggestion ->
+                    createReplaceImportExtensionQuickFix(file, token.range, importPath, suggestion)
+                        ?.let { annotation.withFix(it) }
+                }
                 annotation.create()
                 return@forEach
             }
@@ -1373,14 +1376,23 @@ internal class DreamShaderSemanticAnnotationPipeline {
         file: DreamShaderPsiFile,
         importStringRange: TextRange,
         importPath: String,
-        replacementExtension: String
+        suggestion: ImportExtensionSuggestion
     ): IntentionAction? {
+        val replacementExtension = suggestion.extension
         if (!replacementExtension.startsWith(".")) return null
         val fixedImportPath = replaceImportExtension(importPath, replacementExtension) ?: return null
         val filePointer: SmartPsiElementPointer<DreamShaderPsiFile> = SmartPointerManager.createPointer(file)
         return object : IntentionAction {
-            override fun getText(): String =
-                DreamShaderBundle.message("quickfix.importChangeExtension", replacementExtension)
+            override fun getText(): String {
+                val hintSuffix = when {
+                    suggestion.resolvesExistingTarget ->
+                        DreamShaderBundle.message("quickfix.importChangeExtensionHintResolvesExisting")
+                    suggestion.preferredByUserDefault ->
+                        DreamShaderBundle.message("quickfix.importChangeExtensionHintPreferredDefault")
+                    else -> ""
+                }
+                return DreamShaderBundle.message("quickfix.importChangeExtension", replacementExtension) + hintSuffix
+            }
 
             override fun getFamilyName(): String = DreamShaderBundle.message("quickfix.family.import")
 
@@ -1400,6 +1412,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 if (end - start < 2) return
                 document.replaceString(start, end, "\"$fixedImportPath\"")
                 PsiDocumentManager.getInstance(project).commitDocument(document)
+                maybePersistPreferredImportExtension(project, replacementExtension)
             }
 
             override fun startInWriteAction(): Boolean = true
@@ -1528,6 +1541,43 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val stem = lastSegment.substring(0, dotIndex)
         if (stem.isBlank()) return null
         return "$prefix$stem$replacementExtension"
+    }
+
+    private fun suggestedImportExtensionReplacements(
+        file: DreamShaderPsiFile,
+        importPath: String
+    ): List<ImportExtensionSuggestion> {
+        val preferredExtension = normalizedPreferredImportExtension(file.project)
+        val prioritized = IMPORT_FILE_EXTENSIONS_ORDERED.map { extension ->
+            val replacement = ".$extension"
+            val candidatePath = replaceImportExtension(importPath, replacement)
+            val resolvesExisting = candidatePath != null && DreamShaderImportResolver.resolveImport(file, candidatePath) != null
+            ImportExtensionSuggestion(
+                extension = replacement,
+                resolvesExistingTarget = resolvesExisting,
+                preferredByUserDefault = extension == preferredExtension,
+                orderIndex = IMPORT_FILE_EXTENSIONS_ORDERED.indexOf(extension)
+            )
+        }
+        return prioritized.sortedWith(
+            compareByDescending<ImportExtensionSuggestion> { it.resolvesExistingTarget }
+                .thenByDescending { it.preferredByUserDefault }
+                .thenBy { it.orderIndex }
+        )
+    }
+
+    private fun normalizedPreferredImportExtension(project: Project): String {
+        val raw = project.getService(DreamShaderProjectSettings::class.java).state.preferredImportExtension
+        val normalized = raw.trim().removePrefix(".").lowercase(Locale.ROOT)
+        return if (normalized in IMPORT_FILE_EXTENSIONS) normalized else "dsh"
+    }
+
+    private fun maybePersistPreferredImportExtension(project: Project, replacementExtension: String) {
+        val settingsState = project.getService(DreamShaderProjectSettings::class.java).state
+        if (!settingsState.autoUpdatePreferredImportExtension) return
+        val normalized = replacementExtension.trim().removePrefix(".").lowercase(Locale.ROOT)
+        if (normalized !in IMPORT_FILE_EXTENSIONS) return
+        settingsState.preferredImportExtension = normalized
     }
 
     private fun collectIdentifierNames(text: String): Set<String> {
@@ -2090,6 +2140,16 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val isScopedPackageImport: Boolean
     )
 
+    /**
+     * Candidate extension replacement for unsupported import-extension quick fixes.
+     */
+    private data class ImportExtensionSuggestion(
+        val extension: String,
+        val resolvesExistingTarget: Boolean,
+        val preferredByUserDefault: Boolean,
+        val orderIndex: Int
+    )
+
     companion object {
         // 语义校验字典与建议修复的规范候选集。
         private val SETTINGS_KEYS = setOf(
@@ -2189,7 +2249,8 @@ internal class DreamShaderSemanticAnnotationPipeline {
         )
         private val IDENTIFIER_PATTERN: Pattern = Pattern.compile("\\b[A-Za-z_][A-Za-z0-9_]*\\b")
         private val PATH_CALL_PATTERN: Pattern = Pattern.compile("(?is)Path\\s*\\(.*\\)")
-        private val IMPORT_FILE_EXTENSIONS = setOf("dsh", "dsf", "dsm")
+        private val IMPORT_FILE_EXTENSIONS_ORDERED = listOf("dsh", "dsf", "dsm")
+        private val IMPORT_FILE_EXTENSIONS = IMPORT_FILE_EXTENSIONS_ORDERED.toSet()
         private val BASE_MEMBER_PATTERN: Pattern = Pattern.compile("\\bBase\\.([A-Za-z_][A-Za-z0-9_]*)")
         private val TYPED_DECLARATION_PATTERN: Pattern = Pattern.compile(
             "(?m)(?:^|;)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=|;|\\n)"

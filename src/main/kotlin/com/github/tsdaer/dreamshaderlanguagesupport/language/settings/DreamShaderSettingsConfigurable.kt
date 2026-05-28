@@ -11,6 +11,7 @@ import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import javax.swing.JComponent
 import javax.swing.JLabel
+import javax.swing.JComboBox
 import javax.swing.JPanel
 
 /**
@@ -25,6 +26,9 @@ class DreamShaderSettingsConfigurable(
     private var showStatusBarBox: JBCheckBox? = null
     private var enableCodeLensBox: JBCheckBox? = null
     private var outArgumentPlaceholderSuffixField: JBTextField? = null
+    private var preferredImportExtensionCombo: JComboBox<String>? = null
+    private var autoUpdatePreferredImportExtensionBox: JBCheckBox? = null
+    private var importExtensionPreviewLabel: JLabel? = null
     private var packageSearchGitHubTokenField: JBTextField? = null
     private var hoverDocumentationOverridesArea: JBTextArea? = null
     private var recompileCurrentCommandField: JBTextField? = null
@@ -60,6 +64,27 @@ class DreamShaderSettingsConfigurable(
             row++
         }
 
+        fun addLabelAndComboBox(label: String, combo: JComboBox<String>, tooltip: String? = null) {
+            val labelConstraints = GridBagConstraints().apply {
+                gridx = 0
+                gridy = row
+                anchor = GridBagConstraints.WEST
+                insets = JBUI.insets(4, 4, 2, 8)
+            }
+            root.add(JLabel(label), labelConstraints)
+
+            val comboConstraints = GridBagConstraints().apply {
+                gridx = 1
+                gridy = row
+                weightx = 1.0
+                fill = GridBagConstraints.HORIZONTAL
+                insets = JBUI.insets(4, 0, 2, 4)
+            }
+            combo.toolTipText = tooltip
+            root.add(combo, comboConstraints)
+            row++
+        }
+
         fun addCheckBox(box: JBCheckBox, tooltip: String? = null) {
             val constraints = GridBagConstraints().apply {
                 gridx = 0
@@ -70,6 +95,21 @@ class DreamShaderSettingsConfigurable(
             }
             box.toolTipText = tooltip
             root.add(box, constraints)
+            row++
+        }
+
+        fun addDescription(text: String) {
+            val constraints = GridBagConstraints().apply {
+                gridx = 1
+                gridy = row
+                anchor = GridBagConstraints.WEST
+                insets = JBUI.insets(0, 0, 4, 4)
+                fill = GridBagConstraints.HORIZONTAL
+                weightx = 1.0
+            }
+            val label = JLabel(text)
+            root.add(label, constraints)
+            importExtensionPreviewLabel = label
             row++
         }
 
@@ -105,6 +145,10 @@ class DreamShaderSettingsConfigurable(
         showStatusBarBox = JBCheckBox(DreamShaderBundle.message("settings.showStatusBar.checkbox"))
         enableCodeLensBox = JBCheckBox(DreamShaderBundle.message("settings.enableCodeLens.checkbox"))
         outArgumentPlaceholderSuffixField = JBTextField()
+        preferredImportExtensionCombo = JComboBox(arrayOf(".dsh", ".dsf", ".dsm"))
+        autoUpdatePreferredImportExtensionBox = JBCheckBox(
+            DreamShaderBundle.message("settings.autoUpdatePreferredImportExtension.checkbox")
+        )
         packageSearchGitHubTokenField = JBTextField()
         hoverDocumentationOverridesArea = JBTextArea().apply {
             lineWrap = true
@@ -137,6 +181,16 @@ class DreamShaderSettingsConfigurable(
             outArgumentPlaceholderSuffixField as JBTextField,
             DreamShaderBundle.message("settings.outArgumentPlaceholderSuffix.tooltip")
         )
+        addLabelAndComboBox(
+            DreamShaderBundle.message("settings.preferredImportExtension.label"),
+            preferredImportExtensionCombo as JComboBox<String>,
+            DreamShaderBundle.message("settings.preferredImportExtension.tooltip")
+        )
+        addCheckBox(
+            autoUpdatePreferredImportExtensionBox as JBCheckBox,
+            DreamShaderBundle.message("settings.autoUpdatePreferredImportExtension.tooltip")
+        )
+        addDescription("")
         addLabelAndField(
             DreamShaderBundle.message("settings.packageSearchGitHubToken.label"),
             packageSearchGitHubTokenField as JBTextField,
@@ -163,6 +217,13 @@ class DreamShaderSettingsConfigurable(
             DreamShaderBundle.message("settings.bridgeCleanGenerated.tooltip")
         )
 
+        preferredImportExtensionCombo?.addActionListener {
+            refreshImportExtensionPreview()
+        }
+        autoUpdatePreferredImportExtensionBox?.addActionListener {
+            refreshImportExtensionPreview()
+        }
+
         val spacer = JPanel()
         val spacerConstraints = GridBagConstraints().apply {
             gridx = 0
@@ -185,6 +246,8 @@ class DreamShaderSettingsConfigurable(
             showStatusBarBox?.isSelected != state.showStatusBar ||
             enableCodeLensBox?.isSelected != state.enableCodeLens ||
             outArgumentPlaceholderSuffixField?.text.orEmpty() != state.outArgumentPlaceholderSuffix ||
+            normalizePreferredImportExtension(preferredImportExtensionCombo?.selectedItem as? String) != normalizePreferredImportExtension(state.preferredImportExtension) ||
+            (autoUpdatePreferredImportExtensionBox?.isSelected ?: false) != state.autoUpdatePreferredImportExtension ||
             packageSearchGitHubTokenField?.text.orEmpty() != state.packageStoreGitHubToken ||
             hoverDocumentationOverridesArea?.text.orEmpty() != state.hoverDocumentationOverrides ||
             recompileCurrentCommandField?.text.orEmpty() != state.bridgeRecompileCurrentCommand ||
@@ -201,6 +264,8 @@ class DreamShaderSettingsConfigurable(
         state.showStatusBar = showStatusBarBox?.isSelected ?: true
         state.enableCodeLens = enableCodeLensBox?.isSelected ?: true
         state.outArgumentPlaceholderSuffix = normalizeOutPlaceholderSuffix(outArgumentPlaceholderSuffixField?.text.orEmpty())
+        state.preferredImportExtension = normalizePreferredImportExtension(preferredImportExtensionCombo?.selectedItem as? String)
+        state.autoUpdatePreferredImportExtension = autoUpdatePreferredImportExtensionBox?.isSelected ?: false
         state.packageStoreGitHubToken = packageSearchGitHubTokenField?.text.orEmpty().trim()
         state.hoverDocumentationOverrides = hoverDocumentationOverridesArea?.text.orEmpty().trim()
         state.bridgeRecompileCurrentCommand = recompileCurrentCommandField?.text.orEmpty().trim()
@@ -219,11 +284,14 @@ class DreamShaderSettingsConfigurable(
         showStatusBarBox?.isSelected = state.showStatusBar
         enableCodeLensBox?.isSelected = state.enableCodeLens
         outArgumentPlaceholderSuffixField?.text = state.outArgumentPlaceholderSuffix
+        preferredImportExtensionCombo?.selectedItem = ".${normalizePreferredImportExtension(state.preferredImportExtension)}"
+        autoUpdatePreferredImportExtensionBox?.isSelected = state.autoUpdatePreferredImportExtension
         packageSearchGitHubTokenField?.text = state.packageStoreGitHubToken
         hoverDocumentationOverridesArea?.text = state.hoverDocumentationOverrides
         recompileCurrentCommandField?.text = state.bridgeRecompileCurrentCommand
         recompileAllCommandField?.text = state.bridgeRecompileAllCommand
         cleanGeneratedCommandField?.text = state.bridgeCleanGeneratedShadersCommand
+        refreshImportExtensionPreview()
     }
 
     override fun disposeUIResources() {
@@ -233,6 +301,9 @@ class DreamShaderSettingsConfigurable(
         showStatusBarBox = null
         enableCodeLensBox = null
         outArgumentPlaceholderSuffixField = null
+        preferredImportExtensionCombo = null
+        autoUpdatePreferredImportExtensionBox = null
+        importExtensionPreviewLabel = null
         packageSearchGitHubTokenField = null
         hoverDocumentationOverridesArea = null
         recompileCurrentCommandField = null
@@ -248,5 +319,25 @@ class DreamShaderSettingsConfigurable(
         return if (cleaned.first().isDigit()) "_$cleaned" else cleaned
     }
 
+    private fun normalizePreferredImportExtension(raw: String?): String {
+        val normalized = raw.orEmpty().trim().removePrefix(".").lowercase()
+        return if (normalized in SUPPORTED_IMPORT_EXTENSIONS) normalized else "dsh"
+    }
+
+    private fun refreshImportExtensionPreview() {
+        val extension = ".${normalizePreferredImportExtension(preferredImportExtensionCombo?.selectedItem as? String)}"
+        val autoUpdate = autoUpdatePreferredImportExtensionBox?.isSelected ?: false
+        importExtensionPreviewLabel?.text = DreamShaderBundle.message(
+            "settings.preferredImportExtension.preview",
+            extension,
+            if (autoUpdate) "ON" else "OFF"
+        )
+    }
+
     internal fun testNormalizeOutPlaceholderSuffix(raw: String): String = normalizeOutPlaceholderSuffix(raw)
+    internal fun testNormalizePreferredImportExtension(raw: String?): String = normalizePreferredImportExtension(raw)
+
+    companion object {
+        private val SUPPORTED_IMPORT_EXTENSIONS = setOf("dsh", "dsf", "dsm")
+    }
 }

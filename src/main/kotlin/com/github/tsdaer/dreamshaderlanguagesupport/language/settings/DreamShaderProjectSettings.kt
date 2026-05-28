@@ -30,6 +30,10 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         var enableCodeLens: Boolean = true,
         /** Suffix used when generating placeholder variable names for missing out arguments. */
         var outArgumentPlaceholderSuffix: String = "Out",
+        /** Preferred replacement extension for unsupported import-extension quick fixes. */
+        var preferredImportExtension: String = "dsh",
+        /** Whether applying import-extension quick-fix should update preferred extension. */
+        var autoUpdatePreferredImportExtension: Boolean = false,
         /** Preferred package index sources (multi-source mode). */
         var packageStoreIndexUrls: MutableList<String> = mutableListOf(),
         /** Backward-compatible single source setting used when list mode is empty. */

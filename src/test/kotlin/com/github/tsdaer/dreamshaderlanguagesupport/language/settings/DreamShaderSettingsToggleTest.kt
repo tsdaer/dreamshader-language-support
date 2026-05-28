@@ -38,6 +38,22 @@ class DreamShaderSettingsToggleTest : BasePlatformTestCase() {
         assertTrue(configurable.testNormalizeOutPlaceholderSuffix("out-suffix") == "out_suffix")
     }
 
+    fun testPreferredImportExtensionNormalization() {
+        val configurable = DreamShaderSettingsConfigurable(project)
+        assertTrue(configurable.testNormalizePreferredImportExtension(null) == "dsh")
+        assertTrue(configurable.testNormalizePreferredImportExtension(".dsf") == "dsf")
+        assertTrue(configurable.testNormalizePreferredImportExtension("DSM") == "dsm")
+        assertTrue(configurable.testNormalizePreferredImportExtension("invalid") == "dsh")
+    }
+
+    fun testPreferredImportExtensionStateDefaults() {
+        val settingsService = project.getService(DreamShaderProjectSettings::class.java)
+        settingsService.loadState(DreamShaderProjectSettings.State())
+        val settings = settingsService.state
+        assertEquals("dsh", settings.preferredImportExtension)
+        assertFalse(settings.autoUpdatePreferredImportExtension)
+    }
+
     fun testCodeVisionRespectsEnableCodeLensSetting() {
         val settings = project.getService(DreamShaderProjectSettings::class.java).state
         val provider = DreamShaderCodeVisionProvider()
