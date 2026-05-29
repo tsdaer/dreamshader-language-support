@@ -1,5 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.showWelcomeDialog
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.options.ShowSettingsUtil
@@ -52,6 +53,10 @@ private class DreamShaderHubDialog(
             createSection(
                 DreamShaderBundle.message("hub.section.workspace"),
                 listOf(
+                    button("hub.button.openWelcome") {
+                        close(OK_EXIT_CODE)
+                        showWelcomeDialog(project, forceManual = true)
+                    },
                     button("hub.button.openSettings") {
                         ShowSettingsUtil.getInstance()
                             .showSettingsDialog(project, DreamShaderSettingsConfigurable::class.java)

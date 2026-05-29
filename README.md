@@ -2,7 +2,7 @@
 
 <!-- plugin-metadata:start -->
 name: Dreamshader Language Extension
-description: Comprehensive DreamShaderLang support for JetBrains Rider, including `.dsm`/`.dsf`/`.dsh` file type registration, syntax highlighting, parsing and PSI foundations, context-aware completion, navigation and references, diagnostics and bridge integration, semantic tokens and inlay hints, package store and package lifecycle tooling, template generation, and a unified DreamShader Hub workflow entry.
+description: Comprehensive DreamShaderLang support for JetBrains Rider with `.dsm`/`.dsf`/`.dsh` file types, lexer/parser/PSI and symbol model foundations, syntax highlighting plus semantic classification and color settings, formatter/commenter/brace matching/folding/structure view, context-aware completion (sections/types/settings values/UE.*/HLSL/imports), goto declaration/find usages/references/hover docs/signature help, semantic diagnostics (syntax/section-shape/semantic + Bridge diagnostics mapping), inlay parameter hints and Code Vision hints, configurable DreamShader project settings (project root/manifest path/status bar/code lens/out placeholder suffix/import extension strategy/hover doc overrides/Bridge commands), Bridge tool window and workflow actions (refresh diagnostics/recompile current or all/clean generated shaders/open Bridge paths), package tooling (package store dialog with search/filter/details/install-state markers/background install-update-remove/add-remove index sources/GitHub install/update/remove/open packages folder/package-aware import resolution), template tools (material/function/header and package scaffold), and unified DreamShader Hub entry for settings, diagnostics, package, and template workflows.
 <!-- plugin-metadata:end -->
 
 JetBrains Rider plugin for DreamShaderLang (`.dsm`, `.dsf`, `.dsh`).
@@ -68,6 +68,7 @@ Icons/resources:
 Tests:
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderLexerSyntaxHighlighterTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderLexerSyntaxHighlighterTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/integration/DreamShaderLargeFilePerformanceSmokeTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/integration/DreamShaderLargeFilePerformanceSmokeTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/integration/DreamShaderUpstreamExamplesTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/integration/DreamShaderUpstreamExamplesTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokenClassifierTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokenClassifierTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokensTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContextAnalyzerTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContextAnalyzerTest.kt)
@@ -77,6 +78,7 @@ Tests:
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParserTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParserTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderBundleLocalizationTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderBundleLocalizationTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilderTest.kt)
+- [`src/test/resources/upstream/Examples.md`](src/test/resources/upstream/Examples.md)
 - [`src/test/testData/rename/foo.xml`](src/test/testData/rename/foo.xml)
 - [`src/test/testData/rename/foo_after.xml`](src/test/testData/rename/foo_after.xml)
 
@@ -135,10 +137,18 @@ Build a Rider plugin with feature parity to the VS Code DreamShaderLang extensio
 Primary language reference (upstream):
 - https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/LanguageReference.md
 
+Primary examples reference (upstream):
+- https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/Examples.md
+
 Reference snapshot used for this README alignment:
 - Checked on `2026-05-29`
 - Upstream doc title: `DreamShaderLang 语法参考`
 - Upstream plugin version noted in doc: `1.3.8`
+
+Examples conformance snapshot:
+- Checked on `2026-05-29`
+- Upstream doc title: `DreamShaderLang 示例与模式`
+- Test mapping: `DreamShaderUpstreamExamplesTest.testUpstreamExamplesMarkdownCodeBlocksAreParsable()`
 
 This section summarizes the language rules that this Rider plugin should follow.
 
@@ -1448,6 +1458,15 @@ Acceptance criteria:
 | `P2` large-file performance smoke tests               | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest`                                                                                                                                                                                                                                   |
 | `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`, file-based signing env/properties + legacy env fallback), `.github/workflows/build.yml`, `.github/workflows/release.yml` (writes cert/key secrets to temp files and publishes with file-path env)        |
 | `P3` changelog aligned with release tags              | `Implemented` | `CHANGELOG.md` + release workflow `patchChangelog` step in `.github/workflows/release.yml`                                                                                                                                                                                   |
+
+### Changelog Localization
+
+- `CHANGELOG.md` uses bilingual format:
+  - English section first (default)
+  - Chinese mirror section starts at heading `### 中文`
+- Plugin welcome page ("What Changed In This Version") auto-selects changelog language by IDE/runtime locale:
+  - `zh*` locale -> Chinese section
+  - other locales -> English section
 
 ## Development
 

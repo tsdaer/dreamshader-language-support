@@ -95,8 +95,7 @@ intellijPlatform {
             "<p>${metadataDescription ?: "DreamShaderLang language support for JetBrains Rider."}</p>"
         }
         changeNotes = providers.fileContents(layout.projectDirectory.file("CHANGELOG.md")).asText.map { changelog ->
-            val lines = changelog.lineSequence().take(30).joinToString("\n")
-            "<pre>$lines</pre>"
+            "<pre>${changelog.trim()}</pre>"
         }
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild").orElse("252")
