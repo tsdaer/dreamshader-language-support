@@ -20,6 +20,8 @@ dependencies {
 tasks.processResources {
     val pluginVersion = providers.gradleProperty("version")
     inputs.property("pluginVersion", pluginVersion)
+    // CHANGELOG.md may be updated by patchChangelog during release publishing.
+    dependsOn(tasks.named("patchChangelog"))
     from("CHANGELOG.md")
     filesMatching("dreamshader-plugin.properties") {
         val resolvedVersion = pluginVersion.orNull ?: "0.0.0"
