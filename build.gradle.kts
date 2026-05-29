@@ -1,6 +1,8 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.changelog.tasks.PatchChangelogTask
 import java.nio.file.Files
 import java.nio.file.Path
+import org.gradle.language.jvm.tasks.ProcessResources
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -20,12 +22,12 @@ dependencies {
 }
 
 tasks.processResources {
+    val patchChangelogTask = tasks.named<PatchChangelogTask>("patchChangelog")
     val pluginVersion = providers.gradleProperty("version")
-    val patchChangelogTask = tasks.named("patchChangelog")
     inputs.property("pluginVersion", pluginVersion)
-    // CHANGELOG.md may be updated by patchChangelog during release publishing.
+    // Keep an explicit producer-consumer link for Gradle 9 task output validation.
     dependsOn(patchChangelogTask)
-    from(layout.projectDirectory.file("CHANGELOG.md"))
+    from(patchChangelogTask.flatMap { it.outputFile })
     filesMatching("dreamshader-plugin.properties") {
         val resolvedVersion = pluginVersion.orNull ?: "0.0.0"
         expand(

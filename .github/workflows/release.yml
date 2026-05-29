@@ -47,11 +47,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: true
+          cache-disabled: true
 
       # Update the Unreleased section with the current release note
       - name: Patch Changelog
         if: ${{ github.event.release.body != '' }}
         env:
+          ORG_GRADLE_CONFIGURATION_CACHE: "false"
           CHANGELOG: ${{ github.event.release.body }}
         run: |
           RELEASE_NOTE="./build/tmp/release_note.txt"
