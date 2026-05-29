@@ -1,10 +1,11 @@
 # dreamshader-language-support (Rider)
 
-<div id="jetbrains-marketplace-plugin-card"></div>
-<script src="https://plugins.jetbrains.com/assets/scripts/mp-widget.js"></script>
-<script>
-  MarketplaceWidget.setupMarketplaceWidget('card', 31926, "#jetbrains-marketplace-plugin-card");
-</script>
+[![JetBrains Plugin Version](https://img.shields.io/jetbrains/plugin/v/31926.svg?label=JetBrains%20Marketplace)](https://plugins.jetbrains.com/plugin/31926)
+[![JetBrains Plugin Downloads](https://img.shields.io/jetbrains/plugin/d/31926.svg)](https://plugins.jetbrains.com/plugin/31926)
+[![JetBrains Plugin Rating](https://img.shields.io/jetbrains/plugin/r/rating/31926.svg)](https://plugins.jetbrains.com/plugin/31926)
+[![JetBrains Plugin Stars](https://img.shields.io/jetbrains/plugin/r/stars/31926.svg)](https://plugins.jetbrains.com/plugin/31926)
+
+[View on JetBrains Marketplace](https://plugins.jetbrains.com/plugin/31926)
 
 <!-- plugin-metadata:start -->
 name: Dreamshader Language Extension
