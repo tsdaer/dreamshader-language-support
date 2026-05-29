@@ -49,6 +49,7 @@ internal class DreamShaderPackageStoreDialog(
         entries = emptyList(),
         errors = emptyList()
     )
+    private var centerPanel: JPanel? = null
 
     init {
         title = DreamShaderBundle.message("packages.store.title")
@@ -58,7 +59,17 @@ internal class DreamShaderPackageStoreDialog(
 
     override fun createCenterPanel(): JPanel {
         val root = JPanel(BorderLayout(8, 8))
+        centerPanel = root
         root.preferredSize = Dimension(980, 600)
+
+        queryField.name = QUERY_FIELD_NAME
+        packageList.name = PACKAGE_LIST_NAME
+        installedOnlyCheckBox.name = INSTALLED_ONLY_CHECKBOX_NAME
+        updatesPossibleOnlyCheckBox.name = UPDATES_ONLY_CHECKBOX_NAME
+        installButton.name = INSTALL_BUTTON_NAME
+        updateButton.name = UPDATE_BUTTON_NAME
+        removeButton.name = REMOVE_BUTTON_NAME
+        showRepoButton.name = SHOW_REPOSITORY_BUTTON_NAME
 
         val toolbar = JPanel(BorderLayout(8, 0))
         val leftToolbar = JPanel(BorderLayout(8, 0))
@@ -66,9 +77,11 @@ internal class DreamShaderPackageStoreDialog(
         leftToolbar.add(queryField, BorderLayout.CENTER)
 
         val searchButton = JButton(DreamShaderBundle.message("package.store.dialog.button.search"))
+        searchButton.name = SEARCH_BUTTON_NAME
         searchButton.addActionListener { refreshData() }
         leftToolbar.add(searchButton, BorderLayout.EAST)
         val githubSearchButton = JButton(DreamShaderBundle.message("package.store.dialog.button.githubSearch"))
+        githubSearchButton.name = GITHUB_SEARCH_BUTTON_NAME
         githubSearchButton.addActionListener { searchOnGitHub() }
         leftToolbar.add(githubSearchButton, BorderLayout.WEST)
 
@@ -516,41 +529,94 @@ internal class DreamShaderPackageStoreDialog(
     }
 
     private fun searchOnGitHub() {
-        val query = queryField.text.trim()
+        executeGitHubSearch(
+            queryRaw = queryField.text,
+            showFeedback = true
+        ) { query ->
+            storeService.searchGitHubPackages(query)
+        }
+    }
+
+    private fun executeGitHubSearch(
+        queryRaw: String,
+        showFeedback: Boolean,
+        search: (String) -> DreamShaderGitHubSearchResult
+    ): GitHubSearchActionStatus {
+        val query = queryRaw.trim()
         if (query.isBlank()) {
-            Messages.showInfoMessage(
-                project,
-                DreamShaderBundle.message("package.store.dialog.githubSearch.emptyQuery"),
-                DreamShaderBundle.message("packages.store.title")
-            )
-            return
+            if (showFeedback) {
+                Messages.showInfoMessage(
+                    project,
+                    DreamShaderBundle.message("package.store.dialog.githubSearch.emptyQuery"),
+                    DreamShaderBundle.message("packages.store.title")
+                )
+            }
+            return GitHubSearchActionStatus.EMPTY_QUERY
         }
 
-        val result = storeService.searchGitHubPackages(query)
+        val result = search(query)
         if (result.errorMessage != null) {
-            DreamShaderPackageNotifier.error(
-                project,
-                DreamShaderBundle.message("packages.store.title"),
-                result.errorMessage
-            )
-            return
+            if (showFeedback) {
+                DreamShaderPackageNotifier.error(
+                    project,
+                    DreamShaderBundle.message("packages.store.title"),
+                    result.errorMessage
+                )
+            }
+            return GitHubSearchActionStatus.ERROR
         }
 
+        applyGitHubSearchEntries(query, result.entries, showFeedback)
+        return GitHubSearchActionStatus.APPLIED
+    }
+
+    private fun applyGitHubSearchEntries(
+        query: String,
+        entries: List<DreamShaderPackageIndexEntry>,
+        showFeedback: Boolean
+    ) {
         listModel.clear()
-        result.entries.forEach { listModel.addElement(it) }
-        snapshot = snapshot.copy(entries = result.entries)
+        entries.forEach { listModel.addElement(it) }
+        snapshot = snapshot.copy(entries = entries)
         installedByName = packageManager.listLockEntries().associateBy { it.name }
         if (listModel.size > 0) {
             packageList.selectedIndex = 0
             packageList.ensureIndexIsVisible(0)
         } else {
             renderDetails(null)
-            DreamShaderPackageNotifier.info(
-                project,
-                DreamShaderBundle.message("packages.store.title"),
-                DreamShaderBundle.message("package.store.dialog.githubSearch.noResults", query)
-            )
+            if (showFeedback) {
+                DreamShaderPackageNotifier.info(
+                    project,
+                    DreamShaderBundle.message("packages.store.title"),
+                    DreamShaderBundle.message("package.store.dialog.githubSearch.noResults", query)
+                )
+            }
         }
         updateActionButtons()
+    }
+
+    internal fun testCenterPanel(): JPanel? = centerPanel
+    internal fun testExecuteGitHubSearch(
+        queryRaw: String,
+        result: DreamShaderGitHubSearchResult
+    ): GitHubSearchActionStatus = executeGitHubSearch(queryRaw, showFeedback = false) { result }
+
+    internal enum class GitHubSearchActionStatus {
+        EMPTY_QUERY,
+        ERROR,
+        APPLIED
+    }
+
+    companion object {
+        internal const val QUERY_FIELD_NAME = "dreamshader.packageStore.queryField"
+        internal const val SEARCH_BUTTON_NAME = "dreamshader.packageStore.searchButton"
+        internal const val GITHUB_SEARCH_BUTTON_NAME = "dreamshader.packageStore.githubSearchButton"
+        internal const val PACKAGE_LIST_NAME = "dreamshader.packageStore.packageList"
+        internal const val INSTALLED_ONLY_CHECKBOX_NAME = "dreamshader.packageStore.installedOnlyCheckBox"
+        internal const val UPDATES_ONLY_CHECKBOX_NAME = "dreamshader.packageStore.updatesOnlyCheckBox"
+        internal const val INSTALL_BUTTON_NAME = "dreamshader.packageStore.installButton"
+        internal const val UPDATE_BUTTON_NAME = "dreamshader.packageStore.updateButton"
+        internal const val REMOVE_BUTTON_NAME = "dreamshader.packageStore.removeButton"
+        internal const val SHOW_REPOSITORY_BUTTON_NAME = "dreamshader.packageStore.showRepositoryButton"
     }
 }

@@ -108,6 +108,7 @@ class DreamShaderSettingsConfigurable(
                 weightx = 1.0
             }
             val label = JLabel(text)
+            label.name = IMPORT_EXTENSION_PREVIEW_LABEL_NAME
             root.add(label, constraints)
             importExtensionPreviewLabel = label
             row++
@@ -146,9 +147,11 @@ class DreamShaderSettingsConfigurable(
         enableCodeLensBox = JBCheckBox(DreamShaderBundle.message("settings.enableCodeLens.checkbox"))
         outArgumentPlaceholderSuffixField = JBTextField()
         preferredImportExtensionCombo = JComboBox(arrayOf(".dsh", ".dsf", ".dsm"))
+        preferredImportExtensionCombo?.name = PREFERRED_IMPORT_EXTENSION_COMBO_NAME
         autoUpdatePreferredImportExtensionBox = JBCheckBox(
             DreamShaderBundle.message("settings.autoUpdatePreferredImportExtension.checkbox")
         )
+        autoUpdatePreferredImportExtensionBox?.name = AUTO_UPDATE_PREFERRED_IMPORT_EXTENSION_CHECKBOX_NAME
         packageSearchGitHubTokenField = JBTextField()
         hoverDocumentationOverridesArea = JBTextArea().apply {
             lineWrap = true
@@ -327,17 +330,29 @@ class DreamShaderSettingsConfigurable(
     private fun refreshImportExtensionPreview() {
         val extension = ".${normalizePreferredImportExtension(preferredImportExtensionCombo?.selectedItem as? String)}"
         val autoUpdate = autoUpdatePreferredImportExtensionBox?.isSelected ?: false
-        importExtensionPreviewLabel?.text = DreamShaderBundle.message(
+        importExtensionPreviewLabel?.text = buildImportExtensionPreviewText(extension, autoUpdate)
+    }
+
+    private fun buildImportExtensionPreviewText(extension: String, autoUpdate: Boolean): String {
+        val toggleText = DreamShaderBundle.message(
+            if (autoUpdate) "settings.toggle.enabled" else "settings.toggle.disabled"
+        )
+        return DreamShaderBundle.message(
             "settings.preferredImportExtension.preview",
             extension,
-            if (autoUpdate) "ON" else "OFF"
+            toggleText
         )
     }
 
     internal fun testNormalizeOutPlaceholderSuffix(raw: String): String = normalizeOutPlaceholderSuffix(raw)
     internal fun testNormalizePreferredImportExtension(raw: String?): String = normalizePreferredImportExtension(raw)
+    internal fun testBuildImportExtensionPreviewText(rawExtension: String?, autoUpdate: Boolean): String =
+        buildImportExtensionPreviewText(".${normalizePreferredImportExtension(rawExtension)}", autoUpdate)
 
     companion object {
         private val SUPPORTED_IMPORT_EXTENSIONS = setOf("dsh", "dsf", "dsm")
+        internal const val PREFERRED_IMPORT_EXTENSION_COMBO_NAME = "dreamshader.preferredImportExtensionCombo"
+        internal const val AUTO_UPDATE_PREFERRED_IMPORT_EXTENSION_CHECKBOX_NAME = "dreamshader.autoUpdatePreferredImportExtensionCheckbox"
+        internal const val IMPORT_EXTENSION_PREVIEW_LABEL_NAME = "dreamshader.importExtensionPreviewLabel"
     }
 }

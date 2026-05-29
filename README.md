@@ -494,8 +494,17 @@ Implemented:
   - `Replace with 'Base.<SuggestedMember>'` for unknown `Base.*` output members.
   - `Replace with '<SuggestedType>'` for unknown typed declaration names.
 - Extended unresolved import diagnostics with explicit extension guard: imports ending with unsupported extensions (non `.dsh/.dsf/.dsm`) now report a dedicated semantic error.
-- Unsupported import extension quick-fix now offers all supported replacement extensions (`.dsh`, `.dsf`, `.dsm`), prioritizes already-resolvable targets in the current workspace, and marks quick-fix labels with `(resolves existing file)` / `(preferred default)` hints.
+- Unsupported import extension quick-fix now offers all supported replacement extensions (`.dsh`, `.dsf`, `.dsm`), prioritizes already-resolvable targets in the current workspace, and marks quick-fix labels with `(resolves existing file)` / `(preferred default)` / `(will update preferred default)` hints.
 - Optional setting `autoUpdatePreferredImportExtension` lets users persist the selected quick-fix extension as the new preferred default when applying unsupported-extension quick-fixes.
+- Import-extension quick-fix hint suffix composition is centralized in a dedicated formatter to keep ordering stable (`resolves existing` -> `preferred default` -> `will update preferred default`) and simplify future hint expansion.
+- Added a lightweight settings-UI test base for recursive component lookup by stable component name, and covered `Preferred Import Extension` preview live updates (combo selection + auto-update checkbox interaction).
+- Extended the same UI-testing approach to `DreamShader Package Store` dialog with stable component names and a regression test that verifies install/update/remove button enablement reacts correctly to selection changes and installed-state transitions.
+- Added Package Store filter regression coverage to verify `Installed only` / `Updates possible only` toggles refresh list contents and preserve correct action-button disablement in empty-list states.
+- Added Package Store search regression coverage to verify `queryField` + `Search` button refresh list contents based on keyword and restore full list after clearing the query.
+- Added Package Store GitHub-search UI regression coverage by exposing a testable search execution path and validating both empty-query status handling and successful search-result list replacement.
+- Extended GitHub-search UI regression coverage with explicit `ERROR` status behavior checks to ensure failed searches do not mutate the current Package Store list.
+- Added GitHub-search `no results` UI regression checks to lock current behavior (APPLIED with empty list + action buttons disabled) and refactored Package Store dialog UI tests with a shared harness helper to reduce repeated setup code.
+- Added sequential GitHub-search resilience coverage (`APPLIED` then `ERROR`) to ensure error-path searches do not overwrite or clear the last successfully applied GitHub result list.
 - Refactored unresolved import quick-fix scaffold generation to reuse `DreamShaderTemplateService` templates (`createHeaderTemplate` / `createFunctionTemplate` / `createMaterialTemplate`) for consistency with template actions.
 - Completed `DreamShaderBundle_zh_CN.properties` coverage for newly added diagnostics and quick-fix messages (`VirtualFunction Description` quality diagnostics, settings/semantic suggestion quick fixes).
 - Added localization parity regression test (`DreamShaderBundleLocalizationTest`) to ensure `zh_CN` bundle contains all base bundle keys.
@@ -590,7 +599,7 @@ Rule format:
 | `DSYN-203` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownBaseOutputMember()` + `testUnknownBaseOutputMemberQuickFixReplacesWithSuggestion()`                                                                                                                                                                                                                                                                                                                                                                                      |
 | `DSYN-204` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnknownTypeInInputs()` + `testUnknownTypeQuickFixReplacesWithSuggestion()`                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `DSYN-205` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testMissingOutArgumentInFunctionCall()` + `testMissingOutArgumentQuickFixAddsPlaceholderArgument()` + `testMissingOutArgumentQuickFixAddsFirstArgumentForEmptyCall()` + `testMissingOutArgumentQuickFixAddsAllMissingOutArguments()` + `testMissingOutArgumentQuickFixAvoidsNameCollision()` + `testMissingOutArgumentQuickFixUsesConfiguredPlaceholderSuffix()`                                                                                                                    |
-| `DSYN-206` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnresolvedImportPath()` + `testUnresolvedImportPathQuickFixCreatesMissingFile()` + `testUnresolvedImportPathQuickFixCreatesFunctionTemplateForDsf()` + `testUnresolvedImportPathQuickFixCreatesShaderTemplateForDsm()` + `testUnresolvedScopedImportQuickFixCreatesFileUnderPackages()` + `testUnresolvedImportPathUnsupportedExtensionReportsExplicitError()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixChangesToDsh()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixOffersAllSupportedExtensions()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixPrioritizesResolvableExtension()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixMarksPreferredDefault()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixAutoUpdatesPreferredExtensionWhenEnabled()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixDoesNotAutoUpdatePreferredExtensionWhenDisabled()` |
+| `DSYN-206` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testUnresolvedImportPath()` + `testUnresolvedImportPathQuickFixCreatesMissingFile()` + `testUnresolvedImportPathQuickFixCreatesFunctionTemplateForDsf()` + `testUnresolvedImportPathQuickFixCreatesShaderTemplateForDsm()` + `testUnresolvedScopedImportQuickFixCreatesFileUnderPackages()` + `testUnresolvedImportPathUnsupportedExtensionReportsExplicitError()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixChangesToDsh()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixOffersAllSupportedExtensions()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixPrioritizesResolvableExtension()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixMarksPreferredDefault()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixAutoUpdatesPreferredExtensionWhenEnabled()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixDoesNotAutoUpdatePreferredExtensionWhenDisabled()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixWillUpdateHintHiddenWhenAlreadyPreferred()` + `testUnresolvedImportPathUnsupportedExtensionQuickFixHintOrderIsStable()` |
 | `DSYN-207` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsForLoopStatement()` / `testGraphDisallowsWhileLoopStatement()` / `testGraphDisallowsDoLoopStatement()`                                                                                                                                                                                                                                                                                                                                                            |
 | `DSYN-208` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsSwitchStatement()` / `testGraphDisallowsCaseKeyword()` / `testGraphDisallowsDefaultKeyword()`                                                                                                                                                                                                                                                                                                                                                                     |
 | `DSYN-209` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testGraphDisallowsBreakStatement()` / `testGraphDisallowsContinueStatement()`                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -985,8 +994,8 @@ import "NotFound/Nope.dsh";
 import "Scripts/Auto.usf";
 ```
 `Expected`: `Unsupported import file extension .usf. Only .dsh, .dsf, and .dsm are supported.`  
-`QuickFix`: `Create missing import file: <path>` creates a missing file under project-safe relative path, defaults to `.dsh` when extension is omitted, uses `DreamShaderTemplateService` templates for generated content (`.dsh` header template, `.dsf` function template, `.dsm` material template), opens the created file in editor, and supports scoped package imports by creating under `DShader/Packages/@scope/name/...`; unsupported extensions provide `Change extension to .dsh/.dsf/.dsm`, with ordering rules `resolves existing target > preferred default extension setting > stable fallback order`, and label hints `(resolves existing file)` / `(preferred default)` where applicable; when `autoUpdatePreferredImportExtension=true`, applied extension is persisted as the new preferred default.  
-`Test`: `testUnresolvedImportPath()` / `testUnresolvedImportPathQuickFixCreatesMissingFile()` / `testUnresolvedImportPathQuickFixCreatesFunctionTemplateForDsf()` / `testUnresolvedImportPathQuickFixCreatesShaderTemplateForDsm()` / `testUnresolvedScopedImportQuickFixCreatesFileUnderPackages()` / `testUnresolvedImportPathUnsupportedExtensionReportsExplicitError()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixChangesToDsh()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixOffersAllSupportedExtensions()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixPrioritizesResolvableExtension()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixMarksPreferredDefault()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixAutoUpdatesPreferredExtensionWhenEnabled()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixDoesNotAutoUpdatePreferredExtensionWhenDisabled()`
+`QuickFix`: `Create missing import file: <path>` creates a missing file under project-safe relative path, defaults to `.dsh` when extension is omitted, uses `DreamShaderTemplateService` templates for generated content (`.dsh` header template, `.dsf` function template, `.dsm` material template), opens the created file in editor, and supports scoped package imports by creating under `DShader/Packages/@scope/name/...`; unsupported extensions provide `Change extension to .dsh/.dsf/.dsm`, with ordering rules `resolves existing target > preferred default extension setting > stable fallback order`, and label hints `(resolves existing file)` / `(preferred default)` / `(will update preferred default)` where applicable; `(will update preferred default)` is shown only when `autoUpdatePreferredImportExtension=true` and selected extension differs from current preferred default.  
+`Test`: `testUnresolvedImportPath()` / `testUnresolvedImportPathQuickFixCreatesMissingFile()` / `testUnresolvedImportPathQuickFixCreatesFunctionTemplateForDsf()` / `testUnresolvedImportPathQuickFixCreatesShaderTemplateForDsm()` / `testUnresolvedScopedImportQuickFixCreatesFileUnderPackages()` / `testUnresolvedImportPathUnsupportedExtensionReportsExplicitError()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixChangesToDsh()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixOffersAllSupportedExtensions()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixPrioritizesResolvableExtension()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixMarksPreferredDefault()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixAutoUpdatesPreferredExtensionWhenEnabled()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixDoesNotAutoUpdatePreferredExtensionWhenDisabled()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixWillUpdateHintHiddenWhenAlreadyPreferred()` / `testUnresolvedImportPathUnsupportedExtensionQuickFixHintOrderIsStable()`
 
 21. `ID`: `DSYN-207`  
 `Priority`: `P2`  
@@ -1355,9 +1364,58 @@ Rule format:
 `Expected`: search query matches across all supported fields  
 `Test`: `testStoreSearchMatchesNameDescriptionAndTags()`
 
+#### D-UI. Package Store Dialog UI Regression Matrix
+
+24. `ID`: `DPKG-UI-001`  
+`Priority`: `P2`  
+`Rule`: action buttons in `Browse Package Store` react to selection and install state.  
+`Expected`: installed entry disables install and enables remove/update (when updatable); uninstalled entry enables install and disables remove; no selection disables install/update/remove.  
+`Test`: `DreamShaderPackageStoreDialogUiTest.testActionButtonsToggleBySelectionAndInstallState()`
+
+25. `ID`: `DPKG-UI-002`  
+`Priority`: `P2`  
+`Rule`: `Installed only` and `Updates possible only` filters refresh list and keep button state coherent.  
+`Expected`: filter toggles adjust list size deterministically; empty filtered list disables install/update/remove.  
+`Test`: `DreamShaderPackageStoreDialogUiTest.testFiltersRefreshListAndActionButtons()`
+
+26. `ID`: `DPKG-UI-003`  
+`Priority`: `P2`  
+`Rule`: search input + `Search` button refreshes list by query and can restore full list when query clears.  
+`Expected`: keyword narrows results to matching entry; clearing query restores all entries from sources.  
+`Test`: `DreamShaderPackageStoreDialogUiTest.testSearchFieldAndButtonRefreshListByQuery()`
+
+27. `ID`: `DPKG-UI-004`  
+`Priority`: `P2`  
+`Rule`: GitHub search empty-query path should be non-mutating.  
+`Expected`: search status `EMPTY_QUERY`; current list remains unchanged.  
+`Test`: `DreamShaderPackageStoreDialogUiTest.testGitHubSearchEmptyQueryReturnsEmptyStatusAndDoesNotMutateList()`
+
+28. `ID`: `DPKG-UI-005`  
+`Priority`: `P2`  
+`Rule`: GitHub search success and failure states mutate list only when appropriate.  
+`Expected`: `APPLIED` replaces list with GitHub entries; `ERROR` keeps previous list.  
+`Test`: `DreamShaderPackageStoreDialogUiTest.testGitHubSearchAppliedStatusRefreshesListEntries()` + `DreamShaderPackageStoreDialogUiTest.testGitHubSearchErrorStatusKeepsExistingList()`
+
+29. `ID`: `DPKG-UI-006`  
+`Priority`: `P2`  
+`Rule`: sequential GitHub search state transitions preserve last good state on failure and support explicit no-results replacement behavior.  
+`Expected`: `APPLIED -> ERROR` keeps last applied results; `APPLIED` with empty entries transitions to empty-list state with lifecycle buttons disabled.  
+`Test`: `DreamShaderPackageStoreDialogUiTest.testGitHubSearchErrorAfterAppliedKeepsLastAppliedResults()` + `DreamShaderPackageStoreDialogUiTest.testGitHubSearchNoResultsReplacesListWithEmptyState()`
+
+#### D-UI Audit Matrix (Checked on `2026-05-29`)
+
+| ID             | Status        | Test mapping                                                                                                                                                                                                                                                           |
+|----------------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `DPKG-UI-001`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testActionButtonsToggleBySelectionAndInstallState()`                                                                                                                                                                            |
+| `DPKG-UI-002`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testFiltersRefreshListAndActionButtons()`                                                                                                                                                                                       |
+| `DPKG-UI-003`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testSearchFieldAndButtonRefreshListByQuery()`                                                                                                                                                                                   |
+| `DPKG-UI-004`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testGitHubSearchEmptyQueryReturnsEmptyStatusAndDoesNotMutateList()`                                                                                                                                                            |
+| `DPKG-UI-005`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testGitHubSearchAppliedStatusRefreshesListEntries()` + `DreamShaderPackageStoreDialogUiTest.testGitHubSearchErrorStatusKeepsExistingList()`                                                                                     |
+| `DPKG-UI-006`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testGitHubSearchNoResultsReplacesListWithEmptyState()` + `DreamShaderPackageStoreDialogUiTest.testGitHubSearchErrorAfterAppliedKeepsLastAppliedResults()`                                                                        |
+
 #### E. Bridge/Project Diagnostics Interop
 
-23. `ID`: `DPKG-401`  
+30. `ID`: `DPKG-401`  
 `Priority`: `P2`  
 `Rule`: package-related bridge diagnostics map to originating source path under `DShader/Packages`.  
 `Expected`: diagnostic navigation opens exact file/line in installed package  
@@ -1376,13 +1434,14 @@ Acceptance criteria:
 - CI covers core language behaviors and prevents regressions.
 - Plugin is publishable to JetBrains Marketplace.
 
-#### M6 Audit Matrix (Checked on `2026-05-24`)
+#### M6 Audit Matrix (Checked on `2026-05-29`)
 
 | Item                                                  | Status        | Evidence                                                                                                                                                                                                                                                                     |
 |-------------------------------------------------------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `P1` lexer/highlighter tests                          | `Implemented` | `DreamShaderLexerSyntaxHighlighterTest`                                                                                                                                                                                                                                      |
 | `P1` completion regression tests                      | `Implemented` | `DreamShaderCompletionContextAnalyzerTest`, `DreamShaderCompletionSuggesterTest`                                                                                                                                                                                             |
 | `P1` navigation/diagnostic tests                      | `Implemented` | `DreamShaderGotoDeclarationHandlerTest`, `DreamShaderFindReferencesTest`, `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, `DreamShaderSyntaxDiagnosticsTest`, `DreamShaderSectionShapeDiagnosticsTest`, `DreamShaderSemanticDiagnosticsTest` |
+| `P1` package store UI regression tests                | `Implemented` | `DreamShaderPackageStoreDialogUiTest` (`DPKG-UI-001`..`DPKG-UI-006`: action-button state, filter toggles, query search, GitHub search `EMPTY_QUERY`/`APPLIED`/`ERROR`, no-results state, and `APPLIED -> ERROR` sequence retention)                                         |
 | `P1` localization parity guard                        | `Implemented` | `DreamShaderBundleLocalizationTest` (base bundle keys must exist in `DreamShaderBundle_zh_CN.properties`)                                                                                                                                                                    |
 | `P2` large-file performance smoke tests               | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest`                                                                                                                                                                                                                                   |
 | `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`, file-based signing env/properties + legacy env fallback), `.github/workflows/build.yml`, `.github/workflows/release.yml` (writes cert/key secrets to temp files and publishes with file-path env)        |
@@ -1586,6 +1645,7 @@ Configurable fields:
 - `Out Placeholder Suffix` (used by missing `out` argument quick-fix placeholder generation; sanitized to identifier-safe form)
 - `Preferred Import Extension` (default extension preference for unsupported import-extension quick-fix ordering: `.dsh` / `.dsf` / `.dsm`)
 - `Auto-update preferred extension from quick-fix` (when enabled, applying unsupported import-extension quick-fix persists chosen extension as new preferred default)
+- `Import extension quick-fix preview` (live preview line showing fallback preferred extension and localized auto-update status)
 - `Hover Docs Overrides` (manual hover text overrides; one per line in `path.path=value` format)
 - `Bridge Recompile Current Command`
 - `Bridge Recompile All Command`

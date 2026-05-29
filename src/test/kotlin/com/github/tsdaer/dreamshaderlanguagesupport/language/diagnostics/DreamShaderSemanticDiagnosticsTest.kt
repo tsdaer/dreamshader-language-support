@@ -867,6 +867,10 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         val action = myFixture.filterAvailableIntentions("Change extension to")
             .firstOrNull { it.text.startsWith("Change extension to .dsf") }
             ?: error("Expected extension quick-fix for .dsf")
+        assertTrue(
+            "Expected quick-fix to indicate preferred default will be updated",
+            action.text.contains("(will update preferred default)")
+        )
         myFixture.launchAction(action)
 
         assertEquals("dsf", settings.preferredImportExtension)
@@ -885,6 +889,52 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         myFixture.launchAction(action)
 
         assertEquals("dsh", settings.preferredImportExtension)
+    }
+
+    fun testUnresolvedImportPathUnsupportedExtensionQuickFixWillUpdateHintHiddenWhenAlreadyPreferred() {
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        settings.preferredImportExtension = "dsf"
+        settings.autoUpdatePreferredImportExtension = true
+
+        val text = """import "<caret>Scripts/Auto.usf";"""
+        myFixture.configureByText("unresolved_import_unsupported_ext_no_will_update_when_same_preferred_fix.dsm", text)
+        val action = myFixture.filterAvailableIntentions("Change extension to")
+            .firstOrNull { it.text.startsWith("Change extension to .dsf") }
+            ?: error("Expected extension quick-fix for .dsf")
+
+        assertTrue("Expected preferred default marker", action.text.contains("(preferred default)"))
+        assertFalse(
+            "Did not expect will-update marker when extension already preferred",
+            action.text.contains("(will update preferred default)")
+        )
+    }
+
+    fun testUnresolvedImportPathUnsupportedExtensionQuickFixHintOrderIsStable() {
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        settings.preferredImportExtension = "dsh"
+        settings.autoUpdatePreferredImportExtension = true
+
+        val projectBase = project.basePath ?: error("project base path is null")
+        val targetPath = Paths.get(projectBase, "Scripts", "Auto.dsf")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(targetPath.parent.toString())
+            val file = parent.findOrCreateChildData(this, targetPath.fileName.toString())
+            VfsUtil.saveText(file, "ShaderFunction(Name=\"Functions/Auto\") { }")
+        }
+
+        val text = """import "<caret>Scripts/Auto.usf";"""
+        myFixture.configureByText("unresolved_import_unsupported_ext_hint_order_fix.dsm", text)
+        val action = myFixture.filterAvailableIntentions("Change extension to")
+            .firstOrNull { it.text.startsWith("Change extension to .dsf") }
+            ?: error("Expected extension quick-fix for .dsf")
+
+        val resolvesHint = "(resolves existing file)"
+        val updateHint = "(will update preferred default)"
+        val resolvesIndex = action.text.indexOf(resolvesHint)
+        val updateIndex = action.text.indexOf(updateHint)
+        assertTrue("Expected resolves-existing hint", resolvesIndex >= 0)
+        assertTrue("Expected will-update hint", updateIndex >= 0)
+        assertTrue("Expected resolves-existing hint before will-update hint", resolvesIndex < updateIndex)
     }
 
     fun testGraphDisallowsForLoopStatement() {

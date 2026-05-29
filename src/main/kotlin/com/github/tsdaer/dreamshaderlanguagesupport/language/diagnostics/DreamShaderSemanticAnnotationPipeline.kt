@@ -1382,16 +1382,15 @@ internal class DreamShaderSemanticAnnotationPipeline {
         if (!replacementExtension.startsWith(".")) return null
         val fixedImportPath = replaceImportExtension(importPath, replacementExtension) ?: return null
         val filePointer: SmartPsiElementPointer<DreamShaderPsiFile> = SmartPointerManager.createPointer(file)
+        val willUpdatePreferredDefault = willPersistPreferredImportExtension(file.project, replacementExtension)
         return object : IntentionAction {
             override fun getText(): String {
-                val hintSuffix = when {
-                    suggestion.resolvesExistingTarget ->
-                        DreamShaderBundle.message("quickfix.importChangeExtensionHintResolvesExisting")
-                    suggestion.preferredByUserDefault ->
-                        DreamShaderBundle.message("quickfix.importChangeExtensionHintPreferredDefault")
-                    else -> ""
-                }
-                return DreamShaderBundle.message("quickfix.importChangeExtension", replacementExtension) + hintSuffix
+                return formatImportExtensionQuickFixText(
+                    replacementExtension = replacementExtension,
+                    resolvesExistingTarget = suggestion.resolvesExistingTarget,
+                    preferredByUserDefault = suggestion.preferredByUserDefault,
+                    willUpdatePreferredDefault = willUpdatePreferredDefault
+                )
             }
 
             override fun getFamilyName(): String = DreamShaderBundle.message("quickfix.family.import")
@@ -1578,6 +1577,30 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val normalized = replacementExtension.trim().removePrefix(".").lowercase(Locale.ROOT)
         if (normalized !in IMPORT_FILE_EXTENSIONS) return
         settingsState.preferredImportExtension = normalized
+    }
+
+    private fun willPersistPreferredImportExtension(project: Project, replacementExtension: String): Boolean {
+        val settingsState = project.getService(DreamShaderProjectSettings::class.java).state
+        if (!settingsState.autoUpdatePreferredImportExtension) return false
+        val normalized = replacementExtension.trim().removePrefix(".").lowercase(Locale.ROOT)
+        if (normalized !in IMPORT_FILE_EXTENSIONS) return false
+        val currentPreferred = settingsState.preferredImportExtension.trim().removePrefix(".").lowercase(Locale.ROOT)
+        return normalized != currentPreferred
+    }
+
+    private fun formatImportExtensionQuickFixText(
+        replacementExtension: String,
+        resolvesExistingTarget: Boolean,
+        preferredByUserDefault: Boolean,
+        willUpdatePreferredDefault: Boolean
+    ): String {
+        val baseText = DreamShaderBundle.message("quickfix.importChangeExtension", replacementExtension)
+        val suffixes = listOfNotNull(
+            DreamShaderBundle.message("quickfix.importChangeExtensionHintResolvesExisting").takeIf { resolvesExistingTarget },
+            DreamShaderBundle.message("quickfix.importChangeExtensionHintPreferredDefault").takeIf { preferredByUserDefault },
+            DreamShaderBundle.message("quickfix.importChangeExtensionHintWillUpdatePreferredDefault").takeIf { willUpdatePreferredDefault }
+        )
+        return baseText + suffixes.joinToString(separator = "")
     }
 
     private fun collectIdentifierNames(text: String): Set<String> {
