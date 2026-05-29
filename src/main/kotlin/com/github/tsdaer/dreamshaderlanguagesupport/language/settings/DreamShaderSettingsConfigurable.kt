@@ -1,22 +1,26 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
+
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.intellij.codeInsight.hints.ParameterHintsPassFactory
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
+import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
+import java.util.Locale
+import javax.swing.JButton
 import javax.swing.JComponent
-import javax.swing.JLabel
 import javax.swing.JComboBox
+import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JTable
+import javax.swing.event.TableModelEvent
+import javax.swing.event.TableModelListener
+import javax.swing.table.DefaultTableModel
 
-/**
- * Implementation of DreamShaderSettingsConfigurable.
- */
 class DreamShaderSettingsConfigurable(
     private val project: Project
 ) : Configurable {
@@ -30,7 +34,10 @@ class DreamShaderSettingsConfigurable(
     private var autoUpdatePreferredImportExtensionBox: JBCheckBox? = null
     private var importExtensionPreviewLabel: JLabel? = null
     private var packageSearchGitHubTokenField: JBTextField? = null
-    private var hoverDocumentationOverridesArea: JBTextArea? = null
+    private var hoverDocumentationOverridesTableModel: DefaultTableModel? = null
+    private var hoverDocumentationOverridesTable: JTable? = null
+    private var hoverDocumentationOverridesStatusLabel: JLabel? = null
+    private var hoverDocumentationOverridesRemoveButton: JButton? = null
     private var recompileCurrentCommandField: JBTextField? = null
     private var recompileAllCommandField: JBTextField? = null
     private var cleanGeneratedCommandField: JBTextField? = null
@@ -114,7 +121,7 @@ class DreamShaderSettingsConfigurable(
             row++
         }
 
-        fun addLabelAndTextArea(label: String, area: JBTextArea, tooltip: String? = null) {
+        fun addHoverOverridesTable(label: String, tooltip: String? = null) {
             val labelConstraints = GridBagConstraints().apply {
                 gridx = 0
                 gridy = row
@@ -123,22 +130,125 @@ class DreamShaderSettingsConfigurable(
             }
             root.add(JLabel(label), labelConstraints)
 
-            val scrollPane = com.intellij.ui.components.JBScrollPane(area).apply {
+            val model = object : DefaultTableModel(arrayOf(
+                DreamShaderBundle.message("settings.hoverDocsOverrides.column.path"),
+                DreamShaderBundle.message("settings.hoverDocsOverrides.column.content")
+            ), 0) {
+                override fun isCellEditable(row: Int, column: Int): Boolean = true
+            }
+            hoverDocumentationOverridesTableModel = model
+
+            val table = JTable(model).apply {
+                name = HOVER_DOCS_TABLE_NAME
+                fillsViewportHeight = true
+                rowSelectionAllowed = true
+                columnSelectionAllowed = false
+                selectionModel.selectionMode = javax.swing.ListSelectionModel.SINGLE_SELECTION
+                toolTipText = tooltip
+            }
+            hoverDocumentationOverridesTable = table
+
+            val scrollPane = com.intellij.ui.components.JBScrollPane(table).apply {
                 border = JBUI.Borders.empty()
                 toolTipText = tooltip
-                preferredSize = JBUI.size(320, 120)
+                preferredSize = JBUI.size(320, 140)
             }
 
-            val areaConstraints = GridBagConstraints().apply {
+            val tableConstraints = GridBagConstraints().apply {
                 gridx = 1
                 gridy = row
                 weightx = 1.0
                 fill = GridBagConstraints.BOTH
                 insets = JBUI.insets(4, 0, 2, 4)
             }
-            area.toolTipText = tooltip
-            root.add(scrollPane, areaConstraints)
+            root.add(scrollPane, tableConstraints)
             row++
+
+            val actions = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                isOpaque = false
+            }
+            val addButton = JButton(DreamShaderBundle.message("settings.hoverDocsOverrides.addRowButton")).apply {
+                name = HOVER_DOCS_ADD_ROW_BUTTON_NAME
+                addActionListener {
+                    hoverDocumentationOverridesTableModel?.addRow(arrayOf("", ""))
+                    val rowIndex = (hoverDocumentationOverridesTableModel?.rowCount ?: 1) - 1
+                    if (rowIndex >= 0) {
+                        hoverDocumentationOverridesTable?.setRowSelectionInterval(rowIndex, rowIndex)
+                    }
+                    refreshHoverOverridesStatus()
+                    refreshHoverOverridesButtonsState()
+                }
+            }
+            val removeButton = JButton(DreamShaderBundle.message("settings.hoverDocsOverrides.removeRowButton")).apply {
+                name = HOVER_DOCS_REMOVE_ROW_BUTTON_NAME
+                addActionListener {
+                    val selectedRow = hoverDocumentationOverridesTable?.selectedRow ?: -1
+                    if (selectedRow >= 0) {
+                        hoverDocumentationOverridesTableModel?.removeRow(selectedRow)
+                        val lastRow = (hoverDocumentationOverridesTableModel?.rowCount ?: 0) - 1
+                        if (lastRow >= 0) {
+                            val next = selectedRow.coerceAtMost(lastRow)
+                            hoverDocumentationOverridesTable?.setRowSelectionInterval(next, next)
+                        }
+                        refreshHoverOverridesStatus()
+                        refreshHoverOverridesButtonsState()
+                    }
+                }
+            }
+            hoverDocumentationOverridesRemoveButton = removeButton
+
+            val insertSampleButton = JButton(DreamShaderBundle.message("settings.hoverDocsOverrides.insertSampleButton")).apply {
+                name = HOVER_DOCS_INSERT_SAMPLE_BUTTON_NAME
+                addActionListener {
+                    val sampleLine = DreamShaderBundle.message("settings.hoverDocsOverrides.sampleLine")
+                    val separatorIndex = sampleLine.indexOf('=')
+                    if (separatorIndex > 0) {
+                        val sampleKey = sampleLine.substring(0, separatorIndex).trim()
+                        val sampleValue = sampleLine.substring(separatorIndex + 1).trim()
+                        upsertHoverOverrideRow(sampleKey, sampleValue)
+                    }
+                    refreshHoverOverridesStatus()
+                    refreshHoverOverridesButtonsState()
+                }
+            }
+
+            actions.add(addButton)
+            actions.add(removeButton)
+            actions.add(insertSampleButton)
+
+            val actionsConstraints = GridBagConstraints().apply {
+                gridx = 1
+                gridy = row
+                anchor = GridBagConstraints.WEST
+                insets = JBUI.insets(0, 0, 2, 4)
+            }
+            root.add(actions, actionsConstraints)
+            row++
+
+            val status = JLabel().apply {
+                name = HOVER_DOCS_STATUS_LABEL_NAME
+            }
+            hoverDocumentationOverridesStatusLabel = status
+            val statusConstraints = GridBagConstraints().apply {
+                gridx = 1
+                gridy = row
+                anchor = GridBagConstraints.WEST
+                insets = JBUI.insets(0, 0, 6, 4)
+                fill = GridBagConstraints.HORIZONTAL
+                weightx = 1.0
+            }
+            root.add(status, statusConstraints)
+            row++
+
+            model.addTableModelListener(object : TableModelListener {
+                override fun tableChanged(e: TableModelEvent?) {
+                    refreshHoverOverridesStatus()
+                    refreshHoverOverridesButtonsState()
+                }
+            })
+            table.selectionModel.addListSelectionListener {
+                refreshHoverOverridesButtonsState()
+            }
         }
 
         projectRootField = JBTextField()
@@ -153,10 +263,6 @@ class DreamShaderSettingsConfigurable(
         )
         autoUpdatePreferredImportExtensionBox?.name = AUTO_UPDATE_PREFERRED_IMPORT_EXTENSION_CHECKBOX_NAME
         packageSearchGitHubTokenField = JBTextField()
-        hoverDocumentationOverridesArea = JBTextArea().apply {
-            lineWrap = true
-            wrapStyleWord = false
-        }
         recompileCurrentCommandField = JBTextField()
         recompileAllCommandField = JBTextField()
         cleanGeneratedCommandField = JBTextField()
@@ -199,9 +305,8 @@ class DreamShaderSettingsConfigurable(
             packageSearchGitHubTokenField as JBTextField,
             DreamShaderBundle.message("settings.packageSearchGitHubToken.tooltip")
         )
-        addLabelAndTextArea(
+        addHoverOverridesTable(
             DreamShaderBundle.message("settings.hoverDocsOverrides.label"),
-            hoverDocumentationOverridesArea as JBTextArea,
             DreamShaderBundle.message("settings.hoverDocsOverrides.tooltip")
         )
         addLabelAndField(
@@ -252,7 +357,7 @@ class DreamShaderSettingsConfigurable(
             normalizePreferredImportExtension(preferredImportExtensionCombo?.selectedItem as? String) != normalizePreferredImportExtension(state.preferredImportExtension) ||
             (autoUpdatePreferredImportExtensionBox?.isSelected ?: false) != state.autoUpdatePreferredImportExtension ||
             packageSearchGitHubTokenField?.text.orEmpty() != state.packageStoreGitHubToken ||
-            hoverDocumentationOverridesArea?.text.orEmpty() != state.hoverDocumentationOverrides ||
+            buildHoverOverridesRawFromTable() != state.hoverDocumentationOverrides.trim() ||
             recompileCurrentCommandField?.text.orEmpty() != state.bridgeRecompileCurrentCommand ||
             recompileAllCommandField?.text.orEmpty() != state.bridgeRecompileAllCommand ||
             cleanGeneratedCommandField?.text.orEmpty() != state.bridgeCleanGeneratedShadersCommand
@@ -270,7 +375,7 @@ class DreamShaderSettingsConfigurable(
         state.preferredImportExtension = normalizePreferredImportExtension(preferredImportExtensionCombo?.selectedItem as? String)
         state.autoUpdatePreferredImportExtension = autoUpdatePreferredImportExtensionBox?.isSelected ?: false
         state.packageStoreGitHubToken = packageSearchGitHubTokenField?.text.orEmpty().trim()
-        state.hoverDocumentationOverrides = hoverDocumentationOverridesArea?.text.orEmpty().trim()
+        state.hoverDocumentationOverrides = buildHoverOverridesRawFromTable()
         state.bridgeRecompileCurrentCommand = recompileCurrentCommandField?.text.orEmpty().trim()
         state.bridgeRecompileAllCommand = recompileAllCommandField?.text.orEmpty().trim()
         state.bridgeCleanGeneratedShadersCommand = cleanGeneratedCommandField?.text.orEmpty().trim()
@@ -290,11 +395,13 @@ class DreamShaderSettingsConfigurable(
         preferredImportExtensionCombo?.selectedItem = ".${normalizePreferredImportExtension(state.preferredImportExtension)}"
         autoUpdatePreferredImportExtensionBox?.isSelected = state.autoUpdatePreferredImportExtension
         packageSearchGitHubTokenField?.text = state.packageStoreGitHubToken
-        hoverDocumentationOverridesArea?.text = state.hoverDocumentationOverrides
+        loadHoverOverridesFromRaw(state.hoverDocumentationOverrides)
         recompileCurrentCommandField?.text = state.bridgeRecompileCurrentCommand
         recompileAllCommandField?.text = state.bridgeRecompileAllCommand
         cleanGeneratedCommandField?.text = state.bridgeCleanGeneratedShadersCommand
         refreshImportExtensionPreview()
+        refreshHoverOverridesStatus()
+        refreshHoverOverridesButtonsState()
     }
 
     override fun disposeUIResources() {
@@ -308,7 +415,10 @@ class DreamShaderSettingsConfigurable(
         autoUpdatePreferredImportExtensionBox = null
         importExtensionPreviewLabel = null
         packageSearchGitHubTokenField = null
-        hoverDocumentationOverridesArea = null
+        hoverDocumentationOverridesTableModel = null
+        hoverDocumentationOverridesTable = null
+        hoverDocumentationOverridesStatusLabel = null
+        hoverDocumentationOverridesRemoveButton = null
         recompileCurrentCommandField = null
         recompileAllCommandField = null
         cleanGeneratedCommandField = null
@@ -333,6 +443,96 @@ class DreamShaderSettingsConfigurable(
         importExtensionPreviewLabel?.text = buildImportExtensionPreviewText(extension, autoUpdate)
     }
 
+    private fun refreshHoverOverridesStatus() {
+        val parsed = DreamShaderHoverOverrideParser.parse(buildHoverOverridesValidationRawFromTable())
+        hoverDocumentationOverridesStatusLabel?.text = buildHoverOverridesStatusText(parsed)
+    }
+
+    private fun refreshHoverOverridesButtonsState() {
+        hoverDocumentationOverridesRemoveButton?.isEnabled = (hoverDocumentationOverridesTable?.selectedRow ?: -1) >= 0
+    }
+
+    private fun upsertHoverOverrideRow(key: String, value: String) {
+        val normalizedTarget = key.trim().lowercase(Locale.ROOT)
+        val model = hoverDocumentationOverridesTableModel ?: return
+        var foundRow = -1
+        for (i in 0 until model.rowCount) {
+            val existingKey = model.getValueAt(i, 0)?.toString().orEmpty().trim().lowercase(Locale.ROOT)
+            if (existingKey == normalizedTarget) {
+                foundRow = i
+                break
+            }
+        }
+        if (foundRow >= 0) {
+            model.setValueAt(key, foundRow, 0)
+            model.setValueAt(value, foundRow, 1)
+            hoverDocumentationOverridesTable?.setRowSelectionInterval(foundRow, foundRow)
+        } else {
+            model.addRow(arrayOf(key, value))
+            val rowIndex = model.rowCount - 1
+            hoverDocumentationOverridesTable?.setRowSelectionInterval(rowIndex, rowIndex)
+        }
+    }
+
+    private fun buildHoverOverridesRawFromTable(): String {
+        return buildHoverOverridesRawFromTable(includeIncompleteRows = false)
+    }
+
+    private fun buildHoverOverridesValidationRawFromTable(): String {
+        return buildHoverOverridesRawFromTable(includeIncompleteRows = true)
+    }
+
+    private fun buildHoverOverridesRawFromTable(includeIncompleteRows: Boolean): String {
+        val model = hoverDocumentationOverridesTableModel ?: return ""
+        val lines = mutableListOf<String>()
+        for (i in 0 until model.rowCount) {
+            val key = model.getValueAt(i, 0)?.toString().orEmpty().trim()
+            val value = model.getValueAt(i, 1)?.toString().orEmpty().trim()
+            if (key.isBlank() && value.isBlank()) continue
+            if (key.isBlank() || value.isBlank()) {
+                if (!includeIncompleteRows) continue
+            }
+            lines += "$key=$value"
+        }
+        return lines.joinToString("\n").trim()
+    }
+
+    private fun loadHoverOverridesFromRaw(raw: String) {
+        val model = hoverDocumentationOverridesTableModel ?: return
+        model.rowCount = 0
+        val parsed = DreamShaderHoverOverrideParser.parse(raw)
+        parsed.entries.forEach { (key, value) ->
+            model.addRow(arrayOf(key, value))
+        }
+    }
+
+    private fun buildHoverOverridesStatusText(parsed: DreamShaderHoverOverrideParseResult): String {
+        if (parsed.issues.isNotEmpty()) {
+            val firstIssue = parsed.issues.first()
+            val reason = when (firstIssue.type) {
+                DreamShaderHoverOverrideIssueType.MISSING_EQUALS ->
+                    DreamShaderBundle.message("settings.hoverDocsOverrides.status.issue.missingEquals")
+                DreamShaderHoverOverrideIssueType.EMPTY_KEY ->
+                    DreamShaderBundle.message("settings.hoverDocsOverrides.status.issue.emptyKey")
+                DreamShaderHoverOverrideIssueType.EMPTY_VALUE ->
+                    DreamShaderBundle.message("settings.hoverDocsOverrides.status.issue.emptyValue")
+            }
+            return DreamShaderBundle.message(
+                "settings.hoverDocsOverrides.status.invalid",
+                parsed.entries.size,
+                parsed.issues.size,
+                firstIssue.lineNumber,
+                reason
+            )
+        }
+        return DreamShaderBundle.message(
+            "settings.hoverDocsOverrides.status.valid",
+            parsed.entries.size,
+            parsed.ignoredLineCount,
+            parsed.duplicateKeyCount
+        )
+    }
+
     private fun buildImportExtensionPreviewText(extension: String, autoUpdate: Boolean): String {
         val toggleText = DreamShaderBundle.message(
             if (autoUpdate) "settings.toggle.enabled" else "settings.toggle.disabled"
@@ -348,11 +548,18 @@ class DreamShaderSettingsConfigurable(
     internal fun testNormalizePreferredImportExtension(raw: String?): String = normalizePreferredImportExtension(raw)
     internal fun testBuildImportExtensionPreviewText(rawExtension: String?, autoUpdate: Boolean): String =
         buildImportExtensionPreviewText(".${normalizePreferredImportExtension(rawExtension)}", autoUpdate)
+    internal fun testBuildHoverOverridesStatusText(raw: String): String =
+        buildHoverOverridesStatusText(DreamShaderHoverOverrideParser.parse(raw))
 
     companion object {
         private val SUPPORTED_IMPORT_EXTENSIONS = setOf("dsh", "dsf", "dsm")
         internal const val PREFERRED_IMPORT_EXTENSION_COMBO_NAME = "dreamshader.preferredImportExtensionCombo"
         internal const val AUTO_UPDATE_PREFERRED_IMPORT_EXTENSION_CHECKBOX_NAME = "dreamshader.autoUpdatePreferredImportExtensionCheckbox"
         internal const val IMPORT_EXTENSION_PREVIEW_LABEL_NAME = "dreamshader.importExtensionPreviewLabel"
+        internal const val HOVER_DOCS_TABLE_NAME = "dreamshader.hoverDocsOverrides.table"
+        internal const val HOVER_DOCS_ADD_ROW_BUTTON_NAME = "dreamshader.hoverDocsOverrides.addRowButton"
+        internal const val HOVER_DOCS_REMOVE_ROW_BUTTON_NAME = "dreamshader.hoverDocsOverrides.removeRowButton"
+        internal const val HOVER_DOCS_INSERT_SAMPLE_BUTTON_NAME = "dreamshader.hoverDocsOverrides.insertSampleButton"
+        internal const val HOVER_DOCS_STATUS_LABEL_NAME = "dreamshader.hoverDocsOverrides.statusLabel"
     }
 }

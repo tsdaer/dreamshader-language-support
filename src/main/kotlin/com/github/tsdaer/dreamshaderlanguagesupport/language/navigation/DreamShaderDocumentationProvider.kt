@@ -7,8 +7,10 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTo
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.intellij.lang.documentation.AbstractDocumentationProvider
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import java.util.*
 
@@ -16,7 +18,31 @@ import java.util.*
  * Provider implementation for DreamShaderDocumentationProvider.
  */
 class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
+    override fun getCustomDocumentationElement(
+        editor: Editor,
+        file: PsiFile,
+        contextElement: PsiElement?,
+        targetOffset: Int
+    ): PsiElement? {
+        if (file.language != DreamShaderLanguage && contextElement?.language != DreamShaderLanguage) return null
+        if (file.textLength <= 0) return contextElement
+
+        val safeOffset = targetOffset.coerceIn(0, file.textLength - 1)
+        var leaf = file.findElementAt(safeOffset)
+        if (leaf == null && safeOffset > 0) {
+            leaf = file.findElementAt(safeOffset - 1)
+        }
+        if (leaf?.node?.elementType == DreamShaderTokenTypes.WHITE_SPACE) {
+            leaf = PsiTreeUtil.prevVisibleLeaf(leaf) ?: PsiTreeUtil.nextVisibleLeaf(leaf)
+        }
+        return leaf ?: contextElement
+    }
+
     override fun getQuickNavigateInfo(element: PsiElement, originalElement: PsiElement?): String? {
+        return generateDoc(element, originalElement)
+    }
+
+    override fun generateHoverDoc(element: PsiElement, originalElement: PsiElement?): String? {
         return generateDoc(element, originalElement)
     }
 
@@ -28,6 +54,9 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         val tokenElement = source
         val token = normalizeTokenText(tokenElement.text)
         if (token.isNotBlank()) {
+            val sectionDoc = sectionDocumentation(tokenElement)
+            if (sectionDoc != null) return sectionDoc
+
             val settingsKeyDoc = settingsKeyDocumentation(tokenElement, token)
             if (settingsKeyDoc != null) return settingsKeyDoc
 
@@ -51,12 +80,26 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         return null
     }
 
+    private fun sectionDocumentation(element: PsiElement): String? {
+        if (element.node?.elementType != DreamShaderTokenTypes.SECTION) return null
+
+        val sectionName = element.text.trim().lowercase(Locale.ROOT)
+        if (sectionName.isBlank()) return null
+
+        val description = DreamShaderDocumentationData.sectionDescription(sectionName) ?: return null
+        val title = sectionName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+        return "<b>$title</b><br/>$description"
+    }
+
     private fun declarationDocumentation(element: PsiElement): String? {
-        val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return null
-        if (declaration.nameIdentifier != element && declaration != element) return null
+        val declaration = when (element) {
+            is DreamShaderDeclaration -> element
+            else -> PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false)
+        } ?: return null
+        if (!isDeclarationDocumentationAnchor(element, declaration)) return null
 
         val keyword = declaration.keywordText() ?: return null
-        val name = declaration.declarationName().orEmpty().ifBlank { "<anonymous>" }
+        val name = declarationDisplayName(declaration).orEmpty().ifBlank { "<anonymous>" }
         val overrideKey = "declaration.$keyword.description"
         val kind = overrideDoc(element, overrideKey)
             ?: DreamShaderDocumentationData.declarationDescription(keyword)
@@ -207,6 +250,33 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         return token == element.text
     }
 
+    private fun isDeclarationDocumentationAnchor(element: PsiElement, declaration: DreamShaderDeclaration): Boolean {
+        if (element == declaration) return true
+        if (declaration.nameIdentifier == element) return true
+        return isDeclarationKeywordElement(element, declaration)
+    }
+
+    private fun isDeclarationKeywordElement(element: PsiElement, declaration: DreamShaderDeclaration): Boolean {
+        if (element.node?.elementType != DreamShaderTokenTypes.KEYWORD) return false
+        var child = declaration.node.firstChildNode
+        while (child != null) {
+            if (child.elementType == DreamShaderTokenTypes.KEYWORD) {
+                return child.psi == element
+            }
+            child = child.treeNext
+        }
+        return false
+    }
+
+    private fun declarationDisplayName(declaration: DreamShaderDeclaration): String? {
+        val rawName = declaration.declarationName()
+        val bodyStart = declaration.bodyTextRange()?.startOffset ?: declaration.text.length
+        val head = declaration.text.substring(0, bodyStart.coerceIn(0, declaration.text.length))
+        val keyValueName = NAME_ATTRIBUTE_REGEX.find(head)?.groupValues?.getOrNull(1)?.trim()
+        if (!keyValueName.isNullOrBlank()) return keyValueName
+        return rawName
+    }
+
     private fun isDeclarationNameIdentifier(element: PsiElement): Boolean {
         val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return false
         return declaration.nameIdentifier == element
@@ -355,4 +425,8 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         val typeName: String,
         val scopeLabel: String
     )
+
+    companion object {
+        private val NAME_ATTRIBUTE_REGEX = Regex("\\bName\\s*=\\s*\"([^\"]+)\"")
+    }
 }

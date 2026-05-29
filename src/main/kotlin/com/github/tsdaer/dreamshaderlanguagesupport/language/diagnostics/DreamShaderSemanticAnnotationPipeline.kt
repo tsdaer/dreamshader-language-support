@@ -153,6 +153,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateSettingsDiagnostics(topLevelDeclarations, holder)
         annotateBaseOutputMemberDiagnostics(topLevelDeclarations, holder)
         annotateUnknownTypeDiagnostics(topLevelDeclarations, holder)
+        annotateConstTextureDefaultAssetDiagnostics(topLevelDeclarations, holder)
         annotateUnknownExpressionClassDiagnostics(file, sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphLoopDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphSwitchDiagnostics(sourceText, topLevelDeclarations, holder)
@@ -857,6 +858,46 @@ internal class DreamShaderSemanticAnnotationPipeline {
                             )
                         }
                         annotation.create()
+                    }
+                }
+        }
+    }
+
+    private fun annotateConstTextureDefaultAssetDiagnostics(
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        topLevelDeclarations.forEach { declaration ->
+            directSectionsOf(declaration)
+                .filter { canonicalSectionName(it.sectionName()) == "properties" }
+                .forEach { section ->
+                    val body = sectionBody(section) ?: return@forEach
+                    val statements = splitTopLevel(body.text, ';')
+                    var statementStart = 0
+                    statements.forEach { statement ->
+                        val statementEnd = statementStart + statement.length
+                        val trimmedStartInStatement = statement.indexOfFirst { !it.isWhitespace() }
+                        val trimmed = statement.trim()
+                        if (trimmedStartInStatement >= 0 && trimmed.isNotEmpty()) {
+                            val matcher = CONST_TEXTURE_DECLARATION_PATTERN.matcher(trimmed)
+                            if (matcher.find()) {
+                                val type = matcher.group(1) ?: ""
+                                val hasInitializer = !matcher.group(2).isNullOrBlank()
+                                if (type.lowercase(Locale.ROOT) in CONST_TEXTURE_TYPES_REQUIRING_EXPLICIT_DEFAULT_ASSET && !hasInitializer) {
+                                    val typeStartInTrimmed = matcher.start(1)
+                                    val typeEndInTrimmed = matcher.end(1)
+                                    val range = TextRange(
+                                        body.startOffset + statementStart + trimmedStartInStatement + typeStartInTrimmed,
+                                        body.startOffset + statementStart + trimmedStartInStatement + typeEndInTrimmed
+                                    )
+                                    holder.newAnnotation(
+                                        HighlightSeverity.ERROR,
+                                        DreamShaderBundle.message("diagnostic.constTextureRequiresExplicitDefaultAsset", type)
+                                    ).range(range).create()
+                                }
+                            }
+                        }
+                        statementStart = (statementEnd + 1).coerceAtMost(body.text.length)
                     }
                 }
         }
@@ -2277,6 +2318,15 @@ internal class DreamShaderSemanticAnnotationPipeline {
         private val BASE_MEMBER_PATTERN: Pattern = Pattern.compile("\\bBase\\.([A-Za-z_][A-Za-z0-9_]*)")
         private val TYPED_DECLARATION_PATTERN: Pattern = Pattern.compile(
             "(?m)(?:^|;)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=|;|\\n)"
+        )
+        private val CONST_TEXTURE_DECLARATION_PATTERN: Pattern = Pattern.compile(
+            "(?is)^const\\s+(TextureCube|Texture2DArray|Texture3D|VolumeTexture)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=\\s*(.+))?$"
+        )
+        private val CONST_TEXTURE_TYPES_REQUIRING_EXPLICIT_DEFAULT_ASSET = setOf(
+            "texturecube",
+            "texture2darray",
+            "texture3d",
+            "volumetexture"
         )
 
         // 正则模式：调用签名相关诊断。

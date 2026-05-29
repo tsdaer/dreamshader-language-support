@@ -424,6 +424,76 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Unknown type 'zzzzq'")
     }
 
+    fun testVolumeTextureTypeIsRecognized() {
+        val text = """
+            Shader Main {
+                Properties {
+                    VolumeTexture NoiseVolume = Path(Game, Textures/T_NoiseVolume);
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("known_type_volumetexture.dsm", text)
+        assertNoError("Unknown type 'VolumeTexture'")
+    }
+
+    fun testTexture3DAliasTypeIsRecognized() {
+        val text = """
+            Shader Main {
+                Inputs {
+                    Texture3D VolumeTex;
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("known_type_texture3d.dsm", text)
+        assertNoError("Unknown type 'Texture3D'")
+    }
+
+    fun testConstTextureCubeRequiresExplicitDefaultAsset() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env;
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_requires_default_asset.dsm", text)
+        assertHasError("const TextureCube must explicitly specify a default asset (for example = Path(...)).")
+    }
+
+    fun testConstVolumeTextureWithPathDoesNotRequireExtraDiagnostic() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const VolumeTexture NoiseVolume = Path(Game, Textures/T_NoiseVolume);
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_volumetexture_with_default_asset.dsm", text)
+        assertNoError("const VolumeTexture must explicitly specify a default asset (for example = Path(...)).")
+    }
+
+    fun testConstTexture2DStillAllowsOmittedDefaultAsset() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const Texture2D MainTex;
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texture2d_without_default_asset_allowed.dsm", text)
+        assertNoError("const Texture2D must explicitly specify a default asset (for example = Path(...)).")
+    }
+
     fun testUnknownExpressionClassInUeExpressionCall() {
         val text = """
             Shader Main {
@@ -803,6 +873,28 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         val text = """import "<caret>Scripts/Auto.usf";"""
         myFixture.configureByText("unresolved_import_unsupported_ext.dsm", text)
         assertHasError("Unsupported import file extension .usf. Only .dsh, .dsf, and .dsm are supported.")
+    }
+
+    fun testRemovedBuiltinLibraryFallbackImportPathNowReportsUnresolvedImport() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val builtinPath = Paths.get(projectBase, "Plugins", "DreamShader", "Library", "Texture.dsh")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(builtinPath.parent.toString())
+            val file = parent.findOrCreateChildData(this, builtinPath.fileName.toString())
+            VfsUtil.saveText(
+                file,
+                """
+                Namespace BuiltinTexture {
+                    Function Sample {
+                    }
+                }
+                """.trimIndent()
+            )
+        }
+
+        val text = """import "<caret>Texture.dsh";"""
+        myFixture.configureByText("unresolved_import_removed_builtin_fallback.dsm", text)
+        assertHasError("Cannot resolve import 'Texture.dsh'")
     }
 
     fun testUnresolvedImportPathUnsupportedExtensionQuickFixChangesToDsh() {

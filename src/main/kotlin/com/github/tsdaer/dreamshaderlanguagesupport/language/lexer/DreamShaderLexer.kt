@@ -235,7 +235,7 @@ class DreamShaderLexer : LexerBase() {
             "uvec2", "uvec3", "uvec4",
             "bvec2", "bvec3", "bvec4",
             "mat2", "mat3", "mat4",
-            "texture2d", "texturecube", "texture2darray", "samplerstate",
+            "texture2d", "texturecube", "texture2darray", "texture3d", "volumetexture", "samplerstate",
             "materialattributes",
             "scalarparameter", "vectorparameter", "doublevectorparameter",
             "staticboolparameter", "staticswitchparameter",

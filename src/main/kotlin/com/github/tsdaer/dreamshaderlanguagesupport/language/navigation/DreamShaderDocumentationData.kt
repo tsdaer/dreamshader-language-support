@@ -35,6 +35,14 @@ internal object DreamShaderDocumentationData {
         "declaration.namespace.description" to DreamShaderBundle.message("docs.declaration.namespace"),
         "declaration.import.description" to DreamShaderBundle.message("docs.declaration.import"),
 
+        "section.properties.description" to DreamShaderBundle.message("docs.section.properties"),
+        "section.inputs.description" to DreamShaderBundle.message("docs.section.inputs"),
+        "section.outputs.description" to DreamShaderBundle.message("docs.section.outputs"),
+        "section.results.description" to DreamShaderBundle.message("docs.section.results"),
+        "section.settings.description" to DreamShaderBundle.message("docs.section.settings"),
+        "section.options.description" to DreamShaderBundle.message("docs.section.options"),
+        "section.graph.description" to DreamShaderBundle.message("docs.section.graph"),
+
         "settings.domain.key" to "Domain",
         "settings.domain.description" to DreamShaderBundle.message("docs.settings.domain.description"),
         "settings.domain.commonValues" to listOf("Surface", "DeferredDecal", "LightFunction", "PostProcess", "UserInterface"),
@@ -78,6 +86,9 @@ internal object DreamShaderDocumentationData {
 
     fun declarationDescription(keyword: String): String? =
         readString("declaration.${keyword.lowercase(Locale.ROOT)}.description")
+
+    fun sectionDescription(sectionName: String): String? =
+        readString("section.${sectionName.lowercase(Locale.ROOT)}.description")
 
     fun settingInfo(token: String): DreamShaderSettingInfo? {
         val id = settingsByKey[token.lowercase(Locale.ROOT)] ?: return null

@@ -26,6 +26,87 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
         assertTrue(doc.contains("local function declaration"))
     }
 
+    fun testDeclarationKeywordProvidesHoverDoc() {
+        val file = myFixture.configureByText(
+            "hover_declaration_keyword.dsf",
+            """
+            Function Util {
+                Graph {
+                    float3 v = float3(0.0, 1.0, 0.0);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val offset = file.text.indexOf("Function")
+        val element = file.findElementAt(offset)
+        val doc = provider.generateDoc(element, element)
+
+        assertNotNull(doc)
+        assertTrue(doc!!.contains("Function Util"))
+        assertTrue(doc.contains("local function declaration"))
+    }
+
+    fun testShaderNameAttributeUsedAsDeclarationDisplayName() {
+        val file = myFixture.configureByText(
+            "hover_shader_name_attribute.dsm",
+            """
+            Shader(Name="DreamMaterials/M_Minimal") {
+                Graph {
+                    float3 color = float3(1.0, 1.0, 1.0);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val offset = file.text.indexOf("Shader")
+        val element = file.findElementAt(offset)
+        val doc = provider.generateDoc(element, element)
+
+        assertNotNull(doc)
+        assertTrue(doc!!.contains("Shader DreamMaterials/M_Minimal"))
+        assertFalse(doc.contains("Shader Name"))
+    }
+
+    fun testSectionKeywordsProvideHoverDoc() {
+        val file = myFixture.configureByText(
+            "hover_sections.dsm",
+            """
+            Shader(Name="DreamMaterials/M_Minimal") {
+                Properties = {
+                    vec3 Tint = vec3(1.0, 0.2, 0.2);
+                }
+                Settings = {
+                    Domain = "UI";
+                    ShadingModel = "Unlit";
+                }
+                Outputs = {
+                    vec3 Color;
+                    Base.EmissiveColor = Color;
+                }
+                Graph = {
+                    Color = Tint;
+                }
+            }
+            """.trimIndent()
+        )
+
+        val properties = provider.generateDoc(file.findElementAt(file.text.indexOf("Properties")), file.findElementAt(file.text.indexOf("Properties")))
+        val settings = provider.generateDoc(file.findElementAt(file.text.indexOf("Settings")), file.findElementAt(file.text.indexOf("Settings")))
+        val outputs = provider.generateDoc(file.findElementAt(file.text.indexOf("Outputs")), file.findElementAt(file.text.indexOf("Outputs")))
+        val graph = provider.generateDoc(file.findElementAt(file.text.indexOf("Graph")), file.findElementAt(file.text.indexOf("Graph")))
+
+        assertNotNull(properties)
+        assertNotNull(settings)
+        assertNotNull(outputs)
+        assertNotNull(graph)
+
+        assertTrue(properties!!.contains("Properties"))
+        assertTrue(settings!!.contains("Settings"))
+        assertTrue(outputs!!.contains("Outputs"))
+        assertTrue(graph!!.contains("Graph"))
+    }
+
     fun testSettingsKeyProvidesHoverDoc() {
         val file = myFixture.configureByText(
             "hover_settings_key.dsf",

@@ -74,4 +74,40 @@ class DreamShaderGotoDeclarationHandlerTest : BasePlatformTestCase() {
         val declaration = targets.first() as DreamShaderDeclaration
         assertEquals("Util", declaration.declarationName())
     }
+
+    fun testGotoDeclarationDoesNotResolveBuiltinLibraryFallbackImportPath() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val builtinPath = Paths.get(projectBase, "Plugins", "DreamShader", "Library", "Texture.dsh")
+        WriteCommandAction.runWriteCommandAction(project) {
+            VfsUtil.saveText(
+                VfsUtil.createDirectories(builtinPath.parent.toString()).createChildData(this, builtinPath.fileName.toString()),
+                """
+                Namespace BuiltinTexture {
+                    Function Sample {
+                    }
+                }
+                """.trimIndent()
+            )
+        }
+
+        val file = myFixture.configureByText(
+            "main_builtin_import.dsf",
+            """
+            import "Texture.dsh"
+            Shader Main {
+                Outputs {
+                    float3 Color = float3(1.0, 1.0, 1.0);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("Texture.dsh") + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected source element inside import string", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertTrue("Expected no goto declaration target for removed builtin-library fallback", targets.isNullOrEmpty())
+    }
 }

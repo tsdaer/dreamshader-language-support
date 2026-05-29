@@ -13,11 +13,9 @@ import java.nio.file.Paths
  * 2. `<project>/DShader`
  * 3. `<project>/DShader/Packages`
  * 4. `<project>`（历史兼容回退）
- * 5. 项目内内置库路径（兜底）
  */
 internal object DreamShaderImportResolver {
     private val IMPORT_EXTENSIONS = listOf("dsh", "dsf", "dsm")
-    private const val BUILTIN_LIBRARY_RELATIVE_PATH = "Plugins/DreamShader/Library"
     private const val PACKAGE_METADATA_FILE = "dreamshader.package.json"
     private val DREAMSHADER_OBJECT_REGEX = Regex(
         """"dreamshader"\s*:\s*\{(.*?)\}""",
@@ -82,11 +80,6 @@ internal object DreamShaderImportResolver {
         candidatePaths.forEach { candidate ->
             val fromProjectRoot = fs.findFileByPath("$projectBase/$candidate")
             if (isValidFile(fromProjectRoot)) return fromProjectRoot
-        }
-
-        candidatePaths.forEach { candidate ->
-            val fromBuiltin = fs.findFileByPath("$projectBase/$BUILTIN_LIBRARY_RELATIVE_PATH/$candidate")
-            if (isValidFile(fromBuiltin)) return fromBuiltin
         }
 
         return null

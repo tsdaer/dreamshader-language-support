@@ -136,9 +136,9 @@ Primary language reference (upstream):
 - https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/LanguageReference.md
 
 Reference snapshot used for this README alignment:
-- Checked on `2026-05-21`
+- Checked on `2026-05-29`
 - Upstream doc title: `DreamShaderLang 语法参考`
-- Upstream plugin version noted in doc: `1.3.7`
+- Upstream plugin version noted in doc: `1.3.8`
 
 This section summarizes the language rules that this Rider plugin should follow.
 
@@ -243,7 +243,7 @@ Primary package reference (upstream):
 - https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/Packages.md
 
 Reference snapshot used for this README alignment:
-- Checked on `2026-05-21`
+- Checked on `2026-05-29`
 - Upstream doc title: `DreamShader Package`
 
 This section summarizes package rules and behaviors the Rider plugin should align with.
@@ -286,7 +286,9 @@ Expected import resolution order:
 1. Current file relative path
 2. Project `DShader/`
 3. Project `DShader/Packages/`
-4. Built-in plugin library path (`Plugins/DreamShader/Library/`)
+
+Upstream update note (`2026-05-29` sync):
+- Built-in plugin library import fallback (`Plugins/DreamShader/Library/`) has been removed from upstream docs and should not be used as a resolver source.
 
 ### 4. Package Store and Index Sources
 
@@ -1646,7 +1648,11 @@ Configurable fields:
 - `Preferred Import Extension` (default extension preference for unsupported import-extension quick-fix ordering: `.dsh` / `.dsf` / `.dsm`)
 - `Auto-update preferred extension from quick-fix` (when enabled, applying unsupported import-extension quick-fix persists chosen extension as new preferred default)
 - `Import extension quick-fix preview` (live preview line showing fallback preferred extension and localized auto-update status)
-- `Hover Docs Overrides` (manual hover text overrides; one per line in `path.path=value` format)
+- `Hover Docs Overrides` (table-based visual editor for hover text overrides)
+  - columns: `Path` and `Content`
+  - row actions: `Add Row`, `Remove Row`, `Insert Sample`
+  - real-time validation summary shows active entries, ignored lines, duplicate replacements, and first issue location/reason
+  - persisted format remains backward-compatible `path.path=value` lines
 - `Bridge Recompile Current Command`
 - `Bridge Recompile All Command`
 - `Bridge Clean Generated Command`
