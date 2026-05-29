@@ -1,5 +1,11 @@
 # dreamshader-language-support (Rider)
 
+<div id="jetbrains-marketplace-plugin-card"></div>
+<script src="https://plugins.jetbrains.com/assets/scripts/mp-widget.js"></script>
+<script>
+  MarketplaceWidget.setupMarketplaceWidget('card', 31926, "#jetbrains-marketplace-plugin-card");
+</script>
+
 <!-- plugin-metadata:start -->
 name: Dreamshader Language Extension
 description: Comprehensive DreamShaderLang support for JetBrains Rider with `.dsm`/`.dsf`/`.dsh` file types, lexer/parser/PSI and symbol model foundations, syntax highlighting plus semantic classification and color settings, formatter/commenter/brace matching/folding/structure view, context-aware completion (sections/types/settings values/UE.*/HLSL/imports), goto declaration/find usages/references/hover docs/signature help, semantic diagnostics (syntax/section-shape/semantic + Bridge diagnostics mapping), inlay parameter hints and Code Vision hints, configurable DreamShader project settings (project root/manifest path/status bar/code lens/out placeholder suffix/import extension strategy/hover doc overrides/Bridge commands), Bridge tool window and workflow actions (refresh diagnostics/recompile current or all/clean generated shaders/open Bridge paths), package tooling (package store dialog with search/filter/details/install-state markers/background install-update-remove/add-remove index sources/GitHub install/update/remove/open packages folder/package-aware import resolution), template tools (material/function/header and package scaffold), and unified DreamShader Hub entry for settings, diagnostics, package, and template workflows.
