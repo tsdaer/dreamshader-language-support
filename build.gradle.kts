@@ -1,4 +1,6 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import java.nio.file.Files
+import java.nio.file.Path
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -19,10 +21,11 @@ dependencies {
 
 tasks.processResources {
     val pluginVersion = providers.gradleProperty("version")
+    val patchChangelogTask = tasks.named("patchChangelog")
     inputs.property("pluginVersion", pluginVersion)
     // CHANGELOG.md may be updated by patchChangelog during release publishing.
-    dependsOn(tasks.named("patchChangelog"))
-    from("CHANGELOG.md")
+    dependsOn(patchChangelogTask)
+    from(layout.projectDirectory.file("CHANGELOG.md"))
     filesMatching("dreamshader-plugin.properties") {
         val resolvedVersion = pluginVersion.orNull ?: "0.0.0"
         expand(
@@ -75,13 +78,13 @@ intellijPlatform {
         .orElse(providers.environmentVariable("CERTIFICATE_CHAIN_FILE"))
         .orElse(providers.gradleProperty("jetbrainsCertificateChainFile"))
         .orElse(defaultCertificateChainFilePath)
-        .map { path -> file(path.trim()).readText() }
+        .map { path -> Files.readString(Path.of(path.trim())) }
 
     val privateKeyFromFile = providers.environmentVariable("JETBRAINS_PRIVATE_KEY_FILE")
         .orElse(providers.environmentVariable("PRIVATE_KEY_FILE"))
         .orElse(providers.gradleProperty("jetbrainsPrivateKeyFile"))
         .orElse(defaultPrivateKeyFilePath)
-        .map { path -> file(path.trim()).readText() }
+        .map { path -> Files.readString(Path.of(path.trim())) }
 
     val certificateChainFromEnv = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN")
         .orElse(providers.environmentVariable("CERTIFICATE_CHAIN"))
@@ -93,13 +96,13 @@ intellijPlatform {
         .orElse(providers.environmentVariable("PRIVATE_KEY_PASSWORD_FILE"))
         .orElse(providers.gradleProperty("jetbrainsPrivateKeyPasswordFile"))
         .orElse(defaultPrivateKeyPasswordFilePath)
-        .map { path -> file(path.trim()).readText().trim() }
+        .map { path -> Files.readString(Path.of(path.trim())).trim() }
 
     val publishTokenFromFile = providers.environmentVariable("JETBRAINS_PUBLISH_TOKEN_FILE")
         .orElse(providers.environmentVariable("PUBLISH_TOKEN_FILE"))
         .orElse(providers.gradleProperty("jetbrainsPublishTokenFile"))
         .orElse(defaultPublishTokenFilePath)
-        .map { path -> file(path.trim()).readText().trim() }
+        .map { path -> Files.readString(Path.of(path.trim())).trim() }
 
     pluginConfiguration {
         id = providers.gradleProperty("pluginGroup").zip(providers.gradleProperty("pluginName")) { group, name ->

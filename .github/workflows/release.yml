@@ -63,6 +63,7 @@ jobs:
       # Publish the plugin to JetBrains Marketplace
       - name: Publish Plugin
         env:
+          ORG_GRADLE_CONFIGURATION_CACHE: "false"
           JETBRAINS_PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN || secrets.PUBLISH_TOKEN }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD || secrets.PRIVATE_KEY_PASSWORD }}
           CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN || secrets.CERTIFICATE_CHAIN }}
