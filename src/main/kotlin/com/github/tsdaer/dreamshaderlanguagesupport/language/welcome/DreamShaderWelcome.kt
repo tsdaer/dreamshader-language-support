@@ -1,26 +1,25 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.welcome
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import com.intellij.openapi.util.Key
 import com.intellij.util.Alarm
 import com.intellij.testFramework.LightVirtualFile
+import java.util.Properties
 import java.util.Locale
 
-private const val DREAMSHADER_PLUGIN_ID = "com.github.tsdaer.dreamshaderlanguagesupport"
 private const val DREAMSHADER_WELCOME_FILE_NAME = "DreamShader Welcome"
 private const val DREAMSHADER_WELCOME_EDITOR_TYPE_ID = "dreamshader-welcome-editor"
 private val DREAMSHADER_WELCOME_FILE_KEY = Key.create<DreamShaderWelcomeVirtualFile>("dreamshader.welcome.virtualFile")
 private val DREAMSHADER_CHANGELOG_CHINESE_HEADER = Regex("""^\s*###\s+中文\s*$""", setOf(RegexOption.IGNORE_CASE))
+private const val DREAMSHADER_PLUGIN_INFO_RESOURCE = "dreamshader-plugin.properties"
+private const val DREAMSHADER_CHANGELOG_RESOURCE = "CHANGELOG.md"
 
 internal fun showWelcomeDialog(project: Project, forceManual: Boolean = false) {
-    val plugin = PluginManagerCore.getPlugin(PluginId.getId(DREAMSHADER_PLUGIN_ID))
-    val currentVersion = plugin?.version?.trim().takeUnless { it.isNullOrBlank() }
+    val currentVersion = readPluginVersion().takeUnless { it.isNullOrBlank() }
         ?: DreamShaderBundle.message("common.unknown")
 
     val stateService = ApplicationManager.getApplication().getService(DreamShaderWelcomeStateService::class.java)
@@ -308,25 +307,19 @@ private fun buildSubtitleText(decision: DreamShaderWelcomeStateService.WelcomeDe
 }
 
 private fun extractChangeNotesHtml(): String {
-    val plugin = PluginManagerCore.getPlugin(PluginId.getId(DREAMSHADER_PLUGIN_ID))
-    val notes = plugin?.changeNotes?.trim().orEmpty()
+    val notes = readBundledChangelog().trim()
     if (notes.isNotBlank()) {
-        return selectLocalizedChangeNotesHtml(notes)
+        return selectLocalizedChangeNotesMarkdown(notes)
     }
     return DreamShaderBundle.message("welcome.section.changes.fallback")
 }
 
-private fun selectLocalizedChangeNotesHtml(notes: String): String {
-    val wrapped = notes.trim()
-    if (!wrapped.startsWith("<pre>") || !wrapped.endsWith("</pre>")) {
-        return wrapped
-    }
-
-    val raw = wrapped.removePrefix("<pre>").removeSuffix("</pre>").trim()
+private fun selectLocalizedChangeNotesMarkdown(notes: String): String {
+    val raw = notes.trim()
     val lines = raw.lineSequence().toList()
     val chineseIndex = lines.indexOfFirst { line -> DREAMSHADER_CHANGELOG_CHINESE_HEADER.matches(line) }
     if (chineseIndex < 0) {
-        return wrapped
+        return "<pre>$raw</pre>"
     }
 
     val isChinese = Locale.getDefault().language.equals("zh", ignoreCase = true)
@@ -336,6 +329,26 @@ private fun selectLocalizedChangeNotesHtml(notes: String): String {
         lines.take(chineseIndex).joinToString("\n").trim()
     }
     return "<pre>$localized</pre>"
+}
+
+private fun readPluginVersion(): String? {
+    val loader = DreamShaderWelcomeProjectActivity::class.java.classLoader ?: return null
+    return runCatching {
+        loader.getResourceAsStream(DREAMSHADER_PLUGIN_INFO_RESOURCE)?.use { input ->
+            val properties = Properties()
+            properties.load(input)
+            properties.getProperty("version")?.trim()
+        }
+    }.getOrNull()
+}
+
+private fun readBundledChangelog(): String {
+    val loader = DreamShaderWelcomeProjectActivity::class.java.classLoader ?: return ""
+    return runCatching {
+        loader.getResourceAsStream(DREAMSHADER_CHANGELOG_RESOURCE)?.use { input ->
+            input.bufferedReader(Charsets.UTF_8).readText()
+        }.orEmpty()
+    }.getOrDefault("")
 }
 
 private fun escapeHtml(input: String): String {

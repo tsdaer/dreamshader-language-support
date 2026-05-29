@@ -17,6 +17,20 @@ dependencies {
     }
 }
 
+tasks.processResources {
+    val pluginVersion = providers.gradleProperty("version")
+    inputs.property("pluginVersion", pluginVersion)
+    from("CHANGELOG.md")
+    filesMatching("dreamshader-plugin.properties") {
+        val resolvedVersion = pluginVersion.orNull ?: "0.0.0"
+        expand(
+            mapOf(
+                "pluginVersion" to resolvedVersion
+            )
+        )
+    }
+}
+
 intellijPlatform {
     val pluginMetadata = providers.fileContents(layout.projectDirectory.file("README.md")).asText.map { readme ->
         val startMarker = "<!-- plugin-metadata:start -->"
