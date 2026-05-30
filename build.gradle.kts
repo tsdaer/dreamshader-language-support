@@ -1,8 +1,8 @@
-import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+
 import org.jetbrains.changelog.tasks.PatchChangelogTask
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import java.nio.file.Files
 import java.nio.file.Path
-import org.gradle.language.jvm.tasks.ProcessResources
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
