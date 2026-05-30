@@ -41,33 +41,10 @@ object DreamShaderSymbolModelBuilder {
             .filter { node -> findAncestorOfType(node, DreamShaderElementTypes.DECLARATION) == null }
 
         val declarationSymbols = declarationNodes.mapNotNull { declarationNode ->
-            val declarationPsi = parserDefinition.createElement(declarationNode) as? DreamShaderDeclaration ?: return@mapNotNull null
-            val keyword = declarationPsi.keywordText() ?: return@mapNotNull null
-            val name = declarationPsi.declarationName().orEmpty().ifBlank { "<anonymous>" }
-            val displayName = "$keyword $name"
-            val range = declarationNode.textRange ?: return@mapNotNull null
-            val sectionSymbols = collectNodes(declarationNode, DreamShaderElementTypes.SECTION)
-                .filter { sectionNode ->
-                    val sectionAncestor = findAncestorOfType(sectionNode, DreamShaderElementTypes.SECTION)
-                    val declarationAncestor = findAncestorOfType(sectionNode, DreamShaderElementTypes.DECLARATION)
-                    sectionAncestor == null && declarationAncestor == declarationNode
-                }
-                .mapNotNull { sectionNode ->
-                    val sectionPsi = parserDefinition.createElement(sectionNode) as? DreamShaderSection ?: return@mapNotNull null
-                    val sectionName = sectionPsi.sectionName() ?: return@mapNotNull null
-                    val sectionRange = sectionNode.textRange ?: return@mapNotNull null
-                    DreamShaderSymbol(
-                        name = sectionName,
-                        kind = DreamShaderSymbolKind.SECTION,
-                        range = normalizeRange(sectionRange)
-                    )
-                }
-
-            DreamShaderSymbol(
-                name = displayName,
-                kind = DreamShaderSymbolKind.DECLARATION,
-                range = normalizeRange(range),
-                children = sectionSymbols
+            buildDeclarationSymbolFromAstNode(
+                declarationNode = declarationNode,
+                parserDefinition = parserDefinition,
+                kind = DreamShaderSymbolKind.DECLARATION
             )
         }
 
@@ -80,17 +57,55 @@ object DreamShaderSymbolModelBuilder {
         val displayName = "$keyword $name"
         val range = declaration.textRange ?: return null
 
-        val sections = PsiTreeUtil.findChildrenOfType(declaration, DreamShaderSection::class.java)
-            .filter { section -> PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null }
+        val sections = directChildSections(declaration)
             .mapNotNull { section -> buildSectionSymbol(section) }
             .toList()
+        val namespaceMembers = if (keyword == "namespace") {
+            directChildDeclarations(declaration)
+                .mapNotNull { member -> buildNamespaceMemberSymbol(member) }
+                .toList()
+        } else {
+            emptyList()
+        }
 
         return DreamShaderSymbol(
             name = displayName,
             kind = DreamShaderSymbolKind.DECLARATION,
             range = normalizeRange(range),
+            children = if (namespaceMembers.isNotEmpty()) namespaceMembers else sections
+        )
+    }
+
+    private fun buildNamespaceMemberSymbol(declaration: DreamShaderDeclaration): DreamShaderSymbol? {
+        val keyword = declaration.keywordText() ?: return null
+        val name = declaration.declarationName().orEmpty().ifBlank { "<anonymous>" }
+        val displayName = "$keyword $name"
+        val range = declaration.textRange ?: return null
+        val sections = directChildSections(declaration)
+            .mapNotNull { section -> buildSectionSymbol(section) }
+            .toList()
+
+        return DreamShaderSymbol(
+            name = displayName,
+            kind = DreamShaderSymbolKind.NAMESPACE_MEMBER,
+            range = normalizeRange(range),
             children = sections
         )
+    }
+
+    private fun directChildDeclarations(parentDeclaration: DreamShaderDeclaration): List<DreamShaderDeclaration> {
+        return PsiTreeUtil.findChildrenOfType(parentDeclaration, DreamShaderDeclaration::class.java)
+            .filter { declaration ->
+                declaration != parentDeclaration &&
+                    PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true) == parentDeclaration
+            }
+            .toList()
+    }
+
+    private fun directChildSections(declaration: DreamShaderDeclaration): List<DreamShaderSection> {
+        return PsiTreeUtil.findChildrenOfType(declaration, DreamShaderSection::class.java)
+            .filter { section -> PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null }
+            .toList()
     }
 
     private fun buildSectionSymbol(section: DreamShaderSection): DreamShaderSymbol? {
@@ -107,6 +122,66 @@ object DreamShaderSymbolModelBuilder {
     private fun normalizeRange(range: TextRange): TextRange {
         if (range.startOffset <= range.endOffset) return range
         return TextRange(range.endOffset, range.startOffset)
+    }
+
+    private fun buildDeclarationSymbolFromAstNode(
+        declarationNode: ASTNode,
+        parserDefinition: DreamShaderParserDefinition,
+        kind: DreamShaderSymbolKind
+    ): DreamShaderSymbol? {
+        val declarationPsi = parserDefinition.createElement(declarationNode) as? DreamShaderDeclaration ?: return null
+        val keyword = declarationPsi.keywordText() ?: return null
+        val name = declarationPsi.declarationName().orEmpty().ifBlank { "<anonymous>" }
+        val displayName = "$keyword $name"
+        val range = declarationNode.textRange ?: return null
+
+        val sectionSymbols = collectDirectChildSectionNodes(declarationNode)
+            .mapNotNull { sectionNode ->
+                val sectionPsi = parserDefinition.createElement(sectionNode) as? DreamShaderSection ?: return@mapNotNull null
+                val sectionName = sectionPsi.sectionName() ?: return@mapNotNull null
+                val sectionRange = sectionNode.textRange ?: return@mapNotNull null
+                DreamShaderSymbol(
+                    name = sectionName,
+                    kind = DreamShaderSymbolKind.SECTION,
+                    range = normalizeRange(sectionRange)
+                )
+            }
+
+        val namespaceMemberSymbols = if (keyword == "namespace") {
+            collectDirectChildDeclarationNodes(declarationNode)
+                .mapNotNull { childNode ->
+                    buildDeclarationSymbolFromAstNode(
+                        declarationNode = childNode,
+                        parserDefinition = parserDefinition,
+                        kind = DreamShaderSymbolKind.NAMESPACE_MEMBER
+                    )
+                }
+        } else {
+            emptyList()
+        }
+
+        return DreamShaderSymbol(
+            name = displayName,
+            kind = kind,
+            range = normalizeRange(range),
+            children = if (namespaceMemberSymbols.isNotEmpty()) namespaceMemberSymbols else sectionSymbols
+        )
+    }
+
+    private fun collectDirectChildSectionNodes(declarationNode: ASTNode): List<ASTNode> {
+        return collectNodes(declarationNode, DreamShaderElementTypes.SECTION)
+            .filter { sectionNode ->
+                val sectionAncestor = findAncestorOfType(sectionNode, DreamShaderElementTypes.SECTION)
+                val declarationAncestor = findAncestorOfType(sectionNode, DreamShaderElementTypes.DECLARATION)
+                sectionAncestor == null && declarationAncestor == declarationNode
+            }
+    }
+
+    private fun collectDirectChildDeclarationNodes(declarationNode: ASTNode): List<ASTNode> {
+        return collectNodes(declarationNode, DreamShaderElementTypes.DECLARATION)
+            .filter { childNode ->
+                findAncestorOfType(childNode, DreamShaderElementTypes.DECLARATION) == declarationNode
+            }
     }
 
     private fun collectNodes(root: ASTNode, elementType: com.intellij.psi.tree.IElementType): List<ASTNode> {

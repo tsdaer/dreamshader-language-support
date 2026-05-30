@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.nio.file.Paths
 
@@ -109,5 +110,231 @@ class DreamShaderGotoDeclarationHandlerTest : BasePlatformTestCase() {
         val handler = DreamShaderGotoDeclarationHandler()
         val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
         assertTrue("Expected no goto declaration target for removed builtin-library fallback", targets.isNullOrEmpty())
+    }
+
+    fun testGotoDeclarationResolvesNamespaceQualifiedFunctionMember() {
+        val file = myFixture.configureByText(
+            "namespace_call.dsh",
+            """
+            Namespace Tools {
+                Function ApplyTint(in float3 InColor, out float3 OutColor) {
+                    OutColor = InColor;
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    Tools::<caret>ApplyTint(float3(1,1,1), ColorOut);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("Tools::ApplyTint(") + "Tools::".length + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected member identifier source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto declaration target for namespaced member", targets)
+        assertTrue(targets!!.isNotEmpty())
+        val declaration = targets.first() as DreamShaderDeclaration
+        assertEquals("ApplyTint", declaration.declarationName())
+        assertEquals("function", declaration.keywordText())
+    }
+
+    fun testGotoDeclarationResolvesNamespaceQualifierToNamespaceDeclaration() {
+        val file = myFixture.configureByText(
+            "namespace_qualifier.dsh",
+            """
+            Namespace Tools {
+                GraphFunction Blend(in float A, out float B) {
+                    B = A;
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    <caret>Tools::Blend(1.0, ValueOut);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("Tools::") + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected namespace qualifier source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto declaration target for namespace qualifier", targets)
+        assertTrue(targets!!.isNotEmpty())
+        val declaration = targets.first() as DreamShaderDeclaration
+        assertEquals("Tools", declaration.declarationName())
+        assertEquals("namespace", declaration.keywordText())
+    }
+
+    fun testGotoDeclarationResolvesNestedNamespaceQualifiedFunctionMember() {
+        val file = myFixture.configureByText(
+            "nested_namespace_call.dsh",
+            """
+            Namespace A {
+                Namespace B {
+                    Function Blend(in float X, out float Y) {
+                        Y = X;
+                    }
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    A::B::Blend(1.0, ValueOut);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("A::B::Blend(") + "A::B::".length + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected nested namespaced member identifier source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto declaration target for nested namespaced member", targets)
+        assertTrue(targets!!.isNotEmpty())
+        val declaration = targets.first() as DreamShaderDeclaration
+        assertEquals("Blend", declaration.declarationName())
+        assertEquals("function", declaration.keywordText())
+    }
+
+    fun testGotoDeclarationResolvesNestedNamespaceQualifierToNamespaceDeclaration() {
+        val file = myFixture.configureByText(
+            "nested_namespace_qualifier.dsh",
+            """
+            Namespace A {
+                Namespace B {
+                    GraphFunction Make(in float X, out float Y) {
+                        Y = X;
+                    }
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    A::<caret>B::Make(1.0, ValueOut);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = myFixture.editor.caretModel.offset
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected nested namespace qualifier source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto declaration target for nested namespace qualifier", targets)
+        assertTrue(targets!!.isNotEmpty())
+        val declaration = targets.first() as DreamShaderDeclaration
+        assertEquals("B", declaration.declarationName())
+        assertEquals("namespace", declaration.keywordText())
+    }
+
+    fun testGotoDeclarationDoesNotFallbackToTopLevelForUnresolvedQualifiedMember() {
+        val file = myFixture.configureByText(
+            "namespace_unresolved_qualified_member.dsh",
+            """
+            Namespace Tools {
+            }
+
+            Function ApplyTint {
+            }
+
+            Shader Main {
+                Graph {
+                    Tools::ApplyTint();
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("Tools::ApplyTint(") + "Tools::".length + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected qualified member source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertTrue("Expected no goto target when qualified namespace member is unresolved", targets.isNullOrEmpty())
+    }
+
+    fun testGotoDeclarationUnqualifiedCallPrefersNearestNamespaceMember() {
+        val file = myFixture.configureByText(
+            "namespace_unqualified_prefer_nearest.dsh",
+            """
+            Namespace Tools {
+                Function ApplyTint {
+                }
+
+                Shader Main {
+                    Graph {
+                        ApplyTint();
+                    }
+                }
+            }
+
+            Function ApplyTint {
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("ApplyTint();") + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected unqualified call source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto target for unqualified namespaced member call", targets)
+        assertTrue(targets!!.isNotEmpty())
+        val declaration = targets.first() as DreamShaderDeclaration
+        assertEquals("ApplyTint", declaration.declarationName())
+        assertEquals("function", declaration.keywordText())
+        val namespaceOwner = PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true)
+        assertNotNull("Expected resolved declaration to be owned by namespace", namespaceOwner)
+        assertTrue(
+            "Expected resolved declaration to be inside Namespace Tools",
+            namespaceOwner!!.keywordText() == "namespace" && namespaceOwner.declarationName() == "Tools"
+        )
+    }
+
+    fun testGotoDeclarationUnqualifiedCallFallsBackToParentNamespaceMember() {
+        val file = myFixture.configureByText(
+            "namespace_unqualified_parent_fallback.dsh",
+            """
+            Namespace A {
+                Function Blend {
+                }
+
+                Namespace B {
+                    Shader Main {
+                        Graph {
+                            Blend();
+                        }
+                    }
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("Blend();") + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected unqualified nested call source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto target for parent namespace member call", targets)
+        assertTrue(targets!!.isNotEmpty())
+        val declaration = targets.first() as DreamShaderDeclaration
+        assertEquals("Blend", declaration.declarationName())
+        assertEquals("function", declaration.keywordText())
     }
 }

@@ -69,6 +69,48 @@ class DreamShaderPsiParserTest : BasePlatformTestCase() {
         assertTrue(declarationPsi.isFunctionLike())
     }
 
+    fun testNamespaceParsesAsDeclarationNode() {
+        val text = """
+            Namespace Tools {
+                Function Util(in float x, out float y) {
+                    y = x;
+                }
+            }
+        """.trimIndent()
+
+        val parserDefinition = DreamShaderParserDefinition()
+        val builder = PsiBuilderFactoryImpl().createBuilder(parserDefinition, DreamShaderLexer(), text)
+        val root = DreamShaderPsiParser().parse(DreamShaderElementTypes.FILE, builder)
+
+        val declarationNode = requireNotNull(findFirstNodeByType(root, DreamShaderElementTypes.DECLARATION))
+        val declarationPsi = parserDefinition.createElement(declarationNode) as DreamShaderDeclaration
+
+        assertEquals("namespace", declarationPsi.keywordText())
+        assertEquals("Tools", declarationPsi.declarationName())
+        assertTrue(declarationPsi.bodyTextRange() != null)
+        assertTrue(!declarationPsi.isFunctionLike())
+    }
+
+    fun testNamespaceContainsNestedDeclarationNodes() {
+        val text = """
+            Namespace Tools {
+                Function Util(in float x, out float y) {
+                    y = x;
+                }
+                GraphFunction Blend(in float a, out float b) {
+                    b = a;
+                }
+            }
+        """.trimIndent()
+
+        val parserDefinition = DreamShaderParserDefinition()
+        val builder = PsiBuilderFactoryImpl().createBuilder(parserDefinition, DreamShaderLexer(), text)
+        val root = DreamShaderPsiParser().parse(DreamShaderElementTypes.FILE, builder)
+
+        val declarationCount = countNodesByType(root, DreamShaderElementTypes.DECLARATION)
+        assertTrue("Expected namespace + nested declarations", declarationCount >= 3)
+    }
+
     private fun countNodesByType(node: ASTNode?, elementType: com.intellij.psi.tree.IElementType): Int {
         if (node == null) return 0
         var count = 0

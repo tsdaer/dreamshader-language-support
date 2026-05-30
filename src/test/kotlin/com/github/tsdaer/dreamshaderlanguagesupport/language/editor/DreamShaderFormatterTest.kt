@@ -2,10 +2,24 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.intellij.application.options.CodeStyle
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.psi.codeStyle.CodeStyleSettingsManager
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class DreamShaderFormatterTest : BasePlatformTestCase() {
+    override fun setUp() {
+        super.setUp()
+        CodeStyleSettingsManager.getInstance(project).dropTemporarySettings()
+    }
+
+    override fun tearDown() {
+        try {
+            CodeStyleSettingsManager.getInstance(project).dropTemporarySettings()
+        } finally {
+            super.tearDown()
+        }
+    }
+
     fun testBasicFormattingIndentSpacingAndBraces() {
         val file = myFixture.configureByText(
             "formatter_sample.dsm",
@@ -100,5 +114,27 @@ class DreamShaderFormatterTest : BasePlatformTestCase() {
             """.trimIndent(),
             file.text
         )
+    }
+
+    fun testFormattingPreservesNamespaceDoubleColonWithoutSpaces() {
+        val file = myFixture.configureByText(
+            "formatter_namespace_double_colon.dsh",
+            """
+            Shader Main {
+                Graph {
+                    float3 c = Tools::Util();
+                }
+            }
+            """.trimIndent()
+        )
+
+        WriteCommandAction.runWriteCommandAction(project) {
+            CodeStyleManager.getInstance(project).reformat(file)
+        }
+
+        assertTrue(file.text.contains("Tools::Util"))
+        assertFalse(file.text.contains("Tools:: Util"))
+        assertFalse(file.text.contains("Tools ::Util"))
+        assertFalse(file.text.contains("Tools : : Util"))
     }
 }

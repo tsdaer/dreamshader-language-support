@@ -221,6 +221,15 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("VirtualFunction requires Asset option in Options (Settings alias is also accepted)")
     }
 
+    fun testVirtualFunctionOptionAssetRequiredEvenWhenNoOptionsOrSettingsSection() {
+        val text = """
+            VirtualFunction BufferWriter {
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_required_no_sections.dsh", text)
+        assertHasError("VirtualFunction requires Asset option in Options (Settings alias is also accepted)")
+    }
+
     fun testVirtualFunctionOptionAssetAcceptsSettingsAlias() {
         val text = """
             VirtualFunction BufferWriter {
@@ -320,6 +329,15 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
             }
         """.trimIndent()
         myFixture.configureByText("virtual_function_description_missing_recommended.dsh", text)
+        assertHasWarning("VirtualFunction should provide Options.Description (Settings alias is also accepted)")
+    }
+
+    fun testVirtualFunctionOptionDescriptionRecommendedEvenWhenNoOptionsOrSettingsSection() {
+        val text = """
+            VirtualFunction BufferWriter {
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_description_missing_no_sections.dsh", text)
         assertHasWarning("VirtualFunction should provide Options.Description (Settings alias is also accepted)")
     }
 
@@ -1154,6 +1172,48 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
             }
         """.trimIndent()
         myFixture.configureByText("graph_return_statement.dsm", text)
+        assertHasError("Graph section does not support return statement")
+    }
+
+    fun testFunctionBodyDisallowsForLoopStatement() {
+        val text = """
+            Function BuildNoise(in float X, out float OutValue) {
+                for (int i = 0; i < 4; i = i + 1) {
+                    OutValue = X;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("function_for_loop_statement.dsh", text)
+        assertHasError("Graph section does not support loop statement 'for'")
+    }
+
+    fun testGraphFunctionBodyDisallowsSwitchStatement() {
+        val text = """
+            GraphFunction BuildNoise(in float X, out float OutValue) {
+                switch (Mode) {
+                    default:
+                        OutValue = X;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("graphfunction_switch_statement.dsh", text)
+        assertHasError("Graph section does not support switch statement 'switch'")
+        assertHasError("Graph section does not support switch statement 'default'")
+    }
+
+    fun testFunctionBodyDisallowsBreakContinueAndReturnStatements() {
+        val text = """
+            Function BuildNoise(in float X, out float OutValue) {
+                if (X > 0) {
+                    break;
+                    continue;
+                    return;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("function_flow_statements.dsh", text)
+        assertHasError("Graph section does not support control statement 'break'")
+        assertHasError("Graph section does not support control statement 'continue'")
         assertHasError("Graph section does not support return statement")
     }
 

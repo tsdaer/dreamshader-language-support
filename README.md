@@ -376,7 +376,7 @@ Implemented in M5:
 | Folding                                        | Done   | `lang.foldingBuilder` added; supports brace blocks and `// region` / `// endregion`                                                                                                                                                      |
 | Semantic tokens                                | Done   | Semantic classification implemented for declaration keywords/names, section names, callable references, `UE` namespace, namespace qualifiers (`Namespace::`), local symbol declaration/usage split, and `Base.*` material output members |
 | Diagnostics                                    | Done   | Local parser + section-shape + semantic diagnostics implemented with tests                                                                                                                                                               |
-| Go to Definition / References                  | Done   | Go to Definition + Find References implemented for top-level declaration symbols                                                                                                                                                         |
+| Go to Definition / References                  | Done   | Go to Definition + Find References implemented for imports, top-level declarations, namespace-qualified members (`A::B::Member`), and namespace-scoped unqualified member resolution                                                                 |
 | Document symbols / structure                   | Done   | Structure view integrated for top-level declarations and sections                                                                                                                                                                        |
 | Inlay hints                                    | Done   | Parameter name hints implemented with callable-context filtering and settings toggle (`enableCodeLens` controls this inlay-hints layer), including same-file declared callable signatures (`Function`/`GraphFunction`/`VirtualFunction`) |
 | Formatting                                     | Done   | Basic formatter implemented (`lang.formatter`): indentation, operator spacing, braces/section layout                                                                                                                                     |
@@ -427,8 +427,10 @@ Acceptance criteria:
 Current staged scope:
 - Typed PSI added for `DECLARATION` / `SECTION`.
 - Typed PSI accessors added: declaration keyword/name/body range, section name/body range, function-like declaration marker.
+- `Namespace` is now parsed as a typed top-level `DECLARATION` node (instead of lexer-only handling), aligning parser/symbol/diagnostic flows.
+- `Namespace` declaration bodies now parse nested declaration PSI nodes (for example `Function` / `GraphFunction`) to support tree-style navigation.
 - Completion context analysis now uses PSI tree information for file inputs and parser-based structure analysis for text inputs (lexer kept only as defensive fallback).
-- Minimal symbol model added from typed PSI: top-level declarations with section children.
+- Minimal symbol model added from typed PSI: top-level declarations with section children, plus namespace child declarations.
 
 ### Milestone M2: Completion (Core Editing)
 
@@ -479,14 +481,22 @@ Implemented:
 - Supports multiline `{ ... }` folding and custom `// region ...` / `// endregion` folding.
 - Added regression tests in `DreamShaderFoldingBuilderTest`.
 - Internal symbol model builder added from typed PSI with tests (`DreamShaderSymbolModelBuilder` / `DreamShaderSymbolModelBuilderTest`).
-- Added structure view integration via `lang.psiStructureViewFactory` for top-level declarations and sections.
+- Added structure view integration via `lang.psiStructureViewFactory` for top-level declarations and sections, with namespace nodes expanding nested declarations.
 - Added regression test in `DreamShaderStructureViewModelTest`.
 - Added `DreamShaderGotoDeclarationHandler` via `gotoDeclarationHandler` extension.
-- Supports definition jump for `import "..."` targets (`.dsh/.dsf/.dsm`) and same-file top-level declaration symbol usages.
-- Added regression tests in `DreamShaderGotoDeclarationHandlerTest`.
+- Supports definition jump for `import "..."` targets (`.dsh/.dsf/.dsm`), same-file top-level declaration symbol usages, `Namespace::Member(...)` calls (both qualifier and member target), and namespace-scoped unqualified member calls.
+- Namespace navigation supports multi-level qualifier chains (`A::B::Member`) with full qualifier-path resolution: goto on `Member` resolves against the full namespace path (`A::B`), and goto on intermediate qualifier (`B`) resolves to the nested namespace declaration.
+- Qualified unresolved member calls (for example `Tools::Missing`) no longer fall back to top-level same-name declarations.
+- Added regression tests in `DreamShaderGotoDeclarationHandlerTest` (including unresolved qualified-member no-fallback and namespace-scope unqualified resolution cases).
+- Updated nested-qualifier goto regression test to use editor caret offset (`<caret>`) instead of manual string index arithmetic, preventing brittle offset drift in future fixture edits.
 - Added `DreamShaderReferencesSearchExecutor` via `referencesSearch` extension for declaration usage discovery.
+- References search is namespace-aware for `Namespace::Member` patterns, so same-name top-level and namespace members no longer cross-match.
+- References search now excludes declaration-name identifier tokens from usage results, so Find References/Rename operate on real usages only (declaration heads are no longer double-counted as references).
+- Namespace-aware references matching now uses full qualifier-path matching in multi-level chains (`A::B::Member`), so same-name members under different namespace paths (for example `A::B` vs `C::B`) do not cross-match.
+- Unqualified reference matching inside namespaces now follows enclosing namespace path scope (nearest scope first, then parent namespace path), aligning Find References/Rename with goto behavior.
 - Added `DreamShaderFindUsagesProvider` and `PsiNameIdentifierOwner` support on `DreamShaderDeclaration`.
 - Added regression tests in `DreamShaderFindReferencesTest` and `DreamShaderDeclarationRenameTest`.
+- Added rename regression hardening for namespace collisions: renaming namespace members/top-level declarations no longer cross-renames same-name declarations in the other scope, including nested same-name members under different namespace paths.
 - Added `DreamShaderDocumentationProvider` via `lang.documentationProvider` for hover docs on declarations, settings keys/values, `UE.*` builtins, function call signatures, and local variables (name/type/scope).
 - Hover resolution now prefers caret/original token context before resolved declaration target, so call-site and local-variable hovers are not shadowed by declaration fallback in IDE mouse hover flows.
 - Refactored hover documentation data storage/lookup to dot-path form (`path.path`), centralized in `DreamShaderDocumentationData` (for example `settings.domain.description`, `ueBuiltins.texcoord.signature`) and consumed through path-based accessors.
@@ -499,6 +509,10 @@ Implemented:
 - Extended section-shape diagnostics to declaration-aware schema constraints for `ShaderLayer` / `ShaderLayerBlend` / `Function` / `GraphFunction`, plus declaration-scoped `Results` alias handling (`ShaderFunction` / `VirtualFunction` only).
 - Added semantic rules for `VirtualFunction` `Options.Asset`: required option entry + asset-path validation with root constraints (`Game`, `Engine`, `Plugin.<Name>`, `Plugins.<Name>`).
 - Added `VirtualFunction` `Options/Settings` `Description` quality diagnostics (warning when missing, non-quoted, or empty string).
+- Extended `VirtualFunction` option diagnostics so missing `Asset`/`Description` are still reported when neither `Options` nor `Settings` section exists.
+- Extended unsupported Graph control-flow diagnostics to also apply inside `Function` and `GraphFunction` declaration bodies.
+- Added formatter spacing guard for namespace qualifiers so `Namespace::Member` always stays compact around `::` (no injected spaces before/after the double colon).
+- Stabilized formatter/rename regression tests against code-style setting leakage by resetting temporary code-style settings per formatter test lifecycle.
 - Added quick-fix for missing `VirtualFunction` `Description` (`Add Description option`) to insert a default quoted description entry.
 - Added quick-fix actions for `VirtualFunction` `Description` warnings:
   - `Quote Description value` for non-quoted descriptions.
@@ -538,7 +552,7 @@ Rule format:
 - `Expected`: expected behavior
 - `Test`: suggested test name
 
-#### M3 Audit Matrix (Checked on `2026-05-26`)
+#### M3 Audit Matrix (Checked on `2026-05-30`)
 
 | ID         | Status        | Test mapping                                                                                                                                                                                                         |
 |------------|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

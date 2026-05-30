@@ -86,6 +86,18 @@ private class DreamShaderFormattingBlock(
 
         if (leftType == TokenType.WHITE_SPACE || rightType == TokenType.WHITE_SPACE) return null
 
+        if (isDoubleColonPair(left, right)) {
+            return spaces(0)
+        }
+
+        if (isBeforeDoubleColon(left, right)) {
+            return spaces(0)
+        }
+
+        if (isAfterDoubleColon(left, right)) {
+            return spaces(0)
+        }
+
         if (rightType == DreamShaderTokenTypes.RBRACE) {
             return lineBreak()
         }
@@ -243,5 +255,42 @@ private class DreamShaderFormattingBlock(
             "&&", "||" -> common.SPACE_AROUND_LOGICAL_OPERATORS
             else -> true
         }
+    }
+
+    private fun isDoubleColonPair(left: ASTNode, right: ASTNode): Boolean {
+        return left.elementType == DreamShaderTokenTypes.OPERATOR &&
+            right.elementType == DreamShaderTokenTypes.OPERATOR &&
+            left.text == ":" &&
+            right.text == ":"
+    }
+
+    private fun isBeforeDoubleColon(left: ASTNode, right: ASTNode): Boolean {
+        if (right.elementType != DreamShaderTokenTypes.OPERATOR || right.text != ":") return false
+        val next = nextSignificantNode(right) ?: return false
+        return next.elementType == DreamShaderTokenTypes.OPERATOR && next.text == ":"
+    }
+
+    private fun isAfterDoubleColon(left: ASTNode, right: ASTNode): Boolean {
+        if (left.elementType != DreamShaderTokenTypes.OPERATOR || left.text != ":") return false
+        val prev = previousSignificantNode(left) ?: return false
+        return prev.elementType == DreamShaderTokenTypes.OPERATOR && prev.text == ":"
+    }
+
+    private fun previousSignificantNode(node: ASTNode): ASTNode? {
+        var current = node.treePrev
+        while (current != null) {
+            if (current.elementType != TokenType.WHITE_SPACE) return current
+            current = current.treePrev
+        }
+        return null
+    }
+
+    private fun nextSignificantNode(node: ASTNode): ASTNode? {
+        var current = node.treeNext
+        while (current != null) {
+            if (current.elementType != TokenType.WHITE_SPACE) return current
+            current = current.treeNext
+        }
+        return null
     }
 }

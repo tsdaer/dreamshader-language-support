@@ -52,24 +52,46 @@ class DreamShaderStructureViewElement(
         }
     }
 
-    override fun getChildren(): Array<TreeElement> = when (element) {
-        is DreamShaderPsiFile -> {
-            PsiTreeUtil.findChildrenOfType(element, DreamShaderDeclaration::class.java)
-                .filter { declaration ->
-                    PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true) == null
+    override fun getChildren(): Array<TreeElement> {
+        return when (element) {
+            is DreamShaderPsiFile -> {
+                PsiTreeUtil.findChildrenOfType(element, DreamShaderDeclaration::class.java)
+                    .filter { declaration ->
+                        PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true) == null
+                    }
+                    .map { DreamShaderStructureViewElement(it) }
+                    .toTypedArray()
+            }
+            is DreamShaderDeclaration -> {
+                if (element.keywordText() == "namespace") {
+                    val childDeclarations = PsiTreeUtil.findChildrenOfType(element, DreamShaderDeclaration::class.java)
+                        .filter { declaration ->
+                            declaration != element &&
+                                PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true) == element
+                        }
+                    if (childDeclarations.isNotEmpty()) {
+                        childDeclarations
+                            .map { DreamShaderStructureViewElement(it) }
+                            .toTypedArray()
+                    } else {
+                        PsiTreeUtil.findChildrenOfType(element, DreamShaderSection::class.java)
+                            .filter { section ->
+                                PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null
+                            }
+                            .map { DreamShaderStructureViewElement(it) }
+                            .toTypedArray()
+                    }
+                } else {
+                    PsiTreeUtil.findChildrenOfType(element, DreamShaderSection::class.java)
+                        .filter { section ->
+                            PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null
+                        }
+                        .map { DreamShaderStructureViewElement(it) }
+                        .toTypedArray()
                 }
-                .map { DreamShaderStructureViewElement(it) }
-                .toTypedArray()
+            }
+            else -> emptyArray()
         }
-        is DreamShaderDeclaration -> {
-            PsiTreeUtil.findChildrenOfType(element, DreamShaderSection::class.java)
-                .filter { section ->
-                    PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null
-                }
-                .map { DreamShaderStructureViewElement(it) }
-                .toTypedArray()
-        }
-        else -> emptyArray()
     }
 
     override fun navigate(requestFocus: Boolean) {

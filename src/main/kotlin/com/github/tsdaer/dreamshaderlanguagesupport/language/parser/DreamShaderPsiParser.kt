@@ -91,6 +91,13 @@ class DreamShaderPsiParser : PsiParser {
                     builder.advanceLexer()
                 }
 
+                DreamShaderTokenTypes.KEYWORD -> {
+                    if (depth == 1 && tryParseDeclaration(builder)) {
+                        continue
+                    }
+                    builder.advanceLexer()
+                }
+
                 else -> builder.advanceLexer()
             }
         }

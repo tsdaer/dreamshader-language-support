@@ -43,4 +43,39 @@ class DreamShaderStructureViewModelTest : BasePlatformTestCase() {
             .sorted()
         assertEquals(listOf("inputs", "outputs"), shaderSectionNames)
     }
+
+    fun testStructureViewNamespaceShowsNestedDeclarations() {
+        val file = myFixture.configureByText(
+            "structure_namespace.dsh",
+            """
+            Namespace Tools {
+                Function Util(in float x, out float y) {
+                    y = x;
+                }
+                GraphFunction Blend(in float a, out float b) {
+                    b = a;
+                }
+            }
+            """.trimIndent()
+        )
+
+        val factory = DreamShaderStructureViewFactory()
+        val builder = factory.getStructureViewBuilder(file)
+        assertTrue("Expected structure view builder for DreamShader file", builder != null)
+
+        val treeBuilder = builder as TreeBasedStructureViewBuilder
+        val model = treeBuilder.createStructureViewModel(myFixture.editor) as DreamShaderStructureViewModel
+        val root = model.root as DreamShaderStructureViewElement
+        val topChildren = root.children.map { it as DreamShaderStructureViewElement }
+
+        assertEquals(1, topChildren.size)
+        val namespaceNode = topChildren.first()
+        assertEquals("namespace Tools", namespaceNode.presentation.presentableText)
+
+        val memberNames = namespaceNode.children
+            .map { it as DreamShaderStructureViewElement }
+            .mapNotNull { it.presentation.presentableText }
+            .sorted()
+        assertEquals(listOf("function Util", "graphfunction Blend"), memberNames)
+    }
 }

@@ -90,17 +90,6 @@ internal class DreamShaderSemanticAnnotationPipeline {
                         )
                     ).range(declaration.nameIdentifier ?: declaration).create()
                 }
-
-            tokens.filter { token ->
-                token.depthBefore == 0 &&
-                    token.type == DreamShaderTokenTypes.KEYWORD &&
-                    token.text.equals("namespace", ignoreCase = true)
-            }.forEach { token ->
-                holder.newAnnotation(
-                    HighlightSeverity.ERROR,
-                    DreamShaderBundle.message("diagnostic.topLevelNamespaceNotAllowedInDsf")
-                ).range(token.range).create()
-            }
         }
         if (extension == "dsm") {
             topLevelDeclarations
@@ -270,11 +259,13 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
         if (keyword == "virtualfunction") {
             annotateVirtualFunctionAssetOptionRules(
+                declaration = declaration,
                 optionSections = groupedByName["options"].orEmpty(),
                 settingsAliasSections = groupedByName["settings"].orEmpty(),
                 holder = holder
             )
             annotateVirtualFunctionDescriptionOptionRules(
+                declaration = declaration,
                 optionSections = groupedByName["options"].orEmpty(),
                 settingsAliasSections = groupedByName["settings"].orEmpty(),
                 holder = holder
@@ -283,6 +274,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     private fun annotateVirtualFunctionAssetOptionRules(
+        declaration: DreamShaderDeclaration,
         optionSections: List<DreamShaderSection>,
         settingsAliasSections: List<DreamShaderSection>,
         holder: AnnotationHolder
@@ -310,15 +302,17 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 annotation.create()
             }
         }
-        if (!hasAsset && candidateSections.isNotEmpty()) {
+        if (!hasAsset) {
+            val rangeTarget = candidateSections.firstOrNull() ?: declaration.nameIdentifier ?: declaration
             holder.newAnnotation(
                 HighlightSeverity.ERROR,
                 DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequired")
-            ).range(candidateSections.first()).create()
+            ).range(rangeTarget).create()
         }
     }
 
     private fun annotateVirtualFunctionDescriptionOptionRules(
+        declaration: DreamShaderDeclaration,
         optionSections: List<DreamShaderSection>,
         settingsAliasSections: List<DreamShaderSection>,
         holder: AnnotationHolder
@@ -353,14 +347,17 @@ internal class DreamShaderSemanticAnnotationPipeline {
                     .create()
             }
         }
-        if (!hasDescription && candidateSections.isNotEmpty()) {
-            val fallbackSection = candidateSections.first()
-            holder.newAnnotation(
+        if (!hasDescription) {
+            val fallbackSection = candidateSections.firstOrNull()
+            val annotationTarget = fallbackSection ?: declaration.nameIdentifier ?: declaration
+            val annotation = holder.newAnnotation(
                 HighlightSeverity.WARNING,
                 DreamShaderBundle.message("diagnostic.virtualFunctionOptionDescriptionRecommended")
-            ).range(fallbackSection)
-                .withFix(createAddVirtualFunctionDescriptionQuickFix(fallbackSection))
-                .create()
+            ).range(annotationTarget)
+            if (fallbackSection != null) {
+                annotation.withFix(createAddVirtualFunctionDescriptionQuickFix(fallbackSection))
+            }
+            annotation.create()
         }
     }
 
@@ -1184,21 +1181,13 @@ internal class DreamShaderSemanticAnnotationPipeline {
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
     ) {
-        topLevelDeclarations.forEach { declaration ->
-            directSectionsOf(declaration)
-                .filter { canonicalSectionName(it.sectionName()) == "graph" }
-                .forEach { section ->
-                    val body = sectionBody(section) ?: return@forEach
-                    val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
-                    tokens.forEach { token ->
-                        if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
-                        if (token.text !in UNSUPPORTED_GRAPH_LOOP_KEYWORDS) return@forEach
-                        holder.newAnnotation(
-                            HighlightSeverity.ERROR,
-                            DreamShaderBundle.message("diagnostic.graphDisallowsLoopStatement", token.text)
-                        ).range(token.range).create()
-                    }
-                }
+        annotateUnsupportedGraphKeywordDiagnostics(
+            sourceText = sourceText,
+            topLevelDeclarations = topLevelDeclarations,
+            holder = holder,
+            keywords = UNSUPPORTED_GRAPH_LOOP_KEYWORDS
+        ) { keyword ->
+            DreamShaderBundle.message("diagnostic.graphDisallowsLoopStatement", keyword)
         }
     }
 
@@ -1207,21 +1196,13 @@ internal class DreamShaderSemanticAnnotationPipeline {
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
     ) {
-        topLevelDeclarations.forEach { declaration ->
-            directSectionsOf(declaration)
-                .filter { canonicalSectionName(it.sectionName()) == "graph" }
-                .forEach { section ->
-                    val body = sectionBody(section) ?: return@forEach
-                    val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
-                    tokens.forEach { token ->
-                        if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
-                        if (token.text !in UNSUPPORTED_GRAPH_SWITCH_KEYWORDS) return@forEach
-                        holder.newAnnotation(
-                            HighlightSeverity.ERROR,
-                            DreamShaderBundle.message("diagnostic.graphDisallowsSwitchStatement", token.text)
-                        ).range(token.range).create()
-                    }
-                }
+        annotateUnsupportedGraphKeywordDiagnostics(
+            sourceText = sourceText,
+            topLevelDeclarations = topLevelDeclarations,
+            holder = holder,
+            keywords = UNSUPPORTED_GRAPH_SWITCH_KEYWORDS
+        ) { keyword ->
+            DreamShaderBundle.message("diagnostic.graphDisallowsSwitchStatement", keyword)
         }
     }
 
@@ -1230,21 +1211,13 @@ internal class DreamShaderSemanticAnnotationPipeline {
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
     ) {
-        topLevelDeclarations.forEach { declaration ->
-            directSectionsOf(declaration)
-                .filter { canonicalSectionName(it.sectionName()) == "graph" }
-                .forEach { section ->
-                    val body = sectionBody(section) ?: return@forEach
-                    val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
-                    tokens.forEach { token ->
-                        if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
-                        if (token.text !in UNSUPPORTED_GRAPH_FLOW_KEYWORDS) return@forEach
-                        holder.newAnnotation(
-                            HighlightSeverity.ERROR,
-                            DreamShaderBundle.message("diagnostic.graphDisallowsControlStatement", token.text)
-                        ).range(token.range).create()
-                    }
-                }
+        annotateUnsupportedGraphKeywordDiagnostics(
+            sourceText = sourceText,
+            topLevelDeclarations = topLevelDeclarations,
+            holder = holder,
+            keywords = UNSUPPORTED_GRAPH_FLOW_KEYWORDS
+        ) { keyword ->
+            DreamShaderBundle.message("diagnostic.graphDisallowsControlStatement", keyword)
         }
     }
 
@@ -1253,22 +1226,58 @@ internal class DreamShaderSemanticAnnotationPipeline {
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
     ) {
+        annotateUnsupportedGraphKeywordDiagnostics(
+            sourceText = sourceText,
+            topLevelDeclarations = topLevelDeclarations,
+            holder = holder,
+            keywords = setOf(UNSUPPORTED_GRAPH_RETURN_KEYWORD)
+        ) {
+            DreamShaderBundle.message("diagnostic.graphDisallowsReturnStatement")
+        }
+    }
+
+    private fun annotateUnsupportedGraphKeywordDiagnostics(
+        sourceText: String,
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder,
+        keywords: Set<String>,
+        message: (String) -> String
+    ) {
+        val normalizedKeywords = keywords.map { it.lowercase(Locale.ROOT) }.toSet()
+        if (normalizedKeywords.isEmpty()) return
+
+        val visitedKeywordOffsets = mutableSetOf<Int>()
+        graphConstrainedBodyRanges(topLevelDeclarations).forEach { range ->
+            val tokens = lexTokens(sourceText, range.startOffset, range.endOffset)
+            tokens.forEach { token ->
+                if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
+                val normalized = token.text.lowercase(Locale.ROOT)
+                if (normalized !in normalizedKeywords) return@forEach
+                if (!visitedKeywordOffsets.add(token.range.startOffset)) return@forEach
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    message(normalized)
+                ).range(token.range).create()
+            }
+        }
+    }
+
+    private fun graphConstrainedBodyRanges(topLevelDeclarations: List<DreamShaderDeclaration>): List<TextRange> {
+        val ranges = mutableListOf<TextRange>()
         topLevelDeclarations.forEach { declaration ->
             directSectionsOf(declaration)
                 .filter { canonicalSectionName(it.sectionName()) == "graph" }
                 .forEach { section ->
                     val body = sectionBody(section) ?: return@forEach
-                    val tokens = lexTokens(sourceText, body.startOffset, body.startOffset + body.text.length)
-                    tokens.forEach { token ->
-                        if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
-                        if (token.text != UNSUPPORTED_GRAPH_RETURN_KEYWORD) return@forEach
-                        holder.newAnnotation(
-                            HighlightSeverity.ERROR,
-                            DreamShaderBundle.message("diagnostic.graphDisallowsReturnStatement")
-                        ).range(token.range).create()
-                    }
+                    ranges.add(TextRange(body.startOffset, body.startOffset + body.text.length))
                 }
+
+            val keyword = declaration.keywordText()
+            if (keyword == "function" || keyword == "graphfunction") {
+                declaration.bodyTextRange()?.let { ranges.add(it) }
+            }
         }
+        return ranges
     }
 
     // 语义诊断：调用签名检查、导入解析与导入 quick fix。
