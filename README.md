@@ -1574,27 +1574,8 @@ IDEA/IntelliJ Gradle configuration (project-verified):
 ### Terminal Build Prerequisite (Important)
 
 This project **must** run Gradle with Java 17+.
-On this machine, system `java` may point to Java 11, so AI/terminal commands should bootstrap JDK 21 explicitly.
-All terminal Gradle operations should also pin Gradle user home to `J:/Gradle`.
-
-Use this before Gradle commands (AI/terminal only):
-```powershell
-$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"
-$env:Path="$env:JAVA_HOME\bin;$env:Path"
-$env:GRADLE_USER_HOME="J:/Gradle"
-java -version
-.\gradlew.bat -version
-```
-
-Expected checks:
-- `java -version` shows `21.x`
-- `gradlew -version` reports JVM `21.x`
-- `GRADLE_USER_HOME` points to `J:/Gradle`
-
-Observed failure when using Java 11:
-```text
-Gradle requires JVM 17 or later to run. Your build is currently configured to use JVM 11.
-```
+Commands now resolve the required Java runtime automatically, so terminal runs **no longer require explicit `JAVA_HOME`/`Path` setup**.
+All terminal Gradle operations should pin Gradle user home to `J:/Gradle`.
 
 Quick verification command:
 ```powershell
@@ -1602,8 +1583,9 @@ $env:GRADLE_USER_HOME="J:/Gradle"
 .\gradlew.bat -version
 ```
 
-Expected check:
-- `gradlew -version` reports JVM `21.x`
+Expected checks:
+- `gradlew -version` reports JVM `17+` (project-verified with `21.x`)
+- `GRADLE_USER_HOME` points to `J:/Gradle`
 
 ### Build Commands
 
@@ -1655,8 +1637,6 @@ Compatibility fallback is also enabled:
 
 Local PowerShell example (no `openssl` required):
 ```powershell
-$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"
-$env:Path="$env:JAVA_HOME\bin;$env:Path"
 $env:GRADLE_USER_HOME="J:/Gradle"
 
 # Option A: Use project-local .secrets defaults (no extra env vars needed)
@@ -1776,31 +1756,29 @@ Bridge command placeholders:
 
 ### One-Liner Commands
 
-AI/terminal recommended one-liners (with JDK 21 bootstrap):
+AI/terminal recommended one-liners:
 ```powershell
-$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; $env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat build --no-configuration-cache
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat build --no-configuration-cache
 ```
 
 ```powershell
-$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; $env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat test --no-configuration-cache
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat test --no-configuration-cache
 ```
 
 ```powershell
-$env:JAVA_HOME="C:\Users\Bunny\.jbr\jbr-21.0.2-windows-x64-b375.1"; $env:Path="$env:JAVA_HOME\bin;$env:Path"; $env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat runIde --no-configuration-cache
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat runIde --no-configuration-cache
 ```
 
 ### Quick Troubleshooting
 
-- If build still reports JVM 11:
+- If build reports JVM below 17:
 ```powershell
 $env:GRADLE_USER_HOME="J:/Gradle"
 .\gradlew.bat -version
-Get-Command java | Format-List Source
-java -version
 ```
-Re-run the JDK 21 bootstrap commands above in the same shell session.
+Reopen terminal and run again, then confirm Gradle wrapper/IDE settings are synced.
 
 - If Rider IDE can build but terminal cannot:
 Rider uses configured Gradle JVM.
-Terminal uses system `java` from `PATH`.
-Fix terminal by setting `JAVA_HOME`, prepending `$env:JAVA_HOME\bin`, and keeping `$env:GRADLE_USER_HOME="J:/Gradle"`.
+Terminal may use a different runtime context.
+Verify terminal with `.\gradlew.bat -version`, and keep `$env:GRADLE_USER_HOME="J:/Gradle"` for consistency.

@@ -7,6 +7,7 @@ import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.options.ShowSettingsUtil
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
@@ -19,7 +20,7 @@ import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-class DreamShaderWelcomeFileEditorProvider : FileEditorProvider {
+class DreamShaderWelcomeFileEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean {
         return file is DreamShaderWelcomeVirtualFile
     }
@@ -87,6 +88,8 @@ private class DreamShaderWelcomeFileEditor(
     override fun getPreferredFocusedComponent(): JComponent = root
 
     override fun getName(): String = "DreamShader Welcome"
+
+    override fun getFile(): VirtualFile = file
 
     override fun setState(state: FileEditorState) {
         // No mutable editor state.

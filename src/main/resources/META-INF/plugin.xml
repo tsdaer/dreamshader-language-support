@@ -80,7 +80,8 @@
                 id="DreamShaderBridgeStatus"
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeStatusBarWidgetFactory"/>
         <fileEditorProvider
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeFileEditorProvider"/>
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeFileEditorProvider"
+                dumbAware="true"/>
         <postStartupActivity
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeProjectActivity"/>
     </extensions>
