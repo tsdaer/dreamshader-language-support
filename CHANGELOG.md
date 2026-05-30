@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-05-30
+
+### Added
+
+- Added declaration navigation support for namespace declarations, including go-to declaration, find usages, and structure/symbol coverage.
+- Added in-progress action disabling for GitHub package search in the package store dialog, preventing duplicate operations while requests are running.
+
+### Changed
+
+- Reworked Code Vision click handling to improve interaction stability and align with package search state transitions.
+- Improved hover override configuration and welcome guidance: built-in entries can now be edited/reset, and missing project root prompts are clearer.
+- Updated changelog localization pipeline by splitting language files (`CHANGELOG.md` / `CHANGELOG.zh-CN.md`) and syncing release CI patching behavior.
+- Updated README release presentation with Marketplace plugin card and static badges.
+
 ## [0.0.2] - 2026-05-29
 
 ### Added
@@ -37,6 +51,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
-[Unreleased]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...HEAD
+[Unreleased]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...HEAD
+[0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3
 [0.0.2]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.1...0.0.2
 [0.0.1]: https://github.com/tsdaer/dreamshader-language-support/commits/0.0.1

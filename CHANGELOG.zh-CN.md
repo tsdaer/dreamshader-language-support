@@ -4,6 +4,20 @@
 
 ## [未发布]
 
+## [0.0.3] - 2026-05-30
+
+### 新增
+
+- 新增命名空间声明的导航能力，覆盖跳转声明、查找用法与结构/符号视图关联。
+- Package Store 中 GitHub 包搜索在请求进行时会禁用进行中的操作按钮，避免重复触发。
+
+### 变更
+
+- 重构 Code Vision 点击处理流程，提升交互稳定性并与包搜索状态切换保持一致。
+- 增强 Hover 覆盖设置与欢迎页引导：内置条目支持编辑/重置，缺失项目根目录时的提示更清晰。
+- 更新变更日志本地化流程：拆分语言文件（`CHANGELOG.md` / `CHANGELOG.zh-CN.md`）并同步 Release CI 的补丁策略。
+- 更新 README 发布展示方式，加入 Marketplace 插件卡片与静态徽章。
+
 ## [0.0.2] - 2026-05-29
 
 ### 新增
@@ -37,6 +51,7 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
-[未发布]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...HEAD
+[未发布]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...HEAD
+[0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3
 [0.0.2]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.1...0.0.2
 [0.0.1]: https://github.com/tsdaer/dreamshader-language-support/commits/0.0.1
