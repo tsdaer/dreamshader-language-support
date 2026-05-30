@@ -147,6 +147,32 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertNoError("VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))")
     }
 
+    fun testVirtualFunctionOptionAssetRejectsPathWithoutObjectSegment() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = <caret>Path(Game);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_path_missing_object_segment.dsh", text)
+        assertHasError("VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))")
+    }
+
+    fun testVirtualFunctionOptionAssetPathMissingObjectSegmentQuickFixCompletesPath() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = <caret>Path(Game);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_path_missing_object_segment_fix.dsh", text)
+        val action = myFixture.findSingleIntention("Complete Path(...) with object segment")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("Asset = Path(Game, Textures/T_AutoAsset);"))
+    }
+
     fun testVirtualFunctionOptionAssetRejectsBareIdentifier() {
         val text = """
             VirtualFunction BufferWriter {
@@ -207,6 +233,33 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         val action = myFixture.findSingleIntention("Replace Path root with Game")
         myFixture.launchAction(action)
         assertTrue(myFixture.file.text.contains("Asset = Path(Game, Materials/M_VFAsset);"))
+    }
+
+    fun testVirtualFunctionOptionAssetUnknownQuotedRootQuickFixReplacesWithGame() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = <caret>"Project/Materials/M_VFAsset";
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_unknown_quoted_root_fix.dsh", text)
+        assertHasError("VirtualFunction Options.Asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>")
+        val action = myFixture.findSingleIntention("Replace Path root with Game")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("""Asset = "Game/Materials/M_VFAsset";"""))
+    }
+
+    fun testVirtualFunctionOptionAssetRejectsLeadingSlashUnknownRoot() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = <caret>"/Project/Materials/M_VFAsset";
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_leading_slash_unknown_root.dsh", text)
+        assertHasError("VirtualFunction Options.Asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>")
     }
 
     fun testVirtualFunctionOptionAssetRequiresOptionEntry() {
@@ -442,6 +495,77 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Unknown type 'zzzzq'")
     }
 
+    fun testUnknownTypeInFunctionParameter() {
+        val text = """
+            Function ApplyTint(in <caret>float9 color, out vec3 result) {
+                result = float3(color, color, color);
+            }
+        """.trimIndent()
+        myFixture.configureByText("unknown_type_function_parameter.dsh", text)
+        assertHasError("Unknown type 'float9'. Did you mean 'float'?")
+    }
+
+    fun testUnknownTypeInFunctionParameterQuickFixReplacesWithSuggestion() {
+        val text = """
+            Function ApplyTint(in <caret>float9 color, out vec3 result) {
+                result = float3(color, color, color);
+            }
+        """.trimIndent()
+        myFixture.configureByText("unknown_type_function_parameter_fix.dsh", text)
+        val action = myFixture.findSingleIntention("Replace with 'float'")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("Function ApplyTint(in float color, out vec3 result) {"))
+    }
+
+    fun testUnknownTypeInGraphFunctionParameter() {
+        val text = """
+            GraphFunction BuildNoise(in <caret>float9 seed, out float outValue) {
+                outValue = seed;
+            }
+        """.trimIndent()
+        myFixture.configureByText("unknown_type_graphfunction_parameter.dsf", text)
+        assertHasError("Unknown type 'float9'. Did you mean 'float'?")
+    }
+
+    fun testUnknownTypeInGraphLocalVariable() {
+        val text = """
+            Shader Main {
+                Graph {
+                    <caret>float9 temp = 1.0;
+                    Base.BaseColor = float3(temp, temp, temp);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("unknown_type_graph_local_var.dsm", text)
+        assertHasError("Unknown type 'float9'. Did you mean 'float'?")
+    }
+
+    fun testUnknownTypeInGraphLocalVariableQuickFixReplacesWithSuggestion() {
+        val text = """
+            Shader Main {
+                Graph {
+                    <caret>float9 temp = 1.0;
+                    Base.BaseColor = float3(temp, temp, temp);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("unknown_type_graph_local_var_fix.dsm", text)
+        val action = myFixture.findSingleIntention("Replace with 'float'")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("float temp = 1.0;"))
+    }
+
+    fun testKnownTypeInFunctionLocalVariableDoesNotReportUnknownType() {
+        val text = """
+            Function ApplyTint(in vec3 color, out vec3 result) {
+                float localWeight = 1.0;
+                result = color * localWeight;
+            }
+        """.trimIndent()
+        myFixture.configureByText("known_type_function_local_var.dsf", text)
+        assertNoError("Unknown type 'float'")
+    }
+
     fun testVolumeTextureTypeIsRecognized() {
         val text = """
             Shader Main {
@@ -496,6 +620,126 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.configureByText("const_volumetexture_with_default_asset.dsm", text)
         assertNoError("const VolumeTexture must explicitly specify a default asset (for example = Path(...)).")
+    }
+
+    fun testConstTextureCubeDefaultAssetRejectsBareIdentifier() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env = <caret>EnvTexture;
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_default_asset_invalid_identifier.dsm", text)
+        assertHasError("const TextureCube default asset must be an asset path (quoted object path or Path(...)).")
+    }
+
+    fun testConstTextureCubeDefaultAssetRejectsPathWithoutObjectSegment() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env = <caret>Path(Game);
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_default_asset_path_missing_object_segment.dsm", text)
+        assertHasError("const TextureCube default asset must be an asset path (quoted object path or Path(...)).")
+    }
+
+    fun testConstTextureCubeDefaultAssetPathMissingObjectSegmentQuickFixCompletesPath() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env = <caret>Path(Game);
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_default_asset_path_missing_object_segment_fix.dsm", text)
+        val action = myFixture.findSingleIntention("Complete Path(...) with object segment")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("const TextureCube Env = Path(Game, Textures/T_AutoAsset);"))
+    }
+
+    fun testConstTextureCubeDefaultAssetRejectsUnknownPathRoot() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env = <caret>Path(Project, Textures/T_Env);
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_default_asset_invalid_root.dsm", text)
+        assertHasError("const TextureCube default asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>.")
+    }
+
+    fun testConstTextureCubeDefaultAssetUnknownRootQuickFixReplacesWithGame() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env = <caret>Path(Project, Textures/T_Env);
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_default_asset_invalid_root_fix.dsm", text)
+        val action = myFixture.findSingleIntention("Replace Path root with Game")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("const TextureCube Env = Path(Game, Textures/T_Env);"))
+    }
+
+    fun testConstTextureCubeDefaultAssetUnknownQuotedRootQuickFixReplacesWithGame() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env = <caret>"Project/Textures/T_Env.T_Env";
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_default_asset_unknown_quoted_root_fix.dsm", text)
+        assertHasError("const TextureCube default asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>.")
+        val action = myFixture.findSingleIntention("Replace Path root with Game")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("""const TextureCube Env = "Game/Textures/T_Env.T_Env";"""))
+    }
+
+    fun testConstTextureCubeDefaultAssetRejectsLeadingSlashUnknownRoot() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env = <caret>"/Project/Textures/T_Env.T_Env";
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_default_asset_leading_slash_unknown_root.dsm", text)
+        assertHasError("const TextureCube default asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>.")
+    }
+
+    fun testConstTextureCubeDefaultAssetAcceptsQuotedObjectPath() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env = "/Game/Textures/T_Env.T_Env";
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_default_asset_quoted_path_ok.dsm", text)
+        assertNoError("const TextureCube default asset must be an asset path (quoted object path or Path(...)).")
+        assertNoError("const TextureCube default asset path root '/Game' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>.")
     }
 
     fun testConstTexture2DStillAllowsOmittedDefaultAsset() {

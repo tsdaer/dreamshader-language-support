@@ -143,6 +143,8 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateSettingsDiagnostics(topLevelDeclarations, holder)
         annotateBaseOutputMemberDiagnostics(topLevelDeclarations, holder)
         annotateUnknownTypeDiagnostics(topLevelDeclarations, holder)
+        annotateUnknownDeclarationParameterTypeDiagnostics(topLevelDeclarations, holder)
+        annotateUnknownBodyLocalTypeDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateConstTextureDefaultAssetDiagnostics(topLevelDeclarations, holder)
         annotateUnknownExpressionClassDiagnostics(file, sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphLoopDiagnostics(sourceText, topLevelDeclarations, holder)
@@ -372,6 +374,14 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 if (isUnknownRoot) {
                     annotation.withFix(createReplaceVirtualFunctionAssetRootWithGameQuickFix(section, valueRange, trimmed))
                 }
+                if (isPathCallMissingObjectSegment(trimmed)) {
+                    annotation.withFix(
+                        createCompleteAssetPathObjectSegmentQuickFix(
+                            replacementRange = valueRange,
+                            rawValue = trimmed
+                        )
+                    )
+                }
                 annotation.create()
             }
         }
@@ -535,6 +545,11 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
     private fun replaceVirtualFunctionAssetRootWithGame(rawValue: String): String? {
         val trimmed = rawValue.trim()
+        if (isQuotedStringLiteral(trimmed)) {
+            val unquoted = trimmed.substring(1, trimmed.length - 1).trim()
+            val replacementUnquoted = replaceQuotedAssetRootWithGame(unquoted) ?: return null
+            return "\"$replacementUnquoted\""
+        }
         val matcher = PATH_CALL_WITH_CAPTURE_PATTERN.matcher(trimmed)
         if (!matcher.matches()) return null
         val prefix = matcher.group(1) ?: return null
@@ -544,6 +559,41 @@ internal class DreamShaderSemanticAnnotationPipeline {
         if (args.isEmpty()) return null
         val firstArg = args[0]
         args[0] = if (firstArg.startsWith("\"") && firstArg.endsWith("\"")) "\"Game\"" else "Game"
+        return prefix + args.joinToString(", ") + suffix
+    }
+
+    private fun replaceQuotedAssetRootWithGame(unquotedPath: String): String? {
+        val normalized = unquotedPath.trim().removePrefix("/")
+        if (normalized.isBlank()) return null
+        if (!normalized.contains('/')) return null
+        val segments = normalized.split('/', limit = 2)
+        if (segments.size < 2) return null
+        val tail = segments[1].trim()
+        if (tail.isBlank()) return null
+        return "Game/$tail"
+    }
+
+    private fun isPathCallMissingObjectSegment(rawValue: String): Boolean {
+        val trimmed = rawValue.trim()
+        val matcher = PATH_CALL_WITH_CAPTURE_PATTERN.matcher(trimmed)
+        if (!matcher.matches()) return false
+        val inside = matcher.group(2)?.trim().orEmpty()
+        if (inside.isBlank()) return false
+        val args = splitTopLevel(inside, ',').map { it.trim() }
+        return args.size == 1 && args[0].isNotBlank()
+    }
+
+    private fun completePathCallWithObjectSegment(rawValue: String): String? {
+        val trimmed = rawValue.trim()
+        val matcher = PATH_CALL_WITH_CAPTURE_PATTERN.matcher(trimmed)
+        if (!matcher.matches()) return null
+        val prefix = matcher.group(1) ?: return null
+        val inside = matcher.group(2)?.trim().orEmpty()
+        val suffix = matcher.group(3) ?: ")"
+        if (inside.isBlank()) return null
+        val args = splitTopLevel(inside, ',').map { it.trim() }.toMutableList()
+        if (args.size != 1 || args[0].isBlank()) return null
+        args.add("Textures/T_AutoAsset")
         return prefix + args.joinToString(", ") + suffix
     }
 
@@ -933,6 +983,87 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
+    private fun annotateUnknownDeclarationParameterTypeDiagnostics(
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        topLevelDeclarations.forEach { declaration ->
+            val keyword = declaration.keywordText()
+            if (keyword != "function" && keyword != "graphfunction") return@forEach
+            val signature = parseDeclarationParameters(declaration.text) ?: return@forEach
+            signature.params.forEach { param ->
+                val typeName = param.typeName ?: return@forEach
+                val typeRange = param.typeRangeInDeclaration ?: return@forEach
+                val lower = typeName.lowercase(Locale.ROOT)
+                if (lower in KNOWN_TYPES || lower in TYPE_QUALIFIERS) return@forEach
+                val range = TextRange(
+                    declaration.textRange.startOffset + typeRange.startOffset,
+                    declaration.textRange.startOffset + typeRange.endOffset
+                )
+                val suggestion = suggestTypeName(typeName)
+                val message = if (suggestion != null) {
+                    DreamShaderBundle.message("diagnostic.unknownTypeWithSuggestion", typeName, suggestion)
+                } else {
+                    DreamShaderBundle.message("diagnostic.unknownType", typeName)
+                }
+                val annotation = holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    message
+                ).range(range)
+                if (suggestion != null) {
+                    annotation.withFix(
+                        createReplaceDeclarationRangeQuickFix(
+                            declaration = declaration,
+                            targetRangeInDeclaration = typeRange,
+                            replacement = suggestion,
+                            text = DreamShaderBundle.message("quickfix.typeReplaceWithSuggestion", suggestion),
+                            family = DreamShaderBundle.message("quickfix.family.semantic")
+                        )
+                    )
+                }
+                annotation.create()
+            }
+        }
+    }
+
+    private fun annotateUnknownBodyLocalTypeDiagnostics(
+        sourceText: String,
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        graphConstrainedBodyRanges(topLevelDeclarations).forEach { bodyRange ->
+            val bodyText = sourceText.substring(bodyRange.startOffset, bodyRange.endOffset)
+            val matcher = TYPED_DECLARATION_PATTERN.matcher(bodyText)
+            while (matcher.find()) {
+                val type = matcher.group(1) ?: continue
+                val lower = type.lowercase(Locale.ROOT)
+                if (lower in KNOWN_TYPES || lower in TYPE_QUALIFIERS) continue
+                val range = TextRange(bodyRange.startOffset + matcher.start(1), bodyRange.startOffset + matcher.end(1))
+                val suggestion = suggestTypeName(type)
+                val message = if (suggestion != null) {
+                    DreamShaderBundle.message("diagnostic.unknownTypeWithSuggestion", type, suggestion)
+                } else {
+                    DreamShaderBundle.message("diagnostic.unknownType", type)
+                }
+                val annotation = holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    message
+                ).range(range)
+                if (suggestion != null) {
+                    annotation.withFix(
+                        createReplaceFileRangeQuickFix(
+                            replacementRange = range,
+                            replacement = suggestion,
+                            text = DreamShaderBundle.message("quickfix.typeReplaceWithSuggestion", suggestion),
+                            family = DreamShaderBundle.message("quickfix.family.semantic")
+                        )
+                    )
+                }
+                annotation.create()
+            }
+        }
+    }
+
     private fun annotateConstTextureDefaultAssetDiagnostics(
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
@@ -952,18 +1083,53 @@ internal class DreamShaderSemanticAnnotationPipeline {
                             val matcher = CONST_TEXTURE_DECLARATION_PATTERN.matcher(trimmed)
                             if (matcher.find()) {
                                 val type = matcher.group(1) ?: ""
-                                val hasInitializer = !matcher.group(2).isNullOrBlank()
-                                if (type.lowercase(Locale.ROOT) in CONST_TEXTURE_TYPES_REQUIRING_EXPLICIT_DEFAULT_ASSET && !hasInitializer) {
+                                if (type.lowercase(Locale.ROOT) in CONST_TEXTURE_TYPES_REQUIRING_EXPLICIT_DEFAULT_ASSET) {
+                                    val initializerRaw = matcher.group(2)?.trim().orEmpty()
                                     val typeStartInTrimmed = matcher.start(1)
                                     val typeEndInTrimmed = matcher.end(1)
                                     val range = TextRange(
                                         body.startOffset + statementStart + trimmedStartInStatement + typeStartInTrimmed,
                                         body.startOffset + statementStart + trimmedStartInStatement + typeEndInTrimmed
                                     )
-                                    holder.newAnnotation(
-                                        HighlightSeverity.ERROR,
-                                        DreamShaderBundle.message("diagnostic.constTextureRequiresExplicitDefaultAsset", type)
-                                    ).range(range).create()
+                                    if (initializerRaw.isBlank()) {
+                                        holder.newAnnotation(
+                                            HighlightSeverity.ERROR,
+                                            DreamShaderBundle.message("diagnostic.constTextureRequiresExplicitDefaultAsset", type)
+                                        ).range(range).create()
+                                    } else {
+                                        val initializerStartInTrimmed = matcher.start(2)
+                                        val initializerEndInTrimmed = matcher.end(2)
+                                        val initializerRange = TextRange(
+                                            body.startOffset + statementStart + trimmedStartInStatement + initializerStartInTrimmed,
+                                            body.startOffset + statementStart + trimmedStartInStatement + initializerEndInTrimmed
+                                        )
+                                        val error = validateConstTextureDefaultAssetValue(type, initializerRaw)
+                                        if (error != null) {
+                                            val annotation = holder.newAnnotation(
+                                                HighlightSeverity.ERROR,
+                                                error
+                                            ).range(initializerRange)
+                                            val pathRoot = extractPathRoot(initializerRaw)
+                                            val isUnknownRoot = pathRoot != null && !isAllowedVirtualFunctionAssetRoot(pathRoot)
+                                            if (isUnknownRoot) {
+                                                annotation.withFix(
+                                                    createReplaceFileRangeAssetRootWithGameQuickFix(
+                                                        valueRange = initializerRange,
+                                                        rawValue = initializerRaw
+                                                    )
+                                                )
+                                            }
+                                            if (isPathCallMissingObjectSegment(initializerRaw)) {
+                                                annotation.withFix(
+                                                    createCompleteAssetPathObjectSegmentQuickFix(
+                                                        replacementRange = initializerRange,
+                                                        rawValue = initializerRaw
+                                                    )
+                                                )
+                                            }
+                                            annotation.create()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1242,6 +1408,139 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 if (!FileModificationService.getInstance().preparePsiElementForWrite(targetSection)) return
                 val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
                 replaceSectionRelativeRange(document, targetSection, relativeRange, replacement)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun createReplaceDeclarationRangeQuickFix(
+        declaration: DreamShaderDeclaration,
+        targetRangeInDeclaration: TextRange,
+        replacement: String,
+        text: String,
+        family: String
+    ): IntentionAction {
+        val declarationPointer: SmartPsiElementPointer<DreamShaderDeclaration> = SmartPointerManager.createPointer(declaration)
+        return object : IntentionAction {
+            override fun getText(): String = text
+
+            override fun getFamilyName(): String = family
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                return declarationPointer.element?.isValid == true
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetDeclaration = declarationPointer.element ?: return
+                val targetFile = targetDeclaration.containingFile ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetDeclaration)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                val declarationStart = targetDeclaration.textRange.startOffset
+                val start = (declarationStart + targetRangeInDeclaration.startOffset).coerceIn(0, document.textLength)
+                val end = (declarationStart + targetRangeInDeclaration.endOffset).coerceIn(start, document.textLength)
+                document.replaceString(start, end, replacement)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun createReplaceFileRangeQuickFix(
+        replacementRange: TextRange,
+        replacement: String,
+        text: String,
+        family: String
+    ): IntentionAction {
+        return object : IntentionAction {
+            override fun getText(): String = text
+
+            override fun getFamilyName(): String = family
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                if (file == null || !file.isValid) return false
+                return replacementRange.startOffset >= 0 &&
+                    replacementRange.endOffset >= replacementRange.startOffset &&
+                    replacementRange.endOffset <= file.textLength
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetFile = file ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetFile)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                val start = replacementRange.startOffset.coerceIn(0, document.textLength)
+                val end = replacementRange.endOffset.coerceIn(start, document.textLength)
+                document.replaceString(start, end, replacement)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun createReplaceFileRangeAssetRootWithGameQuickFix(
+        valueRange: TextRange,
+        rawValue: String
+    ): IntentionAction {
+        return object : IntentionAction {
+            override fun getText(): String =
+                DreamShaderBundle.message("quickfix.virtualFunctionOptionAssetReplaceRootWithGame")
+
+            override fun getFamilyName(): String =
+                DreamShaderBundle.message("quickfix.family.semantic")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                if (file == null || !file.isValid) return false
+                return valueRange.startOffset >= 0 &&
+                    valueRange.endOffset >= valueRange.startOffset &&
+                    valueRange.endOffset <= file.textLength &&
+                    replaceVirtualFunctionAssetRootWithGame(rawValue) != null
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetFile = file ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetFile)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                val replacement = replaceVirtualFunctionAssetRootWithGame(rawValue) ?: return
+                val start = valueRange.startOffset.coerceIn(0, document.textLength)
+                val end = valueRange.endOffset.coerceIn(start, document.textLength)
+                document.replaceString(start, end, replacement)
+                PsiDocumentManager.getInstance(project).commitDocument(document)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
+    }
+
+    private fun createCompleteAssetPathObjectSegmentQuickFix(
+        replacementRange: TextRange,
+        rawValue: String
+    ): IntentionAction {
+        return object : IntentionAction {
+            override fun getText(): String =
+                DreamShaderBundle.message("quickfix.assetPathAddObjectSegment")
+
+            override fun getFamilyName(): String =
+                DreamShaderBundle.message("quickfix.family.semantic")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                if (file == null || !file.isValid) return false
+                return replacementRange.startOffset >= 0 &&
+                    replacementRange.endOffset >= replacementRange.startOffset &&
+                    replacementRange.endOffset <= file.textLength &&
+                    completePathCallWithObjectSegment(rawValue) != null
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val targetFile = file ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(targetFile)) return
+                val document = PsiDocumentManager.getInstance(project).getDocument(targetFile) ?: return
+                val replacement = completePathCallWithObjectSegment(rawValue) ?: return
+                val start = replacementRange.startOffset.coerceIn(0, document.textLength)
+                val end = replacementRange.endOffset.coerceIn(start, document.textLength)
+                document.replaceString(start, end, replacement)
                 PsiDocumentManager.getInstance(project).commitDocument(document)
             }
 
@@ -1802,15 +2101,27 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val rightParen = header.lastIndexOf(')')
         if (leftParen !in 0..<rightParen) return null
         val rawParams = header.substring(leftParen + 1, rightParen)
-        val params = splitTopLevel(rawParams, ',').mapNotNull { rawParam ->
+        val paramsStartOffset = leftParen + 1
+        val params = splitTopLevelWithOffsets(rawParams, ',').mapNotNull { segment ->
+            val rawParam = segment.text
             val trimmed = rawParam.trim()
             if (trimmed.isBlank()) return@mapNotNull null
             val nameMatch = PARAM_NAME_PATTERN.matcher(trimmed)
             if (!nameMatch.find()) return@mapNotNull null
             val name = nameMatch.group(1) ?: return@mapNotNull null
+            val nameStartInRaw = rawParam.lastIndexOf(name).takeIf { it >= 0 } ?: rawParam.length
+            val parameterType = parseDeclarationParameterType(rawParam, nameStartInRaw)
+            val typeRangeInDeclaration = parameterType?.rangeInParameter?.let { rangeInParameter ->
+                TextRange(
+                    paramsStartOffset + segment.startOffset + rangeInParameter.startOffset,
+                    paramsStartOffset + segment.startOffset + rangeInParameter.endOffset
+                )
+            }
             ParsedParam(
                 name = name,
-                isOut = OUT_QUALIFIER_PATTERN.matcher(trimmed).find()
+                isOut = OUT_QUALIFIER_PATTERN.matcher(trimmed).find(),
+                typeName = parameterType?.typeName,
+                typeRangeInDeclaration = typeRangeInDeclaration
             )
         }
         return ParsedSignature(params)
@@ -1912,6 +2223,10 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     private fun splitTopLevel(input: String, delimiter: Char): List<String> {
+        return splitTopLevelWithOffsets(input, delimiter).map { it.text }
+    }
+
+    private fun splitTopLevelWithOffsets(input: String, delimiter: Char): List<SplitSegment> {
         val result = mutableListOf<String>()
         var start = 0
         var parenDepth = 0
@@ -1951,7 +2266,31 @@ internal class DreamShaderSemanticAnnotationPipeline {
             i++
         }
         result.add(input.substring(start))
-        return result
+        return result.mapIndexed { index, segmentText ->
+            val segmentStart = if (index == 0) {
+                0
+            } else {
+                val priorLength = result.take(index).sumOf { it.length }
+                priorLength + index
+            }
+            SplitSegment(text = segmentText, startOffset = segmentStart)
+        }
+    }
+
+    private fun parseDeclarationParameterType(rawParameter: String, nameStartInParameter: Int): ParsedParameterType? {
+        val typeSearchEnd = nameStartInParameter.coerceIn(0, rawParameter.length)
+        if (typeSearchEnd <= 0) return null
+        val leadingPart = rawParameter.substring(0, typeSearchEnd)
+        val matcher = IDENTIFIER_PATTERN.matcher(leadingPart)
+        while (matcher.find()) {
+            val candidate = matcher.group() ?: continue
+            if (candidate.lowercase(Locale.ROOT) in TYPE_QUALIFIERS) continue
+            return ParsedParameterType(
+                typeName = candidate,
+                rangeInParameter = TextRange(matcher.start(), matcher.end())
+            )
+        }
+        return null
     }
 
     // 工具函数：PSI/token 遍历与文本范围辅助处理。
@@ -2114,6 +2453,18 @@ internal class DreamShaderSemanticAnnotationPipeline {
         return null
     }
 
+    private fun validateConstTextureDefaultAssetValue(type: String, value: String): String? {
+        if (value.isBlank()) {
+            return DreamShaderBundle.message("diagnostic.constTextureRequiresExplicitDefaultAsset", type)
+        }
+        val pathRoot = extractPathRoot(value)
+            ?: return DreamShaderBundle.message("diagnostic.constTextureDefaultAssetRequiresPath", type)
+        if (!isAllowedVirtualFunctionAssetRoot(pathRoot)) {
+            return DreamShaderBundle.message("diagnostic.constTextureDefaultAssetPathRootNotAllowed", type, pathRoot)
+        }
+        return null
+    }
+
     private fun isQuotedStringLiteral(value: String): Boolean {
         if (value.length < 2) return false
         return value.startsWith("\"") && value.endsWith("\"")
@@ -2124,12 +2475,18 @@ internal class DreamShaderSemanticAnnotationPipeline {
         if (trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 3) {
             val unquoted = trimmed.substring(1, trimmed.length - 1).trim()
             if (unquoted.isEmpty()) return null
+            if (unquoted.startsWith("/")) {
+                val normalized = unquoted.removePrefix("/")
+                if (normalized.isBlank()) return null
+                val root = normalized.substringBefore('/').trim()
+                return if (root.isBlank()) null else root
+            }
             return when {
-                unquoted.startsWith("/") -> "Game"
                 unquoted.startsWith("Game/") -> "Game"
                 unquoted.startsWith("Engine/") -> "Engine"
                 unquoted.startsWith("Plugin.") -> unquoted.substringBefore('/')
                 unquoted.startsWith("Plugins.") -> unquoted.substringBefore('/')
+                unquoted.contains('/') -> unquoted.substringBefore('/')
                 else -> null
             }
         }
@@ -2138,8 +2495,12 @@ internal class DreamShaderSemanticAnnotationPipeline {
         if (pathMatch.matches()) {
             val inside = trimmed.substringAfter('(').substringBeforeLast(')').trim()
             if (inside.isBlank()) return null
-            val firstArg = splitTopLevel(inside, ',').firstOrNull()?.trim().orEmpty()
+            val args = splitTopLevel(inside, ',').map { it.trim() }
+            if (args.size < 2) return null
+            val firstArg = args.firstOrNull().orEmpty()
             if (firstArg.isBlank()) return null
+            val secondArg = args[1].removePrefix("\"").removeSuffix("\"").trim()
+            if (secondArg.isBlank()) return null
             return firstArg.removePrefix("\"").removeSuffix("\"").trim()
         }
         return null
@@ -2248,12 +2609,27 @@ internal class DreamShaderSemanticAnnotationPipeline {
         return result
     }
 
+    private data class SplitSegment(
+        val text: String,
+        val startOffset: Int
+    )
+
+    /**
+     * Data model for ParsedParameterType.
+     */
+    private data class ParsedParameterType(
+        val typeName: String,
+        val rangeInParameter: TextRange
+    )
+
     /**
      * Data model for ParsedParam.
      */
     private data class ParsedParam(
         val name: String,
-        val isOut: Boolean
+        val isOut: Boolean,
+        val typeName: String?,
+        val typeRangeInDeclaration: TextRange?
     )
 
     /**
