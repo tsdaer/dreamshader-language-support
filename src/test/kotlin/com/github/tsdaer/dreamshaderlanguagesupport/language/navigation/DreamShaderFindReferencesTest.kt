@@ -187,6 +187,49 @@ class DreamShaderFindReferencesTest : BasePlatformTestCase() {
         assertEquals(usageElement, refs.first().element)
     }
 
+    fun testReferencesSearchForNestedNameAttributeNamespaceMemberUsesFullQualifierPath() {
+        val file = myFixture.configureByText(
+            "refs_nested_name_attr_namespace_full_path.dsh",
+            """
+            Namespace(Name="A") {
+                Namespace(Name="B") {
+                    Function Blend {
+                    }
+                }
+            }
+
+            Namespace(Name="C") {
+                Namespace(Name="B") {
+                    Function Blend {
+                    }
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    A::B::Blend();
+                    C::B::Blend();
+                }
+            }
+            """.trimIndent()
+        )
+
+        val declarationOffset = file.text.indexOf("Namespace(Name=\"A\")")
+        val aBlockStart = file.text.indexOf('{', declarationOffset)
+        val targetFunctionOffset = file.text.indexOf("Function Blend", aBlockStart) + "Function ".length
+        val nameElement = file.findElementAt(targetFunctionOffset)
+        assertNotNull("Expected nested namespace member declaration identifier", nameElement)
+        val declaration = nameElement!!.parent as DreamShaderDeclaration
+
+        val refs = ReferencesSearch.search(declaration).findAll()
+        assertEquals(1, refs.size)
+
+        val usageOffset = file.text.indexOf("A::B::Blend();") + "A::B::".length + 1
+        val usageElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected full-path namespaced usage identifier", usageElement)
+        assertEquals(usageElement, refs.first().element)
+    }
+
     fun testReferencesSearchFindsUsagesAcrossImportedFiles() {
         val projectBase = project.basePath ?: error("project base path is null")
         val importedPath = Paths.get(projectBase, "Shared", "Utils.dsh")

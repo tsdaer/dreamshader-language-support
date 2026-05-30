@@ -422,6 +422,7 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
 
     companion object {
         private val CALLABLE_NAME_ATTRIBUTE_DECLARATIONS = setOf(
+            "namespace",
             "virtualfunction",
             "shaderfunction",
             "shaderlayer",

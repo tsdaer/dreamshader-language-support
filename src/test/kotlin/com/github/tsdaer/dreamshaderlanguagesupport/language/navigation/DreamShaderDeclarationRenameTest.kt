@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.refactoring.rename.RenameProcessor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -56,13 +57,13 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         val nameElement = file.findElementAt(declarationOffset)
         assertNotNull("Expected namespace member declaration identifier", nameElement)
         val declaration = nameElement!!.parent as DreamShaderDeclaration
-        RenameProcessor(project, declaration, "Utility", false, false).run()
+        runRenameAndCommit(declaration, "Utility")
         val updated = file.text
 
-        assertTrue(updated.contains("Namespace Tools {\n    Function Utility {"))
-        assertTrue(updated.contains("Function Util {\n}"))
-        assertTrue(updated.contains("Tools::Utility"))
-        assertTrue(Regex("""\bUtil\s*\(""").containsMatchIn(updated))
+        assertMatches(updated, """Namespace\s+Tools\s*\{\s*Function\s+Utility\s*\{""")
+        assertMatches(updated, """Function\s+Util\s*\{\s*\}""")
+        assertMatches(updated, """Tools\s*::\s*Utility""")
+        assertMatches(updated, """\bUtil\s*\(""")
     }
 
     fun testRenameTopLevelFunctionDoesNotRenameNamespaceMemberSameName() {
@@ -90,13 +91,13 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         val nameElement = file.findElementAt(topLevelDeclarationOffset)
         assertNotNull("Expected top-level declaration identifier", nameElement)
         val declaration = nameElement!!.parent as DreamShaderDeclaration
-        RenameProcessor(project, declaration, "Utility", false, false).run()
+        runRenameAndCommit(declaration, "Utility")
         val updated = file.text
 
-        assertTrue(updated.contains("Namespace Tools {\n    Function Util {"))
-        assertTrue(updated.contains("Function Utility {\n}"))
-        assertTrue(updated.contains("Tools::Util"))
-        assertTrue(Regex("""\bUtility\s*\(""").containsMatchIn(updated))
+        assertMatches(updated, """Namespace\s+Tools\s*\{\s*Function\s+Util\s*\{""")
+        assertMatches(updated, """Function\s+Utility\s*\{\s*\}""")
+        assertMatches(updated, """Tools\s*::\s*Util""")
+        assertMatches(updated, """\bUtility\s*\(""")
     }
 
     fun testRenameNestedNamespaceMemberDoesNotRenameSameNameUnderOtherNamespacePath() {
@@ -133,13 +134,56 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         assertNotNull("Expected nested namespace member declaration identifier", nameElement)
         val declaration = nameElement!!.parent as DreamShaderDeclaration
 
-        RenameProcessor(project, declaration, "Compose", false, false).run()
+        runRenameAndCommit(declaration, "Compose")
         val updated = file.text
 
-        assertTrue(updated.contains("Namespace A {\n    Namespace B {\n        Function Compose {"))
-        assertTrue(updated.contains("Namespace C {\n    Namespace B {\n        Function Blend {"))
-        assertTrue(updated.contains("A::B::Compose"))
-        assertTrue(updated.contains("C::B::Blend"))
+        assertMatches(updated, """Namespace\s+A\s*\{\s*Namespace\s+B\s*\{\s*Function\s+Compose\s*\{""")
+        assertMatches(updated, """Namespace\s+C\s*\{\s*Namespace\s+B\s*\{\s*Function\s+Blend\s*\{""")
+        assertMatches(updated, """A\s*::\s*B\s*::\s*Compose""")
+        assertMatches(updated, """C\s*::\s*B\s*::\s*Blend""")
+    }
+
+    fun testRenameNestedNameAttributeNamespaceMemberDoesNotRenameSameNameUnderOtherNamespacePath() {
+        val file = myFixture.configureByText(
+            "rename_nested_name_attr_namespace_full_path.dsh",
+            """
+            Namespace(Name="A") {
+                Namespace(Name="B") {
+                    Function Blend {
+                    }
+                }
+            }
+
+            Namespace(Name="C") {
+                Namespace(Name="B") {
+                    Function Blend {
+                    }
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    A::B::Blend();
+                    C::B::Blend();
+                }
+            }
+            """.trimIndent()
+        )
+
+        val declarationOffset = file.text.indexOf("Namespace(Name=\"A\")")
+        val aBlockStart = file.text.indexOf('{', declarationOffset)
+        val targetFunctionOffset = file.text.indexOf("Function Blend", aBlockStart) + "Function ".length
+        val nameElement = file.findElementAt(targetFunctionOffset)
+        assertNotNull("Expected nested namespace member declaration identifier", nameElement)
+        val declaration = nameElement!!.parent as DreamShaderDeclaration
+
+        runRenameAndCommit(declaration, "Compose")
+        val updated = file.text
+
+        assertMatches(updated, """Namespace\(Name="A"\)\s*\{\s*Namespace\(Name="B"\)\s*\{\s*Function\s+Compose\s*\{""")
+        assertMatches(updated, """Namespace\(Name="C"\)\s*\{\s*Namespace\(Name="B"\)\s*\{\s*Function\s+Blend\s*\{""")
+        assertMatches(updated, """A\s*::\s*B\s*::\s*Compose""")
+        assertMatches(updated, """C\s*::\s*B\s*::\s*Blend""")
     }
 
     fun testRenameVirtualFunctionNameAttributeUpdatesStringAndUsages() {
@@ -173,7 +217,7 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         assertNotNull("Expected virtual function declaration identifier", nameElement)
         val declaration = nameElement!!.parent as DreamShaderDeclaration
 
-        RenameProcessor(project, declaration, "BufferOutput", false, false).run()
+        runRenameAndCommit(declaration, "BufferOutput")
         val updated = file.text
         assertTrue("Updated text:\n$updated", updated.contains("BufferOutput"))
 
@@ -237,7 +281,7 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         assertNotNull("Expected shader function declaration identifier", nameElement)
         val declaration = nameElement!!.parent as DreamShaderDeclaration
 
-        RenameProcessor(project, declaration, "F_OutputTint", false, false).run()
+        runRenameAndCommit(declaration, "F_OutputTint")
 
         val importedUpdated = importedPsi.text
         assertTrue("Updated imported text:\n$importedUpdated", importedUpdated.contains("F_OutputTint"))
@@ -248,8 +292,14 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         assertFalse(importedUpdated.contains("Functions/F_PulseTint"))
 
         val callerUpdated = caller.text
-        assertTrue(callerUpdated.contains("F_OutputTint(a)"))
-        assertFalse(callerUpdated.contains("F_PulseTint("))
+        assertTrue(
+            "Updated caller text:\n$callerUpdated",
+            Regex("""\bF_OutputTint\s*\(\s*a\s*\)""").containsMatchIn(callerUpdated)
+        )
+        assertFalse(
+            "Updated caller text:\n$callerUpdated",
+            Regex("""\bF_PulseTint\s*\(""").containsMatchIn(callerUpdated)
+        )
     }
 
     fun testDeclarationNameUsesVirtualFunctionNameAttributeLeaf() {
@@ -292,5 +342,14 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         val declaration = nameElement!!.parent as DreamShaderDeclaration
         assertEquals("F_PulseTint", declaration.declarationName())
         assertEquals("F_PulseTint", declaration.name)
+    }
+
+    private fun runRenameAndCommit(declaration: DreamShaderDeclaration, newName: String) {
+        RenameProcessor(project, declaration, newName, false, false).run()
+        PsiDocumentManager.getInstance(project).commitAllDocuments()
+    }
+
+    private fun assertMatches(text: String, pattern: String) {
+        assertTrue("Expected pattern `$pattern` in text:\n$text", Regex(pattern).containsMatchIn(text))
     }
 }

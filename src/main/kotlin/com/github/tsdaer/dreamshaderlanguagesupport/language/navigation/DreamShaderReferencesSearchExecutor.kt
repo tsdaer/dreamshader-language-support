@@ -288,6 +288,7 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
     companion object {
         private val IMPORT_EXTENSIONS = setOf("dsm", "dsf", "dsh")
         private val CALLABLE_NAME_ATTRIBUTE_DECLARATIONS = setOf(
+            "namespace",
             "virtualfunction",
             "shaderfunction",
             "shaderlayer",

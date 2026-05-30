@@ -198,7 +198,22 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.configureByText("namespace_invalid.dsh", text)
 
-        assertHasError("Namespace can only contain Function or GraphFunction declarations")
+        assertHasError("Namespace can only contain Function, GraphFunction, or Namespace declarations")
+    }
+
+    fun testNamespaceAllowsNestedNamespaceDeclarations() {
+        val text = """
+            Namespace A {
+                Namespace B {
+                    Function Blend(in float X, out float Y) {
+                        Y = X;
+                    }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("namespace_nested_valid.dsh", text)
+
+        assertNoError("Namespace can only contain Function, GraphFunction, or Namespace declarations")
     }
 
     fun testLayerRequiresSingleMaterialAttributesOutput() {

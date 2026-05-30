@@ -567,7 +567,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     private fun annotateNamespaceRules(tokens: List<DreamShaderLexedToken>, holder: AnnotationHolder) {
-        val allowed = setOf("function", "graphfunction")
+        val allowed = setOf("function", "graphfunction", "namespace")
         var i = 0
         while (i < tokens.size) {
             val token = tokens[i]

@@ -241,6 +241,39 @@ class DreamShaderGotoDeclarationHandlerTest : BasePlatformTestCase() {
         assertEquals("namespace", declaration.keywordText())
     }
 
+    fun testGotoDeclarationResolvesNestedNameAttributeNamespaceQualifier() {
+        val file = myFixture.configureByText(
+            "nested_name_attr_namespace_qualifier.dsh",
+            """
+            Namespace(Name="A") {
+                Namespace(Name="B") {
+                    GraphFunction Make(in float X, out float Y) {
+                        Y = X;
+                    }
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    A::<caret>B::Make(1.0, ValueOut);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = myFixture.editor.caretModel.offset
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected nested namespace qualifier source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto declaration target for nested namespace qualifier", targets)
+        assertTrue(targets!!.isNotEmpty())
+        val declaration = targets.first() as DreamShaderDeclaration
+        assertEquals("B", declaration.declarationName())
+        assertEquals("namespace", declaration.keywordText())
+    }
+
     fun testGotoDeclarationDoesNotFallbackToTopLevelForUnresolvedQualifiedMember() {
         val file = myFixture.configureByText(
             "namespace_unresolved_qualified_member.dsh",

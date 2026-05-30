@@ -173,6 +173,7 @@ class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), Dr
 
     companion object {
         private val NAME_ATTRIBUTE_DECLARATION_KEYWORDS = setOf(
+            "namespace",
             "virtualfunction",
             "shaderfunction",
             "shaderlayer",

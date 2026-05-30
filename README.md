@@ -235,7 +235,7 @@ Type system expectations:
 - Graph currently supports `if` / `else`, not full loop/control-flow parity.
 - Rider plugin currently reports diagnostics for unsupported Graph control-flow statements: `for`, `while`, `do`, `switch`, `case`, `default`, `break`, `continue`, `return`.
 - `Function` calls require explicit `out` target passing.
-- `Namespace` is for function organization (not arbitrary declaration containers).
+- `Namespace` is for function organization and nested namespace grouping (not arbitrary declaration containers).
 
 ### 7. Rider Plugin Coverage Mapping
 
@@ -500,11 +500,14 @@ Implemented:
 - References search import graph construction now reuses shared import resolution (`DreamShaderImportClosureResolver.resolveDirectImports`) while keeping the existing importers+imports connected-closure behavior unchanged.
 - Architecture quick note: see `docs/architecture.md` -> `4. Navigation and References` -> `Current boundary` for the canonical reference-search boundary definition.
 - References search now aligns symbol-name extraction with goto behavior for `Name="..."` declarations (`VirtualFunction` / `ShaderFunction` / `ShaderLayer` / `ShaderLayerBlend`): both full path and path-leaf alias names participate in Find References/Rename matching.
+- Namespace declarations now also align with the same `Name="..."` symbol extraction path (`Namespace(Name="...")`): declaration naming, nested-namespace qualifier resolution (`A::B::Member`), Find References, and Rename all treat attribute-form namespaces equivalently to identifier-form namespaces.
 - Rename now supports `Name="..."` declaration identifiers directly (`VirtualFunction` / `ShaderFunction` / `ShaderLayer` / `ShaderLayerBlend`): refactor updates the quoted `Name` value itself and propagates to call sites; path-form names preserve prefix and only replace leaf segment (for example `Functions/F_PulseTint` -> `Functions/F_OutputTint`).
 - `DreamShaderDeclaration.declarationName()` now normalizes `Name="..."` declarations to user-facing callable aliases (string unquoted; path-form returns leaf segment), so structure/navigation/find-usages naming is consistent with call-site symbols.
 - Added `DreamShaderFindUsagesProvider` and `PsiNameIdentifierOwner` support on `DreamShaderDeclaration`.
 - Find Usages presentation type now reflects declaration keyword kind (for example `dreamshader shaderfunction declaration`) instead of a single generic declaration label, improving usage-panel scanability in mixed files.
 - Added regression tests in `DreamShaderFindReferencesTest` and `DreamShaderDeclarationRenameTest`.
+- Stabilized cross-file rename regression for path-form `Name="..."` declarations (`ShaderFunction` etc.): rename assertions now commit pending PSI/doc changes and validate call-site updates with whitespace-tolerant matching, preventing false negatives from formatter/layout noise.
+- Standardized rename regression assertions to semantic regex matching (instead of indentation/newline-sensitive string slices) and centralized post-rename PSI document commit in test helper flow, reducing flakiness under full-suite runs.
 - Added cross-file references regression coverage in `DreamShaderFindReferencesTest`:
   - `testReferencesSearchFindsUsagesAcrossImportedFiles()`
   - `testReferencesSearchFindsUsagesThroughRecursiveImportChain()`
@@ -785,14 +788,14 @@ VirtualFunction(Name="BufferWriter") {
 
 8. `ID`: `DSYN-103`  
 `Priority`: `P1`  
-`Rule`: `Namespace` body may only contain `Function` or `GraphFunction`.  
+`Rule`: `Namespace` body may only contain `Function`, `GraphFunction`, or nested `Namespace`.  
 `Invalid`:
 ```c
 Namespace(Name="Bad") {
     ShaderFunction(Name="X") { }
 }
 ```
-`Expected`: `Namespace can only contain Function or GraphFunction declarations`  
+`Expected`: `Namespace can only contain Function, GraphFunction, or Namespace declarations`  
 `Test`: `testNamespaceAllowsOnlyFunctionDeclarations()`
 
 9. `ID`: `DSYN-104`  
