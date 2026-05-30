@@ -527,6 +527,18 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Unknown type 'float9'. Did you mean 'float'?")
     }
 
+    fun testUnknownTypeInNamespaceFunctionParameter() {
+        val text = """
+            Namespace Tools {
+                Function ApplyTint(in <caret>float9 color, out vec3 result) {
+                    result = float3(color, color, color);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("unknown_type_namespace_function_parameter.dsh", text)
+        assertHasError("Unknown type 'float9'. Did you mean 'float'?")
+    }
+
     fun testUnknownTypeInGraphLocalVariable() {
         val text = """
             Shader Main {
@@ -553,6 +565,19 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         val action = myFixture.findSingleIntention("Replace with 'float'")
         myFixture.launchAction(action)
         assertTrue(myFixture.file.text.contains("float temp = 1.0;"))
+    }
+
+    fun testUnknownTypeInNamespaceFunctionLocalVariable() {
+        val text = """
+            Namespace Tools {
+                Function ApplyTint(in vec3 color, out vec3 result) {
+                    <caret>float9 tmp = 1.0;
+                    result = color * tmp;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("unknown_type_namespace_function_local_var.dsh", text)
+        assertHasError("Unknown type 'float9'. Did you mean 'float'?")
     }
 
     fun testKnownTypeInFunctionLocalVariableDoesNotReportUnknownType() {
@@ -987,6 +1012,85 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         val action = myFixture.findSingleIntention("Add missing out arguments")
         myFixture.launchAction(action)
         assertTrue(myFixture.file.text.contains("ApplyTint(float3(1,1,1), float3(1,0,0), result_out);"))
+    }
+
+    fun testMissingOutArgumentInNamespaceFunctionCall() {
+        val text = """
+            Namespace Tools {
+                Function ApplyTint(in vec3 color, in vec3 tint, out vec3 result) {
+                    result = color * tint;
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    Tools::ApplyTint(float3(1,1,1), float3(1,0,0));
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("missing_out_arg_namespace_function_call.dsm", text)
+        assertHasError("Missing out argument for parameter 'result'")
+    }
+
+    fun testMissingOutArgumentInNamespaceFunctionCallQuickFixAddsPlaceholderArgument() {
+        project.getService(DreamShaderProjectSettings::class.java).state.outArgumentPlaceholderSuffix = "Out"
+        val text = """
+            Namespace Tools {
+                Function ApplyTint(in vec3 color, in vec3 tint, out vec3 result) {
+                    result = color * tint;
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    <caret>Tools::ApplyTint(float3(1,1,1), float3(1,0,0));
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("missing_out_arg_namespace_function_call_fix.dsm", text)
+        val action = myFixture.findSingleIntention("Add missing out arguments")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("Tools::ApplyTint(float3(1,1,1), float3(1,0,0), resultOut);"))
+    }
+
+    fun testMissingOutArgumentResolvesUnqualifiedCallToNearestNamespaceScope() {
+        val text = """
+            Function Blend(in float x, in float y) {
+            }
+
+            Namespace Tools {
+                Function Blend(in float x, in float y, out float result) {
+                    result = x + y;
+                }
+
+                Function Build(in float x, out float output) {
+                    <caret>Blend(x, x);
+                    output = x;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("missing_out_arg_namespace_scope_resolution.dsh", text)
+        assertHasError("Missing out argument for parameter 'result'")
+    }
+
+    fun testMissingOutArgumentDoesNotReportForTopLevelOverloadWhenNamespaceCallIsComplete() {
+        val text = """
+            Function Blend(in float x, in float y, out float result) {
+                result = x + y;
+            }
+
+            Namespace Tools {
+                Function Blend(in float x, in float y) {
+                }
+
+                Function Build(in float x, out float output) {
+                    <caret>Blend(x, x);
+                    output = x;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("missing_out_arg_namespace_scope_no_false_positive.dsh", text)
+        assertNoError("Missing out argument for parameter 'result'")
     }
 
     fun testUnresolvedImportPath() {

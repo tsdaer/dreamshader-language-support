@@ -942,7 +942,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
     ) {
-        topLevelDeclarations.forEach { declaration ->
+        allDeclarations(topLevelDeclarations).forEach { declaration ->
             directSectionsOf(declaration)
                 .filter {
                     val sectionName = canonicalSectionName(it.sectionName())
@@ -987,7 +987,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
     ) {
-        topLevelDeclarations.forEach { declaration ->
+        allDeclarations(topLevelDeclarations).forEach { declaration ->
             val keyword = declaration.keywordText()
             if (keyword != "function" && keyword != "graphfunction") return@forEach
             val signature = parseDeclarationParameters(declaration.text) ?: return@forEach
@@ -1636,7 +1636,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
     private fun graphConstrainedBodyRanges(topLevelDeclarations: List<DreamShaderDeclaration>): List<TextRange> {
         val ranges = mutableListOf<TextRange>()
-        topLevelDeclarations.forEach { declaration ->
+        allDeclarations(topLevelDeclarations).forEach { declaration ->
             directSectionsOf(declaration)
                 .filter { canonicalSectionName(it.sectionName()) == "graph" }
                 .forEach { section ->
@@ -1652,6 +1652,21 @@ internal class DreamShaderSemanticAnnotationPipeline {
         return ranges
     }
 
+    private fun allDeclarations(topLevelDeclarations: List<DreamShaderDeclaration>): List<DreamShaderDeclaration> {
+        if (topLevelDeclarations.isEmpty()) return emptyList()
+        val ordered = mutableListOf<DreamShaderDeclaration>()
+        val queue = ArrayDeque<DreamShaderDeclaration>()
+        topLevelDeclarations.forEach { queue.addLast(it) }
+        while (queue.isNotEmpty()) {
+            val declaration = queue.removeFirst()
+            ordered.add(declaration)
+            directChildDeclarations(declaration).forEach { child ->
+                queue.addLast(child)
+            }
+        }
+        return ordered
+    }
+
     // 语义诊断：调用签名检查、导入解析与导入 quick fix。
     private fun annotateMissingOutArgumentDiagnostics(
         file: DreamShaderPsiFile,
@@ -1660,26 +1675,26 @@ internal class DreamShaderSemanticAnnotationPipeline {
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
     ) {
-        val signatureByFunction = topLevelDeclarations.mapNotNull { declaration ->
-            val keyword = declaration.keywordText() ?: return@mapNotNull null
-            if (keyword != "function" && keyword != "graphfunction") return@mapNotNull null
-            val name = declaration.declarationName() ?: return@mapNotNull null
-            val signature = parseDeclarationParameters(declaration.text) ?: return@mapNotNull null
-            if (signature.params.none { it.isOut }) return@mapNotNull null
-            name to signature
-        }.toMap()
-        if (signatureByFunction.isEmpty()) return
+        val signatureCandidates = collectCallableSignatureCandidates(topLevelDeclarations)
+        if (signatureCandidates.isEmpty()) return
 
         tokens.indices.forEach { index ->
             val token = tokens[index]
             if (token.type != DreamShaderTokenTypes.IDENTIFIER) return@forEach
-            val signature = signatureByFunction[token.text] ?: return@forEach
             val next = nextSignificantToken(tokens, index) ?: return@forEach
             if (next.type != DreamShaderTokenTypes.LPAREN) return@forEach
 
             val prev = previousSignificantToken(tokens, index)
             if (prev?.type == DreamShaderTokenTypes.OPERATOR && prev.text == ".") return@forEach
             if (prev?.type == DreamShaderTokenTypes.KEYWORD && prev.text.lowercase(Locale.ROOT) in DreamShaderLanguageKeywords.DECLARATION_KEYWORDS) return@forEach
+
+            val signature = resolveCallableSignatureForCall(
+                sourceText = sourceText,
+                callName = token.text,
+                callNameStartOffset = token.range.startOffset,
+                signatureCandidates = signatureCandidates,
+                topLevelDeclarations = topLevelDeclarations
+            ) ?: return@forEach
 
             val call = parseCallArgumentInfo(sourceText, next.range.startOffset) ?: return@forEach
             val missingOutParam = signature.params.withIndex()
@@ -1701,6 +1716,125 @@ internal class DreamShaderSemanticAnnotationPipeline {
             annotation.create()
         }
     }
+
+    private fun collectCallableSignatureCandidates(
+        topLevelDeclarations: List<DreamShaderDeclaration>
+    ): List<CallableSignatureCandidate> {
+        val result = mutableListOf<CallableSignatureCandidate>()
+        fun visit(declaration: DreamShaderDeclaration, namespacePath: List<String>) {
+            val keyword = declaration.keywordText()
+            val nextNamespacePath = if (keyword == "namespace") {
+                val namespaceName = declaration.declarationName().orEmpty().trim()
+                if (namespaceName.isNotBlank()) namespacePath + namespaceName else namespacePath
+            } else {
+                namespacePath
+            }
+
+            if (keyword == "function" || keyword == "graphfunction") {
+                val name = declaration.declarationName().orEmpty().trim()
+                val signature = parseDeclarationParameters(declaration.text)
+                if (name.isNotBlank() && signature != null) {
+                    result.add(
+                        CallableSignatureCandidate(
+                            name = name,
+                            namespacePath = nextNamespacePath,
+                            signature = signature
+                        )
+                    )
+                }
+            }
+
+            directChildDeclarations(declaration).forEach { child ->
+                visit(child, nextNamespacePath)
+            }
+        }
+        topLevelDeclarations.forEach { declaration ->
+            visit(declaration, emptyList())
+        }
+        return result
+    }
+
+    private fun resolveCallableSignatureForCall(
+        sourceText: String,
+        callName: String,
+        callNameStartOffset: Int,
+        signatureCandidates: List<CallableSignatureCandidate>,
+        topLevelDeclarations: List<DreamShaderDeclaration>
+    ): ParsedSignature? {
+        val candidatesByName = signatureCandidates.filter { it.name == callName }
+        if (candidatesByName.isEmpty()) return null
+
+        val qualifierChainBefore = readQualifierChainBeforeIdentifier(sourceText, callNameStartOffset)
+        if (qualifierChainBefore.isNotEmpty()) {
+            return candidatesByName.firstOrNull { it.namespacePath == qualifierChainBefore }?.signature
+        }
+
+        val enclosingNamespacePath = enclosingNamespacePathAtOffset(topLevelDeclarations, callNameStartOffset)
+        for (depth in enclosingNamespacePath.size downTo 0) {
+            val scopePath = enclosingNamespacePath.take(depth)
+            val candidate = candidatesByName.firstOrNull { it.namespacePath == scopePath }
+            if (candidate != null) return candidate.signature
+        }
+        return null
+    }
+
+    private fun readQualifierChainBeforeIdentifier(text: String, anchorOffset: Int): List<String> {
+        val qualifiers = mutableListOf<String>()
+        var i = anchorOffset - 1
+        while (true) {
+            while (i >= 0 && text[i].isWhitespace()) i--
+            if (i < 1 || text[i] != ':' || text[i - 1] != ':') break
+
+            i -= 2
+            while (i >= 0 && text[i].isWhitespace()) i--
+            if (i < 0 || !isIdentifierChar(text[i])) return emptyList()
+
+            val end = i
+            while (i >= 0 && isIdentifierChar(text[i])) i--
+            val start = i + 1
+            if (start > end) return emptyList()
+            qualifiers.add(text.substring(start, end + 1))
+        }
+        qualifiers.reverse()
+        return qualifiers
+    }
+
+    private fun enclosingNamespacePathAtOffset(
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        offset: Int
+    ): List<String> {
+        fun visit(
+            declaration: DreamShaderDeclaration,
+            namespacePath: List<String>,
+            targetOffset: Int
+        ): List<String>? {
+            val declarationRange = declaration.textRange ?: return null
+            if (!declarationRange.containsOffset(targetOffset)) return null
+
+            val keyword = declaration.keywordText()
+            val nextNamespacePath = if (keyword == "namespace") {
+                val namespaceName = declaration.declarationName().orEmpty().trim()
+                if (namespaceName.isNotBlank()) namespacePath + namespaceName else namespacePath
+            } else {
+                namespacePath
+            }
+
+            directChildDeclarations(declaration).forEach { child ->
+                val childPath = visit(child, nextNamespacePath, targetOffset)
+                if (childPath != null) return childPath
+            }
+
+            return nextNamespacePath
+        }
+
+        topLevelDeclarations.forEach { declaration ->
+            val path = visit(declaration, emptyList(), offset)
+            if (path != null) return path
+        }
+        return emptyList()
+    }
+
+    private fun isIdentifierChar(ch: Char): Boolean = ch == '_' || ch.isLetterOrDigit()
 
     private fun createAddMissingOutArgumentsQuickFix(
         file: DreamShaderPsiFile,
@@ -2645,6 +2779,15 @@ internal class DreamShaderSemanticAnnotationPipeline {
     private data class CallArgumentInfo(
         val argumentCount: Int,
         val rightParenOffset: Int
+    )
+
+    /**
+     * Data model for CallableSignatureCandidate.
+     */
+    private data class CallableSignatureCandidate(
+        val name: String,
+        val namespacePath: List<String>,
+        val signature: ParsedSignature
     )
 
     /**
