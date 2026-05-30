@@ -10,6 +10,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFileFactory
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.SearchScope
 import com.intellij.util.IncorrectOperationException
 import java.util.*
 
@@ -23,7 +25,13 @@ class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), Dr
     }
 
     override fun declarationName(): String? {
-        return nameIdentifier?.text
+        val identifier = nameIdentifier ?: return null
+        if (identifier.node?.elementType == DreamShaderTokenTypes.STRING) {
+            val raw = trimQuotes(identifier.text).trim()
+            if (raw.isBlank()) return null
+            return raw.substringAfterLast('/').substringAfterLast('\\')
+        }
+        return identifier.text
     }
 
     override fun bodyTextRange(): TextRange? {
@@ -40,6 +48,7 @@ class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), Dr
     override fun getName(): String? = declarationName()
 
     override fun getNameIdentifier(): PsiElement? {
+        nameAttributeValueElement()?.let { return it }
         var child = node.firstChildNode
         var seenKeyword = false
         while (child != null) {
@@ -56,10 +65,25 @@ class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), Dr
     override fun setName(newName: String): PsiElement {
         if (newName.isBlank()) throw IncorrectOperationException("DreamShader declaration name cannot be blank")
         val identifier = nameIdentifier ?: throw IncorrectOperationException("Cannot rename declaration without identifier")
+
+        if (identifier.node?.elementType == DreamShaderTokenTypes.STRING) {
+            val trimmed = trimQuotes(identifier.text)
+            val renamed = if (trimmed.contains('/') || trimmed.contains('\\')) {
+                replacePathLeaf(trimmed, newName)
+            } else {
+                newName
+            }
+            val replacementString = createStringLiteralFromText(project, renamed)
+            identifier.replace(replacementString)
+            return this
+        }
+
         val replacementIdentifier = createIdentifierFromText(project, newName)
         identifier.replace(replacementIdentifier)
         return this
     }
+
+    override fun getUseScope(): SearchScope = GlobalSearchScope.projectScope(project)
 
     private fun findMatchingRightBrace(leftBrace: ASTNode): ASTNode? {
         var depth = 0
@@ -89,5 +113,70 @@ class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), Dr
             ?: throw IncorrectOperationException("Failed to create declaration identifier")
         return declaration.nameIdentifier
             ?: throw IncorrectOperationException("Failed to create declaration identifier")
+    }
+
+    private fun createStringLiteralFromText(project: Project, value: String): PsiElement {
+        val escaped = value.replace("\\", "\\\\").replace("\"", "\\\"")
+        val file = PsiFileFactory.getInstance(project).createFileFromText(
+            "dummy.dsf",
+            DreamShaderLanguage,
+            "VirtualFunction(Name=\"$escaped\") { }"
+        )
+        val declaration = com.intellij.psi.util.PsiTreeUtil.findChildOfType(file, DreamShaderDeclaration::class.java)
+            ?: throw IncorrectOperationException("Failed to create string literal identifier")
+        return declaration.nameIdentifier
+            ?: throw IncorrectOperationException("Failed to create string literal identifier")
+    }
+
+    private fun nameAttributeValueElement(): PsiElement? {
+        val keyword = keywordText() ?: return null
+        if (keyword !in NAME_ATTRIBUTE_DECLARATION_KEYWORDS) return null
+
+        val bodyStart = bodyTextRange()?.startOffset ?: textLength
+        var child = node.firstChildNode
+        while (child != null) {
+            if (child.startOffset >= bodyStart) break
+            if (child.elementType == DreamShaderTokenTypes.IDENTIFIER && child.text.equals("Name", ignoreCase = true)) {
+                var cursor = child.treeNext
+                while (cursor != null && cursor.startOffset < bodyStart) {
+                    when (cursor.elementType) {
+                        DreamShaderTokenTypes.STRING -> return cursor.psi
+                        DreamShaderTokenTypes.OPERATOR -> {
+                            if (cursor.text == ",") return null
+                        }
+                        DreamShaderTokenTypes.RPAREN,
+                        DreamShaderTokenTypes.LBRACE -> return null
+                    }
+                    cursor = cursor.treeNext
+                }
+                return null
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
+    private fun trimQuotes(text: String): String {
+        if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+            return text.substring(1, text.length - 1)
+        }
+        return text
+    }
+
+    private fun replacePathLeaf(rawPath: String, newLeaf: String): String {
+        val slashIndex = rawPath.lastIndexOf('/')
+        val backslashIndex = rawPath.lastIndexOf('\\')
+        val index = maxOf(slashIndex, backslashIndex)
+        if (index < 0) return newLeaf
+        return rawPath.substring(0, index + 1) + newLeaf
+    }
+
+    companion object {
+        private val NAME_ATTRIBUTE_DECLARATION_KEYWORDS = setOf(
+            "virtualfunction",
+            "shaderfunction",
+            "shaderlayer",
+            "shaderlayerblend"
+        )
     }
 }

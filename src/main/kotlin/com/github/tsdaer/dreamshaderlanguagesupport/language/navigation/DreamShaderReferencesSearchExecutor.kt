@@ -1,14 +1,26 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileType
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiReference
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
+import com.intellij.psi.search.FileTypeIndex
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.LocalSearchScope
+import com.intellij.psi.search.SearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.Processor
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.util.Locale
 
 /**
  * 自定义参考文献搜索顶级DreamShader声明。
@@ -20,24 +32,47 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
     override fun execute(queryParameters: ReferencesSearch.SearchParameters, consumer: Processor<in PsiReference>): Boolean {
         val declaration = queryParameters.elementToSearch as? DreamShaderDeclaration ?: return true
         val file = declaration.containingFile ?: return true
-        val declarationName = declaration.declarationName().orEmpty()
-        if (declarationName.isBlank()) return true
+        val declarationNames = declarationSymbolNames(declaration)
+        if (declarationNames.isEmpty()) return true
         val declarationProfile = buildDeclarationProfile(declaration)
-
-        val identifiers = PsiTreeUtil.collectElements(file) { element ->
-            val t = element.node?.elementType
-            t == DreamShaderTokenTypes.IDENTIFIER && element.text == declarationName
+        val searchScope = queryParameters.effectiveSearchScope
+        val candidateFiles = resolveImportClosure(file).filter { candidate ->
+            isFileInSearchScope(candidate, searchScope)
         }
 
         val declarationNameId = declaration.nameIdentifier
-        for (identifier in identifiers) {
-            if (identifier == declarationNameId) continue
-            if (!isInsideDeclarationTree(identifier)) continue
-            if (isDeclarationNameIdentifier(identifier)) continue
-            if (!matchesDeclarationProfile(identifier, declarationProfile)) continue
-            if (!consumer.process(DreamShaderLightReference(identifier, declaration))) return false
+        for (candidateFile in candidateFiles) {
+            val identifiers = PsiTreeUtil.collectElements(candidateFile) { element ->
+                val t = element.node?.elementType
+                t == DreamShaderTokenTypes.IDENTIFIER && declarationNames.contains(element.text)
+            }
+
+            for (identifier in identifiers) {
+                if (identifier == declarationNameId) continue
+                if (!isInsideDeclarationTree(identifier)) continue
+                if (isDeclarationNameIdentifier(identifier)) continue
+                if (!matchesDeclarationProfile(identifier, declarationProfile)) continue
+                if (!consumer.process(DreamShaderLightReference(identifier, declaration))) return false
+            }
         }
         return true
+    }
+
+    private fun isFileInSearchScope(file: PsiFile, scope: SearchScope): Boolean {
+        val fileVf = file.virtualFile ?: return false
+        return when (scope) {
+            is GlobalSearchScope -> scope.contains(fileVf)
+            is LocalSearchScope -> containsFileInLocalScope(scope, fileVf)
+            else -> true
+        }
+    }
+
+    private fun containsFileInLocalScope(scope: LocalSearchScope, targetFile: com.intellij.openapi.vfs.VirtualFile): Boolean {
+        return scope.scope.any { scopedElement ->
+            val scopedFile = scopedElement.containingFile ?: return@any false
+            val scopedVf = scopedFile.virtualFile ?: return@any false
+            scopedVf == targetFile
+        }
     }
 
     private fun isInsideDeclarationTree(element: PsiElement): Boolean {
@@ -140,10 +175,176 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
 
     private fun isIdentifierChar(ch: Char): Boolean = ch == '_' || ch.isLetterOrDigit()
 
+    private fun declarationSymbolNames(declaration: DreamShaderDeclaration): Set<String> {
+        val names = linkedSetOf<String>()
+        val explicit = declaration.declarationName().orEmpty().trim()
+        if (explicit.isNotBlank() && !explicit.equals("name", ignoreCase = true)) {
+            names.add(explicit)
+        }
+
+        val keyword = declaration.keywordText().orEmpty().lowercase(Locale.ROOT)
+        if (keyword in CALLABLE_NAME_ATTRIBUTE_DECLARATIONS) {
+            val attrName = extractNameAttributeValue(declaration)
+            if (!attrName.isNullOrBlank()) {
+                names.add(attrName)
+                names.add(attrName.substringAfterLast('/').substringAfterLast('\\'))
+            }
+        }
+        return names.filter { it.isNotBlank() }.toSet()
+    }
+
+    private fun extractNameAttributeValue(declaration: DreamShaderDeclaration): String? {
+        val bodyStart = declaration.bodyTextRange()?.startOffset ?: declaration.text.length
+        if (bodyStart <= 0 || bodyStart > declaration.text.length) return null
+        val head = declaration.text.substring(0, bodyStart)
+        return NAME_ATTRIBUTE_REGEX.find(head)?.groupValues?.getOrNull(1)?.trim()
+    }
+
+    private fun resolveImportClosure(sourceFile: PsiFile): List<PsiFile> {
+        val seedFile = sourceFile.containingFile
+        val seedVf = seedFile.virtualFile ?: return listOf(seedFile)
+        val project = seedFile.project
+        val projectBasePath = project.basePath ?: return listOf(seedFile)
+        val psiManager = PsiManager.getInstance(project)
+        val allFilesByPath = linkedMapOf<String, PsiFile>()
+        collectAllDreamShaderPsiFiles(project, projectBasePath, psiManager).forEach { psiFile ->
+            val key = fileKey(psiFile.virtualFile) ?: return@forEach
+            allFilesByPath.putIfAbsent(key, psiFile)
+        }
+        allFilesByPath.putIfAbsent(fileKey(seedVf) ?: seedVf.path, seedFile)
+
+        val importsByPath = mutableMapOf<String, MutableSet<String>>()
+        val importersByPath = mutableMapOf<String, MutableSet<String>>()
+        val keyByPhysicalPath = mutableMapOf<String, String>()
+        for ((key, psiFile) in allFilesByPath) {
+            val vf = psiFile.virtualFile ?: continue
+            val physicalPath = filePath(vf) ?: continue
+            keyByPhysicalPath.putIfAbsent(physicalPath, key)
+        }
+
+        for ((fromKey, psiFile) in allFilesByPath) {
+            val fromVf = psiFile.containingFile.virtualFile ?: continue
+            val containingDirectory = fromVf.parent
+            val imports = collectImportPaths(psiFile)
+            for (importPath in imports) {
+                val importedVf = DreamShaderImportResolver.resolveImport(
+                    projectBasePath = projectBasePath,
+                    containingDirectory = containingDirectory,
+                    importPath = importPath
+                ) ?: continue
+                val importedPath = filePath(importedVf) ?: continue
+                val importedKey = keyByPhysicalPath[importedPath] ?: continue
+
+                importsByPath.getOrPut(fromKey) { linkedSetOf() }.add(importedKey)
+                importersByPath.getOrPut(importedKey) { linkedSetOf() }.add(fromKey)
+            }
+        }
+
+        val visited = linkedSetOf<String>()
+        val queue = ArrayDeque<String>()
+        queue.add(fileKey(seedVf) ?: seedVf.path)
+
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (!visited.add(current)) continue
+
+            val neighbors = linkedSetOf<String>()
+            importsByPath[current]?.let { neighbors.addAll(it) }
+            importersByPath[current]?.let { neighbors.addAll(it) }
+            for (next in neighbors) {
+                if (!visited.contains(next)) {
+                    queue.addLast(next)
+                }
+            }
+        }
+
+        return visited.mapNotNull { path -> allFilesByPath[path] }
+    }
+
+    private fun collectImportPaths(file: PsiFile): List<String> {
+        val sourceFile = file.containingFile
+        val paths = linkedSetOf<String>()
+        val stringLiterals = PsiTreeUtil.collectElements(sourceFile) { element ->
+            element.node?.elementType == DreamShaderTokenTypes.STRING
+        }
+        for (literal in stringLiterals) {
+            if (!isImportStringLiteral(literal)) continue
+            val raw = literal.text.trim()
+            if (raw.length < 2 || !raw.startsWith('"') || !raw.endsWith('"')) continue
+            val importPath = raw.substring(1, raw.length - 1).trim()
+            if (importPath.isBlank()) continue
+            paths.add(importPath)
+        }
+        return paths.toList()
+    }
+
+    private fun collectAllDreamShaderPsiFiles(
+        project: com.intellij.openapi.project.Project,
+        projectBasePath: String,
+        psiManager: PsiManager
+    ): List<PsiFile> {
+        val filesByKey = linkedMapOf<String, PsiFile>()
+        FileTypeIndex.getFiles(DreamShaderFileType.INSTANCE, GlobalSearchScope.allScope(project)).forEach { vf ->
+            val psi = psiManager.findFile(vf) ?: return@forEach
+            if (psi.language != DreamShaderLanguage) return@forEach
+            val key = fileKey(vf) ?: return@forEach
+            filesByKey.putIfAbsent(key, psi)
+        }
+
+        val fs = LocalFileSystem.getInstance()
+        val rootPath = runCatching { Paths.get(projectBasePath) }.getOrNull() ?: return emptyList()
+        if (!Files.exists(rootPath) || !Files.isDirectory(rootPath)) return filesByKey.values.toList()
+
+        Files.walk(rootPath).use { paths ->
+            paths.filter { Files.isRegularFile(it) }.forEach { path ->
+                val extension = path.fileName.toString().substringAfterLast('.', "").lowercase()
+                if (extension !in IMPORT_EXTENSIONS) return@forEach
+
+                val candidateVf = fs.findFileByPath(path.toString().replace('\\', '/')) ?: return@forEach
+                val candidatePsi = psiManager.findFile(candidateVf) ?: return@forEach
+                if (candidatePsi.language != DreamShaderLanguage) return@forEach
+                val key = fileKey(candidateVf) ?: return@forEach
+                filesByKey.putIfAbsent(key, candidatePsi)
+            }
+        }
+        return filesByKey.values.toList()
+    }
+
+    private fun fileKey(vf: com.intellij.openapi.vfs.VirtualFile?): String? = vf?.url
+
+    private fun filePath(vf: com.intellij.openapi.vfs.VirtualFile?): String? {
+        if (vf == null) return null
+        return runCatching { vf.path.replace('\\', '/') }.getOrNull()
+    }
+
+    private fun isImportStringLiteral(element: PsiElement): Boolean {
+        var prev = PsiTreeUtil.prevLeaf(element, true)
+        while (prev != null) {
+            val t = prev.node?.elementType
+            if (t == DreamShaderTokenTypes.WHITE_SPACE || t == DreamShaderTokenTypes.LINE_COMMENT || t == DreamShaderTokenTypes.BLOCK_COMMENT) {
+                prev = PsiTreeUtil.prevLeaf(prev, true)
+                continue
+            }
+            return t == DreamShaderTokenTypes.KEYWORD && prev.text.equals("import", ignoreCase = true)
+        }
+        return false
+    }
+
     private data class DeclarationProfile(
         val namespacePath: List<String>,
         val isNamespaceDeclaration: Boolean
     )
+
+    companion object {
+        private val IMPORT_EXTENSIONS = setOf("dsm", "dsf", "dsh")
+        private val CALLABLE_NAME_ATTRIBUTE_DECLARATIONS = setOf(
+            "virtualfunction",
+            "shaderfunction",
+            "shaderlayer",
+            "shaderlayerblend"
+        )
+        private val NAME_ATTRIBUTE_REGEX = Regex("\\bName\\s*=\\s*\"([^\"]+)\"")
+    }
 }
 
 /**

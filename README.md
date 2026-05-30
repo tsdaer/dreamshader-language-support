@@ -246,13 +246,12 @@ Already implemented in this plugin:
 - Context-aware completion for sections, types, settings values, `UE.*`, HLSL intrinsics, imports.
 - Navigation/symbols/folding/references/hover/signature help basics.
 
-Not fully implemented yet (tracked in milestones below):
-- Full section-shape parity with all upstream declaration edge cases and future syntax revisions.
-- Full semantic diagnostics for invalid settings/outputs/types.
-- Full Graph grammar validation beyond current permissive parser stage.
-- Formatting rules aligned with DreamShader structure conventions.
-- Semantic token classification parity with upstream VS Code behavior.
-- Inlay hints parity for callable/output authoring contexts.
+Current boundary and long-term parity notes:
+- `Partial`: section-shape diagnostics cover current declaration-aware baseline, but full parity for all upstream edge cases/future syntax revisions is an ongoing alignment target.
+- `Partial`: semantic diagnostics cover major high-signal rules; exhaustive parity for all invalid settings/outputs/types remains a long-term hardening target.
+- `Partial`: parser is intentionally permissive for IDE resilience; full strict Graph grammar validation is not the current parser mode.
+- `Implemented` (baseline): formatter handles indentation/spacing/braces/section layout; fine-grained parity with all DreamShader authoring conventions may continue to evolve.
+- `Implemented` (baseline): semantic token classification and inlay hints are available and tested; exact upstream VS Code parity is treated as iterative polish, not a release blocker.
 
 ## DreamShader Package Baseline
 
@@ -376,7 +375,7 @@ Implemented in M5:
 | Folding                                        | Done   | `lang.foldingBuilder` added; supports brace blocks and `// region` / `// endregion`                                                                                                                                                      |
 | Semantic tokens                                | Done   | Semantic classification implemented for declaration keywords/names, section names, callable references, `UE` namespace, namespace qualifiers (`Namespace::`), local symbol declaration/usage split, and `Base.*` material output members |
 | Diagnostics                                    | Done   | Local parser + section-shape + semantic diagnostics implemented with tests                                                                                                                                                               |
-| Go to Definition / References                  | Done   | Go to Definition + Find References implemented for imports, top-level declarations, namespace-qualified members (`A::B::Member`), and namespace-scoped unqualified member resolution                                                                 |
+| Go to Definition / References                  | Done   | Go to Definition + Find References implemented for imports, top-level declarations, namespace-qualified members (`A::B::Member`), namespace-scoped unqualified member resolution, import-chain cross-file declaration usages, and `Name="..."` alias call targets (`VirtualFunction`/`ShaderFunction` etc.)                                                     |
 | Document symbols / structure                   | Done   | Structure view integrated for top-level declarations and sections                                                                                                                                                                        |
 | Inlay hints                                    | Done   | Parameter name hints implemented with callable-context filtering and settings toggle (`enableCodeLens` controls this inlay-hints layer), including same-file declared callable signatures (`Function`/`GraphFunction`/`VirtualFunction`) |
 | Formatting                                     | Done   | Basic formatter implemented (`lang.formatter`): indentation, operator spacing, braces/section layout                                                                                                                                     |
@@ -465,6 +464,7 @@ Implemented:
 - [x] `P1` Folding for blocks and `// region` markers.
 - [x] `P1` Go to Definition for imports and symbol declarations.
 - [x] `P1` Find References for local declarations/usages.
+- [x] `P2` Extend Find References to import-chain cross-file declaration usages.
 - [x] `P2` Semantic token classification for declarations, sections, code symbols, and material outputs.
 - [x] `P2` Hover information for symbols/settings/UE builtins.
 - [x] `P2` Signature help for function-like calls where feasible.
@@ -494,8 +494,32 @@ Implemented:
 - References search now excludes declaration-name identifier tokens from usage results, so Find References/Rename operate on real usages only (declaration heads are no longer double-counted as references).
 - Namespace-aware references matching now uses full qualifier-path matching in multi-level chains (`A::B::Member`), so same-name members under different namespace paths (for example `A::B` vs `C::B`) do not cross-match.
 - Unqualified reference matching inside namespaces now follows enclosing namespace path scope (nearest scope first, then parent namespace path), aligning Find References/Rename with goto behavior.
+- References search now traverses import-connected files (including recursive import chains), so cross-file call sites are included in Find References/Rename results.
+- References search now respects IDE/user-provided search scope constraints (`GlobalSearchScope`/`LocalSearchScope`) while traversing import-connected files, so scoped Find References/Rename queries do not leak outside requested files/elements.
+- Architecture quick note: see `docs/architecture.md` -> `4. Navigation and References` -> `Current boundary` for the canonical reference-search boundary definition.
+- References search now aligns symbol-name extraction with goto behavior for `Name="..."` declarations (`VirtualFunction` / `ShaderFunction` / `ShaderLayer` / `ShaderLayerBlend`): both full path and path-leaf alias names participate in Find References/Rename matching.
+- Rename now supports `Name="..."` declaration identifiers directly (`VirtualFunction` / `ShaderFunction` / `ShaderLayer` / `ShaderLayerBlend`): refactor updates the quoted `Name` value itself and propagates to call sites; path-form names preserve prefix and only replace leaf segment (for example `Functions/F_PulseTint` -> `Functions/F_OutputTint`).
+- `DreamShaderDeclaration.declarationName()` now normalizes `Name="..."` declarations to user-facing callable aliases (string unquoted; path-form returns leaf segment), so structure/navigation/find-usages naming is consistent with call-site symbols.
 - Added `DreamShaderFindUsagesProvider` and `PsiNameIdentifierOwner` support on `DreamShaderDeclaration`.
+- Find Usages presentation type now reflects declaration keyword kind (for example `dreamshader shaderfunction declaration`) instead of a single generic declaration label, improving usage-panel scanability in mixed files.
 - Added regression tests in `DreamShaderFindReferencesTest` and `DreamShaderDeclarationRenameTest`.
+- Added cross-file references regression coverage in `DreamShaderFindReferencesTest`:
+  - `testReferencesSearchFindsUsagesAcrossImportedFiles()`
+  - `testReferencesSearchFindsUsagesThroughRecursiveImportChain()`
+  - `testReferencesSearchRespectsGlobalFileScope()`
+  - `testReferencesSearchRespectsLocalSearchScopeFileBoundary()`
+- Added `Name="..."` references regression coverage in `DreamShaderFindReferencesTest`:
+  - `testReferencesSearchFindsVirtualFunctionUsagesByNameAttributeLeaf()`
+  - `testReferencesSearchFindsShaderFunctionUsagesByNameAttributePathLeafAcrossImportedFiles()`
+- Added `Name="..."` rename regression coverage in `DreamShaderDeclarationRenameTest`:
+  - `testRenameVirtualFunctionNameAttributeUpdatesStringAndUsages()`
+  - `testRenameShaderFunctionNameAttributePathLeafKeepsPrefixAndUpdatesCrossFileUsages()`
+- Added declaration-name normalization regression coverage in `DreamShaderDeclarationRenameTest`:
+  - `testDeclarationNameUsesVirtualFunctionNameAttributeLeaf()`
+  - `testDeclarationNameUsesShaderFunctionNameAttributePathLeaf()`
+- Added Find Usages provider presentation regression coverage in `DreamShaderFindUsagesProviderTest`:
+  - `testGetTypeUsesDeclarationKeyword()`
+  - `testGetTypeFallsBackWhenKeywordMissing()`
 - Added rename regression hardening for namespace collisions: renaming namespace members/top-level declarations no longer cross-renames same-name declarations in the other scope, including nested same-name members under different namespace paths.
 - Added `DreamShaderDocumentationProvider` via `lang.documentationProvider` for hover docs on declarations, settings keys/values, `UE.*` builtins, function call signatures, and local variables (name/type/scope).
 - Hover resolution now prefers caret/original token context before resolved declaration target, so call-site and local-variable hovers are not shadowed by declaration fallback in IDE mouse hover flows.

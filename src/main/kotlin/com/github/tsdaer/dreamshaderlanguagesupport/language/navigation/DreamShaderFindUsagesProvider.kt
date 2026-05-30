@@ -26,7 +26,14 @@ class DreamShaderFindUsagesProvider : FindUsagesProvider {
     override fun getHelpId(psiElement: PsiElement): String? = null
 
     override fun getType(element: PsiElement): String = when (element) {
-        is DreamShaderDeclaration -> "dreamshader declaration"
+        is DreamShaderDeclaration -> {
+            val keyword = element.keywordText().orEmpty().trim().lowercase()
+            if (keyword.isBlank()) {
+                "dreamshader declaration"
+            } else {
+                "dreamshader $keyword declaration"
+            }
+        }
         else -> "dreamshader symbol"
     }
 

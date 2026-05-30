@@ -52,12 +52,12 @@ Design goal:
   - import string -> resolved target file
   - identifier -> top-level declaration target
 - `DreamShaderReferencesSearchExecutor`
-  - file-local reference search for top-level declarations
+  - namespace-aware reference search for declarations across import-connected files
 - `DreamShaderFindUsagesProvider`
   - Find Usages scanner and display metadata
 
 Current boundary:
-- References are intentionally lightweight and file-local.
+- References are lightweight and computed within the import-connected closure (source file + files it imports/importers across recursive chains), then constrained by IDE/user-provided search scope (`GlobalSearchScope` / `LocalSearchScope`), not full workspace/global semantic indexing.
 
 ### 5. Diagnostics Pipeline
 
