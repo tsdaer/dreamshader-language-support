@@ -8,18 +8,31 @@
 
 ### Added
 
-- Added declaration navigation support for namespace declarations, including go-to declaration, find usages, and structure/symbol coverage.
-- Added in-progress action disabling for GitHub package search in the package store dialog, preventing duplicate operations while requests are running.
+- Added namespace declaration support in language parsing and navigation flows, including go-to declaration, find usages, and structure/symbol model coverage.
+- Added in-progress action disabling for GitHub package search in the package store dialog to prevent duplicate operations while requests are running.
+- Added cross-file import-closure resolution to support imported-function signature analysis.
+- Added reference-search expansion across import chains and `Name="..."` form declarations.
+- Added nested-namespace semantic coverage for unknown types and missing `out` arguments in nested declarations.
 - Added semantic diagnostics for duplicate declaration names within the same scope (top-level and namespace-local scopes), while allowing same names across different namespace scopes.
 - Added duplicate declaration-name quick fix (`Rename declaration to '<NameN>'`) with unique numeric-suffix suggestion in the current scope.
 - Added path-form `Name="..."` duplicate-name coverage: diagnostics compare path leaf names and quick-fix preserves path prefix while renaming only the leaf.
+- Added stronger unknown-type diagnostics and const-texture default-asset path validation.
+- Added dumb-mode support for the welcome file editor.
 
 ### Changed
 
+- Reworked plugin version and changelog loading for the welcome page flow.
 - Reworked Code Vision click handling to improve interaction stability and align with package search state transitions.
 - Improved hover override configuration and welcome guidance: built-in entries can now be edited/reset, and missing project root prompts are clearer.
 - Updated changelog localization pipeline by splitting language files (`CHANGELOG.md` / `CHANGELOG.zh-CN.md`) and syncing release CI patching behavior.
 - Updated README release presentation with Marketplace plugin card and static badges.
+- Refactored shared import/signature parsing helpers to consolidate navigation/diagnostics logic.
+- Updated README terminal build guidance to emphasize Java 17+ auto-resolution and `GRADLE_USER_HOME`.
+
+### Fixed
+
+- Fixed release workflow config-cache and dependency ordering issues in publishing pipeline.
+- Fixed Gradle build conflicts between changelog patching and configuration cache behavior.
 
 ## [0.0.2] - 2026-05-29
 
