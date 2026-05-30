@@ -57,10 +57,22 @@ jobs:
           CHANGELOG: ${{ github.event.release.body }}
         run: |
           RELEASE_NOTE="./build/tmp/release_note.txt"
+          RELEASE_NOTE_EN="./build/tmp/release_note.en.txt"
           mkdir -p "$(dirname "$RELEASE_NOTE")"
-          echo "$CHANGELOG" > $RELEASE_NOTE
+          echo "$CHANGELOG" > "$RELEASE_NOTE"
 
-          ./gradlew patchChangelog --release-note-file=$RELEASE_NOTE --no-configuration-cache
+          awk '
+            BEGIN { in_en=0 }
+            /^## English[[:space:]]*$/ { in_en=1; next }
+            /^## 中文[[:space:]]*$/ { if (in_en) exit }
+            in_en { print }
+          ' "$RELEASE_NOTE" > "$RELEASE_NOTE_EN"
+
+          if [ ! -s "$RELEASE_NOTE_EN" ]; then
+            cp "$RELEASE_NOTE" "$RELEASE_NOTE_EN"
+          fi
+
+          ./gradlew patchChangelog --release-note-file="$RELEASE_NOTE_EN" --no-configuration-cache
 
       # Publish the plugin to JetBrains Marketplace
       - name: Publish Plugin

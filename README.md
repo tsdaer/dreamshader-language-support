@@ -1468,12 +1468,12 @@ Acceptance criteria:
 
 ### Changelog Localization
 
-- `CHANGELOG.md` uses bilingual format:
-  - English section first (default)
-  - Chinese mirror section starts at heading `### 中文`
+- Changelog is split into two files:
+  - English: `CHANGELOG.md`
+  - Chinese: `CHANGELOG.zh-CN.md`
 - Plugin welcome page ("What Changed In This Version") auto-selects changelog language by IDE/runtime locale:
-  - `zh*` locale -> Chinese section
-  - other locales -> English section
+  - `zh*` locale -> `CHANGELOG.zh-CN.md` (fallback to English if unavailable)
+  - other locales -> `CHANGELOG.md`
 
 ## Development
 

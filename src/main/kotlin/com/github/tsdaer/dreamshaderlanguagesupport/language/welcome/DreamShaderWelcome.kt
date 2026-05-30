@@ -14,9 +14,9 @@ import java.util.Locale
 private const val DREAMSHADER_WELCOME_FILE_NAME = "DreamShader Welcome"
 private const val DREAMSHADER_WELCOME_EDITOR_TYPE_ID = "dreamshader-welcome-editor"
 private val DREAMSHADER_WELCOME_FILE_KEY = Key.create<DreamShaderWelcomeVirtualFile>("dreamshader.welcome.virtualFile")
-private val DREAMSHADER_CHANGELOG_CHINESE_HEADER = Regex("""^\s*###\s+中文\s*$""", setOf(RegexOption.IGNORE_CASE))
 private const val DREAMSHADER_PLUGIN_INFO_RESOURCE = "dreamshader-plugin.properties"
 private const val DREAMSHADER_CHANGELOG_RESOURCE = "CHANGELOG.md"
+private const val DREAMSHADER_CHANGELOG_ZH_RESOURCE = "CHANGELOG.zh-CN.md"
 
 internal fun showWelcomeDialog(project: Project, forceManual: Boolean = false) {
     val currentVersion = readPluginVersion().takeUnless { it.isNullOrBlank() }
@@ -307,28 +307,11 @@ private fun buildSubtitleText(decision: DreamShaderWelcomeStateService.WelcomeDe
 }
 
 private fun extractChangeNotesHtml(): String {
-    val notes = readBundledChangelog().trim()
+    val notes = readBundledChangelogByLocale().trim()
     if (notes.isNotBlank()) {
-        return selectLocalizedChangeNotesMarkdown(notes)
+        return "<pre>$notes</pre>"
     }
     return DreamShaderBundle.message("welcome.section.changes.fallback")
-}
-
-private fun selectLocalizedChangeNotesMarkdown(notes: String): String {
-    val raw = notes.trim()
-    val lines = raw.lineSequence().toList()
-    val chineseIndex = lines.indexOfFirst { line -> DREAMSHADER_CHANGELOG_CHINESE_HEADER.matches(line) }
-    if (chineseIndex < 0) {
-        return "<pre>$raw</pre>"
-    }
-
-    val isChinese = Locale.getDefault().language.equals("zh", ignoreCase = true)
-    val localized = if (isChinese) {
-        lines.drop(chineseIndex + 1).joinToString("\n").trim()
-    } else {
-        lines.take(chineseIndex).joinToString("\n").trim()
-    }
-    return "<pre>$localized</pre>"
 }
 
 private fun readPluginVersion(): String? {
@@ -342,10 +325,22 @@ private fun readPluginVersion(): String? {
     }.getOrNull()
 }
 
-private fun readBundledChangelog(): String {
+private fun readBundledChangelogByLocale(): String {
+    val isChinese = Locale.getDefault().language.equals("zh", ignoreCase = true)
+    val resource = if (isChinese) DREAMSHADER_CHANGELOG_ZH_RESOURCE else DREAMSHADER_CHANGELOG_RESOURCE
+    return readBundledTextResource(resource).ifBlank {
+        if (resource == DREAMSHADER_CHANGELOG_ZH_RESOURCE) {
+            readBundledTextResource(DREAMSHADER_CHANGELOG_RESOURCE)
+        } else {
+            ""
+        }
+    }
+}
+
+private fun readBundledTextResource(resource: String): String {
     val loader = DreamShaderWelcomeProjectActivity::class.java.classLoader ?: return ""
     return runCatching {
-        loader.getResourceAsStream(DREAMSHADER_CHANGELOG_RESOURCE)?.use { input ->
+        loader.getResourceAsStream(resource)?.use { input ->
             input.bufferedReader(Charsets.UTF_8).readText()
         }.orEmpty()
     }.getOrDefault("")
