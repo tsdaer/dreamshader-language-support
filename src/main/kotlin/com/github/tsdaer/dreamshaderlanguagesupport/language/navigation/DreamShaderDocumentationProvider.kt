@@ -35,7 +35,14 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         if (leaf?.node?.elementType == DreamShaderTokenTypes.WHITE_SPACE) {
             leaf = PsiTreeUtil.prevVisibleLeaf(leaf) ?: PsiTreeUtil.nextVisibleLeaf(leaf)
         }
-        return leaf ?: contextElement
+        val selected = leaf ?: contextElement
+        if (selected != null && selected.node?.elementType == DreamShaderTokenTypes.IDENTIFIER) {
+            val declarationTarget = DreamShaderGotoDeclarationHandler()
+                .getGotoDeclarationTargets(selected, selected.textRange.startOffset, editor)
+                ?.firstOrNull()
+            if (declarationTarget != null) return declarationTarget
+        }
+        return selected
     }
 
     override fun getQuickNavigateInfo(element: PsiElement, originalElement: PsiElement?): String? {

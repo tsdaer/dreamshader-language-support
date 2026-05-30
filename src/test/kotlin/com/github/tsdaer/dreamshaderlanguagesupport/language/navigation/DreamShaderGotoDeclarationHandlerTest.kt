@@ -1,5 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.util.PsiTreeUtil
@@ -336,5 +337,257 @@ class DreamShaderGotoDeclarationHandlerTest : BasePlatformTestCase() {
         val declaration = targets.first() as DreamShaderDeclaration
         assertEquals("Blend", declaration.declarationName())
         assertEquals("function", declaration.keywordText())
+    }
+
+    fun testGotoDeclarationResolvesGraphIdentifierToPropertiesVariableDeclaration() {
+        val file = myFixture.configureByText(
+            "graph_to_properties_variable.dsm",
+            """
+            Shader(Name="DreamMaterials/M_Minimal")
+            {
+                Properties = {
+                    vec3 Tint = vec3(1.0, 0.2, 0.2);
+                }
+
+                Outputs = {
+                    vec3 Color;
+                    Base.EmissiveColor = Color;
+                }
+
+                Graph = {
+                    Color = Tint;
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.lastIndexOf("Tint;") + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull("Expected Tint usage source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto declaration target for Tint usage", targets)
+        assertTrue(targets!!.isNotEmpty())
+
+        val target = targets.first()
+        assertEquals("Tint", target.text)
+        val prev = PsiTreeUtil.prevVisibleLeaf(target)
+        val next = PsiTreeUtil.nextVisibleLeaf(target)
+        assertNotNull("Expected variable declaration type token before Tint target", prev)
+        assertNotNull("Expected assignment token after Tint target", next)
+        assertEquals(DreamShaderTokenTypes.TYPE, prev!!.node?.elementType)
+        assertEquals("=", next!!.text)
+    }
+
+    fun testGotoDeclarationResolvesQualifiedMemberFromImportedFile() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val importedPath = Paths.get(projectBase, "Shared", "Common.dsh")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(importedPath.parent.toString())
+            val file = parent.findOrCreateChildData(this, importedPath.fileName.toString())
+            VfsUtil.saveText(
+                file,
+                """
+                Namespace Common {
+                    Function BuildPulse(in float t, in vec2 uv, out vec3 result) {
+                        result = vec3(1.0, 1.0, 1.0);
+                    }
+                }
+                """.trimIndent()
+            )
+        }
+
+        val caller = myFixture.configureByText(
+            "cross_file_qualified_member.dsm",
+            """
+            import "Shared/Common.dsh";
+
+            Shader Main {
+                Graph {
+                    Common::BuildPulse(time, uv, outColor);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = caller.text.indexOf("BuildPulse(") + 1
+        val sourceElement = caller.findElementAt(usageOffset)
+        assertNotNull("Expected qualified member source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto target for imported qualified member", targets)
+        assertTrue(targets!!.isNotEmpty())
+        val declaration = targets.first() as DreamShaderDeclaration
+        assertEquals("BuildPulse", declaration.declarationName())
+        assertEquals("Common.dsh", declaration.containingFile.name)
+    }
+
+    fun testGotoDeclarationResolvesUnqualifiedFunctionCallFromImportedFile() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val importedPath = Paths.get(projectBase, "Shared", "Utils.dsh")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(importedPath.parent.toString())
+            val file = parent.findOrCreateChildData(this, importedPath.fileName.toString())
+            VfsUtil.saveText(
+                file,
+                """
+                Function ApplyTint(in vec3 color, in vec3 tint, out vec3 result) {
+                    result = color * tint;
+                }
+                """.trimIndent()
+            )
+        }
+
+        val caller = myFixture.configureByText(
+            "cross_file_unqualified_member.dsm",
+            """
+            import "Shared/Utils.dsh";
+
+            Shader Main {
+                Graph {
+                    vec3 c = vec3(1.0, 1.0, 1.0);
+                    vec3 t = vec3(0.5, 0.5, 0.5);
+                    vec3 outColor;
+                    ApplyTint(c, t, outColor);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = caller.text.indexOf("ApplyTint(") + 1
+        val sourceElement = caller.findElementAt(usageOffset)
+        assertNotNull("Expected imported function call source element", sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull("Expected goto target for imported unqualified function call", targets)
+        assertTrue(targets!!.isNotEmpty())
+        val declaration = targets.first() as DreamShaderDeclaration
+        assertEquals("ApplyTint", declaration.declarationName())
+        assertEquals("Utils.dsh", declaration.containingFile.name)
+    }
+
+    fun testGotoDeclarationResolvesVirtualFunctionCallByNameAttributeLeaf() {
+        val file = myFixture.configureByText(
+            "virtual_function_name_leaf.dsh",
+            """
+            VirtualFunction(Name="BufferWriter")
+            {
+                Options = {
+                    Asset = Path(Plugins.MoonToon, "MaterialFunctions/Buffer/Writer");
+                }
+                Inputs = {
+                    float3 Color;
+                    float Alpha;
+                }
+                Outputs = {
+                    float3 Result;
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    float3 written = BufferWriter(Color, 1.0, Output="Result");
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("BufferWriter(") + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull(sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull(targets)
+        val declaration = targets!!.first() as DreamShaderDeclaration
+        assertEquals("virtualfunction", declaration.keywordText())
+    }
+
+    fun testGotoDeclarationResolvesShaderFunctionCallByNameAttributePathLeaf() {
+        val file = myFixture.configureByText(
+            "shader_function_name_path_leaf.dsf",
+            """
+            ShaderFunction(Name="Functions/F_PulseTint")
+            {
+                Inputs = {
+                    vec3 InColor;
+                }
+                Outputs = {
+                    vec3 OutColor;
+                }
+                Graph = {
+                    OutColor = InColor;
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    vec3 a = vec3(1.0, 1.0, 1.0);
+                    vec3 b = F_PulseTint(a);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("F_PulseTint(") + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull(sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull(targets)
+        val declaration = targets!!.first() as DreamShaderDeclaration
+        assertEquals("shaderfunction", declaration.keywordText())
+    }
+
+    fun testGotoDeclarationResolvesImportedFunctionThroughRecursiveImportChain() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val apiPath = Paths.get(projectBase, "Shared", "Api.dsh")
+        val implPath = Paths.get(projectBase, "Shared", "Impl.dsh")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val apiParent = VfsUtil.createDirectories(apiPath.parent.toString())
+            val apiFile = apiParent.findOrCreateChildData(this, apiPath.fileName.toString())
+            VfsUtil.saveText(apiFile, "import \"Impl.dsh\";")
+
+            val implParent = VfsUtil.createDirectories(implPath.parent.toString())
+            val implFile = implParent.findOrCreateChildData(this, implPath.fileName.toString())
+            VfsUtil.saveText(
+                implFile,
+                """
+                Function IndirectFunc(in float x, out float y) {
+                    y = x;
+                }
+                """.trimIndent()
+            )
+        }
+
+        val caller = myFixture.configureByText(
+            "recursive_import_caller.dsm",
+            """
+            import "Shared/Api.dsh";
+
+            Shader Main {
+                Graph {
+                    float x = 1.0;
+                    float y = 0.0;
+                    IndirectFunc(x, y);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = caller.text.indexOf("IndirectFunc(") + 1
+        val sourceElement = caller.findElementAt(usageOffset)
+        assertNotNull(sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull(targets)
+        val declaration = targets!!.first() as DreamShaderDeclaration
+        assertEquals("IndirectFunc", declaration.declarationName())
+        assertEquals("Impl.dsh", declaration.containingFile.name)
     }
 }

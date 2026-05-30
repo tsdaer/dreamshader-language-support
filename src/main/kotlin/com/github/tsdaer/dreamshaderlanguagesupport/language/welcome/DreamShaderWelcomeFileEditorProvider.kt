@@ -13,6 +13,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
+import com.intellij.ui.jcef.JBCefBrowserBase
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
@@ -45,7 +46,8 @@ private class DreamShaderWelcomeFileEditor(
     init {
         if (JBCefApp.isSupported()) {
             val cef = JBCefBrowser()
-            val jsQuery = JBCefJSQuery.create(cef)
+            val cefBase: JBCefBrowserBase = cef
+            val jsQuery = JBCefJSQuery.create(cefBase)
             jsQuery.addHandler {
                 ShowSettingsUtil.getInstance().showSettingsDialog(project, DreamShaderSettingsConfigurable::class.java)
                 null

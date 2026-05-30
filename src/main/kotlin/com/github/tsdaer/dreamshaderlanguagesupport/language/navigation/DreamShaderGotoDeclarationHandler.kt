@@ -7,8 +7,10 @@ import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
+import java.util.Locale
 
 /**
  * 前往声明处理器：
@@ -73,19 +75,66 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
             return null
         }
 
+        resolveNearestVariableLikeDeclarationTarget(element)?.let { return arrayOf(it) }
+
         val symbolName = element.text
         if (symbolName.isBlank()) return null
 
         resolveUnqualifiedNamespaceMemberTarget(file, element, symbolName)?.let { return arrayOf(it) }
 
-        val declarations = topLevelDeclarations(file)
+        resolveTopLevelDeclarationBySymbol(file, symbolName)?.let { return arrayOf(it) }
+        resolveTopLevelDeclarationBySymbolInImportedFiles(file, symbolName)?.let { return arrayOf(it) }
+        return null
+    }
 
-        for (declaration in declarations) {
-            if (declaration.declarationName() == symbolName) {
-                return arrayOf(declaration)
+    private fun resolveNearestVariableLikeDeclarationTarget(element: PsiElement): PsiElement? {
+        val symbolName = element.text
+        if (symbolName.isBlank()) return null
+
+        val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return null
+        val bodyRange = declaration.bodyTextRange() ?: return null
+        val searchLowerBound = if (declaration.isFunctionLike()) {
+            declaration.textRange.startOffset
+        } else {
+            bodyRange.startOffset
+        }
+        val usageStart = element.textRange.startOffset
+        if (usageStart <= searchLowerBound) return null
+
+        var current = PsiTreeUtil.prevVisibleLeaf(element)
+        while (current != null) {
+            val start = current.textRange.startOffset
+            if (start < searchLowerBound) break
+
+            if (current.node?.elementType == DreamShaderTokenTypes.IDENTIFIER &&
+                current.text == symbolName &&
+                isVariableLikeDeclarationIdentifier(current)
+            ) {
+                return current
             }
+            current = PsiTreeUtil.prevVisibleLeaf(current)
         }
         return null
+    }
+
+    private fun isVariableLikeDeclarationIdentifier(identifier: PsiElement): Boolean {
+        if (identifier.node?.elementType != DreamShaderTokenTypes.IDENTIFIER) return false
+        if (isDeclarationNameIdentifier(identifier)) return false
+        if (isNamedCallArgumentKey(identifier)) return false
+        if (isNamespaceQualifier(identifier)) return false
+        if (isMemberAccessComponent(identifier)) return false
+
+        val previous = previousNonTriviaLeaf(identifier) ?: return false
+        if (previous.node?.elementType != DreamShaderTokenTypes.TYPE) return false
+
+        val next = nextNonTriviaLeaf(identifier) ?: return false
+        if (!isVariableDeclarationFollower(next.text)) return false
+
+        return true
+    }
+
+    private fun isVariableDeclarationFollower(tokenText: String): Boolean {
+        return tokenText == "=" || tokenText == ";" || tokenText == "," || tokenText == ")" || tokenText == "["
     }
 
     private fun isInsideDeclarationTree(element: PsiElement): Boolean {
@@ -132,6 +181,7 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
     ): DreamShaderDeclaration? {
         val namespacePath = qualifierChainBefore + element.text
         return resolveNamespaceByPath(file, namespacePath)
+            ?: resolveNamespaceByPathInImportedFiles(file, namespacePath)
     }
 
     private fun resolveNamespaceQualifiedMemberTarget(
@@ -143,10 +193,13 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
         if (namespacePath.isEmpty()) return null
         val memberName = element.text
 
-        val namespaceDeclaration = resolveNamespaceByPath(file, namespacePath) ?: return null
+        val namespaceDeclaration = resolveNamespaceByPath(file, namespacePath)
+        if (namespaceDeclaration != null) {
+            return directChildDeclarations(namespaceDeclaration)
+                .firstOrNull { declaration -> declaration.declarationName() == memberName }
+        }
 
-        return directChildDeclarations(namespaceDeclaration)
-            .firstOrNull { declaration -> declaration.declarationName() == memberName }
+        return resolveNamespaceMemberByPathInImportedFiles(file, namespacePath, memberName)
     }
 
     private fun resolveUnqualifiedNamespaceMemberTarget(
@@ -165,6 +218,136 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
             if (member != null) return member
         }
         return null
+    }
+
+    private fun resolveNamespaceByPathInImportedFiles(
+        file: PsiElement,
+        namespacePath: List<String>
+    ): DreamShaderDeclaration? {
+        if (namespacePath.isEmpty()) return null
+        for (importedFile in resolveImportedDreamShaderFiles(file)) {
+            val target = resolveNamespaceByPath(importedFile, namespacePath)
+            if (target != null) return target
+        }
+        return null
+    }
+
+    private fun resolveNamespaceMemberByPathInImportedFiles(
+        file: PsiElement,
+        namespacePath: List<String>,
+        memberName: String
+    ): DreamShaderDeclaration? {
+        if (namespacePath.isEmpty() || memberName.isBlank()) return null
+        for (importedFile in resolveImportedDreamShaderFiles(file)) {
+            val namespace = resolveNamespaceByPath(importedFile, namespacePath) ?: continue
+            val member = directChildDeclarations(namespace)
+                .firstOrNull { declaration -> declaration.declarationName() == memberName }
+            if (member != null) return member
+        }
+        return null
+    }
+
+    private fun resolveTopLevelDeclarationBySymbol(file: PsiElement, symbolName: String): DreamShaderDeclaration? {
+        if (symbolName.isBlank()) return null
+        return topLevelDeclarations(file).firstOrNull { declarationMatchesSymbolName(it, symbolName) }
+    }
+
+    private fun resolveTopLevelDeclarationBySymbolInImportedFiles(
+        file: PsiElement,
+        symbolName: String
+    ): DreamShaderDeclaration? {
+        if (symbolName.isBlank()) return null
+        for (importedFile in resolveImportedDreamShaderFiles(file)) {
+            val declaration = resolveTopLevelDeclarationBySymbol(importedFile, symbolName)
+            if (declaration != null) return declaration
+        }
+        return null
+    }
+
+    private fun declarationMatchesSymbolName(declaration: DreamShaderDeclaration, symbolName: String): Boolean {
+        return declarationSymbolNames(declaration)
+            .any { candidate -> candidate.equals(symbolName, ignoreCase = false) }
+    }
+
+    private fun declarationSymbolNames(declaration: DreamShaderDeclaration): Set<String> {
+        val names = linkedSetOf<String>()
+        val explicit = declaration.declarationName().orEmpty().trim()
+        if (explicit.isNotBlank() && !explicit.equals("name", ignoreCase = true)) {
+            names.add(explicit)
+        }
+
+        val keyword = declaration.keywordText().orEmpty().lowercase(Locale.ROOT)
+        if (keyword in CALLABLE_NAME_ATTRIBUTE_DECLARATIONS) {
+            val attrName = extractNameAttributeValue(declaration)
+            if (!attrName.isNullOrBlank()) {
+                names.add(attrName)
+                names.add(attrName.substringAfterLast('/').substringAfterLast('\\'))
+            }
+        }
+
+        return names.filter { it.isNotBlank() }.toSet()
+    }
+
+    private fun extractNameAttributeValue(declaration: DreamShaderDeclaration): String? {
+        val bodyStart = declaration.bodyTextRange()?.startOffset ?: declaration.text.length
+        if (bodyStart <= 0 || bodyStart > declaration.text.length) return null
+        val head = declaration.text.substring(0, bodyStart)
+        return NAME_ATTRIBUTE_REGEX.find(head)?.groupValues?.getOrNull(1)?.trim()
+    }
+
+    private fun resolveImportedDreamShaderFiles(file: PsiElement): List<PsiFile> {
+        val sourceFile = file.containingFile ?: return emptyList()
+        val project = sourceFile.project
+        val projectBasePath = project.basePath ?: return emptyList()
+        val psiManager = PsiManager.getInstance(project)
+        val resolved = linkedMapOf<String, PsiFile>()
+        val queue = ArrayDeque<PsiFile>()
+        val visited = hashSetOf<String>()
+
+        queue.add(sourceFile)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            val currentVf = current.virtualFile ?: continue
+            val currentPath = currentVf.path
+            if (!visited.add(currentPath)) continue
+
+            val containingDirectory = currentVf.parent
+            val importPaths = collectImportPaths(current)
+            for (importPath in importPaths) {
+                val targetVf = DreamShaderImportResolver.resolveImport(
+                    projectBasePath = projectBasePath,
+                    containingDirectory = containingDirectory,
+                    importPath = importPath
+                ) ?: continue
+                val targetPsi = psiManager.findFile(targetVf) ?: continue
+                if (targetPsi.language != DreamShaderLanguage) continue
+
+                if (targetVf.path != sourceFile.virtualFile?.path) {
+                    resolved.putIfAbsent(targetVf.path, targetPsi)
+                }
+                if (!visited.contains(targetVf.path)) {
+                    queue.addLast(targetPsi)
+                }
+            }
+        }
+
+        return resolved.values.toList()
+    }
+
+    private fun collectImportPaths(file: PsiFile): List<String> {
+        val paths = linkedSetOf<String>()
+        val stringLiterals = PsiTreeUtil.collectElements(file) { element ->
+            element.node?.elementType == DreamShaderTokenTypes.STRING
+        }
+        for (literal in stringLiterals) {
+            if (!isImportStringLiteral(literal)) continue
+            val raw = literal.text.trim()
+            if (raw.length < 2 || !raw.startsWith('"') || !raw.endsWith('"')) continue
+            val importPath = raw.substring(1, raw.length - 1).trim()
+            if (importPath.isBlank()) continue
+            paths.add(importPath)
+        }
+        return paths.toList()
     }
 
     private fun topLevelDeclarations(file: PsiElement): List<DreamShaderDeclaration> {
@@ -188,6 +371,57 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
         var i = startOffset
         while (i < text.length && text[i].isWhitespace()) i++
         return i + 1 < text.length && text[i] == ':' && text[i + 1] == ':'
+    }
+
+    private fun isNamespaceQualifier(element: PsiElement): Boolean {
+        val text = element.containingFile.text
+        var i = element.textRange.endOffset
+        while (i < text.length && text[i].isWhitespace()) i++
+        if (i + 1 >= text.length) return false
+        return text[i] == ':' && text[i + 1] == ':'
+    }
+
+    private fun isNamedCallArgumentKey(element: PsiElement): Boolean {
+        val next = nextNonTriviaLeaf(element) ?: return false
+        if (next.text != "=") return false
+
+        val prev = previousNonTriviaLeaf(element) ?: return false
+        return prev.text == "(" || prev.text == ","
+    }
+
+    private fun isMemberAccessComponent(element: PsiElement): Boolean {
+        val prev = previousNonTriviaLeaf(element) ?: return false
+        return prev.text == "."
+    }
+
+    private fun previousNonTriviaLeaf(element: PsiElement): PsiElement? {
+        var leaf = PsiTreeUtil.prevVisibleLeaf(element)
+        while (leaf != null) {
+            val type = leaf.node?.elementType
+            if (type != DreamShaderTokenTypes.WHITE_SPACE &&
+                type != DreamShaderTokenTypes.LINE_COMMENT &&
+                type != DreamShaderTokenTypes.BLOCK_COMMENT
+            ) {
+                return leaf
+            }
+            leaf = PsiTreeUtil.prevVisibleLeaf(leaf)
+        }
+        return null
+    }
+
+    private fun nextNonTriviaLeaf(element: PsiElement): PsiElement? {
+        var leaf = PsiTreeUtil.nextVisibleLeaf(element)
+        while (leaf != null) {
+            val type = leaf.node?.elementType
+            if (type != DreamShaderTokenTypes.WHITE_SPACE &&
+                type != DreamShaderTokenTypes.LINE_COMMENT &&
+                type != DreamShaderTokenTypes.BLOCK_COMMENT
+            ) {
+                return leaf
+            }
+            leaf = PsiTreeUtil.nextVisibleLeaf(leaf)
+        }
+        return null
     }
 
     private fun resolveNamespaceByPath(file: PsiElement, namespacePath: List<String>): DreamShaderDeclaration? {
@@ -246,4 +480,14 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
     }
 
     private fun isIdentifierChar(ch: Char): Boolean = ch == '_' || ch.isLetterOrDigit()
+
+    companion object {
+        private val CALLABLE_NAME_ATTRIBUTE_DECLARATIONS = setOf(
+            "virtualfunction",
+            "shaderfunction",
+            "shaderlayer",
+            "shaderlayerblend"
+        )
+        private val NAME_ATTRIBUTE_REGEX = Regex("\\bName\\s*=\\s*\"([^\"]+)\"")
+    }
 }
