@@ -570,6 +570,8 @@ Implemented:
 - Unsupported import extension quick-fix now offers all supported replacement extensions (`.dsh`, `.dsf`, `.dsm`), prioritizes already-resolvable targets in the current workspace, and marks quick-fix labels with `(resolves existing file)` / `(preferred default)` / `(will update preferred default)` hints.
 - Optional setting `autoUpdatePreferredImportExtension` lets users persist the selected quick-fix extension as the new preferred default when applying unsupported-extension quick-fixes.
 - Import-extension quick-fix hint suffix composition is centralized in a dedicated formatter to keep ordering stable (`resolves existing` -> `preferred default` -> `will update preferred default`) and simplify future hint expansion.
+- Added same-scope duplicate declaration-name diagnostics for semantic analysis (top-level and namespace-local scope), including `Name="..."` path-form declarations matched by path leaf (for example `Functions/F_Blend` -> `F_Blend`), while allowing identical names across different namespace scopes.
+- Added duplicate declaration-name quick fix: `Rename declaration to '<NameN>'`, which suggests a unique numeric-suffix name in the current scope and preserves path prefix for `Name="..."` path-form declarations.
 - Added a lightweight settings-UI test base for recursive component lookup by stable component name, and covered `Preferred Import Extension` preview live updates (combo selection + auto-update checkbox interaction).
 - Extended the same UI-testing approach to `DreamShader Package Store` dialog with stable component names and a regression test that verifies install/update/remove button enablement reacts correctly to selection changes and installed-state transitions.
 - Added Package Store filter regression coverage to verify `Installed only` / `Updates possible only` toggles refresh list contents and preserve correct action-button disablement in empty-list states.
@@ -683,6 +685,7 @@ Rule format:
 | `DSYN-211` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testVirtualFunctionOptionAssetRequiresPath()` + `testVirtualFunctionOptionAssetRejectsBareIdentifier()` + `testVirtualFunctionOptionAssetAcceptsPathCall()` + `testVirtualFunctionOptionAssetAcceptsQuotedObjectPath()` + `testVirtualFunctionOptionAssetAcceptsEngineRootPathCall()` + `testVirtualFunctionOptionAssetRejectsUnknownPathRoot()` + `testVirtualFunctionOptionAssetUnknownRootQuickFixReplacesWithGame()` + `testVirtualFunctionOptionAssetRequiresOptionEntry()`    |
 | `DSYN-212` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testShaderRootRejectsEngineRoot()` + `testShaderRootAcceptsPluginRoot()`                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `DSYN-213` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testVirtualFunctionOptionDescriptionWarnsWhenNotQuoted()` + `testVirtualFunctionOptionDescriptionNotQuotedQuickFixAddsQuotes()` + `testVirtualFunctionOptionDescriptionWarnsWhenEmpty()` + `testVirtualFunctionOptionDescriptionEmptyQuickFixFillsDefault()` + `testVirtualFunctionOptionDescriptionSettingsAliasAcceptsQuotedText()` + `testVirtualFunctionOptionDescriptionRecommendedWhenMissing()` + `testVirtualFunctionOptionDescriptionRecommendedQuickFixAddsDescription()` |
+| `DSYN-214` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testDuplicateTopLevelDeclarationNameIsReported()` + `testDuplicateNamespaceChildDeclarationNameIsReported()` + `testSameNameInDifferentNamespacesIsAllowed()` + `testDuplicateTopLevelDeclarationNameQuickFixRenamesToUniqueName()` + `testDuplicateNamespaceChildDeclarationNameQuickFixRenamesToUniqueName()` + `testDuplicateNameAttributePathLeafIsReported()` + `testDuplicateNameAttributePathLeafQuickFixKeepsPrefixAndRenamesLeaf()` + `testSameNameAttributeLeafInDifferentNamespacesIsAllowed()`                                                                                           |
 
 #### A. Local Parser Diagnostics (`P1`)
 
@@ -961,6 +964,14 @@ VirtualFunction(Name="VF_NoDescription") {
 - `Fill Description with default text` replaces empty-string with default description text
 - `Add Description option` inserts `Description = "Bridge-compatible virtual function";` when missing  
 `Test`: `testVirtualFunctionOptionDescriptionWarnsWhenNotQuoted()` / `testVirtualFunctionOptionDescriptionNotQuotedQuickFixAddsQuotes()` / `testVirtualFunctionOptionDescriptionWarnsWhenEmpty()` / `testVirtualFunctionOptionDescriptionEmptyQuickFixFillsDefault()` / `testVirtualFunctionOptionDescriptionSettingsAliasAcceptsQuotedText()` / `testVirtualFunctionOptionDescriptionRecommendedWhenMissing()` / `testVirtualFunctionOptionDescriptionRecommendedQuickFixAddsDescription()`
+
+28. `ID`: `DSYN-214`  
+`Priority`: `P2`  
+`Rule`: duplicate declaration names are not allowed within the same declaration scope (top-level scope and each `Namespace` local scope are checked independently); path-form `Name="Folder/Leaf"` declarations participate by leaf name.  
+`Expected`: `Duplicate declaration name 'BuildNoise' in the same scope`  
+`Note`: same declaration name is allowed across different namespace scopes.  
+`QuickFix`: `Rename declaration to 'BuildNoise2'` (suggests a unique numeric-suffix name within current scope; for path-form `Name`, only leaf is replaced and prefix is preserved, for example `Functions/F_Blend` -> `Functions/F_Blend2`)  
+`Test`: `testDuplicateTopLevelDeclarationNameIsReported()` / `testDuplicateNamespaceChildDeclarationNameIsReported()` / `testSameNameInDifferentNamespacesIsAllowed()` / `testDuplicateNameAttributePathLeafIsReported()` / `testDuplicateNameAttributePathLeafQuickFixKeepsPrefixAndRenamesLeaf()` / `testSameNameAttributeLeafInDifferentNamespacesIsAllowed()`
 
 #### C. Semantic Diagnostics (`P2`)
 
@@ -1532,6 +1543,12 @@ Acceptance criteria:
 - Plugin welcome page ("What Changed In This Version") auto-selects changelog language by IDE/runtime locale:
   - `zh*` locale -> `CHANGELOG.zh-CN.md` (fallback to English if unavailable)
   - other locales -> `CHANGELOG.md`
+
+### Changelog Versioning Policy
+
+- Between version bumps, record new updates under the current released version section (for example, keep adding to `0.0.3` until `0.0.4` is actually created).
+- Keep `Unreleased` empty by default during normal development.
+- Use Git commit history as the source of truth for detailed update chronology before each version bump.
 
 ## Development
 

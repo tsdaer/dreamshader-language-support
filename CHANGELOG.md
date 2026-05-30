@@ -10,6 +10,9 @@
 
 - Added declaration navigation support for namespace declarations, including go-to declaration, find usages, and structure/symbol coverage.
 - Added in-progress action disabling for GitHub package search in the package store dialog, preventing duplicate operations while requests are running.
+- Added semantic diagnostics for duplicate declaration names within the same scope (top-level and namespace-local scopes), while allowing same names across different namespace scopes.
+- Added duplicate declaration-name quick fix (`Rename declaration to '<NameN>'`) with unique numeric-suffix suggestion in the current scope.
+- Added path-form `Name="..."` duplicate-name coverage: diagnostics compare path leaf names and quick-fix preserves path prefix while renaming only the leaf.
 
 ### Changed
 

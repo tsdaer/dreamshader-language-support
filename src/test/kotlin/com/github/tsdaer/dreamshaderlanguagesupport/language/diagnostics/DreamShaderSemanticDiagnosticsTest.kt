@@ -1175,6 +1175,146 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Graph section does not support return statement")
     }
 
+    fun testDuplicateTopLevelDeclarationNameIsReported() {
+        val text = """
+            Function BuildNoise(in float X, out float OutValue) {
+                OutValue = X;
+            }
+
+            Function <caret>BuildNoise(in float X, out float OutValue) {
+                OutValue = X;
+            }
+        """.trimIndent()
+        myFixture.configureByText("duplicate_top_level_declaration_name.dsh", text)
+        assertHasError("Duplicate declaration name 'BuildNoise' in the same scope")
+    }
+
+    fun testDuplicateNamespaceChildDeclarationNameIsReported() {
+        val text = """
+            Namespace Tools {
+                Function BuildNoise(in float X, out float OutValue) {
+                    OutValue = X;
+                }
+                Function <caret>BuildNoise(in float X, out float OutValue) {
+                    OutValue = X;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("duplicate_namespace_child_declaration_name.dsh", text)
+        assertHasError("Duplicate declaration name 'BuildNoise' in the same scope")
+    }
+
+    fun testDuplicateTopLevelDeclarationNameQuickFixRenamesToUniqueName() {
+        val text = """
+            Function BuildNoise(in float X, out float OutValue) {
+                OutValue = X;
+            }
+
+            Function <caret>BuildNoise(in float X, out float OutValue) {
+                OutValue = X;
+            }
+        """.trimIndent()
+        myFixture.configureByText("duplicate_top_level_declaration_name_fix.dsh", text)
+        val action = myFixture.findSingleIntention("Rename declaration to 'BuildNoise2'")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("Function BuildNoise2(in float X, out float OutValue)"))
+    }
+
+    fun testDuplicateNamespaceChildDeclarationNameQuickFixRenamesToUniqueName() {
+        val text = """
+            Namespace Tools {
+                Function BuildNoise(in float X, out float OutValue) {
+                    OutValue = X;
+                }
+                Function <caret>BuildNoise(in float X, out float OutValue) {
+                    OutValue = X;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("duplicate_namespace_child_declaration_name_fix.dsh", text)
+        val action = myFixture.findSingleIntention("Rename declaration to 'BuildNoise2'")
+        myFixture.launchAction(action)
+        assertTrue(myFixture.file.text.contains("Function BuildNoise2(in float X, out float OutValue)"))
+    }
+
+    fun testDuplicateNameAttributePathLeafIsReported() {
+        val text = """
+            ShaderFunction(Name="Functions/F_Blend") {
+                Inputs { in float A; in float B; }
+                Outputs { out float Result; }
+                Graph { Result = A + B; }
+            }
+
+            ShaderFunction(Name="Functions/<caret>F_Blend") {
+                Inputs { in float A; in float B; }
+                Outputs { out float Result; }
+                Graph { Result = A - B; }
+            }
+        """.trimIndent()
+        myFixture.configureByText("duplicate_name_attribute_path_leaf.dsf", text)
+        assertHasError("Duplicate declaration name 'F_Blend' in the same scope")
+    }
+
+    fun testDuplicateNameAttributePathLeafQuickFixKeepsPrefixAndRenamesLeaf() {
+        val text = """
+            ShaderFunction(Name="Functions/F_Blend") {
+                Inputs { in float A; in float B; }
+                Outputs { out float Result; }
+                Graph { Result = A + B; }
+            }
+
+            ShaderFunction(Name="Functions/<caret>F_Blend") {
+                Inputs { in float A; in float B; }
+                Outputs { out float Result; }
+                Graph { Result = A - B; }
+            }
+        """.trimIndent()
+        myFixture.configureByText("duplicate_name_attribute_path_leaf_fix.dsf", text)
+        val action = myFixture.findSingleIntention("Rename declaration to 'F_Blend2'")
+        myFixture.launchAction(action)
+        assertTrue(Regex("""Name\s*=\s*"Functions/F_Blend2"""").containsMatchIn(myFixture.file.text))
+    }
+
+    fun testSameNameAttributeLeafInDifferentNamespacesIsAllowed() {
+        val text = """
+            Namespace PackA {
+                ShaderFunction(Name="Functions/F_Blend") {
+                    Inputs { in float A; in float B; }
+                    Outputs { out float Result; }
+                    Graph { Result = A + B; }
+                }
+            }
+
+            Namespace PackB {
+                ShaderFunction(Name="Functions/F_Blend") {
+                    Inputs { in float A; in float B; }
+                    Outputs { out float Result; }
+                    Graph { Result = A - B; }
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("same_name_attribute_leaf_in_different_namespaces_allowed.dsh", text)
+        assertNoError("Duplicate declaration name 'F_Blend' in the same scope")
+    }
+
+    fun testSameNameInDifferentNamespacesIsAllowed() {
+        val text = """
+            Namespace A {
+                Function BuildNoise(in float X, out float OutValue) {
+                    OutValue = X;
+                }
+            }
+
+            Namespace B {
+                Function BuildNoise(in float X, out float OutValue) {
+                    OutValue = X;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("same_name_in_different_namespaces_allowed.dsh", text)
+        assertNoError("Duplicate declaration name 'BuildNoise' in the same scope")
+    }
+
     fun testFunctionBodyDisallowsForLoopStatement() {
         val text = """
             Function BuildNoise(in float X, out float OutValue) {

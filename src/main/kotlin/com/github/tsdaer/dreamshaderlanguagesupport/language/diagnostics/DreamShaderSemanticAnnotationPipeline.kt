@@ -139,6 +139,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
     ) {
+        annotateDuplicateDeclarationNameDiagnostics(topLevelDeclarations, holder)
         annotateSettingsDiagnostics(topLevelDeclarations, holder)
         annotateBaseOutputMemberDiagnostics(topLevelDeclarations, holder)
         annotateUnknownTypeDiagnostics(topLevelDeclarations, holder)
@@ -151,6 +152,78 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateMissingOutArgumentDiagnostics(file, sourceText, tokens, topLevelDeclarations, holder)
         annotateAssetRootPathDiagnostics(topLevelDeclarations, holder)
         annotateUnresolvedImportDiagnostics(file, tokens, holder)
+    }
+
+    private fun annotateDuplicateDeclarationNameDiagnostics(
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        annotateDuplicateDeclarationNameDiagnosticsInScope(topLevelDeclarations, holder)
+    }
+
+    private fun annotateDuplicateDeclarationNameDiagnosticsInScope(
+        declarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        if (declarations.isEmpty()) return
+
+        declarations
+            .mapNotNull { declaration ->
+                val name = declaration.declarationName()?.trim().orEmpty()
+                if (name.isBlank()) return@mapNotNull null
+                declaration to name
+            }
+            .groupBy { (_, name) -> name }
+            .forEach { (duplicateName, entries) ->
+                if (entries.size <= 1) return@forEach
+                val occupiedNames = entries.mapNotNull { (_, name) ->
+                    name.trim().takeIf { it.isNotBlank() }
+                }.toMutableSet()
+                entries.drop(1).forEach { (declaration, _) ->
+                    val annotation = holder.newAnnotation(
+                        HighlightSeverity.ERROR,
+                        DreamShaderBundle.message("diagnostic.duplicateDeclarationName", duplicateName)
+                    ).range(declaration.nameIdentifier ?: declaration)
+                    suggestUniqueDeclarationName(duplicateName, occupiedNames)?.let { replacement ->
+                        annotation.withFix(createRenameDuplicateDeclarationQuickFix(declaration, replacement))
+                        occupiedNames.add(replacement)
+                    }
+                    annotation.create()
+                }
+            }
+
+        declarations.forEach { declaration ->
+            if (declaration.keywordText() != "namespace") return@forEach
+            val children = directChildDeclarations(declaration)
+            annotateDuplicateDeclarationNameDiagnosticsInScope(children, holder)
+        }
+    }
+
+    private fun createRenameDuplicateDeclarationQuickFix(
+        declaration: DreamShaderDeclaration,
+        replacement: String
+    ): IntentionAction {
+        val declarationPointer: SmartPsiElementPointer<DreamShaderDeclaration> = SmartPointerManager.createPointer(declaration)
+        return object : IntentionAction {
+            override fun getText(): String =
+                DreamShaderBundle.message("quickfix.duplicateDeclarationRenameTo", replacement)
+
+            override fun getFamilyName(): String =
+                DreamShaderBundle.message("quickfix.family.semantic")
+
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                val target = declarationPointer.element ?: return false
+                return target.isValid && replacement.isNotBlank() && target.declarationName() != replacement
+            }
+
+            override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+                val target = declarationPointer.element ?: return
+                if (!FileModificationService.getInstance().preparePsiElementForWrite(target)) return
+                target.setName(replacement)
+            }
+
+            override fun startInWriteAction(): Boolean = true
+        }
     }
 
     // Section 形状诊断：声明作用域下的 section 兼容性与必需项检查。
@@ -1896,6 +1969,15 @@ internal class DreamShaderSemanticAnnotationPipeline {
             .toList()
     }
 
+    private fun directChildDeclarations(declaration: DreamShaderDeclaration): List<DreamShaderDeclaration> {
+        return PsiTreeUtil.findChildrenOfType(declaration, DreamShaderDeclaration::class.java)
+            .filter { child ->
+                child != declaration &&
+                    PsiTreeUtil.getParentOfType(child, DreamShaderDeclaration::class.java, true) == declaration
+            }
+            .toList()
+    }
+
     private fun topLevelTypedDeclarations(section: DreamShaderSection?): List<String> {
         if (section == null) return emptyList()
         val body = sectionBodyText(section.text) ?: return emptyList()
@@ -2006,6 +2088,17 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
         if (bestCandidate == null) return null
         return if (bestDistance <= 3) bestCandidate else null
+    }
+
+    private fun suggestUniqueDeclarationName(baseName: String, occupiedNames: Set<String>): String? {
+        val trimmed = baseName.trim()
+        if (trimmed.isBlank()) return null
+        if (trimmed !in occupiedNames) return trimmed
+        for (index in 2..9999) {
+            val candidate = "$trimmed$index"
+            if (candidate !in occupiedNames) return candidate
+        }
+        return null
     }
 
     private fun validateVirtualFunctionAssetPath(value: String): String? {
