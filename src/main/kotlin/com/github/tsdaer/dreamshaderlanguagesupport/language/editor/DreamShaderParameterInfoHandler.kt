@@ -1,6 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
-import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.parameterInfo.ParameterInfoHandler
 import com.intellij.lang.parameterInfo.ParameterInfoUIContext
@@ -18,14 +17,7 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
         val file = context.file
         if (file.language != DreamShaderLanguage) return null
         val call = DreamShaderSignatureHelpAnalyzer.findCallContext(file.text, context.offset) ?: return null
-        val closureSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(file)
-            .drop(1)
-            .map { it.text }
-        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(
-            call.functionName,
-            file.text,
-            closureSourceTexts
-        )
+        val signatures = DreamShaderCallSignatureResolver.resolveSignatures(call.functionName, file)
         if (signatures.isEmpty()) return null
         context.itemsToShow = signatures.toTypedArray()
         context.highlightedElement = file.findElementAt(call.nameStartOffset)
@@ -57,14 +49,7 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
             return
         }
 
-        val closureSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(element)
-            .drop(1)
-            .map { it.text }
-        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(
-            call.functionName,
-            element.text,
-            closureSourceTexts
-        )
+        val signatures = DreamShaderCallSignatureResolver.resolveSignatures(call.functionName, element)
         if (signatures.isEmpty()) {
             context.removeHint()
             return

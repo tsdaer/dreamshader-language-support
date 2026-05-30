@@ -48,11 +48,15 @@ Design goal:
 
 ### 4. Navigation and References
 
+- Shared import graph helper:
+  - `DreamShaderImportClosureResolver`
+  - provides direct import-edge resolution and forward recursive import closure for navigation/signature/reference features.
 - `DreamShaderGotoDeclarationHandler`
   - import string -> resolved target file
   - identifier -> top-level declaration target
 - `DreamShaderReferencesSearchExecutor`
   - namespace-aware reference search for declarations across import-connected files
+  - reuses `DreamShaderImportClosureResolver.resolveDirectImports(...)` to build forward import edges, then augments with reverse importer edges to preserve connected-closure reference search semantics
 - `DreamShaderFindUsagesProvider`
   - Find Usages scanner and display metadata
 

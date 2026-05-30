@@ -37,7 +37,7 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
     override fun getActionText(context: DataContext): String? = null
 
     private fun resolveImportTargets(element: PsiElement): Array<PsiElement>? {
-        if (!isImportStringLiteral(element)) return null
+        if (!DreamShaderImportClosureResolver.isImportStringLiteralToken(element)) return null
         val rawText = element.text
         if (rawText.length < 2 || !rawText.startsWith('"') || !rawText.endsWith('"')) return null
         val importPath = rawText.substring(1, rawText.length - 1).trim()
@@ -158,19 +158,6 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
                 return child.psi == identifier
             }
             child = child.treeNext
-        }
-        return false
-    }
-
-    private fun isImportStringLiteral(element: PsiElement): Boolean {
-        var prev = PsiTreeUtil.prevLeaf(element, true)
-        while (prev != null) {
-            val t = prev.node?.elementType
-            if (t == DreamShaderTokenTypes.WHITE_SPACE || t == DreamShaderTokenTypes.LINE_COMMENT || t == DreamShaderTokenTypes.BLOCK_COMMENT) {
-                prev = PsiTreeUtil.prevLeaf(prev, true)
-                continue
-            }
-            return t == DreamShaderTokenTypes.KEYWORD && prev.text.equals("import", ignoreCase = true)
         }
         return false
     }

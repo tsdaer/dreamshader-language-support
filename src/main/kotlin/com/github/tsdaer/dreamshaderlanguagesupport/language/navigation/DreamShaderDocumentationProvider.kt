@@ -1,10 +1,10 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCallSignatureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSignatureHelpAnalyzer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
-import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.intellij.lang.documentation.AbstractDocumentationProvider
@@ -183,14 +183,7 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         if (!isGraphLikeContext(element)) return null
         if (!isCallableReference(element)) return null
 
-        val closureSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(element.containingFile)
-            .drop(1)
-            .map { it.text }
-        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(
-            token,
-            element.containingFile.text,
-            closureSourceTexts
-        )
+        val signatures = DreamShaderCallSignatureResolver.resolveSignatures(token, element.containingFile)
         if (signatures.isEmpty()) return null
         val signature = signatures.first()
 

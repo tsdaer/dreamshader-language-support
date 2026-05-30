@@ -2,7 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileType
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
-import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
+import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.util.TextRange
@@ -215,25 +215,10 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
 
         val importsByPath = mutableMapOf<String, MutableSet<String>>()
         val importersByPath = mutableMapOf<String, MutableSet<String>>()
-        val keyByPhysicalPath = mutableMapOf<String, String>()
-        for ((key, psiFile) in allFilesByPath) {
-            val vf = psiFile.virtualFile ?: continue
-            val physicalPath = filePath(vf) ?: continue
-            keyByPhysicalPath.putIfAbsent(physicalPath, key)
-        }
-
         for ((fromKey, psiFile) in allFilesByPath) {
-            val fromVf = psiFile.containingFile.virtualFile ?: continue
-            val containingDirectory = fromVf.parent
-            val imports = collectImportPaths(psiFile)
-            for (importPath in imports) {
-                val importedVf = DreamShaderImportResolver.resolveImport(
-                    projectBasePath = projectBasePath,
-                    containingDirectory = containingDirectory,
-                    importPath = importPath
-                ) ?: continue
-                val importedPath = filePath(importedVf) ?: continue
-                val importedKey = keyByPhysicalPath[importedPath] ?: continue
+            for (importedPsi in DreamShaderImportClosureResolver.resolveDirectImports(psiFile)) {
+                val importedVf = importedPsi.virtualFile ?: continue
+                val importedKey = fileKey(importedVf) ?: continue
 
                 importsByPath.getOrPut(fromKey) { linkedSetOf() }.add(importedKey)
                 importersByPath.getOrPut(importedKey) { linkedSetOf() }.add(fromKey)
@@ -259,23 +244,6 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
         }
 
         return visited.mapNotNull { path -> allFilesByPath[path] }
-    }
-
-    private fun collectImportPaths(file: PsiFile): List<String> {
-        val sourceFile = file.containingFile
-        val paths = linkedSetOf<String>()
-        val stringLiterals = PsiTreeUtil.collectElements(sourceFile) { element ->
-            element.node?.elementType == DreamShaderTokenTypes.STRING
-        }
-        for (literal in stringLiterals) {
-            if (!isImportStringLiteral(literal)) continue
-            val raw = literal.text.trim()
-            if (raw.length < 2 || !raw.startsWith('"') || !raw.endsWith('"')) continue
-            val importPath = raw.substring(1, raw.length - 1).trim()
-            if (importPath.isBlank()) continue
-            paths.add(importPath)
-        }
-        return paths.toList()
     }
 
     private fun collectAllDreamShaderPsiFiles(
@@ -311,24 +279,6 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
     }
 
     private fun fileKey(vf: com.intellij.openapi.vfs.VirtualFile?): String? = vf?.url
-
-    private fun filePath(vf: com.intellij.openapi.vfs.VirtualFile?): String? {
-        if (vf == null) return null
-        return runCatching { vf.path.replace('\\', '/') }.getOrNull()
-    }
-
-    private fun isImportStringLiteral(element: PsiElement): Boolean {
-        var prev = PsiTreeUtil.prevLeaf(element, true)
-        while (prev != null) {
-            val t = prev.node?.elementType
-            if (t == DreamShaderTokenTypes.WHITE_SPACE || t == DreamShaderTokenTypes.LINE_COMMENT || t == DreamShaderTokenTypes.BLOCK_COMMENT) {
-                prev = PsiTreeUtil.prevLeaf(prev, true)
-                continue
-            }
-            return t == DreamShaderTokenTypes.KEYWORD && prev.text.equals("import", ignoreCase = true)
-        }
-        return false
-    }
 
     private data class DeclarationProfile(
         val namespacePath: List<String>,

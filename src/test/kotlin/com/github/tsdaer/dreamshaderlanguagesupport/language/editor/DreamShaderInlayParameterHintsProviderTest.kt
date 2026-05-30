@@ -123,4 +123,34 @@ class DreamShaderInlayParameterHintsProviderTest : BasePlatformTestCase() {
             hints.any { it.text == "color:" && file.text.substring(it.offset).startsWith("float3(1,1,1)") }
         )
     }
+
+    fun testPrefersImportedDeclarationSignatureOverBuiltinSignature() {
+        myFixture.addFileToProject(
+            "Library/custom_texcoord.dsh",
+            """
+            Function TexCoord(in float slot, in float scale, out float2 uv) {
+                uv = float2(slot, scale);
+            }
+            """.trimIndent()
+        )
+        val file = myFixture.configureByText(
+            "inlay_imported_over_builtin.dsm",
+            """
+            import "Library/custom_texcoord.dsh"
+
+            Shader Main {
+                Graph {
+                    TexCoord(2, 4.0, uvOut);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers
+            .flatMap { provider.getParameterHints(it) }
+            .sortedBy { it.offset }
+
+        assertEquals(listOf("slot:", "scale:", "uv:"), hints.map { it.text })
+    }
 }

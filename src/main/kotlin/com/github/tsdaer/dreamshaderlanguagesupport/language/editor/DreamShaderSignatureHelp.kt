@@ -131,6 +131,14 @@ object DreamShaderSignatureHelpAnalyzer {
         return signatureLookup[key].orEmpty()
     }
 
+    fun resolveDeclaredSignatures(
+        functionName: String,
+        sourceText: String? = null,
+        additionalSourceTexts: List<String> = emptyList()
+    ): List<DreamShaderCallSignature> {
+        return resolveDeclaredSignaturesInternal(functionName, sourceText, additionalSourceTexts)
+    }
+
     fun findCallContext(text: String, offset: Int): DreamShaderCallContext? {
         if (text.isEmpty()) return null
         val safeOffset = offset.coerceIn(0, text.length)
@@ -244,7 +252,7 @@ object DreamShaderSignatureHelpAnalyzer {
         )
     }
 
-    private fun resolveDeclaredSignatures(
+    private fun resolveDeclaredSignaturesInternal(
         functionName: String,
         sourceText: String?,
         additionalSourceTexts: List<String>
