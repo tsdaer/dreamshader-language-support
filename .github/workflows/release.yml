@@ -68,7 +68,7 @@ jobs:
             in_en { print }
           ' "$RELEASE_NOTE" > "$RELEASE_NOTE_EN"
 
-          if [ ! -s "$RELEASE_NOTE_EN" ]; then
+          if ! grep -q '[^[:space:]]' "$RELEASE_NOTE_EN"; then
             cp "$RELEASE_NOTE" "$RELEASE_NOTE_EN"
           fi
 

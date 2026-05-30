@@ -1,13 +1,16 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.welcome
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderSettingsConfigurable
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.FileEditorProvider
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import java.awt.BorderLayout
@@ -37,11 +40,37 @@ private class DreamShaderWelcomeFileEditor(
 ) : UserDataHolderBase(), FileEditor {
     private val root = JPanel(BorderLayout())
     private var browser: JBCefBrowser? = null
+    private var openSettingsQuery: JBCefJSQuery? = null
 
     init {
         if (JBCefApp.isSupported()) {
             val cef = JBCefBrowser()
-            cef.loadHTML(file.htmlContent)
+            val jsQuery = JBCefJSQuery.create(cef)
+            jsQuery.addHandler {
+                ShowSettingsUtil.getInstance().showSettingsDialog(project, DreamShaderSettingsConfigurable::class.java)
+                null
+            }
+            openSettingsQuery = jsQuery
+
+            val injectedHtml = file.htmlContent.replace(
+                "</body>",
+                """
+                <script>
+                (function() {
+                  var links = document.querySelectorAll('a[href="dreamshader://open-settings"]');
+                  if (!links || links.length === 0) return;
+                  links.forEach(function(link) {
+                    link.addEventListener('click', function(evt) {
+                      evt.preventDefault();
+                      ${jsQuery.inject("openSettings")}
+                    });
+                  });
+                })();
+                </script>
+                </body>
+                """.trimIndent()
+            )
+            cef.loadHTML(injectedHtml)
             browser = cef
             root.add(cef.component, BorderLayout.CENTER)
         } else {
@@ -80,6 +109,8 @@ private class DreamShaderWelcomeFileEditor(
     override fun getCurrentLocation(): FileEditorLocation? = null
 
     override fun dispose() {
+        openSettingsQuery?.dispose()
+        openSettingsQuery = null
         browser?.dispose()
         browser = null
     }

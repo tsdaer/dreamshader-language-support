@@ -52,4 +52,17 @@ class DreamShaderHoverOverrideParserTest : BasePlatformTestCase() {
         assertEquals(DreamShaderHoverOverrideIssueType.EMPTY_VALUE, parsed.issues[2].type)
         assertEquals(3, parsed.issues[2].lineNumber)
     }
+
+    fun testParserDecodesEscapedNewlineAndBackslash() {
+        val parsed = DreamShaderHoverOverrideParser.parse(
+            """declaration.function.description=line1\nline2\\tail"""
+        )
+        assertEquals(1, parsed.entries.size)
+        assertEquals("line1\nline2\\tail", parsed.entries["declaration.function.description"])
+    }
+
+    fun testParserEncodeEscapesNewlineAndBackslash() {
+        val encoded = DreamShaderHoverOverrideParser.encodeValue("line1\nline2\\tail")
+        assertEquals("line1\\nline2\\\\tail", encoded)
+    }
 }

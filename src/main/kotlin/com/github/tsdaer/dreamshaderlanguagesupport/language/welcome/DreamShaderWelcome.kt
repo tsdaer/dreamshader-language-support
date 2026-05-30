@@ -96,6 +96,7 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
     val changes = extractChangeNotesHtml()
     val features = DreamShaderBundle.message("welcome.section.features.html")
     val howTo = DreamShaderBundle.message("welcome.section.howTo.html")
+    val setup = DreamShaderBundle.message("welcome.section.setup.html")
     val versionLine = DreamShaderBundle.message(
         "welcome.section.changes.versionLine",
         decision.previousVersion ?: DreamShaderBundle.message("common.unknown"),
@@ -181,7 +182,7 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
             .grid {
               margin-top: 16px;
               display: grid;
-              grid-template-columns: 1fr 1fr;
+              grid-template-columns: 1fr 1fr 1fr;
               gap: 16px;
             }
             .card {
@@ -273,6 +274,10 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
               <article class="card">
                 <h2>${escapeHtml(DreamShaderBundle.message("welcome.section.howTo.title"))}</h2>
                 $howTo
+              </article>
+              <article class="card">
+                <h2>${escapeHtml(DreamShaderBundle.message("welcome.section.setup.title"))}</h2>
+                $setup
               </article>
             </section>
 

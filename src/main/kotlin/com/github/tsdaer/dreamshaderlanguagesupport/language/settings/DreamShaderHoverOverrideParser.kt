@@ -68,7 +68,7 @@ internal object DreamShaderHoverOverrideParser {
 
             val key = rawKey.lowercase(Locale.ROOT)
             if (parsed.containsKey(key)) duplicateKeyCount++
-            parsed[key] = rawValue
+            parsed[key] = decodeEscapedValue(rawValue)
         }
 
         return DreamShaderHoverOverrideParseResult(
@@ -77,5 +77,43 @@ internal object DreamShaderHoverOverrideParser {
             duplicateKeyCount = duplicateKeyCount,
             issues = issues
         )
+    }
+
+    fun encodeValue(value: String): String {
+        val normalized = value.replace("\r\n", "\n").replace('\r', '\n')
+        val out = StringBuilder(normalized.length + 8)
+        normalized.forEach { ch ->
+            when (ch) {
+                '\\' -> out.append("\\\\")
+                '\n' -> out.append("\\n")
+                else -> out.append(ch)
+            }
+        }
+        return out.toString()
+    }
+
+    private fun decodeEscapedValue(value: String): String {
+        val out = StringBuilder(value.length)
+        var i = 0
+        while (i < value.length) {
+            val ch = value[i]
+            if (ch == '\\' && i + 1 < value.length) {
+                when (value[i + 1]) {
+                    'n' -> {
+                        out.append('\n')
+                        i += 2
+                        continue
+                    }
+                    '\\' -> {
+                        out.append('\\')
+                        i += 2
+                        continue
+                    }
+                }
+            }
+            out.append(ch)
+            i++
+        }
+        return out.toString()
     }
 }

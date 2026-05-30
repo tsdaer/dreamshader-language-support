@@ -163,4 +163,25 @@ internal object DreamShaderDocumentationData {
                 }
             }
     }
+
+    /**
+     * Built-in documentation entries that can be overridden from settings.
+     * Keys are returned in their canonical bundle-data form.
+     */
+    fun builtinOverrideEntries(): Map<String, String> {
+        return data.entries.asSequence()
+            .mapNotNull { (key, value) ->
+                val text = value as? String ?: return@mapNotNull null
+                if (!key.endsWith(".description")) return@mapNotNull null
+                if (!key.startsWith("declaration.") &&
+                    !key.startsWith("settings.") &&
+                    !key.startsWith("ueBuiltins.")
+                ) {
+                    return@mapNotNull null
+                }
+                key to text
+            }
+            .sortedBy { it.first.lowercase(Locale.ROOT) }
+            .toMap(linkedMapOf())
+    }
 }

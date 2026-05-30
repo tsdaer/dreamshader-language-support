@@ -27,6 +27,18 @@ internal object DreamShaderBridgePathResolver {
             return normalizePath(configuredRoot)
         }
 
+        return resolveProjectRootAutoFallback(project, activeFile)
+    }
+
+    /**
+     * Resolve project root using automatic fallback logic only, ignoring configured settings.
+     */
+    fun resolveProjectRootAutoFallback(project: Project, activeFile: VirtualFile?): String? {
+        return resolveProjectRootWithoutConfigured(project, activeFile)
+    }
+
+    private fun resolveProjectRootWithoutConfigured(project: Project, activeFile: VirtualFile?): String? {
+
         val projectBase = project.basePath?.takeIf { it.isNotBlank() }
         val activePath = activeFile?.path?.takeIf { it.isNotBlank() }
 
