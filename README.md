@@ -83,6 +83,7 @@ Tests:
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderImportPathNormalizationTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderImportPathNormalizationTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderFoldingBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderFoldingBuilderTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParserTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/parser/DreamShaderPsiParserTest.kt)
+- [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/navigation/DreamShaderDeclarationRenameTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/navigation/DreamShaderDeclarationRenameTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderBundleLocalizationTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderBundleLocalizationTest.kt)
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilderTest.kt`](src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilderTest.kt)
 - [`src/test/resources/upstream/Examples.md`](src/test/resources/upstream/Examples.md)
@@ -377,7 +378,7 @@ Implemented in M5:
 | Diagnostics                                    | Done   | Local parser + section-shape + semantic diagnostics implemented with tests                                                                                                                                                               |
 | Go to Definition / References                  | Done   | Go to Definition + Find References implemented for imports, top-level declarations, namespace-qualified members (`A::B::Member`), namespace-scoped unqualified member resolution, import-chain cross-file declaration usages, and `Name="..."` alias call targets (`VirtualFunction`/`ShaderFunction` etc.)                                                     |
 | Document symbols / structure                   | Done   | Structure view integrated for top-level declarations and sections                                                                                                                                                                        |
-| Inlay hints                                    | Done   | Parameter name hints implemented with callable-context filtering and settings toggle (`enableCodeLens` controls this inlay-hints layer), including same-file declared callable signatures (`Function`/`GraphFunction`/`VirtualFunction`) |
+| Inlay hints                                    | Done   | Parameter name hints implemented with callable-context filtering and settings toggle (`enableCodeLens` controls this inlay-hints layer), including same-file and import-chain declared callable signatures (`Function`/`GraphFunction`/`VirtualFunction`) |
 | Formatting                                     | Done   | Basic formatter implemented (`lang.formatter`): indentation, operator spacing, braces/section layout                                                                                                                                     |
 | Bridge diagnostics panel                       | Done   | Tool window added with refresh/list/open-location baseline                                                                                                                                                                               |
 | Bridge actions                                 | Done   | Refresh/open-location/open bridge path + configurable recompile/clean command execution                                                                                                                                                  |
@@ -517,6 +518,7 @@ Implemented:
 - Added declaration-name normalization regression coverage in `DreamShaderDeclarationRenameTest`:
   - `testDeclarationNameUsesVirtualFunctionNameAttributeLeaf()`
   - `testDeclarationNameUsesShaderFunctionNameAttributePathLeaf()`
+- Hardened `Name="..."` rename regression assertions to accept formatter whitespace normalization (`Name="X"` vs `Name = "X"`), removing full-suite order-dependent flakiness while keeping semantic rename guarantees.
 - Added Find Usages provider presentation regression coverage in `DreamShaderFindUsagesProviderTest`:
   - `testGetTypeUsesDeclarationKeyword()`
   - `testGetTypeFallsBackWhenKeywordMissing()`
@@ -524,8 +526,10 @@ Implemented:
 - Added `DreamShaderDocumentationProvider` via `lang.documentationProvider` for hover docs on declarations, settings keys/values, `UE.*` builtins, function call signatures, and local variables (name/type/scope).
 - Hover resolution now prefers caret/original token context before resolved declaration target, so call-site and local-variable hovers are not shadowed by declaration fallback in IDE mouse hover flows.
 - Refactored hover documentation data storage/lookup to dot-path form (`path.path`), centralized in `DreamShaderDocumentationData` (for example `settings.domain.description`, `ueBuiltins.texcoord.signature`) and consumed through path-based accessors.
-- Added `DreamShaderParameterInfoHandler` via `codeInsight.parameterInfo` for signature help on `UE.*` builtins, common HLSL intrinsics, and same-file declared callable signatures (`Function`/`GraphFunction`/`VirtualFunction`).
-- Extended inlay-parameter-hint signature resolution to reuse same-file declared callable signatures and suppress declaration-head false positives (avoid duplicate hints on declaration parameter lists).
+- Added `DreamShaderParameterInfoHandler` via `codeInsight.parameterInfo` for signature help on `UE.*` builtins, common HLSL intrinsics, and declared callable signatures from current file plus import-recursive closure (`Function`/`GraphFunction`/`VirtualFunction`).
+- Extended inlay-parameter-hint signature resolution to reuse declared callable signatures from current file plus import-recursive closure and suppress declaration-head false positives (avoid duplicate hints on declaration parameter lists).
+- Function-call hover signature rendering now resolves declared callable signatures from current file plus import-recursive closure.
+- Added `DreamShaderImportClosureResolver` as a shared import-recursive file-closure utility, reused by signature/inlay/hover call-signature flows and goto imported-file traversal.
 - Added regression tests in `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, and `DreamShaderInlayParameterHintsProviderTest`.
 - Added semantic token classification in `DreamShaderSemanticAnnotator` for declaration keywords/names, section names, callable references, `UE` namespace, namespace qualifiers (`Namespace::`), local symbol declaration/usage split, and `Base.*` material output members.
 - Refactored semantic-token classification logic into `DreamShaderSemanticTokenClassifier` so `DreamShaderSemanticAnnotator` focuses on annotation emission + diagnostics pipeline aggregation.
@@ -1495,13 +1499,13 @@ Acceptance criteria:
 - CI covers core language behaviors and prevents regressions.
 - Plugin is publishable to JetBrains Marketplace.
 
-#### M6 Audit Matrix (Checked on `2026-05-29`)
+#### M6 Audit Matrix (Checked on `2026-05-30`)
 
 | Item                                                  | Status        | Evidence                                                                                                                                                                                                                                                                     |
 |-------------------------------------------------------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `P1` lexer/highlighter tests                          | `Implemented` | `DreamShaderLexerSyntaxHighlighterTest`                                                                                                                                                                                                                                      |
 | `P1` completion regression tests                      | `Implemented` | `DreamShaderCompletionContextAnalyzerTest`, `DreamShaderCompletionSuggesterTest`                                                                                                                                                                                             |
-| `P1` navigation/diagnostic tests                      | `Implemented` | `DreamShaderGotoDeclarationHandlerTest`, `DreamShaderFindReferencesTest`, `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, `DreamShaderSyntaxDiagnosticsTest`, `DreamShaderSectionShapeDiagnosticsTest`, `DreamShaderSemanticDiagnosticsTest` |
+| `P1` navigation/diagnostic tests                      | `Implemented` | `DreamShaderGotoDeclarationHandlerTest`, `DreamShaderFindReferencesTest`, `DreamShaderDeclarationRenameTest`, `DreamShaderFindUsagesProviderTest`, `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, `DreamShaderSyntaxDiagnosticsTest`, `DreamShaderSectionShapeDiagnosticsTest`, `DreamShaderSemanticDiagnosticsTest` |
 | `P1` package store UI regression tests                | `Implemented` | `DreamShaderPackageStoreDialogUiTest` (`DPKG-UI-001`..`DPKG-UI-007`: action-button state, filter toggles, query search, GitHub search `EMPTY_QUERY`/`APPLIED`/`ERROR`, no-results state, `APPLIED -> ERROR` sequence retention, and in-progress action-disablement)        |
 | `P1` localization parity guard                        | `Implemented` | `DreamShaderBundleLocalizationTest` (base bundle keys must exist in `DreamShaderBundle_zh_CN.properties`)                                                                                                                                                                    |
 | `P2` large-file performance smoke tests               | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest`                                                                                                                                                                                                                                   |

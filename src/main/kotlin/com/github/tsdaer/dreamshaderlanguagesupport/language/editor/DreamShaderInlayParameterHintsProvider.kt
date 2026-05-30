@@ -1,6 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.codeInsight.hints.HintInfo
 import com.intellij.codeInsight.hints.InlayInfo
@@ -19,7 +20,14 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
         if (element.node.elementType != DreamShaderTokenTypes.IDENTIFIER) return emptyList()
 
         val callInfo = findCallAtIdentifier(element) ?: return emptyList()
-        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(callInfo.functionName, element.containingFile.text)
+        val closureSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(element.containingFile)
+            .drop(1)
+            .map { it.text }
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(
+            callInfo.functionName,
+            element.containingFile.text,
+            closureSourceTexts
+        )
         if (signatures.isEmpty()) return emptyList()
 
         val parameterNames = extractParameterNames(signatures.first().presentableText)
@@ -46,7 +54,14 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
         if (settings != null && !settings.enableCodeLens) return null
 
         val callInfo = findCallAtIdentifier(element) ?: return null
-        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(callInfo.functionName, element.containingFile.text)
+        val closureSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(element.containingFile)
+            .drop(1)
+            .map { it.text }
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(
+            callInfo.functionName,
+            element.containingFile.text,
+            closureSourceTexts
+        )
         if (signatures.isEmpty()) return null
         val parameterNames = extractParameterNames(signatures.first().presentableText)
         return HintInfo.MethodInfo(callInfo.functionName.lowercase(Locale.ROOT), parameterNames)

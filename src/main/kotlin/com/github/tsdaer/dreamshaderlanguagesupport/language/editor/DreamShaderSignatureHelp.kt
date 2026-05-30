@@ -119,8 +119,12 @@ object DreamShaderSignatureHelpAnalyzer {
         put("tan", listOf(signature("tan(x)", "x")))
     }
 
-    fun resolveSignatures(functionName: String, sourceText: String? = null): List<DreamShaderCallSignature> {
-        val declaredSignatures = resolveDeclaredSignatures(functionName, sourceText)
+    fun resolveSignatures(
+        functionName: String,
+        sourceText: String? = null,
+        additionalSourceTexts: List<String> = emptyList()
+    ): List<DreamShaderCallSignature> {
+        val declaredSignatures = resolveDeclaredSignatures(functionName, sourceText, additionalSourceTexts)
         if (declaredSignatures.isNotEmpty()) return declaredSignatures
 
         val key = functionName.lowercase(Locale.ROOT)
@@ -240,10 +244,16 @@ object DreamShaderSignatureHelpAnalyzer {
         )
     }
 
-    private fun resolveDeclaredSignatures(functionName: String, sourceText: String?): List<DreamShaderCallSignature> {
-        if (sourceText.isNullOrBlank()) return emptyList()
-
-        val declarationSignaturesByName = parseDeclaredFunctionSignatures(sourceText)
+    private fun resolveDeclaredSignatures(
+        functionName: String,
+        sourceText: String?,
+        additionalSourceTexts: List<String>
+    ): List<DreamShaderCallSignature> {
+        val declarationSignaturesByName = linkedMapOf<String, DreamShaderCallSignature>()
+        appendDeclaredSignatures(declarationSignaturesByName, sourceText)
+        additionalSourceTexts.forEach { text ->
+            appendDeclaredSignatures(declarationSignaturesByName, text)
+        }
         if (declarationSignaturesByName.isEmpty()) return emptyList()
 
         val lookupCandidates = buildLookupCandidates(functionName)
@@ -252,6 +262,16 @@ object DreamShaderSignatureHelpAnalyzer {
             declarationSignaturesByName[candidate]?.let { resolved.add(it) }
         }
         return resolved.toList()
+    }
+
+    private fun appendDeclaredSignatures(
+        out: MutableMap<String, DreamShaderCallSignature>,
+        sourceText: String?
+    ) {
+        if (sourceText.isNullOrBlank()) return
+        parseDeclaredFunctionSignatures(sourceText).forEach { (name, signature) ->
+            out.putIfAbsent(name, signature)
+        }
     }
 
     private fun parseDeclaredFunctionSignatures(sourceText: String): Map<String, DreamShaderCallSignature> {

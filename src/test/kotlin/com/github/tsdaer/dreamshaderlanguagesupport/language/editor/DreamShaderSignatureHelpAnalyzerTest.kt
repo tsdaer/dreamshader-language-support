@@ -96,4 +96,26 @@ class DreamShaderSignatureHelpAnalyzerTest {
         assertEquals(1, signatures.size)
         assertEquals("Blend(a, b, result)", signatures.first().presentableText)
     }
+
+    @Test
+    fun `prefers source text declarations before additional imported sources`() {
+        val localText = """
+            Function Blend(in float localA, in float localB, out float localResult) {
+                localResult = lerp(localA, localB, 0.5);
+            }
+        """.trimIndent()
+        val importedText = """
+            Function Blend(in float importedA, in float importedB, out float importedResult) {
+                importedResult = lerp(importedA, importedB, 0.5);
+            }
+        """.trimIndent()
+
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(
+            functionName = "Blend",
+            sourceText = localText,
+            additionalSourceTexts = listOf(importedText)
+        )
+        assertEquals(1, signatures.size)
+        assertEquals("Blend(localA, localB, localResult)", signatures.first().presentableText)
+    }
 }

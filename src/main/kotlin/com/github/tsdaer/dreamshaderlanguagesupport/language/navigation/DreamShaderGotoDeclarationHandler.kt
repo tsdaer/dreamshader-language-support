@@ -1,6 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
@@ -297,57 +298,8 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
 
     private fun resolveImportedDreamShaderFiles(file: PsiElement): List<PsiFile> {
         val sourceFile = file.containingFile ?: return emptyList()
-        val project = sourceFile.project
-        val projectBasePath = project.basePath ?: return emptyList()
-        val psiManager = PsiManager.getInstance(project)
-        val resolved = linkedMapOf<String, PsiFile>()
-        val queue = ArrayDeque<PsiFile>()
-        val visited = hashSetOf<String>()
-
-        queue.add(sourceFile)
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-            val currentVf = current.virtualFile ?: continue
-            val currentPath = currentVf.path
-            if (!visited.add(currentPath)) continue
-
-            val containingDirectory = currentVf.parent
-            val importPaths = collectImportPaths(current)
-            for (importPath in importPaths) {
-                val targetVf = DreamShaderImportResolver.resolveImport(
-                    projectBasePath = projectBasePath,
-                    containingDirectory = containingDirectory,
-                    importPath = importPath
-                ) ?: continue
-                val targetPsi = psiManager.findFile(targetVf) ?: continue
-                if (targetPsi.language != DreamShaderLanguage) continue
-
-                if (targetVf.path != sourceFile.virtualFile?.path) {
-                    resolved.putIfAbsent(targetVf.path, targetPsi)
-                }
-                if (!visited.contains(targetVf.path)) {
-                    queue.addLast(targetPsi)
-                }
-            }
-        }
-
-        return resolved.values.toList()
-    }
-
-    private fun collectImportPaths(file: PsiFile): List<String> {
-        val paths = linkedSetOf<String>()
-        val stringLiterals = PsiTreeUtil.collectElements(file) { element ->
-            element.node?.elementType == DreamShaderTokenTypes.STRING
-        }
-        for (literal in stringLiterals) {
-            if (!isImportStringLiteral(literal)) continue
-            val raw = literal.text.trim()
-            if (raw.length < 2 || !raw.startsWith('"') || !raw.endsWith('"')) continue
-            val importPath = raw.substring(1, raw.length - 1).trim()
-            if (importPath.isBlank()) continue
-            paths.add(importPath)
-        }
-        return paths.toList()
+        return DreamShaderImportClosureResolver.resolveImportClosure(sourceFile)
+            .drop(1)
     }
 
     private fun topLevelDeclarations(file: PsiElement): List<DreamShaderDeclaration> {

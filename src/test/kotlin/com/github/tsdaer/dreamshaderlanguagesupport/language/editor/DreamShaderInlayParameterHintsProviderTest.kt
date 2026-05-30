@@ -89,4 +89,38 @@ class DreamShaderInlayParameterHintsProviderTest : BasePlatformTestCase() {
             hints.any { it.text == "result:" && file.text.substring(it.offset).startsWith("finalColor") }
         )
     }
+
+    fun testProducesHintsForImportedUserDeclaredFunctionCall() {
+        myFixture.addFileToProject(
+            "Library/shared.dsh",
+            """
+            Function ApplyTint(in vec3 color, in vec3 tint, out vec3 result) {
+                result = color * tint;
+            }
+            """.trimIndent()
+        )
+        val file = myFixture.configureByText(
+            "inlay_imported_user_declared_call.dsm",
+            """
+            import "Library/shared.dsh"
+
+            Shader Main {
+                Graph {
+                    ApplyTint(float3(1,1,1), float3(1,0,0), finalColor);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers
+            .flatMap { provider.getParameterHints(it) }
+            .sortedBy { it.offset }
+
+        assertEquals(listOf("color:", "tint:", "result:"), hints.map { it.text })
+        assertTrue(
+            "Expected inlay at imported function first argument",
+            hints.any { it.text == "color:" && file.text.substring(it.offset).startsWith("float3(1,1,1)") }
+        )
+    }
 }

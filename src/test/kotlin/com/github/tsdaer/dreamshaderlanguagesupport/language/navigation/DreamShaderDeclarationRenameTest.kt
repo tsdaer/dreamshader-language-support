@@ -177,8 +177,14 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         val updated = file.text
         assertTrue("Updated text:\n$updated", updated.contains("BufferOutput"))
 
-        assertTrue(updated.contains("VirtualFunction(Name= \"BufferOutput\")") || updated.contains("VirtualFunction(Name=\"BufferOutput\")"))
-        assertTrue(updated.contains("BufferOutput(Color, 1.0, Output = \"Result\")") || updated.contains("BufferOutput(Color, 1.0, Output=\"Result\")"))
+        assertTrue(
+            "Updated text:\n$updated",
+            Regex("""VirtualFunction\(\s*Name\s*=\s*"BufferOutput"\s*\)""").containsMatchIn(updated)
+        )
+        assertTrue(
+            "Updated text:\n$updated",
+            Regex("""BufferOutput\s*\(\s*Color\s*,\s*1\.0\s*,\s*Output\s*=\s*"Result"\s*\)""").containsMatchIn(updated)
+        )
         assertFalse(updated.contains("BufferWriter("))
     }
 
@@ -235,7 +241,10 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
 
         val importedUpdated = importedPsi.text
         assertTrue("Updated imported text:\n$importedUpdated", importedUpdated.contains("F_OutputTint"))
-        assertTrue(importedUpdated.contains("ShaderFunction(Name= \"Functions/F_OutputTint\")") || importedUpdated.contains("ShaderFunction(Name=\"Functions/F_OutputTint\")"))
+        assertTrue(
+            "Updated imported text:\n$importedUpdated",
+            Regex("""ShaderFunction\(\s*Name\s*=\s*"Functions/F_OutputTint"\s*\)""").containsMatchIn(importedUpdated)
+        )
         assertFalse(importedUpdated.contains("Functions/F_PulseTint"))
 
         val callerUpdated = caller.text
