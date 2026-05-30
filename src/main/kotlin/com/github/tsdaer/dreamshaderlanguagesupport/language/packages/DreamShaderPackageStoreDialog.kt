@@ -30,6 +30,8 @@ internal class DreamShaderPackageStoreDialog(
     private val packageManager = DreamShaderPackageManager(project)
 
     private val queryField = JBTextField()
+    private val searchButton = JButton(DreamShaderBundle.message("package.store.dialog.button.search"))
+    private val githubSearchButton = JButton(DreamShaderBundle.message("package.store.dialog.button.githubSearch"))
     private val listModel = DefaultListModel<DreamShaderPackageIndexEntry>()
     private val packageList = JBList(listModel)
     private val detailArea = JBTextArea()
@@ -42,6 +44,7 @@ internal class DreamShaderPackageStoreDialog(
     private var installedByName: Map<String, DreamShaderPackageLockEntry> = emptyMap()
     private var gitAvailableForLifecycle: Boolean = false
     private var operationInProgress: Boolean = false
+    private var githubSearchInProgress: Boolean = false
     private var pendingSelectPackageName: String? = null
 
     private var snapshot: DreamShaderPackageStoreSnapshot = DreamShaderPackageStoreSnapshot(
@@ -76,11 +79,9 @@ internal class DreamShaderPackageStoreDialog(
         queryField.toolTipText = DreamShaderBundle.message("package.store.dialog.searchTooltip")
         leftToolbar.add(queryField, BorderLayout.CENTER)
 
-        val searchButton = JButton(DreamShaderBundle.message("package.store.dialog.button.search"))
         searchButton.name = SEARCH_BUTTON_NAME
         searchButton.addActionListener { refreshData() }
         leftToolbar.add(searchButton, BorderLayout.EAST)
-        val githubSearchButton = JButton(DreamShaderBundle.message("package.store.dialog.button.githubSearch"))
         githubSearchButton.name = GITHUB_SEARCH_BUTTON_NAME
         githubSearchButton.addActionListener { searchOnGitHub() }
         leftToolbar.add(githubSearchButton, BorderLayout.WEST)
@@ -446,20 +447,27 @@ internal class DreamShaderPackageStoreDialog(
     }
 
     private fun updateActionButtons() {
+        val busy = operationInProgress || githubSearchInProgress
+        queryField.isEnabled = !busy
+        searchButton.isEnabled = !busy
+        githubSearchButton.isEnabled = !busy
+        installedOnlyCheckBox.isEnabled = !busy
+        updatesPossibleOnlyCheckBox.isEnabled = !busy
+
         val selected = packageList.selectedValue
         if (selected == null) {
             installButton.isEnabled = false
             updateButton.isEnabled = false
             removeButton.isEnabled = false
-            showRepoButton.isEnabled = !operationInProgress
+            showRepoButton.isEnabled = !busy
             return
         }
 
         val installed = installedByName.containsKey(selected.name)
-        installButton.isEnabled = !operationInProgress && !installed
-        updateButton.isEnabled = !operationInProgress && canUpdateEntry(selected)
-        removeButton.isEnabled = !operationInProgress && installed
-        showRepoButton.isEnabled = !operationInProgress
+        installButton.isEnabled = !busy && !installed
+        updateButton.isEnabled = !busy && canUpdateEntry(selected)
+        removeButton.isEnabled = !busy && installed
+        showRepoButton.isEnabled = !busy
     }
 
     private fun canUpdateEntry(entry: DreamShaderPackageIndexEntry): Boolean {
@@ -529,12 +537,71 @@ internal class DreamShaderPackageStoreDialog(
     }
 
     private fun searchOnGitHub() {
-        executeGitHubSearch(
-            queryRaw = queryField.text,
-            showFeedback = true
-        ) { query ->
-            storeService.searchGitHubPackages(query)
+        val query = queryField.text.trim()
+        if (query.isBlank()) {
+            Messages.showInfoMessage(
+                project,
+                DreamShaderBundle.message("package.store.dialog.githubSearch.emptyQuery"),
+                DreamShaderBundle.message("packages.store.title")
+            )
+            return
         }
+        if (operationInProgress || githubSearchInProgress) return
+
+        githubSearchInProgress = true
+        updateActionButtons()
+        ProgressManager.getInstance().run(
+            object : Task.Backgroundable(project, DreamShaderBundle.message("packages.dialog.githubSearch.title"), true) {
+                private var result: DreamShaderGitHubSearchResult? = null
+
+                override fun run(indicator: ProgressIndicator) {
+                    indicator.isIndeterminate = true
+                    indicator.text = DreamShaderBundle.message("packages.dialog.githubSearch.title")
+                    indicator.text2 = query
+                    result = storeService.searchGitHubPackages(query)
+                }
+
+                override fun onSuccess() {
+                    val resolved = result ?: DreamShaderGitHubSearchResult(
+                        entries = emptyList(),
+                        errorMessage = DreamShaderBundle.message("common.unknownError")
+                    )
+                    applyGitHubSearchResult(query, resolved, showFeedback = true)
+                }
+
+                override fun onThrowable(error: Throwable) {
+                    DreamShaderPackageNotifier.error(
+                        project,
+                        DreamShaderBundle.message("packages.store.title"),
+                        error.message ?: DreamShaderBundle.message("common.unknownError")
+                    )
+                }
+
+                override fun onFinished() {
+                    githubSearchInProgress = false
+                    updateActionButtons()
+                }
+            }
+        )
+    }
+
+    private fun applyGitHubSearchResult(
+        query: String,
+        result: DreamShaderGitHubSearchResult,
+        showFeedback: Boolean
+    ): GitHubSearchActionStatus {
+        if (result.errorMessage != null) {
+            if (showFeedback) {
+                DreamShaderPackageNotifier.error(
+                    project,
+                    DreamShaderBundle.message("packages.store.title"),
+                    result.errorMessage
+                )
+            }
+            return GitHubSearchActionStatus.ERROR
+        }
+        applyGitHubSearchEntries(query, result.entries, showFeedback)
+        return GitHubSearchActionStatus.APPLIED
     }
 
     private fun executeGitHubSearch(
@@ -555,19 +622,7 @@ internal class DreamShaderPackageStoreDialog(
         }
 
         val result = search(query)
-        if (result.errorMessage != null) {
-            if (showFeedback) {
-                DreamShaderPackageNotifier.error(
-                    project,
-                    DreamShaderBundle.message("packages.store.title"),
-                    result.errorMessage
-                )
-            }
-            return GitHubSearchActionStatus.ERROR
-        }
-
-        applyGitHubSearchEntries(query, result.entries, showFeedback)
-        return GitHubSearchActionStatus.APPLIED
+        return applyGitHubSearchResult(query, result, showFeedback)
     }
 
     private fun applyGitHubSearchEntries(
@@ -596,6 +651,10 @@ internal class DreamShaderPackageStoreDialog(
     }
 
     internal fun testCenterPanel(): JPanel? = centerPanel
+    internal fun testSetGitHubSearchInProgress(inProgress: Boolean) {
+        githubSearchInProgress = inProgress
+        updateActionButtons()
+    }
     internal fun testExecuteGitHubSearch(
         queryRaw: String,
         result: DreamShaderGitHubSearchResult

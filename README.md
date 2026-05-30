@@ -543,6 +543,8 @@ Implemented:
 - Added localization parity regression test (`DreamShaderBundleLocalizationTest`) to ensure `zh_CN` bundle contains all base bundle keys.
 - Added regression tests in `DreamShaderSemanticTokensTest` for `DSYM-001` and `DSYM-002`, including nested-call/member-like edge cases, array-index symbol usage, and multi-level namespace qualifier classification.
 - Added `DreamShaderSemanticTokenClassifierTest` to validate classifier behavior directly and verify classifier/annotator consistency on representative samples.
+- Refactored `DreamShaderCodeVisionProvider` click handling into an explicit action-plan layer (`RefreshPackageStore` / `OpenBridgeDirectory` / `NoAction`) to make workflow behavior deterministic and unit-testable.
+- Added regression tests in `DreamShaderCodeVisionProviderTest` for code-vision click planning branches (active-file refresh, bridge-directory open plan, and no-action fallback when bridge path is unresolved).
 
 ### M3 Testable Navigation/Symbol Checklist
 
@@ -560,6 +562,7 @@ Rule format:
 | `DSYM-002` | `Implemented` | `DreamShaderSemanticTokensTest.testSemanticTokensInGraphAndFunctionBodies()` + subcases `testSemanticTokensForNestedCallsAndMemberLikeSyntax()` / `testSemanticTokensForArrayIndexAndMultiLevelNamespaceQualifier()` |
 | `DSYM-003` | `Implemented` | `DreamShaderInlayParameterHintsProviderTest.testProducesHintsForUeAndIntrinsicCalls()` + `DreamShaderInlayParameterHintsProviderTest.testProducesHintsForUserDeclaredFunctionCall()`                                                  |
 | `DSYM-004` | `Implemented` | `DreamShaderInlayParameterHintsProviderTest.testSkipsNamedArguments()`                                                                                                                                               |
+| `DSYM-005` | `Implemented` | `DreamShaderCodeVisionProviderTest.testClickPlanRefreshesStoreWhenDeclarationFileIsActiveFile()` + `DreamShaderCodeVisionProviderTest.testClickPlanOpensBridgeDirectoryWhenNotActiveAndBridgeExists()` + `DreamShaderCodeVisionProviderTest.testClickPlanReturnsNoActionWhenNotActiveAndBridgeMissing()` |
 
 1. `ID`: `DSYM-001`  
 `Priority`: `P2`  
@@ -1445,6 +1448,7 @@ Rule format:
 | `DPKG-UI-004`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testGitHubSearchEmptyQueryReturnsEmptyStatusAndDoesNotMutateList()`                                                                                                                                                            |
 | `DPKG-UI-005`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testGitHubSearchAppliedStatusRefreshesListEntries()` + `DreamShaderPackageStoreDialogUiTest.testGitHubSearchErrorStatusKeepsExistingList()`                                                                                     |
 | `DPKG-UI-006`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testGitHubSearchNoResultsReplacesListWithEmptyState()` + `DreamShaderPackageStoreDialogUiTest.testGitHubSearchErrorAfterAppliedKeepsLastAppliedResults()`                                                                        |
+| `DPKG-UI-007`  | `Implemented` | `DreamShaderPackageStoreDialogUiTest.testGitHubSearchInProgressDisablesActionControls()`                                                                                                                                                                             |
 
 #### E. Bridge/Project Diagnostics Interop
 
@@ -1474,7 +1478,7 @@ Acceptance criteria:
 | `P1` lexer/highlighter tests                          | `Implemented` | `DreamShaderLexerSyntaxHighlighterTest`                                                                                                                                                                                                                                      |
 | `P1` completion regression tests                      | `Implemented` | `DreamShaderCompletionContextAnalyzerTest`, `DreamShaderCompletionSuggesterTest`                                                                                                                                                                                             |
 | `P1` navigation/diagnostic tests                      | `Implemented` | `DreamShaderGotoDeclarationHandlerTest`, `DreamShaderFindReferencesTest`, `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, `DreamShaderSyntaxDiagnosticsTest`, `DreamShaderSectionShapeDiagnosticsTest`, `DreamShaderSemanticDiagnosticsTest` |
-| `P1` package store UI regression tests                | `Implemented` | `DreamShaderPackageStoreDialogUiTest` (`DPKG-UI-001`..`DPKG-UI-006`: action-button state, filter toggles, query search, GitHub search `EMPTY_QUERY`/`APPLIED`/`ERROR`, no-results state, and `APPLIED -> ERROR` sequence retention)                                         |
+| `P1` package store UI regression tests                | `Implemented` | `DreamShaderPackageStoreDialogUiTest` (`DPKG-UI-001`..`DPKG-UI-007`: action-button state, filter toggles, query search, GitHub search `EMPTY_QUERY`/`APPLIED`/`ERROR`, no-results state, `APPLIED -> ERROR` sequence retention, and in-progress action-disablement)        |
 | `P1` localization parity guard                        | `Implemented` | `DreamShaderBundleLocalizationTest` (base bundle keys must exist in `DreamShaderBundle_zh_CN.properties`)                                                                                                                                                                    |
 | `P2` large-file performance smoke tests               | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest`                                                                                                                                                                                                                                   |
 | `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`, file-based signing env/properties + legacy env fallback), `.github/workflows/build.yml`, `.github/workflows/release.yml` (writes cert/key secrets to temp files and publishes with file-path env)        |

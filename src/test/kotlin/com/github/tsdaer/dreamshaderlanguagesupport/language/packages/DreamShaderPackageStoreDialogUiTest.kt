@@ -415,6 +415,61 @@ class DreamShaderPackageStoreDialogUiTest : DreamShaderSettingsUiTestBase() {
         assertEquals("Expected error path to preserve last applied GitHub entries", appliedNames, afterErrorNames)
     }
 
+    fun testGitHubSearchInProgressDisablesActionControls() {
+        val dialogHarness = createDialogHarness(
+            indexContent = """
+                [
+                  {
+                    "name": "@typedreammoon/dream-noise",
+                    "displayName": "Noise Toolkit",
+                    "description": "procedural noise utilities",
+                    "repository": "https://example.com/noise.git",
+                    "version": "1.0.0",
+                    "tags": ["noise", "procedural"]
+                  }
+                ]
+            """.trimIndent()
+        )
+        val dialog = dialogHarness.dialog
+        val queryField = dialogHarness.queryField
+        val searchButton = dialogHarness.searchButton
+        val githubSearchButton = findComponentByName(
+            dialogHarness.root,
+            DreamShaderPackageStoreDialog.GITHUB_SEARCH_BUTTON_NAME,
+            JButton::class.java
+        )
+        val installedOnly = dialogHarness.installedOnlyCheckBox
+        val updatesOnly = dialogHarness.updatesOnlyCheckBox
+        val installButton = dialogHarness.installButton
+        val updateButton = dialogHarness.updateButton
+        val removeButton = dialogHarness.removeButton
+
+        assertTrue("Expected query field enabled initially", queryField.isEnabled)
+        assertTrue("Expected search button enabled initially", searchButton.isEnabled)
+        assertTrue("Expected github search button enabled initially", githubSearchButton.isEnabled)
+        assertTrue("Expected installed-only enabled initially", installedOnly.isEnabled)
+        assertTrue("Expected updates-only enabled initially", updatesOnly.isEnabled)
+
+        dialog.testSetGitHubSearchInProgress(true)
+
+        assertTrue("Expected query field disabled during GitHub search", !queryField.isEnabled)
+        assertTrue("Expected search button disabled during GitHub search", !searchButton.isEnabled)
+        assertTrue("Expected github search button disabled during GitHub search", !githubSearchButton.isEnabled)
+        assertTrue("Expected installed-only disabled during GitHub search", !installedOnly.isEnabled)
+        assertTrue("Expected updates-only disabled during GitHub search", !updatesOnly.isEnabled)
+        assertTrue("Expected install button disabled during GitHub search", !installButton.isEnabled)
+        assertTrue("Expected update button disabled during GitHub search", !updateButton.isEnabled)
+        assertTrue("Expected remove button disabled during GitHub search", !removeButton.isEnabled)
+
+        dialog.testSetGitHubSearchInProgress(false)
+
+        assertTrue("Expected query field re-enabled after GitHub search", queryField.isEnabled)
+        assertTrue("Expected search button re-enabled after GitHub search", searchButton.isEnabled)
+        assertTrue("Expected github search button re-enabled after GitHub search", githubSearchButton.isEnabled)
+        assertTrue("Expected installed-only re-enabled after GitHub search", installedOnly.isEnabled)
+        assertTrue("Expected updates-only re-enabled after GitHub search", updatesOnly.isEnabled)
+    }
+
     private fun createIndex(content: String): Path {
         val file = Files.createTempFile("dreamshader-store-dialog-ui-index-", ".json")
         Files.writeString(file, content, StandardCharsets.UTF_8)
@@ -450,6 +505,7 @@ class DreamShaderPackageStoreDialogUiTest : DreamShaderSettingsUiTestBase() {
         val root = dialog.testCenterPanel() ?: error("Expected center panel to be initialized")
         return DialogHarness(
             dialog = dialog,
+            root = root,
             packageList = findComponentByName(root, DreamShaderPackageStoreDialog.PACKAGE_LIST_NAME, JBList::class.java) as JBList<*>,
             queryField = findComponentByName(root, DreamShaderPackageStoreDialog.QUERY_FIELD_NAME, JBTextField::class.java),
             searchButton = findComponentByName(root, DreamShaderPackageStoreDialog.SEARCH_BUTTON_NAME, JButton::class.java),
@@ -472,6 +528,7 @@ class DreamShaderPackageStoreDialogUiTest : DreamShaderSettingsUiTestBase() {
 
     private data class DialogHarness(
         val dialog: DreamShaderPackageStoreDialog,
+        val root: javax.swing.JPanel,
         val packageList: JBList<*>,
         val queryField: JBTextField,
         val searchButton: JButton,
