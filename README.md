@@ -132,6 +132,9 @@ This plugin currently follows a layered architecture:
 Detailed architecture doc:
 - [`docs/architecture.md`](docs/architecture.md)
 
+Development plans:
+- [`docs/0.0.4-development-plan.md`](docs/0.0.4-development-plan.md) - `0.0.4` plan for scanned/catalog-based `UE.*` built-in completion from Unreal `UMaterialExpression` data.
+
 ## Goal
 
 Build a Rider plugin with feature parity to the VS Code DreamShaderLang extension, in phases:
