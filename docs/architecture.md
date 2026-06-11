@@ -133,3 +133,47 @@ Design goal:
 3. Keep UI handlers thin; place business logic in analyzers/loaders.
 4. Preserve fallback chains (PSI -> parsed text -> lexer, explicit setting -> project -> bundled).
 5. Add stable tests for every new rule/loader behavior before wiring UI actions.
+
+## README Architecture Snapshot
+
+This plugin currently follows a layered architecture:
+
+1. Lexer and parser foundation
+- `DreamShaderLexer` tokenizes source text.
+- `DreamShaderPsiParser` builds a permissive AST for declarations and sections.
+- `DreamShaderParserDefinition` wires lexer/parser/PSI construction into IntelliJ.
+
+2. PSI and symbol model
+- Typed PSI (`DreamShaderDeclaration`, `DreamShaderSection`) is the canonical structure for editor features.
+- `DreamShaderSymbolModelBuilder` derives declaration/section symbols for structure/navigation use.
+
+3. Editor intelligence
+- Completion (`DreamShaderCompletionContributor`) uses PSI-first context analysis with lexer fallback.
+- Signature help and inlay hints consume call-signature parsing utilities (current implementation is parameter inlay hints, not IntelliJ Code Vision lenses).
+- Navigation/references rely on declaration symbol extraction and identifier matching.
+
+4. Diagnostics pipeline
+- `DreamShaderSemanticAnnotator` is the central diagnostic entry and aggregates:
+- Syntax diagnostics
+- Section-shape diagnostics
+- Semantic diagnostics
+- Bridge diagnostics mapped back to source ranges
+
+5. Bridge integration
+- `DreamShaderBridgePathResolver` resolves project root and Bridge folder with explicit-setting-first fallback.
+- `DreamShaderBridgeDiagnosticsRepository` loads and normalizes Bridge diagnostics snapshots.
+- `DreamShaderMaterialExpressionManifest` merges expression classes from explicit path, Bridge manifest, and bundled fallback.
+
+6. Package index data layer (M5 completed)
+- `DreamShaderPackageIndexLoader` resolves package index sources (multi-source, legacy single-source, default upstream).
+- Index loader accepts both JSON shapes: array root and `{ "packages": [...] }`.
+- Entry `path` is resolved relative to local index location; unresolved paths degrade to `repository`.
+
+7. Project-level persistent settings
+- `DreamShaderProjectSettings` stores project-scoped configuration for Bridge and package tooling.
+- Current keys: `projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`, `outArgumentPlaceholderSuffix`, `preferredImportExtension`, `autoUpdatePreferredImportExtension`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `packageStoreGitHubToken`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`.
+
+Related docs:
+- [`code-map.md`](code-map.md) for source entry points.
+- [`roadmap.md`](roadmap.md) for milestone status and implementation planning.
+- [`0.0.4-development-plan.md`](0.0.4-development-plan.md) for the current scanned/catalog-based `UE.*` built-in completion plan.
