@@ -176,4 +176,4 @@ This plugin currently follows a layered architecture:
 Related docs:
 - [`code-map.md`](code-map.md) for source entry points.
 - [`roadmap.md`](roadmap.md) for milestone status and implementation planning.
-- [`0.0.4-development-plan.md`](0.0.4-development-plan.md) for the current scanned/catalog-based `UE.*` built-in completion plan.
+- [`plans/0.0.4-catalog-ue-builtins.md`](plans/0.0.4-catalog-ue-builtins.md) for the current scanned/catalog-based `UE.*` built-in completion plan.

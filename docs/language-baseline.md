@@ -2,6 +2,8 @@
 
 Stable language-reference notes used by this Rider plugin. Refresh this file when upstream DreamShader language behavior changes.
 
+Active upstream-sync planning for `0.0.4` lives in [`plans/0.0.4-catalog-ue-builtins.md`](plans/0.0.4-catalog-ue-builtins.md). Move stable, implemented language behavior back here after the version plan lands.
+
 ## DreamShaderLang Syntax Baseline
 
 Primary language reference (upstream):

@@ -11,12 +11,12 @@ This directory is the long-form home for project knowledge. The top-level README
 - [Package Baseline](package-baseline.md): package layout, import resolution, store/index behavior, and parity targets.
 - [Roadmap and Progress](roadmap.md): project goal, current progress, detailed TODOs, audit matrices, and changelog policy.
 - [Development Guide](development.md): build/test/run commands, signing/publishing, Rider actions, settings, and troubleshooting.
-- [0.0.4 Development Plan](0.0.4-development-plan.md): scanned/catalog-based `UE.*` built-in completion plan.
+- [Version Plans](plans/README.md): version-scoped implementation plans and active release slices.
 
 ## Maintenance Rules
 
 - Keep README focused on what the project is, how to get started, and where to find deeper information.
 - Put stable language and package behavior in the baseline documents.
-- Put changing implementation plans in versioned development-plan files or `roadmap.md`.
+- Put version-scoped implementation plans under `plans/`; keep `roadmap.md` for cross-version status and milestone history.
 - Put local workflow details in `development.md`, not in README.
 - When adding a new feature area, add or update a dedicated docs page and link it from this index.

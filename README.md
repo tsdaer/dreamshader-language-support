@@ -29,7 +29,7 @@ Long-form project knowledge now lives under [`docs/`](docs/README.md):
 - [`docs/package-baseline.md`](docs/package-baseline.md) - package-system baseline and Rider parity notes.
 - [`docs/roadmap.md`](docs/roadmap.md) - goals, current progress, detailed TODOs, audit matrices, and changelog policy.
 - [`docs/development.md`](docs/development.md) - local build/test/run, signing/publishing, Rider actions, settings, and troubleshooting.
-- [`docs/0.0.4-development-plan.md`](docs/0.0.4-development-plan.md) - scanned/catalog-based `UE.*` built-in completion plan.
+- [`docs/plans/0.0.4-catalog-ue-builtins.md`](docs/plans/0.0.4-catalog-ue-builtins.md) - scanned/catalog-based `UE.*` built-in completion plan.
 
 ## Current Goal
 
