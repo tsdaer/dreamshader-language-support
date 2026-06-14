@@ -127,4 +127,43 @@ class DreamShaderMaterialExpressionManifestTest {
         assertEquals("Substrate", helper.namespace)
         assertEquals("MaterialExpressionSubstrateTransmittanceToMFP", helper.className)
     }
+
+    @Test
+    fun `builds parameters and signature from bridge inputs and outputs`() {
+        // Bridge material-expressions.json 的实际形状：无 parameters/signature，
+        // 仅有 inputs[]/outputs[]/defaultOutputType。
+        val json = """
+            {
+              "expressions": [
+                {
+                  "name": "Add",
+                  "className": "MaterialExpressionAdd",
+                  "properties": [
+                    { "name": "A", "type": "input", "isInput": true },
+                    { "name": "B", "type": "input", "isInput": true },
+                    { "name": "ConstA", "type": "float", "isInput": false },
+                    { "name": "Desc", "type": "string", "isInput": false }
+                  ],
+                  "inputs": [
+                    { "name": "A", "type": "input", "isInput": true },
+                    { "name": "B", "type": "input", "isInput": true }
+                  ],
+                  "outputs": [
+                    { "index": 0, "name": "None", "componentCount": 1, "outputType": "float1" }
+                  ],
+                  "defaultOutputType": "float1"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val entry = DreamShaderMaterialExpressionManifest.parseCatalogEntries(json).single()
+        assertEquals("UE", entry.namespace)
+        assertEquals("Add", entry.ueName)
+        assertEquals("float1", entry.outputType)
+        // 参数来自 inputs（仅 A、B，不含 ConstA/Desc 这类非输入属性）。
+        assertEquals(listOf("A", "B"), entry.parameters.map { it.name })
+        // 合成的具名调用签名带 OutputType 与各输入实参占位，不再是 (...)。
+        assertEquals("UE.Add(OutputType=\"float1\", A=Value, B=Value)", entry.signature)
+    }
 }

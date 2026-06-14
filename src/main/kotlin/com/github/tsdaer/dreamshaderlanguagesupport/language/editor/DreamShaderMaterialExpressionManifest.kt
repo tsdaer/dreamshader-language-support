@@ -9,7 +9,8 @@ import java.util.Locale
 internal data class DreamShaderMaterialExpressionParameter(
     val name: String,
     val type: String? = null,
-    val required: Boolean = false
+    val required: Boolean = false,
+    val placeholder: String? = null
 )
 
 internal enum class DreamShaderMaterialExpressionSource {
@@ -278,27 +279,81 @@ internal object DreamShaderMaterialExpressionManifest {
             ?: "UE"
         val ueName = readStringField(objectText, "ueName")
             ?.takeIf { it.isNotBlank() }
+            ?: readStringField(objectText, "name")?.takeIf { it.isNotBlank() }
             ?: deriveUeName(rawClassName)
+
+        // 参数来源优先级：显式 `parameters`（旧格式/Substrate）→ Bridge 的 `inputs`（实际产物）。
         val parameters = findNamedArrayContent(objectText, "parameters")
             ?.let(::splitTopLevelArrayElements)
             ?.filter { it.trim().startsWith("{") }
             ?.mapNotNull(::parseParameterObject)
-            .orEmpty()
+            ?.takeIf { it.isNotEmpty() }
+            ?: parseInputParameters(objectText)
+
+        // 输出类型优先级：显式 `outputType` → `defaultOutputType` → 从 `outputs[0]` 推断。
+        val outputType = readStringField(objectText, "outputType")?.takeIf { it.isNotBlank() }
+            ?: readStringField(objectText, "defaultOutputType")?.takeIf { it.isNotBlank() }
+            ?: inferOutputTypeFromOutputs(objectText)
+
+        val explicitSignature = readStringField(objectText, "signature")?.takeIf { it.isNotBlank() }
 
         return DreamShaderMaterialExpressionInfo(
             namespace = namespace,
             className = rawClassName,
             ueName = ueName,
-            signature = readStringField(objectText, "signature")
-                ?.takeIf { it.isNotBlank() }
-                ?: defaultSignature(namespace, ueName),
+            signature = explicitSignature ?: synthesizeSignature(namespace, ueName, parameters, outputType),
             parameters = parameters,
-            outputType = readStringField(objectText, "outputType")?.takeIf { it.isNotBlank() },
+            outputType = outputType,
             description = readStringField(objectText, "description")
                 ?.takeIf { it.isNotBlank() }
+                ?: readStringField(objectText, "detail")?.takeIf { it.isNotBlank() }
                 ?: defaultDescription(namespace, ueName, rawClassName),
             source = source
         )
+    }
+
+    /** 从 Bridge `inputs[]` 提取输入参数（每个 input 名作为一个 `Value` 占位实参）。 */
+    private fun parseInputParameters(objectText: String): List<DreamShaderMaterialExpressionParameter> {
+        return findNamedArrayContent(objectText, "inputs")
+            ?.let(::splitTopLevelArrayElements)
+            ?.filter { it.trim().startsWith("{") }
+            ?.mapNotNull { input ->
+                val name = readStringField(input, "name")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                DreamShaderMaterialExpressionParameter(
+                    name = name,
+                    type = readStringField(input, "type")?.takeIf { it.isNotBlank() },
+                    required = false,
+                    placeholder = "Value"
+                )
+            }
+            .orEmpty()
+    }
+
+    /** 从 `outputs[0].outputType` 推断输出类型；缺失时按 componentCount 退化为 floatN。 */
+    private fun inferOutputTypeFromOutputs(objectText: String): String? {
+        val firstOutput = findNamedArrayContent(objectText, "outputs")
+            ?.let(::splitTopLevelArrayElements)
+            ?.firstOrNull { it.trim().startsWith("{") }
+            ?: return null
+        readStringField(firstOutput, "outputType")?.takeIf { it.isNotBlank() }?.let { return it }
+        val components = readIntField(firstOutput, "componentCount")?.coerceIn(1, 4) ?: 1
+        return "float$components"
+    }
+
+    /**
+     * 合成具名调用签名：`<ns>.<name>(OutputType="float1", A=Value, B=Value)`。
+     * 无参数时退化为 `<ns>.<name>(OutputType="...")` 或纯 `<ns>.<name>()`。
+     */
+    private fun synthesizeSignature(
+        namespace: String,
+        ueName: String,
+        parameters: List<DreamShaderMaterialExpressionParameter>,
+        outputType: String?
+    ): String {
+        val args = mutableListOf<String>()
+        if (outputType != null) args.add("OutputType=\"$outputType\"")
+        parameters.forEach { args.add("${it.name}=${it.placeholder ?: "Value"}") }
+        return "$namespace.$ueName(${args.joinToString(", ")})"
     }
 
     private fun parseParameterObject(objectText: String): DreamShaderMaterialExpressionParameter? {
@@ -306,7 +361,8 @@ internal object DreamShaderMaterialExpressionManifest {
         return DreamShaderMaterialExpressionParameter(
             name = name,
             type = readStringField(objectText, "type")?.takeIf { it.isNotBlank() },
-            required = readBooleanField(objectText, "required") ?: false
+            required = readBooleanField(objectText, "required") ?: false,
+            placeholder = readStringField(objectText, "placeholder")?.takeIf { it.isNotBlank() }
         )
     }
 
@@ -462,6 +518,14 @@ internal object DreamShaderMaterialExpressionManifest {
             RegexOption.IGNORE_CASE
         ).find(objectText) ?: return null
         return match.groupValues[1].equals("true", ignoreCase = true)
+    }
+
+    private fun readIntField(objectText: String, field: String): Int? {
+        val match = Regex(
+            """"$field"\s*:\s*(-?\d+)""",
+            RegexOption.IGNORE_CASE
+        ).find(objectText) ?: return null
+        return match.groupValues[1].toIntOrNull()
     }
 
     private fun unescapeJsonString(value: String): String {
