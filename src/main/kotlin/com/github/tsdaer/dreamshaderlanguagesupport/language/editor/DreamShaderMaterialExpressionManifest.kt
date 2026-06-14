@@ -1,7 +1,14 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.Locale
@@ -54,17 +61,58 @@ internal object DreamShaderMaterialExpressionManifest {
 
     private const val SUBSTRATE_BUILTINS_FILE_NAME = "substrate-builtins.json"
 
-    private val classNameRegex = Regex(
-        """"className"\s*:\s*"([A-Za-z_][A-Za-z0-9_]*)"""",
-        RegexOption.IGNORE_CASE
+    // ---- 反序列化 DTO ----
+
+    /** rich `expressions[]` 元素，覆盖配置/Bridge/scan 多来源字段。 */
+    @Serializable
+    private data class ExpressionDto(
+        val namespace: String? = null,
+        val className: String? = null,
+        val name: String? = null,
+        val ueName: String? = null,
+        val signature: String? = null,
+        val outputType: String? = null,
+        val defaultOutputType: String? = null,
+        val description: String? = null,
+        val detail: String? = null,
+        val parameters: List<ParameterDto> = emptyList(),
+        val inputs: List<InputDto> = emptyList(),
+        val outputs: List<OutputDto> = emptyList()
     )
-    private val nameRegex = Regex(
-        """"name"\s*:\s*"([A-Za-z_][A-Za-z0-9_]*)"""",
-        RegexOption.IGNORE_CASE
+
+    /** 显式 `parameters[]`（旧格式/Substrate）元素。 */
+    @Serializable
+    private data class ParameterDto(
+        val name: String? = null,
+        val type: String? = null,
+        val required: Boolean = false,
+        val placeholder: String? = null
     )
-    private val simpleArrayEntryRegex = Regex(
-        """"(?:className|name)"\s*:\s*"([A-Za-z_][A-Za-z0-9_]*)"|"([A-Za-z_][A-Za-z0-9_]*)"""",
-        RegexOption.IGNORE_CASE
+
+    /** Bridge `inputs[]` 元素，每个输入名作为一个 `Value` 占位实参。 */
+    @Serializable
+    private data class InputDto(
+        val name: String? = null,
+        val type: String? = null
+    )
+
+    /** Bridge `outputs[]` 元素，用于推断输出类型。 */
+    @Serializable
+    private data class OutputDto(
+        val outputType: String? = null,
+        val componentCount: Int? = null
+    )
+
+    /** Substrate `builtins[]` 元素。 */
+    @Serializable
+    private data class SubstrateBuiltinDto(
+        val name: String? = null,
+        val className: String? = null,
+        val outputType: String? = null,
+        val detail: String? = null,
+        val example: String? = null,
+        val snippet: String? = null,
+        val parameters: List<ParameterDto> = emptyList()
     )
 
     fun catalogEntries(project: Project?, explicitManifestPath: String?): List<DreamShaderMaterialExpressionInfo> {
@@ -154,33 +202,31 @@ internal object DreamShaderMaterialExpressionManifest {
     }
 
     internal fun parseSubstrateBuiltins(rawJson: String): List<DreamShaderMaterialExpressionInfo> {
-        val trimmed = rawJson.trim()
-        if (trimmed.isBlank()) return emptyList()
-        val arrayContent = findNamedArrayContent(trimmed, "builtins") ?: return emptyList()
-        return splitTopLevelArrayElements(arrayContent)
-            .filter { it.trim().startsWith("{") }
-            .mapNotNull(::parseSubstrateBuiltinObject)
+        val root = DreamShaderJson.decodeOrNull<JsonObject>(rawJson) ?: return emptyList()
+        val array = root["builtins"] as? JsonArray ?: return emptyList()
+        return array.mapNotNull { element ->
+            val dto = runCatching {
+                DreamShaderJson.lenient.decodeFromJsonElement<SubstrateBuiltinDto>(element)
+            }.getOrNull() ?: return@mapNotNull null
+            substrateBuiltinFromDto(dto)
+        }
     }
 
-    private fun parseSubstrateBuiltinObject(objectText: String): DreamShaderMaterialExpressionInfo? {
-        val name = readStringField(objectText, "name")?.takeIf { it.isNotBlank() } ?: return null
-        val className = readStringField(objectText, "className")?.takeIf { it.isNotBlank() }
+    private fun substrateBuiltinFromDto(dto: SubstrateBuiltinDto): DreamShaderMaterialExpressionInfo? {
+        val name = dto.name?.takeIf { it.isNotBlank() } ?: return null
+        val className = dto.className?.takeIf { it.isNotBlank() }
             ?: "MaterialExpressionSubstrate$name"
-        val parameters = findNamedArrayContent(objectText, "parameters")
-            ?.let(::splitTopLevelArrayElements)
-            ?.filter { it.trim().startsWith("{") }
-            ?.mapNotNull(::parseParameterObject)
-            .orEmpty()
-        val example = readStringField(objectText, "example")?.takeIf { it.isNotBlank() }
-        val snippet = readStringField(objectText, "snippet")?.takeIf { it.isNotBlank() }
+        val parameters = dto.parameters.mapNotNull(::parameterFromDto)
+        val example = dto.example?.takeIf { it.isNotBlank() }
+        val snippet = dto.snippet?.takeIf { it.isNotBlank() }
         return DreamShaderMaterialExpressionInfo(
             namespace = "Substrate",
             className = className,
             ueName = name,
             signature = example ?: snippet ?: defaultSignature("Substrate", name),
             parameters = parameters,
-            outputType = readStringField(objectText, "outputType")?.takeIf { it.isNotBlank() },
-            description = readStringField(objectText, "detail")?.takeIf { it.isNotBlank() }
+            outputType = dto.outputType?.takeIf { it.isNotBlank() },
+            description = dto.detail?.takeIf { it.isNotBlank() }
                 ?: defaultDescription("Substrate", name, className),
             source = DreamShaderMaterialExpressionSource.BRIDGE_MANIFEST
         )
@@ -234,68 +280,69 @@ internal object DreamShaderMaterialExpressionManifest {
         rawJson: String,
         source: DreamShaderMaterialExpressionSource = DreamShaderMaterialExpressionSource.BUNDLED_FALLBACK
     ): List<DreamShaderMaterialExpressionInfo> {
-        val trimmed = rawJson.trim()
-        if (trimmed.isBlank()) return emptyList()
+        val root = DreamShaderJson.decodeOrNull<JsonElement>(rawJson) ?: return emptyList()
 
         val entries = mutableListOf<DreamShaderMaterialExpressionInfo>()
-        findNamedArrayContent(trimmed, "expressions")
-            ?.let(::splitTopLevelArrayElements)
-            ?.filter { it.trim().startsWith("{") }
-            ?.mapNotNull { parseRichExpressionObject(it, source) }
-            ?.let(entries::addAll)
 
-        parseLegacyClassEntries(trimmed, source).let(entries::addAll)
+        // rich `expressions[]`
+        ((root as? JsonObject)?.get("expressions") as? JsonArray)?.forEach { element ->
+            decodeExpression(element)?.let { richEntry(it, source) }?.let(entries::add)
+        }
+
+        // 旧格式 `classes[]` 或裸数组根
+        entries.addAll(parseLegacyClassEntries(root, source))
 
         if (entries.isNotEmpty()) return entries
 
+        // 回退：扫描树中任意 className/name 标识符；空且根为数组时收集裸字符串。
         val values = linkedSetOf<String>()
-        classNameRegex.findAll(trimmed).forEach { values.add(it.groupValues[1]) }
-        nameRegex.findAll(trimmed).forEach { values.add(it.groupValues[1]) }
-
-        if (values.isEmpty() && trimmed.startsWith("[")) {
-            simpleArrayEntryRegex.findAll(trimmed).forEach { match ->
-                val first = match.groupValues[1]
-                val second = match.groupValues[2]
-                when {
-                    first.isNotBlank() -> values.add(first)
-                    second.isNotBlank() && !second.equals("className", ignoreCase = true) && !second.equals("name", ignoreCase = true) -> values.add(second)
-                }
+        collectIdentifierFields(root, values)
+        if (values.isEmpty() && root is JsonArray) {
+            root.forEach { element ->
+                (element as? JsonPrimitive)?.takeIf { it.isString }?.content
+                    ?.takeIf { IDENTIFIER_PATTERN.matches(it) }
+                    ?.let(values::add)
             }
         }
-
         return values.map { legacyEntry(it, source) }
     }
 
-    private fun parseRichExpressionObject(
-        objectText: String,
+    private fun decodeExpression(element: JsonElement): ExpressionDto? = runCatching {
+        DreamShaderJson.lenient.decodeFromJsonElement<ExpressionDto>(element)
+    }.getOrNull()
+
+    private fun richEntry(
+        dto: ExpressionDto,
         source: DreamShaderMaterialExpressionSource
     ): DreamShaderMaterialExpressionInfo? {
-        val rawClassName = readStringField(objectText, "className")
-            ?: readStringField(objectText, "name")
-            ?: readStringField(objectText, "ueName")
+        val rawClassName = dto.className?.takeIf { it.isNotBlank() }
+            ?: dto.name?.takeIf { it.isNotBlank() }
+            ?: dto.ueName?.takeIf { it.isNotBlank() }
             ?: return null
-        val namespace = readStringField(objectText, "namespace")
-            ?.takeIf { it.isNotBlank() }
-            ?: "UE"
-        val ueName = readStringField(objectText, "ueName")
-            ?.takeIf { it.isNotBlank() }
-            ?: readStringField(objectText, "name")?.takeIf { it.isNotBlank() }
+        val namespace = dto.namespace?.takeIf { it.isNotBlank() } ?: "UE"
+        val ueName = dto.ueName?.takeIf { it.isNotBlank() }
+            ?: dto.name?.takeIf { it.isNotBlank() }
             ?: deriveUeName(rawClassName)
 
         // 参数来源优先级：显式 `parameters`（旧格式/Substrate）→ Bridge 的 `inputs`（实际产物）。
-        val parameters = findNamedArrayContent(objectText, "parameters")
-            ?.let(::splitTopLevelArrayElements)
-            ?.filter { it.trim().startsWith("{") }
-            ?.mapNotNull(::parseParameterObject)
-            ?.takeIf { it.isNotEmpty() }
-            ?: parseInputParameters(objectText)
+        val parameters = dto.parameters.mapNotNull(::parameterFromDto)
+            .takeIf { it.isNotEmpty() }
+            ?: dto.inputs.mapNotNull { input ->
+                val name = input.name?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                DreamShaderMaterialExpressionParameter(
+                    name = name,
+                    type = input.type?.takeIf { it.isNotBlank() },
+                    required = false,
+                    placeholder = "Value"
+                )
+            }
 
         // 输出类型优先级：显式 `outputType` → `defaultOutputType` → 从 `outputs[0]` 推断。
-        val outputType = readStringField(objectText, "outputType")?.takeIf { it.isNotBlank() }
-            ?: readStringField(objectText, "defaultOutputType")?.takeIf { it.isNotBlank() }
-            ?: inferOutputTypeFromOutputs(objectText)
+        val outputType = dto.outputType?.takeIf { it.isNotBlank() }
+            ?: dto.defaultOutputType?.takeIf { it.isNotBlank() }
+            ?: inferOutputTypeFromOutputs(dto.outputs)
 
-        val explicitSignature = readStringField(objectText, "signature")?.takeIf { it.isNotBlank() }
+        val explicitSignature = dto.signature?.takeIf { it.isNotBlank() }
 
         return DreamShaderMaterialExpressionInfo(
             namespace = namespace,
@@ -304,39 +351,18 @@ internal object DreamShaderMaterialExpressionManifest {
             signature = explicitSignature ?: synthesizeSignature(namespace, ueName, parameters, outputType),
             parameters = parameters,
             outputType = outputType,
-            description = readStringField(objectText, "description")
-                ?.takeIf { it.isNotBlank() }
-                ?: readStringField(objectText, "detail")?.takeIf { it.isNotBlank() }
+            description = dto.description?.takeIf { it.isNotBlank() }
+                ?: dto.detail?.takeIf { it.isNotBlank() }
                 ?: defaultDescription(namespace, ueName, rawClassName),
             source = source
         )
     }
 
-    /** 从 Bridge `inputs[]` 提取输入参数（每个 input 名作为一个 `Value` 占位实参）。 */
-    private fun parseInputParameters(objectText: String): List<DreamShaderMaterialExpressionParameter> {
-        return findNamedArrayContent(objectText, "inputs")
-            ?.let(::splitTopLevelArrayElements)
-            ?.filter { it.trim().startsWith("{") }
-            ?.mapNotNull { input ->
-                val name = readStringField(input, "name")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                DreamShaderMaterialExpressionParameter(
-                    name = name,
-                    type = readStringField(input, "type")?.takeIf { it.isNotBlank() },
-                    required = false,
-                    placeholder = "Value"
-                )
-            }
-            .orEmpty()
-    }
-
     /** 从 `outputs[0].outputType` 推断输出类型；缺失时按 componentCount 退化为 floatN。 */
-    private fun inferOutputTypeFromOutputs(objectText: String): String? {
-        val firstOutput = findNamedArrayContent(objectText, "outputs")
-            ?.let(::splitTopLevelArrayElements)
-            ?.firstOrNull { it.trim().startsWith("{") }
-            ?: return null
-        readStringField(firstOutput, "outputType")?.takeIf { it.isNotBlank() }?.let { return it }
-        val components = readIntField(firstOutput, "componentCount")?.coerceIn(1, 4) ?: 1
+    private fun inferOutputTypeFromOutputs(outputs: List<OutputDto>): String? {
+        val first = outputs.firstOrNull() ?: return null
+        first.outputType?.takeIf { it.isNotBlank() }?.let { return it }
+        val components = first.componentCount?.coerceIn(1, 4) ?: 1
         return "float$components"
     }
 
@@ -356,34 +382,52 @@ internal object DreamShaderMaterialExpressionManifest {
         return "$namespace.$ueName(${args.joinToString(", ")})"
     }
 
-    private fun parseParameterObject(objectText: String): DreamShaderMaterialExpressionParameter? {
-        val name = readStringField(objectText, "name")?.takeIf { it.isNotBlank() } ?: return null
+    private fun parameterFromDto(dto: ParameterDto): DreamShaderMaterialExpressionParameter? {
+        val name = dto.name?.takeIf { it.isNotBlank() } ?: return null
         return DreamShaderMaterialExpressionParameter(
             name = name,
-            type = readStringField(objectText, "type")?.takeIf { it.isNotBlank() },
-            required = readBooleanField(objectText, "required") ?: false,
-            placeholder = readStringField(objectText, "placeholder")?.takeIf { it.isNotBlank() }
+            type = dto.type?.takeIf { it.isNotBlank() },
+            required = dto.required,
+            placeholder = dto.placeholder?.takeIf { it.isNotBlank() }
         )
     }
 
+    /** 递归收集树中所有 `className`/`name` 标识符字段值（回退路径用）。 */
+    private fun collectIdentifierFields(element: JsonElement, sink: MutableSet<String>) {
+        when (element) {
+            is JsonObject -> {
+                listOf("className", "name").forEach { key ->
+                    (element[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+                        ?.takeIf { IDENTIFIER_PATTERN.matches(it) }
+                        ?.let(sink::add)
+                }
+                element.values.forEach { collectIdentifierFields(it, sink) }
+            }
+            is JsonArray -> element.forEach { collectIdentifierFields(it, sink) }
+            else -> Unit
+        }
+    }
+
     private fun parseLegacyClassEntries(
-        rawJson: String,
+        root: JsonElement,
         source: DreamShaderMaterialExpressionSource
     ): List<DreamShaderMaterialExpressionInfo> {
-        val arrayContent = findNamedArrayContent(rawJson, "classes")
-            ?: if (rawJson.trim().startsWith("[")) rawJson.trim().removePrefix("[").removeSuffix("]") else null
-            ?: return emptyList()
+        val array = when {
+            root is JsonObject && root["classes"] is JsonArray -> root["classes"] as JsonArray
+            root is JsonArray -> root
+            else -> return emptyList()
+        }
 
-        return splitTopLevelArrayElements(arrayContent)
-            .mapNotNull { element ->
-                val trimmed = element.trim()
-                when {
-                    trimmed.startsWith("{") -> readStringField(trimmed, "className")
-                        ?: readStringField(trimmed, "name")
-                    trimmed.startsWith("\"") -> unescapeJsonString(trimmed.trim('"'))
-                    else -> trimmed.takeIf { IDENTIFIER_PATTERN.matches(it) }
+        return array.mapNotNull { element ->
+            when (element) {
+                is JsonObject -> {
+                    (element["className"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+                        ?: (element["name"] as? JsonPrimitive)?.takeIf { it.isString }?.content
                 }
+                is JsonPrimitive -> if (element.isString) element.content else null
+                else -> null
             }
+        }
             .filter { it.isNotBlank() }
             .map { legacyEntry(it, source) }
     }
@@ -425,114 +469,6 @@ internal object DreamShaderMaterialExpressionManifest {
 
     private fun defaultDescription(namespace: String, ueName: String, className: String): String =
         "Material expression '$className' exposed as $namespace.$ueName."
-
-    private fun findNamedArrayContent(text: String, name: String): String? {
-        val match = Regex(""""$name"\s*:\s*\[""", RegexOption.IGNORE_CASE).find(text) ?: return null
-        val leftBracket = text.indexOf('[', match.range.first)
-        if (leftBracket < 0) return null
-        val rightBracket = findMatchingBracket(text, leftBracket, '[', ']') ?: return null
-        return text.substring(leftBracket + 1, rightBracket)
-    }
-
-    private fun splitTopLevelArrayElements(text: String): List<String> {
-        val elements = mutableListOf<String>()
-        var start = 0
-        var objectDepth = 0
-        var arrayDepth = 0
-        var inString = false
-        var escaped = false
-
-        for (index in text.indices) {
-            val ch = text[index]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                continue
-            }
-
-            when (ch) {
-                '"' -> inString = true
-                '{' -> objectDepth++
-                '}' -> if (objectDepth > 0) objectDepth--
-                '[' -> arrayDepth++
-                ']' -> if (arrayDepth > 0) arrayDepth--
-                ',' -> {
-                    if (objectDepth == 0 && arrayDepth == 0) {
-                        elements.add(text.substring(start, index))
-                        start = index + 1
-                    }
-                }
-            }
-        }
-        elements.add(text.substring(start))
-        return elements.map { it.trim() }.filter { it.isNotBlank() }
-    }
-
-    private fun findMatchingBracket(text: String, leftOffset: Int, left: Char, right: Char): Int? {
-        var depth = 0
-        var inString = false
-        var escaped = false
-        var index = leftOffset
-        while (index < text.length) {
-            val ch = text[index]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                index++
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                left -> depth++
-                right -> {
-                    depth--
-                    if (depth == 0) return index
-                }
-            }
-            index++
-        }
-        return null
-    }
-
-    private fun readStringField(objectText: String, field: String): String? {
-        val match = Regex(
-            """"$field"\s*:\s*"((?:[^"\\]|\\.)*)"""",
-            RegexOption.IGNORE_CASE
-        ).find(objectText) ?: return null
-        return unescapeJsonString(match.groupValues[1])
-    }
-
-    private fun readBooleanField(objectText: String, field: String): Boolean? {
-        val match = Regex(
-            """"$field"\s*:\s*(true|false)""",
-            RegexOption.IGNORE_CASE
-        ).find(objectText) ?: return null
-        return match.groupValues[1].equals("true", ignoreCase = true)
-    }
-
-    private fun readIntField(objectText: String, field: String): Int? {
-        val match = Regex(
-            """"$field"\s*:\s*(-?\d+)""",
-            RegexOption.IGNORE_CASE
-        ).find(objectText) ?: return null
-        return match.groupValues[1].toIntOrNull()
-    }
-
-    private fun unescapeJsonString(value: String): String {
-        return value
-            .replace("\\\"", "\"")
-            .replace("\\\\", "\\")
-    }
 
     private val IDENTIFIER_PATTERN = Regex("[A-Za-z_][A-Za-z0-9_]*")
 }

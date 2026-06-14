@@ -1,11 +1,43 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.io.File
 import java.nio.charset.StandardCharsets
+
+/** 单条诊断的反序列化 DTO，字段别名在 [DreamShaderBridgeDiagnosticsRepository.toDiagnostic] 归一化。 */
+@Serializable
+private data class BridgeDiagnosticDto(
+    val sourcePath: String? = null,
+    val file: String? = null,
+    val path: String? = null,
+    val line: Int? = null,
+    val lineNumber: Int? = null,
+    val column: Int? = null,
+    val col: Int? = null,
+    val severity: String? = null,
+    val level: String? = null,
+    val message: String? = null,
+    val text: String? = null,
+    val msg: String? = null
+)
+
+/** `{ "files": [ { "path": ..., "diagnostics": [...] } ] }` 中的单个 file 分组。 */
+@Serializable
+private data class BridgeDiagnosticFileGroupDto(
+    val path: String? = null,
+    val file: String? = null,
+    val sourcePath: String? = null,
+    val diagnostics: List<BridgeDiagnosticDto> = emptyList()
+)
 
 /**
  * Bridge 诊断仓库（项目级服务）。
@@ -66,53 +98,54 @@ class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
     }
 
     internal fun parseDiagnosticsJson(rawJson: String): List<DreamShaderBridgeDiagnostic> {
-        val text = rawJson.trim()
-        if (text.isBlank()) return emptyList()
+        val root = DreamShaderJson.decodeOrNull<JsonElement>(rawJson) ?: return emptyList()
 
         // 按文件分组的结构（Bridge 默认产物）：诊断对象不带路径，继承父级 file 的 path。
-        if (text.startsWith("{") && text.contains("\"files\"")) {
-            val grouped = parseGroupedByFile(text)
+        if (root is JsonObject && root["files"] is JsonArray) {
+            val grouped = parseGroupedByFile(root["files"] as JsonArray)
             if (grouped.isNotEmpty()) return grouped
         }
 
-        val objectTexts = when {
-            text.startsWith("[") -> extractTopLevelObjects(text)
-            text.startsWith("{") && text.contains("\"diagnostics\"") -> {
-                val diagnosticsArray = extractArrayForField(text, "diagnostics")
-                if (diagnosticsArray.isNullOrBlank()) emptyList() else extractTopLevelObjects(diagnosticsArray)
-            }
-            text.startsWith("{") -> listOf(text)
+        val diagnosticElements: List<JsonElement> = when {
+            root is JsonArray -> root
+            root is JsonObject && root["diagnostics"] is JsonArray -> root["diagnostics"] as JsonArray
+            root is JsonObject -> listOf(root)
             else -> emptyList()
         }
-        if (objectTexts.isEmpty()) return emptyList()
 
-        return objectTexts.mapNotNull { parseDiagnosticObject(it) }
+        return diagnosticElements.mapNotNull { element ->
+            decodeDiagnostic(element)?.let { toDiagnostic(it, fallbackPath = null) }
+        }
     }
 
     /**
      * 解析 `{ "files": [ { "path": "...", "diagnostics": [...] } ] }` 结构。
      * 每个 file 对象提供 `path`，其下诊断对象若自身缺少路径字段则继承之。
      */
-    private fun parseGroupedByFile(text: String): List<DreamShaderBridgeDiagnostic> {
-        val filesArray = extractArrayForField(text, "files") ?: return emptyList()
-        val fileObjects = extractTopLevelObjects(filesArray)
+    private fun parseGroupedByFile(filesArray: JsonArray): List<DreamShaderBridgeDiagnostic> {
         val result = mutableListOf<DreamShaderBridgeDiagnostic>()
-        fileObjects.forEach { fileObj ->
-            val filePath = findStringField(fileObj, listOf("path", "file", "sourcePath"))
-            val diagnosticsArray = extractArrayForField(fileObj, "diagnostics") ?: return@forEach
-            extractTopLevelObjects(diagnosticsArray).forEach { diagObj ->
-                parseDiagnosticObject(diagObj, fallbackPath = filePath)?.let(result::add)
+        filesArray.forEach { element ->
+            val group = runCatching {
+                DreamShaderJson.lenient.decodeFromJsonElement<BridgeDiagnosticFileGroupDto>(element)
+            }.getOrNull() ?: return@forEach
+            val filePath = group.path ?: group.file ?: group.sourcePath
+            group.diagnostics.forEach { dto ->
+                toDiagnostic(dto, fallbackPath = filePath)?.let(result::add)
             }
         }
         return result
     }
 
-    private fun parseDiagnosticObject(objText: String, fallbackPath: String? = null): DreamShaderBridgeDiagnostic? {
-        val source = findStringField(objText, listOf("sourcePath", "file", "path")) ?: fallbackPath ?: return null
-        val line = findIntField(objText, listOf("line", "lineNumber")) ?: 1
-        val column = findIntField(objText, listOf("column", "col")) ?: 1
-        val severity = findStringField(objText, listOf("severity", "level")) ?: "error"
-        val message = findStringField(objText, listOf("message", "text", "msg")) ?: return null
+    private fun decodeDiagnostic(element: JsonElement): BridgeDiagnosticDto? = runCatching {
+        DreamShaderJson.lenient.decodeFromJsonElement<BridgeDiagnosticDto>(element)
+    }.getOrNull()
+
+    private fun toDiagnostic(dto: BridgeDiagnosticDto, fallbackPath: String?): DreamShaderBridgeDiagnostic? {
+        val source = dto.sourcePath ?: dto.file ?: dto.path ?: fallbackPath ?: return null
+        val message = dto.message ?: dto.text ?: dto.msg ?: return null
+        val line = dto.line ?: dto.lineNumber ?: 1
+        val column = dto.column ?: dto.col ?: 1
+        val severity = dto.severity ?: dto.level ?: "error"
         return DreamShaderBridgeDiagnostic(
             sourcePath = normalizePath(source),
             line = if (line < 1) 1 else line,
@@ -120,101 +153,6 @@ class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
             severity = severity.lowercase(),
             message = message
         )
-    }
-
-    private fun extractArrayForField(text: String, field: String): String? {
-        val index = text.indexOf("\"$field\"")
-        if (index < 0) return null
-        val openBracket = text.indexOf('[', index)
-        if (openBracket < 0) return null
-        var depth = 0
-        var inString = false
-        var escaped = false
-        for (i in openBracket until text.length) {
-            val ch = text[i]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                '[' -> depth++
-                ']' -> {
-                    depth--
-                    if (depth == 0) return text.substring(openBracket, i + 1)
-                }
-            }
-        }
-        return null
-    }
-
-    private fun extractTopLevelObjects(arrayOrObjectText: String): List<String> {
-        val result = mutableListOf<String>()
-        var depth = 0
-        var objStart = -1
-        var inString = false
-        var escaped = false
-        for (i in arrayOrObjectText.indices) {
-            val ch = arrayOrObjectText[i]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                '{' -> {
-                    if (depth == 0) objStart = i
-                    depth++
-                }
-                '}' -> {
-                    depth--
-                    if (depth == 0 && objStart >= 0) {
-                        result.add(arrayOrObjectText.substring(objStart, i + 1))
-                        objStart = -1
-                    }
-                }
-            }
-        }
-        return result
-    }
-
-    private fun findStringField(text: String, names: List<String>): String? {
-        names.forEach { name ->
-            val regex = Regex(""""$name"\s*:\s*"((?:[^"\\]|\\.)*)"""", setOf(RegexOption.IGNORE_CASE))
-            val match = regex.find(text) ?: return@forEach
-            return unescapeJsonString(match.groupValues[1])
-        }
-        return null
-    }
-
-    private fun findIntField(text: String, names: List<String>): Int? {
-        names.forEach { name ->
-            val regex = Regex(""""$name"\s*:\s*(-?\d+)""", setOf(RegexOption.IGNORE_CASE))
-            val match = regex.find(text) ?: return@forEach
-            return match.groupValues[1].toIntOrNull()
-        }
-        return null
-    }
-
-    private fun unescapeJsonString(raw: String): String {
-        return raw
-            .replace("\\\\", "\\")
-            .replace("\\\"", "\"")
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
     }
 
     private fun normalizePath(path: String): String {

@@ -76,9 +76,6 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             val catalogDoc = catalogExpressionDocumentation(tokenElement, token)
             if (catalogDoc != null) return catalogDoc
 
-            val ueBuiltinDoc = ueBuiltinDocumentation(tokenElement, token)
-            if (ueBuiltinDoc != null) return ueBuiltinDoc
-
             val functionCallDoc = functionCallDocumentation(tokenElement, token)
             if (functionCallDoc != null) return functionCallDoc
 
@@ -225,20 +222,6 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             project = project,
             explicitManifestPath = settings?.state?.materialExpressionManifestPath
         )
-    }
-
-    private fun ueBuiltinDocumentation(element: PsiElement, token: String): String? {
-        if (!isGraphLikeContext(element)) return null
-        val builtin = DreamShaderDocumentationData.ueBuiltinInfo(token) ?: return null
-        val overrideKey = "ueBuiltins.${builtin.name.lowercase(Locale.ROOT)}.description"
-        val description = overrideDoc(element, overrideKey) ?: builtin.description
-
-        return buildString {
-            append("<b>")
-            append(builtin.signature)
-            append("</b><br/>")
-            append(description)
-        }
     }
 
     private fun functionCallDocumentation(element: PsiElement, token: String): String? {

@@ -150,25 +150,51 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
         assertTrue(doc.contains("Domain"))
     }
 
-    fun testUeBuiltinProvidesHoverDoc() {
-        val file = myFixture.configureByText(
-            "hover_ue_builtin.dsf",
+    fun testUeBuiltinResolvesThroughCatalogNotHardcodedTable() {
+        // UE.* 内置节点文档不再硬编码，改由 catalog 提供（此处用临时 manifest 模拟 Bridge 产物）。
+        val manifest = Files.createTempFile("ds-hover-texcoord", ".json")
+        Files.writeString(
+            manifest,
             """
-            Shader Main {
-                Graph {
-                    float2 uv = UE.TexCoord(Index=0);
+            {
+              "expressions": [
+                {
+                  "namespace": "UE",
+                  "className": "UMaterialExpressionTextureCoordinate",
+                  "ueName": "TexCoord",
+                  "signature": "UE.TexCoord(Index=0)",
+                  "outputType": "float2",
+                  "description": "Catalog-sourced TexCoord doc."
                 }
+              ]
             }
             """.trimIndent()
         )
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        settings.materialExpressionManifestPath = manifest.toString()
+        try {
+            val file = myFixture.configureByText(
+                "hover_ue_builtin.dsf",
+                """
+                Shader Main {
+                    Graph {
+                        float2 uv = UE.TexCoord(Index=0);
+                    }
+                }
+                """.trimIndent()
+            )
 
-        val offset = file.text.indexOf("TexCoord")
-        val element = file.findElementAt(offset)
-        val doc = provider.generateDoc(element, element)
+            val offset = file.text.indexOf("TexCoord")
+            val element = file.findElementAt(offset)
+            val doc = provider.generateDoc(element, element)
 
-        assertNotNull(doc)
-        assertTrue(doc!!.contains("UE.TexCoord"))
-        assertTrue(doc.contains("UV"))
+            assertNotNull(doc)
+            assertTrue(doc!!.contains("UE.TexCoord"))
+            assertTrue(doc.contains("Catalog-sourced TexCoord doc."))
+        } finally {
+            settings.materialExpressionManifestPath = ""
+            Files.deleteIfExists(manifest)
+        }
     }
 
     fun testFunctionCallProvidesHoverDoc() {

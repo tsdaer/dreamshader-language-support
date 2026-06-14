@@ -1,9 +1,13 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 
@@ -15,6 +19,15 @@ internal data class DreamShaderSettingMapping(
     val value: Int?,
     val name: String?,
     val displayName: String?
+)
+
+/** `mappings.<Key>[]` 元素的反序列化 DTO。 */
+@Serializable
+private data class SettingMappingDto(
+    val alias: String? = null,
+    val value: Int? = null,
+    val name: String? = null,
+    val displayName: String? = null
 )
 
 /**
@@ -78,136 +91,24 @@ class DreamShaderBridgeSettingsRepository(private val project: Project) {
     }
 
     internal fun parseSettingsJson(rawJson: String): Map<String, List<DreamShaderSettingMapping>> {
-        val text = rawJson.trim()
-        if (text.isBlank() || !text.contains("\"mappings\"")) return emptyMap()
-        val mappingsObject = extractObjectForField(text, "mappings") ?: return emptyMap()
+        val root = DreamShaderJson.decodeOrNull<JsonObject>(rawJson) ?: return emptyMap()
+        val mappingsObject = (root["mappings"] as? JsonObject) ?: return emptyMap()
         val result = linkedMapOf<String, List<DreamShaderSettingMapping>>()
-        extractObjectArrayFields(mappingsObject).forEach { (key, arrayText) ->
-            val entries = extractTopLevelObjects(arrayText).mapNotNull(::parseMappingObject)
+        for ((key, arrayElement) in mappingsObject) {
+            val dtos = runCatching {
+                DreamShaderJson.lenient.decodeFromJsonElement<List<SettingMappingDto>>(arrayElement)
+            }.getOrNull() ?: continue
+            val entries = dtos.mapNotNull { dto ->
+                val alias = dto.alias?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                DreamShaderSettingMapping(
+                    alias = alias,
+                    value = dto.value,
+                    name = dto.name,
+                    displayName = dto.displayName
+                )
+            }
             if (entries.isNotEmpty()) result[key.lowercase(Locale.ROOT)] = entries
         }
         return result
-    }
-
-    private fun parseMappingObject(objText: String): DreamShaderSettingMapping? {
-        val alias = findStringField(objText, "alias") ?: return null
-        return DreamShaderSettingMapping(
-            alias = alias,
-            value = findIntField(objText, "value"),
-            name = findStringField(objText, "name"),
-            displayName = findStringField(objText, "displayName")
-        )
-    }
-
-    /** 提取 `"<field>": { ... }` 对象体（含外层花括号）。 */
-    private fun extractObjectForField(text: String, field: String): String? {
-        val index = text.indexOf("\"$field\"")
-        if (index < 0) return null
-        val openBrace = text.indexOf('{', index)
-        if (openBrace < 0) return null
-        val close = findMatchingBracket(text, openBrace, '{', '}') ?: return null
-        return text.substring(openBrace, close + 1)
-    }
-
-    /**
-     * 在一个对象体内，找出所有 `"<key>": [ ... ]` 顶层字段，返回 key→数组体（含方括号）。
-     * 用于解析 `mappings` 下按设置键分组的数组。
-     */
-    private fun extractObjectArrayFields(objectText: String): List<Pair<String, String>> {
-        val result = mutableListOf<Pair<String, String>>()
-        val regex = Regex(""""([A-Za-z_][A-Za-z0-9_]*)"\s*:\s*\[""")
-        var searchFrom = 0
-        while (true) {
-            val match = regex.find(objectText, searchFrom) ?: break
-            val openBracket = objectText.indexOf('[', match.range.first)
-            val close = findMatchingBracket(objectText, openBracket, '[', ']')
-            if (close == null) {
-                searchFrom = match.range.last + 1
-                continue
-            }
-            result.add(match.groupValues[1] to objectText.substring(openBracket, close + 1))
-            searchFrom = close + 1
-        }
-        return result
-    }
-
-    private fun extractTopLevelObjects(arrayOrObjectText: String): List<String> {
-        val result = mutableListOf<String>()
-        var depth = 0
-        var objStart = -1
-        var inString = false
-        var escaped = false
-        for (i in arrayOrObjectText.indices) {
-            val ch = arrayOrObjectText[i]
-            if (inString) {
-                if (escaped) escaped = false
-                else if (ch == '\\') escaped = true
-                else if (ch == '"') inString = false
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                '{' -> {
-                    if (depth == 0) objStart = i
-                    depth++
-                }
-                '}' -> {
-                    depth--
-                    if (depth == 0 && objStart >= 0) {
-                        result.add(arrayOrObjectText.substring(objStart, i + 1))
-                        objStart = -1
-                    }
-                }
-            }
-        }
-        return result
-    }
-
-    private fun findMatchingBracket(text: String, leftOffset: Int, left: Char, right: Char): Int? {
-        var depth = 0
-        var inString = false
-        var escaped = false
-        var index = leftOffset
-        while (index < text.length) {
-            val ch = text[index]
-            if (inString) {
-                if (escaped) escaped = false
-                else if (ch == '\\') escaped = true
-                else if (ch == '"') inString = false
-                index++
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                left -> depth++
-                right -> {
-                    depth--
-                    if (depth == 0) return index
-                }
-            }
-            index++
-        }
-        return null
-    }
-
-    private fun findStringField(text: String, name: String): String? {
-        val regex = Regex(""""$name"\s*:\s*"((?:[^"\\]|\\.)*)"""", setOf(RegexOption.IGNORE_CASE))
-        val match = regex.find(text) ?: return null
-        return unescapeJsonString(match.groupValues[1])
-    }
-
-    private fun findIntField(text: String, name: String): Int? {
-        val regex = Regex(""""$name"\s*:\s*(-?\d+)""", setOf(RegexOption.IGNORE_CASE))
-        val match = regex.find(text) ?: return null
-        return match.groupValues[1].toIntOrNull()
-    }
-
-    private fun unescapeJsonString(raw: String): String {
-        return raw
-            .replace("\\\\", "\\")
-            .replace("\\\"", "\"")
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
     }
 }

@@ -1,5 +1,8 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -10,6 +13,22 @@ import java.nio.charset.StandardCharsets
 internal data class DreamShaderGitHubSearchResult(
     val entries: List<DreamShaderPackageIndexEntry>,
     val errorMessage: String? = null
+)
+
+/** GitHub Search API 响应根：`{ "items": [ ... ] }`。 */
+@Serializable
+private data class GitHubSearchResponseDto(
+    val items: List<GitHubRepositoryDto> = emptyList()
+)
+
+/** GitHub 仓库条目，未知字段由宽容解析忽略。 */
+@Serializable
+private data class GitHubRepositoryDto(
+    val name: String? = null,
+    @SerialName("full_name") val fullName: String? = null,
+    @SerialName("html_url") val htmlUrl: String? = null,
+    val description: String? = null,
+    val topics: List<String> = emptyList()
 )
 
 /**
@@ -41,34 +60,33 @@ internal object DreamShaderGitHubPackageSearch {
             )
         }
 
-        return runCatching {
-            val items = extractTopLevelObjectsFromItemsArray(response.body)
-            val entries = items.mapNotNull { parseRepository(it) }
-            DreamShaderGitHubSearchResult(entries, null)
-        }.getOrElse {
-            DreamShaderGitHubSearchResult(emptyList(), "Failed to parse GitHub search response.")
-        }
+        val payload = DreamShaderJson.decodeOrNull<GitHubSearchResponseDto>(response.body)
+            ?: return DreamShaderGitHubSearchResult(emptyList(), "Failed to parse GitHub search response.")
+        return DreamShaderGitHubSearchResult(payload.items.mapNotNull(::toEntry), null)
+    }
+
+    /** 测试入口：解析完整搜索响应载荷为包条目列表。 */
+    internal fun parseSearchPayload(rawJson: String): List<DreamShaderPackageIndexEntry> {
+        val payload = DreamShaderJson.decodeOrNull<GitHubSearchResponseDto>(rawJson) ?: return emptyList()
+        return payload.items.mapNotNull(::toEntry)
     }
 
     private fun buildQuery(keyword: String): String {
         return "$keyword topic:dreamshader in:name,description,readme"
     }
 
-    private fun parseRepository(item: String): DreamShaderPackageIndexEntry? {
-        val fullName = findStringField(item, "full_name") ?: return null
-        val htmlUrl = findStringField(item, "html_url") ?: return null
-        val description = findStringField(item, "description")
-        val displayName = findStringField(item, "name")
-        val tags = extractTopics(item)
+    private fun toEntry(dto: GitHubRepositoryDto): DreamShaderPackageIndexEntry? {
+        val fullName = dto.fullName?.takeIf { it.isNotBlank() } ?: return null
+        val htmlUrl = dto.htmlUrl?.takeIf { it.isNotBlank() } ?: return null
         return DreamShaderPackageIndexEntry(
             name = "@github/$fullName",
-            displayName = displayName,
-            description = description,
+            displayName = dto.name,
+            description = dto.description,
             version = null,
             repository = htmlUrl,
             source = "github-search",
             path = null,
-            tags = tags
+            tags = dto.topics
         )
     }
 
@@ -98,102 +116,6 @@ internal object DreamShaderGitHubPackageSearch {
             val body = stream?.use { String(it.readBytes(), StandardCharsets.UTF_8) }.orEmpty()
             HttpResponse(status, body)
         }.getOrNull()
-    }
-
-    private fun extractTopLevelObjectsFromItemsArray(text: String): List<String> {
-        val itemsArray = extractArrayField(text, "items") ?: return emptyList()
-        return extractTopLevelObjects(itemsArray)
-    }
-
-    private fun extractTopics(objectText: String): List<String> {
-        val array = extractArrayField(objectText, "topics") ?: return emptyList()
-        return Regex(""""((?:[^"\\]|\\.)*)"""").findAll(array).map { match ->
-            unescapeJsonString(match.groupValues[1])
-        }.toList()
-    }
-
-    private fun extractArrayField(text: String, field: String): String? {
-        val index = text.indexOf("\"$field\"")
-        if (index < 0) return null
-        val openBracket = text.indexOf('[', index)
-        if (openBracket < 0) return null
-        var depth = 0
-        var inString = false
-        var escaped = false
-        for (i in openBracket until text.length) {
-            val ch = text[i]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                '[' -> depth++
-                ']' -> {
-                    depth--
-                    if (depth == 0) return text.substring(openBracket, i + 1)
-                }
-            }
-        }
-        return null
-    }
-
-    private fun extractTopLevelObjects(arrayText: String): List<String> {
-        val result = mutableListOf<String>()
-        var depth = 0
-        var objectStart = -1
-        var inString = false
-        var escaped = false
-
-        for (i in arrayText.indices) {
-            val ch = arrayText[i]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                '{' -> {
-                    if (depth == 0) objectStart = i
-                    depth++
-                }
-                '}' -> {
-                    depth--
-                    if (depth == 0 && objectStart >= 0) {
-                        result.add(arrayText.substring(objectStart, i + 1))
-                        objectStart = -1
-                    }
-                }
-            }
-        }
-        return result
-    }
-
-    private fun findStringField(text: String, name: String): String? {
-        val regex = Regex(""""$name"\s*:\s*"((?:[^"\\]|\\.)*)"""")
-        val match = regex.find(text) ?: return null
-        return unescapeJsonString(match.groupValues[1])
-    }
-
-    private fun unescapeJsonString(raw: String): String {
-        return raw
-            .replace("\\\\", "\\")
-            .replace("\\\"", "\"")
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
     }
 
     private fun urlEncode(value: String): String {

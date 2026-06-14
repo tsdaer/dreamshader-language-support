@@ -1,11 +1,28 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
+
+/** 索引源中单个包条目的反序列化 DTO。 */
+@Serializable
+private data class PackageIndexEntryDto(
+    val name: String? = null,
+    val displayName: String? = null,
+    val description: String? = null,
+    val version: String? = null,
+    val repository: String? = null,
+    val path: String? = null,
+    val tags: List<String> = emptyList()
+)
 
 /**
  * 包索引加载器。
@@ -73,20 +90,27 @@ internal object DreamShaderPackageIndexLoader {
     }
 
     internal fun parseEntries(rawJson: String, source: String): List<DreamShaderPackageIndexEntry> {
-        val text = rawJson.trim()
-        if (text.isBlank()) return emptyList()
+        if (rawJson.isBlank()) return emptyList()
+        val root = DreamShaderJson.decodeOrNull<kotlinx.serialization.json.JsonElement>(rawJson)
+            ?: throw IllegalArgumentException("index root is not valid JSON")
 
-        val packageObjects = when {
-            text.startsWith("[") -> extractTopLevelObjects(text)
-            text.startsWith("{") -> {
-                val packagesArray = extractArrayField(text, "packages")
+        val packageArray: JsonArray = when {
+            root is JsonArray -> root
+            root is JsonObject -> {
+                val packages = root["packages"]
                     ?: throw IllegalArgumentException("missing field 'packages'")
-                extractTopLevelObjects(packagesArray)
+                packages as? JsonArray
+                    ?: throw IllegalArgumentException("field 'packages' is not an array")
             }
             else -> throw IllegalArgumentException("index root must be array or object")
         }
 
-        return packageObjects.mapNotNull { parsePackageObject(it, source) }
+        return packageArray.mapNotNull { element ->
+            val dto = runCatching {
+                DreamShaderJson.lenient.decodeFromJsonElement<PackageIndexEntryDto>(element)
+            }.getOrNull() ?: return@mapNotNull null
+            toEntry(dto, source)
+        }
     }
 
     internal fun resolveInstallSource(entry: DreamShaderPackageIndexEntry): DreamShaderPackageInstallSource {
@@ -106,24 +130,19 @@ internal object DreamShaderPackageIndexLoader {
         )
     }
 
-    private fun parsePackageObject(objText: String, source: String): DreamShaderPackageIndexEntry? {
-        val name = findStringField(objText, listOf("name")) ?: return null
-        val repository = findStringField(objText, listOf("repository")) ?: return null
-        val displayName = findStringField(objText, listOf("displayName"))
-        val description = findStringField(objText, listOf("description"))
-        val version = findStringField(objText, listOf("version"))
-        val path = findStringField(objText, listOf("path"))
-        val tags = findStringArrayField(objText, listOf("tags"))
-
+    private fun toEntry(dto: PackageIndexEntryDto, source: String): DreamShaderPackageIndexEntry? {
+        // 与旧 findStringField 行为对齐：字段缺失（null）才丢弃，空串保留。
+        val name = dto.name ?: return null
+        val repository = dto.repository ?: return null
         return DreamShaderPackageIndexEntry(
             name = name,
-            displayName = displayName,
-            description = description,
-            version = version,
+            displayName = dto.displayName,
+            description = dto.description,
+            version = dto.version,
             repository = repository,
             source = source,
-            path = path,
-            tags = tags
+            path = dto.path,
+            tags = dto.tags
         )
     }
 
@@ -195,107 +214,6 @@ internal object DreamShaderPackageIndexLoader {
 
     private fun normalizePath(path: String): String {
         return path.replace('\\', '/').trimEnd('/')
-    }
-
-    private fun extractArrayField(text: String, field: String): String? {
-        val index = text.indexOf("\"$field\"")
-        if (index < 0) return null
-        val openBracket = text.indexOf('[', index)
-        if (openBracket < 0) return null
-
-        var depth = 0
-        var inString = false
-        var escaped = false
-        for (i in openBracket until text.length) {
-            val ch = text[i]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                '[' -> depth++
-                ']' -> {
-                    depth--
-                    if (depth == 0) return text.substring(openBracket, i + 1)
-                }
-            }
-        }
-        return null
-    }
-
-    private fun extractTopLevelObjects(arrayText: String): List<String> {
-        val result = mutableListOf<String>()
-        var depth = 0
-        var objectStart = -1
-        var inString = false
-        var escaped = false
-
-        for (i in arrayText.indices) {
-            val ch = arrayText[i]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                continue
-            }
-
-            when (ch) {
-                '"' -> inString = true
-                '{' -> {
-                    if (depth == 0) objectStart = i
-                    depth++
-                }
-                '}' -> {
-                    depth--
-                    if (depth == 0 && objectStart >= 0) {
-                        result.add(arrayText.substring(objectStart, i + 1))
-                        objectStart = -1
-                    }
-                }
-            }
-        }
-        return result
-    }
-
-    private fun findStringField(text: String, names: List<String>): String? {
-        names.forEach { name ->
-            val regex = Regex(""""$name"\s*:\s*"((?:[^"\\]|\\.)*)"""", setOf(RegexOption.IGNORE_CASE))
-            val match = regex.find(text) ?: return@forEach
-            return unescapeJsonString(match.groupValues[1])
-        }
-        return null
-    }
-
-    private fun findStringArrayField(text: String, names: List<String>): List<String> {
-        names.forEach { name ->
-            val arrayText = extractArrayField(text, name) ?: return@forEach
-            val result = mutableListOf<String>()
-            Regex(""""((?:[^"\\]|\\.)*)"""").findAll(arrayText).forEach { match ->
-                result.add(unescapeJsonString(match.groupValues[1]))
-            }
-            return result
-        }
-        return emptyList()
-    }
-
-    private fun unescapeJsonString(raw: String): String {
-        return raw
-            .replace("\\\\", "\\")
-            .replace("\\\"", "\"")
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
     }
 
     private fun errorMessage(key: String, vararg args: Any): String {

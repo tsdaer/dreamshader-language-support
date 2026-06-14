@@ -12,15 +12,6 @@ internal data class DreamShaderSettingInfo(
 )
 
 /**
- * Data model for DreamShaderBuiltinInfo.
- */
-internal data class DreamShaderBuiltinInfo(
-    val name: String,
-    val signature: String,
-    val description: String
-)
-
-/**
  * Singleton for DreamShaderDocumentationData.
  */
 internal object DreamShaderDocumentationData {
@@ -65,23 +56,7 @@ internal object DreamShaderDocumentationData {
         "settings.twosided.commonValues" to listOf("true", "false"),
         "settings.wireframe.key" to "Wireframe",
         "settings.wireframe.description" to DreamShaderBundle.message("docs.settings.wireframe.description"),
-        "settings.wireframe.commonValues" to listOf("true", "false"),
-
-        "ueBuiltins.texcoord.name" to "TexCoord",
-        "ueBuiltins.texcoord.signature" to "UE.TexCoord(Index=0)",
-        "ueBuiltins.texcoord.description" to DreamShaderBundle.message("docs.ueBuiltin.texcoord.description"),
-        "ueBuiltins.time.name" to "Time",
-        "ueBuiltins.time.signature" to "UE.Time(Period=4.0)",
-        "ueBuiltins.time.description" to DreamShaderBundle.message("docs.ueBuiltin.time.description"),
-        "ueBuiltins.panner.name" to "Panner",
-        "ueBuiltins.panner.signature" to "UE.Panner(Coordinate=UV, Time=UE.Time(), Speed=float2(0.1, 0.0))",
-        "ueBuiltins.panner.description" to DreamShaderBundle.message("docs.ueBuiltin.panner.description"),
-        "ueBuiltins.worldposition.name" to "WorldPosition",
-        "ueBuiltins.worldposition.signature" to "UE.WorldPosition()",
-        "ueBuiltins.worldposition.description" to DreamShaderBundle.message("docs.ueBuiltin.worldposition.description"),
-        "ueBuiltins.expression.name" to "Expression",
-        "ueBuiltins.expression.signature" to "UE.Expression(Class=\"Sine\", OutputType=\"float1\", Input=UE.Time())",
-        "ueBuiltins.expression.description" to DreamShaderBundle.message("docs.ueBuiltin.expression.description")
+        "settings.wireframe.commonValues" to listOf("true", "false")
     )
 
     fun declarationDescription(keyword: String): String? =
@@ -95,22 +70,10 @@ internal object DreamShaderDocumentationData {
         return readSettingInfo(id)
     }
 
-    fun ueBuiltinInfo(token: String): DreamShaderBuiltinInfo? {
-        val id = builtinsByName[token.lowercase(Locale.ROOT)] ?: return null
-        return readBuiltinInfo(id)
-    }
-
     private val settingsByKey: Map<String, String> by lazy {
         settingIds().mapNotNull { id ->
             val key = readString("settings.$id.key") ?: return@mapNotNull null
             key.lowercase(Locale.ROOT) to id
-        }.toMap()
-    }
-
-    private val builtinsByName: Map<String, String> by lazy {
-        builtinIds().mapNotNull { id ->
-            val name = readString("ueBuiltins.$id.name") ?: return@mapNotNull null
-            name.lowercase(Locale.ROOT) to id
         }.toMap()
     }
 
@@ -121,16 +84,7 @@ internal object DreamShaderDocumentationData {
         return DreamShaderSettingInfo(key = key, description = description, commonValues = commonValues)
     }
 
-    private fun readBuiltinInfo(id: String): DreamShaderBuiltinInfo? {
-        val name = readString("ueBuiltins.$id.name") ?: return null
-        val signature = readString("ueBuiltins.$id.signature") ?: return null
-        val description = readString("ueBuiltins.$id.description") ?: return null
-        return DreamShaderBuiltinInfo(name = name, signature = signature, description = description)
-    }
-
     private fun settingIds(): Set<String> = collectIds("settings")
-
-    private fun builtinIds(): Set<String> = collectIds("ueBuiltins")
 
     private fun collectIds(prefix: String): Set<String> {
         val rootPrefix = "$prefix."
@@ -174,8 +128,7 @@ internal object DreamShaderDocumentationData {
                 val text = value as? String ?: return@mapNotNull null
                 if (!key.endsWith(".description")) return@mapNotNull null
                 if (!key.startsWith("declaration.") &&
-                    !key.startsWith("settings.") &&
-                    !key.startsWith("ueBuiltins.")
+                    !key.startsWith("settings.")
                 ) {
                     return@mapNotNull null
                 }

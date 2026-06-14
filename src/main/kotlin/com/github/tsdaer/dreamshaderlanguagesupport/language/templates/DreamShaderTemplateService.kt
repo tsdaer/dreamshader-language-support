@@ -1,12 +1,26 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.templates
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
 import com.intellij.openapi.project.Project
+import kotlinx.serialization.Serializable
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import kotlin.io.path.*
+
+/** `dreamshader.package.json` 脚手架元数据的序列化模型。 */
+@Serializable
+private data class PackageScaffoldMetadata(
+    val name: String,
+    val version: String,
+    val repository: String,
+    val dreamshader: DreamShaderEntry
+) {
+    @Serializable
+    data class DreamShaderEntry(val entry: String)
+}
 
 /**
  * Service implementation for DreamShaderTemplateService.
@@ -142,16 +156,16 @@ internal class DreamShaderTemplateService(
         val entryFileName = "${toIdentifier(packageId, "Main")}Lib.dsh"
         val namespaceName = toIdentifier(packageId, "Library")
 
-        val metadataContent = """
-            {
-              "name": "$normalizedName",
-              "version": "0.1.0",
-              "repository": "https://github.com/owner/repository",
-              "dreamshader": {
-                "entry": "Library/$entryFileName"
-              }
-            }
-        """.trimIndent() + "\n"
+        val metadataContent = DreamShaderJson.encodePretty(
+            PackageScaffoldMetadata(
+                name = normalizedName,
+                version = "0.1.0",
+                repository = "https://github.com/owner/repository",
+                dreamshader = PackageScaffoldMetadata.DreamShaderEntry(
+                    entry = "Library/$entryFileName"
+                )
+            )
+        ) + "\n"
         val readmeContent = """
             # $normalizedName
 

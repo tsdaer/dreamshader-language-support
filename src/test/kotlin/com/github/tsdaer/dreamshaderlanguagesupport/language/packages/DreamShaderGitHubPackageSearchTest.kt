@@ -7,22 +7,23 @@ import org.junit.Test
 class DreamShaderGitHubPackageSearchTest {
     @Test
     fun `parse item object into package entry`() {
-        val item = """
+        val payload = """
             {
-              "name": "dream-noise",
-              "full_name": "TypeDreamMoon/dream-noise",
-              "html_url": "https://github.com/TypeDreamMoon/dream-noise",
-              "description": "DreamShader noise package",
-              "topics": ["dreamshader", "noise"]
+              "items": [
+                {
+                  "name": "dream-noise",
+                  "full_name": "TypeDreamMoon/dream-noise",
+                  "html_url": "https://github.com/TypeDreamMoon/dream-noise",
+                  "description": "DreamShader noise package",
+                  "topics": ["dreamshader", "noise"]
+                }
+              ]
             }
         """.trimIndent()
 
-        val entryMethod = DreamShaderGitHubPackageSearch::class.java.getDeclaredMethod(
-            "parseRepository",
-            String::class.java
-        )
-        entryMethod.isAccessible = true
-        val entry = entryMethod.invoke(DreamShaderGitHubPackageSearch, item) as DreamShaderPackageIndexEntry
+        val entries = DreamShaderGitHubPackageSearch.parseSearchPayload(payload)
+        assertEquals(1, entries.size)
+        val entry = entries.first()
 
         assertEquals("@github/TypeDreamMoon/dream-noise", entry.name)
         assertEquals("dream-noise", entry.displayName)
@@ -47,13 +48,9 @@ class DreamShaderGitHubPackageSearchTest {
             }
         """.trimIndent()
 
-        val extractMethod = DreamShaderGitHubPackageSearch::class.java.getDeclaredMethod(
-            "extractTopLevelObjectsFromItemsArray",
-            String::class.java
-        )
-        extractMethod.isAccessible = true
-        val items = extractMethod.invoke(DreamShaderGitHubPackageSearch, payload) as List<*>
-        assertEquals(1, items.size)
-        assertTrue((items.first() as String).contains("\"full_name\": \"TypeDreamMoon/dream-water\""))
+        val entries = DreamShaderGitHubPackageSearch.parseSearchPayload(payload)
+        assertEquals(1, entries.size)
+        assertEquals("@github/TypeDreamMoon/dream-water", entries.first().name)
+        assertTrue(entries.first().tags.isEmpty())
     }
 }

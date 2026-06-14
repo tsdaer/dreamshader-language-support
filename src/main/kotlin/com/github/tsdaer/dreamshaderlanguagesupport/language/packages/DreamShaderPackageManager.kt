@@ -1,7 +1,9 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
 import com.intellij.openapi.project.Project
+import kotlinx.serialization.Serializable
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -11,6 +13,30 @@ import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.streams.asSequence
+
+/** `dreamshader.package.json` 的最小反序列化 DTO。 */
+@Serializable
+private data class PackageMetadataDto(
+    val name: String? = null,
+    val version: String? = null,
+    val repository: String? = null
+)
+
+/** `dreamshader.lock.json` 根：`{ "packages": [ ... ] }`。 */
+@Serializable
+private data class PackageLockFileDto(
+    val packages: List<PackageLockEntryDto> = emptyList()
+)
+
+/** lock 文件中的单个包记录 DTO。 */
+@Serializable
+private data class PackageLockEntryDto(
+    val name: String? = null,
+    val version: String? = null,
+    val repository: String? = null,
+    val commit: String? = null,
+    val installPath: String? = null
+)
 
 /**
  * 包生命周期管理器。
@@ -213,19 +239,30 @@ internal class DreamShaderPackageManager(
 
     private fun parsePackageMetadata(file: Path): DreamShaderPackageMetadata? {
         val raw = runCatching { Files.readString(file, StandardCharsets.UTF_8) }.getOrNull() ?: return null
-        val name = findStringField(raw, listOf("name"))?.trim().orEmpty()
+        val dto = DreamShaderJson.decodeOrNull<PackageMetadataDto>(raw) ?: return null
+        val name = dto.name?.trim().orEmpty()
         if (name.isBlank()) return null
-        val version = findStringField(raw, listOf("version"))?.trim()
-        val repository = findStringField(raw, listOf("repository"))?.trim()
-        return DreamShaderPackageMetadata(name = name, version = version, repository = repository)
+        return DreamShaderPackageMetadata(
+            name = name,
+            version = dto.version?.trim(),
+            repository = dto.repository?.trim()
+        )
     }
 
     private fun readLockEntries(): List<DreamShaderPackageLockEntry> {
         val lockFile = lockFilePath()
         if (!lockFile.exists() || !lockFile.isRegularFile()) return emptyList()
         val raw = runCatching { Files.readString(lockFile, StandardCharsets.UTF_8) }.getOrNull() ?: return emptyList()
-        val array = extractArrayField(raw, "packages") ?: return emptyList()
-        return extractTopLevelObjects(array).mapNotNull { parseLockEntry(it) }
+        val parsed = DreamShaderJson.decodeOrNull<PackageLockFileDto>(raw) ?: return emptyList()
+        return parsed.packages.mapNotNull { dto ->
+            DreamShaderPackageLockEntry(
+                name = dto.name ?: return@mapNotNull null,
+                version = dto.version ?: return@mapNotNull null,
+                repository = dto.repository ?: return@mapNotNull null,
+                commit = dto.commit ?: return@mapNotNull null,
+                installPath = dto.installPath ?: return@mapNotNull null
+            )
+        }
     }
 
     private fun upsertLockEntry(entry: DreamShaderPackageLockEntry) {
@@ -242,38 +279,23 @@ internal class DreamShaderPackageManager(
     private fun writeLockEntries(entries: List<DreamShaderPackageLockEntry>) {
         val file = lockFilePath()
         Files.createDirectories(file.parent)
-        val body = buildString {
-            append("{\n")
-            append("  \"packages\": [\n")
-            entries.forEachIndexed { index, entry ->
-                append("    {\n")
-                append("      \"name\": \"${escapeJson(entry.name)}\",\n")
-                append("      \"version\": \"${escapeJson(entry.version)}\",\n")
-                append("      \"repository\": \"${escapeJson(entry.repository)}\",\n")
-                append("      \"commit\": \"${escapeJson(entry.commit)}\",\n")
-                append("      \"installPath\": \"${escapeJson(entry.installPath)}\"\n")
-                append("    }")
-                if (index < entries.lastIndex) append(",")
-                append("\n")
+        val dto = PackageLockFileDto(
+            packages = entries.map {
+                PackageLockEntryDto(
+                    name = it.name,
+                    version = it.version,
+                    repository = it.repository,
+                    commit = it.commit,
+                    installPath = it.installPath
+                )
             }
-            append("  ]\n")
-            append("}\n")
-        }
-        Files.writeString(file, body, StandardCharsets.UTF_8)
+        )
+        Files.writeString(file, DreamShaderJson.encodePretty(dto) + "\n", StandardCharsets.UTF_8)
     }
 
     private fun lockFilePath(): Path {
         val basePath = project.basePath ?: error("project base path is null")
         return Path.of(basePath).resolve("DShader").resolve("dreamshader.lock.json")
-    }
-
-    private fun parseLockEntry(obj: String): DreamShaderPackageLockEntry? {
-        val name = findStringField(obj, listOf("name")) ?: return null
-        val version = findStringField(obj, listOf("version")) ?: return null
-        val repository = findStringField(obj, listOf("repository")) ?: return null
-        val commit = findStringField(obj, listOf("commit")) ?: return null
-        val installPath = findStringField(obj, listOf("installPath")) ?: return null
-        return DreamShaderPackageLockEntry(name, version, repository, commit, installPath)
     }
 
     private fun moveOrCopyDirectory(from: Path, to: Path) {
@@ -324,101 +346,6 @@ internal class DreamShaderPackageManager(
                     .forEach { Files.deleteIfExists(it) }
             }
         }
-    }
-
-    private fun extractArrayField(text: String, field: String): String? {
-        val index = text.indexOf("\"$field\"")
-        if (index < 0) return null
-        val openBracket = text.indexOf('[', index)
-        if (openBracket < 0) return null
-        var depth = 0
-        var inString = false
-        var escaped = false
-        for (i in openBracket until text.length) {
-            val ch = text[i]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                '[' -> depth++
-                ']' -> {
-                    depth--
-                    if (depth == 0) return text.substring(openBracket, i + 1)
-                }
-            }
-        }
-        return null
-    }
-
-    private fun extractTopLevelObjects(arrayText: String): List<String> {
-        val result = mutableListOf<String>()
-        var depth = 0
-        var objectStart = -1
-        var inString = false
-        var escaped = false
-        for (i in arrayText.indices) {
-            val ch = arrayText[i]
-            if (inString) {
-                if (escaped) {
-                    escaped = false
-                } else if (ch == '\\') {
-                    escaped = true
-                } else if (ch == '"') {
-                    inString = false
-                }
-                continue
-            }
-            when (ch) {
-                '"' -> inString = true
-                '{' -> {
-                    if (depth == 0) objectStart = i
-                    depth++
-                }
-                '}' -> {
-                    depth--
-                    if (depth == 0 && objectStart >= 0) {
-                        result.add(arrayText.substring(objectStart, i + 1))
-                        objectStart = -1
-                    }
-                }
-            }
-        }
-        return result
-    }
-
-    private fun findStringField(text: String, names: List<String>): String? {
-        names.forEach { name ->
-            val regex = Regex(""""$name"\s*:\s*"((?:[^"\\]|\\.)*)"""", setOf(RegexOption.IGNORE_CASE))
-            val match = regex.find(text) ?: return@forEach
-            return unescapeJsonString(match.groupValues[1])
-        }
-        return null
-    }
-
-    private fun escapeJson(value: String): String {
-        return value
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r")
-            .replace("\t", "\\t")
-    }
-
-    private fun unescapeJsonString(raw: String): String {
-        return raw
-            .replace("\\\\", "\\")
-            .replace("\\\"", "\"")
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
     }
 
     private companion object {

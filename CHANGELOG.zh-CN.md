@@ -4,6 +4,14 @@
 
 ## [未发布]
 
+### 变更
+
+- 将所有 JSON 访问（Bridge `settings.json` / `diagnostics.json`、包索引、GitHub 搜索、包元数据 / lock 文件、材质表达式清单、包脚手架）统一到 `kotlinx.serialization`，替换各文件各自手写的正则 / 括号扫描解析器。同时修复了 `\uXXXX`/`\/`/`\b`/`\f` 转义处理、避免深层嵌套同名字段误匹配，并在写出 lock 文件与包元数据时正确转义。
+
+### 移除
+
+- 移除了硬编码的 `UE.*` 内置节点文档表（TexCoord/Time/Panner/WorldPosition/Expression）。`UE.<Name>` 悬浮文档现在完全经由材质表达式 catalog（Bridge / 配置 / 扫描 / 捆绑清单）获取，文档随实际 catalog 数据更新，而非陈旧的硬编码列表。用户悬浮文档覆盖（`ueBuiltins.<name>.description`）仍然优先生效。
+
 ## [0.0.4] - 2026-06-14
 
 ### 新增
