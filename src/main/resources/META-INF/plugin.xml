@@ -84,6 +84,8 @@
                 dumbAware="true"/>
         <postStartupActivity
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeProjectActivity"/>
+        <postStartupActivity
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeFileWatcher"/>
     </extensions>
 
     <actions>

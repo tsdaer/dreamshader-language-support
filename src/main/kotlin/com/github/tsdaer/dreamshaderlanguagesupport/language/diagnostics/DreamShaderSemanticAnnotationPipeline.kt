@@ -1,5 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeDiagnosticsPass
+import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeSettingsRepository
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMaterialExpressionManifest
@@ -755,11 +756,33 @@ internal class DreamShaderSemanticAnnotationPipeline {
         return namespaceKeywordIndex
     }
 
+    /**
+     * 解析 Bridge `settings.json` 提供的枚举别名，按诊断使用的小写键展开
+     * （含同义键 materialdomain/domain、blendmode/rendertype）。
+     * 缺失或为空时返回空表，由调用方回退到硬编码校验器。
+     */
+    private fun resolveBridgeSettingValueOverrides(
+        topLevelDeclarations: List<DreamShaderDeclaration>
+    ): Map<String, Set<String>> {
+        val project = topLevelDeclarations.firstOrNull()?.project ?: return emptyMap()
+        val repository = project.getService(DreamShaderBridgeSettingsRepository::class.java) ?: return emptyMap()
+        val result = mutableMapOf<String, Set<String>>()
+        fun put(targetKeys: List<String>, bridgeKey: String) {
+            val aliases = repository.allowedAliasesForKey(bridgeKey)
+            if (aliases.isNotEmpty()) targetKeys.forEach { result[it] = aliases }
+        }
+        put(listOf("materialdomain", "domain"), "materialdomain")
+        put(listOf("shadingmodel"), "shadingmodel")
+        put(listOf("blendmode", "rendertype"), "blendmode")
+        return result
+    }
+
     // 语义诊断：设置项、Base 输出成员、类型名与表达式类检查。
     private fun annotateSettingsDiagnostics(
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
     ) {
+        val bridgeValueOverrides = resolveBridgeSettingValueOverrides(topLevelDeclarations)
         topLevelDeclarations.forEach { declaration ->
             val declarationKeyword = declaration.keywordText()
             directSectionsOf(declaration)
@@ -808,8 +831,14 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
                         val rawValue = matcher.group(2) ?: continue
                         val value = rawValue.trim().trim('"')
-                        val validator = SETTING_VALUE_VALIDATORS[keyLower] ?: continue
-                        if (!validator(value)) {
+                        val bridgeValues = bridgeValueOverrides[keyLower]
+                        val isValid = if (bridgeValues != null && bridgeValues.isNotEmpty()) {
+                            bridgeValues.any { it.equals(value, ignoreCase = true) }
+                        } else {
+                            val validator = SETTING_VALUE_VALIDATORS[keyLower] ?: continue
+                            validator(value)
+                        }
+                        if (!isValid) {
                             val valueRange = TextRange(body.startOffset + matcher.start(2), body.startOffset + matcher.end(2))
                             val annotation = holder.newAnnotation(
                                 HighlightSeverity.ERROR,

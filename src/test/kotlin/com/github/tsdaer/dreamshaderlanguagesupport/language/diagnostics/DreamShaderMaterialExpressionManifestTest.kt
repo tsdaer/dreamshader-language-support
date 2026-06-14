@@ -81,4 +81,50 @@ class DreamShaderMaterialExpressionManifestTest {
         assertTrue(classNames.contains("MaterialExpressionSubstrateSlabBSDF"))
         assertTrue(classNames.contains("SubstrateSlabBSDF"))
     }
+
+    @Test
+    fun `parses substrate builtins into Substrate namespace entries`() {
+        val json = """
+            {
+              "schema": "DreamShader.SubstrateBuiltins",
+              "version": 1,
+              "supported": true,
+              "builtins": [
+                {
+                  "name": "Slab",
+                  "qualifiedName": "Substrate.Slab",
+                  "className": "MaterialExpressionSubstrateSlabBSDF",
+                  "outputType": "Substrate",
+                  "detail": "Creates a Substrate slab BSDF.",
+                  "example": "Substrate.Slab(DiffuseAlbedo=Color, Roughness=0.45)",
+                  "parameters": [
+                    { "name": "DiffuseAlbedo", "type": "value" },
+                    { "name": "Roughness", "type": "value" }
+                  ]
+                },
+                {
+                  "name": "TransmittanceToMFP",
+                  "outputType": "auto",
+                  "parameters": []
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val entries = DreamShaderMaterialExpressionManifest.parseSubstrateBuiltins(json)
+        assertEquals(2, entries.size)
+
+        val slab = entries.first { it.ueName == "Slab" }
+        assertEquals("Substrate", slab.namespace)
+        assertEquals("MaterialExpressionSubstrateSlabBSDF", slab.className)
+        assertEquals("Substrate", slab.outputType)
+        assertEquals("Substrate.Slab(DiffuseAlbedo=Color, Roughness=0.45)", slab.signature)
+        assertEquals("Creates a Substrate slab BSDF.", slab.description)
+        assertEquals(listOf("DiffuseAlbedo", "Roughness"), slab.parameters.map { it.name })
+        assertEquals("Substrate.Slab", slab.qualifiedName)
+
+        val helper = entries.first { it.ueName == "TransmittanceToMFP" }
+        assertEquals("Substrate", helper.namespace)
+        assertEquals("MaterialExpressionSubstrateTransmittanceToMFP", helper.className)
+    }
 }

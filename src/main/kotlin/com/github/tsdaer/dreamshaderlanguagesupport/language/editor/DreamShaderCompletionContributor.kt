@@ -1,4 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
+import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeSettingsRepository
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
@@ -670,7 +671,9 @@ internal object DreamShaderCompletionSuggester {
         offset: Int,
         importCandidates: List<String> = emptyList(),
         expressionClassCandidates: List<String> = emptyList(),
-        materialExpressionCatalogEntries: List<DreamShaderMaterialExpressionInfo> = emptyList()
+        materialExpressionCatalogEntries: List<DreamShaderMaterialExpressionInfo> = emptyList(),
+        bridgeSettingValueOverrides: Map<String, List<String>> = emptyMap(),
+        bridgeSettingValueDisplayNames: Map<String, Map<String, String>> = emptyMap()
     ): List<DreamShaderCompletionItem> {
         val context = DreamShaderCompletionContextAnalyzer.analyze(text, offset)
         val suggestions = linkedMapOf<String, DreamShaderCompletionItem>()
@@ -722,12 +725,21 @@ internal object DreamShaderCompletionSuggester {
                 isVirtualFunctionOptionsAliasContext &&
                     key == "description" &&
                     settingValueContext.isQuotedValueContext -> DreamShaderCompletionData.virtualFunctionDescriptionTemplates
-                else -> DreamShaderCompletionData.settingValueMappings[key].orEmpty()
+                else -> bridgeSettingValueOverrides[key]
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: DreamShaderCompletionData.settingValueMappings[key].orEmpty()
             }
             values
                 .filter { value -> value.lowercase(Locale.ROOT).startsWith(valuePrefix) }
                 .forEach { value ->
-                    add(DreamShaderCompletionItem(label = value, insertText = value, detail = "$key value"))
+                    val displayName = bridgeSettingValueDisplayNames[key]?.get(value.lowercase(Locale.ROOT))
+                    add(
+                        DreamShaderCompletionItem(
+                            label = value,
+                            insertText = value,
+                            detail = displayName?.takeIf { it.isNotBlank() } ?: "$key value"
+                        )
+                    )
                 }
             if (suggestions.isNotEmpty()) {
                 return suggestions.values.toList()
@@ -1074,6 +1086,50 @@ private fun collectMaterialExpressionCatalogEntries(file: PsiFile): List<DreamSh
 }
 
 /**
+ * Bridge `settings.json` 提供的枚举别名，按补全使用的小写键展开（含同义键，
+ * 如 materialdomain/domain、blendmode/rendertype）。缺失时返回空表，由调用方回退硬编码。
+ */
+private fun collectBridgeSettingValueOverrides(file: PsiFile): Map<String, List<String>> {
+    val repository = file.project.getService(DreamShaderBridgeSettingsRepository::class.java) ?: return emptyMap()
+    val result = mutableMapOf<String, List<String>>()
+    fun put(targetKeys: List<String>, bridgeKey: String) {
+        val aliases = repository.mappingsForKey(bridgeKey)
+            .map { it.alias }
+            .filter { it.isNotBlank() }
+            .distinct()
+        if (aliases.isNotEmpty()) targetKeys.forEach { result[it] = aliases }
+    }
+    put(listOf("materialdomain", "domain"), "materialdomain")
+    put(listOf("shadingmodel"), "shadingmodel")
+    put(listOf("blendmode", "rendertype"), "blendmode")
+    return result
+}
+
+/**
+ * Bridge `settings.json` 的枚举显示名查找表：补全键（小写）→（别名小写 → displayName/name）。
+ * 用于在补全项 detail 中展示中文 displayName 与对应 UE 枚举名。
+ */
+private fun collectBridgeSettingValueDisplayNames(file: PsiFile): Map<String, Map<String, String>> {
+    val repository = file.project.getService(DreamShaderBridgeSettingsRepository::class.java) ?: return emptyMap()
+    val result = mutableMapOf<String, Map<String, String>>()
+    fun put(targetKeys: List<String>, bridgeKey: String) {
+        val lookup = linkedMapOf<String, String>()
+        repository.mappingsForKey(bridgeKey).forEach { mapping ->
+            val alias = mapping.alias.takeIf { it.isNotBlank() } ?: return@forEach
+            val display = mapping.displayName?.takeIf { it.isNotBlank() }
+                ?: mapping.name?.takeIf { it.isNotBlank() }
+                ?: return@forEach
+            lookup.putIfAbsent(alias.lowercase(Locale.ROOT), display)
+        }
+        if (lookup.isNotEmpty()) targetKeys.forEach { result[it] = lookup }
+    }
+    put(listOf("materialdomain", "domain"), "materialdomain")
+    put(listOf("shadingmodel"), "shadingmodel")
+    put(listOf("blendmode", "rendertype"), "blendmode")
+    return result
+}
+
+/**
  * Implementation of DreamShaderCompletionContributor.
  */
 class DreamShaderCompletionContributor : CompletionContributor() {
@@ -1098,7 +1154,9 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                         text = file.text,
                         offset = parameters.offset,
                         importCandidates = collectProjectImportCandidates(file),
-                        materialExpressionCatalogEntries = collectMaterialExpressionCatalogEntries(file)
+                        materialExpressionCatalogEntries = collectMaterialExpressionCatalogEntries(file),
+                        bridgeSettingValueOverrides = collectBridgeSettingValueOverrides(file),
+                        bridgeSettingValueDisplayNames = collectBridgeSettingValueDisplayNames(file)
                     )
                     suggestions.forEach { suggestion ->
                         val builder = LookupElementBuilder.create(suggestion.label)

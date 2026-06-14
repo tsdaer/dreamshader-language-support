@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationData
+import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeDiagnosticsRepository
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgePathResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderUnrealSourceLocator
 import com.intellij.codeInsight.hints.ParameterHintsPassFactory
@@ -67,6 +68,7 @@ class DreamShaderSettingsConfigurable(
     private var recompileAllCommandField: JBTextField? = null
     private var cleanGeneratedCommandField: JBTextField? = null
     private var projectRootAutoResolvedLabel: JLabel? = null
+    private var bridgeStatusLabel: JLabel? = null
 
     override fun getDisplayName(): String = DreamShaderBundle.message("settings.title")
 
@@ -486,6 +488,7 @@ class DreamShaderSettingsConfigurable(
             DreamShaderBundle.message("settings.projectRoot.tooltip")
         )
         projectRootAutoResolvedLabel = addInlineInfoLabel(PROJECT_ROOT_AUTO_RESOLVED_LABEL_NAME)
+        bridgeStatusLabel = addInlineInfoLabel(BRIDGE_STATUS_LABEL_NAME)
         addLabelAndField(
             DreamShaderBundle.message("settings.manifestPath.label"),
             manifestPathField as JBTextField,
@@ -566,6 +569,7 @@ class DreamShaderSettingsConfigurable(
         }
         projectRootField?.document?.addDocumentListener(SimpleDocumentListener {
             refreshProjectRootAutoResolvedHint()
+            refreshBridgeStatusHint()
         })
 
         val spacer = JPanel()
@@ -649,6 +653,7 @@ class DreamShaderSettingsConfigurable(
         cleanGeneratedCommandField?.text = state.bridgeCleanGeneratedShadersCommand
         refreshImportExtensionPreview()
         refreshProjectRootAutoResolvedHint()
+        refreshBridgeStatusHint()
         refreshHoverOverridesStatus()
         refreshHoverOverridesButtonsState()
     }
@@ -677,6 +682,7 @@ class DreamShaderSettingsConfigurable(
         recompileAllCommandField = null
         cleanGeneratedCommandField = null
         projectRootAutoResolvedLabel = null
+        bridgeStatusLabel = null
     }
 
     private fun refreshProjectRootAutoResolvedHint() {
@@ -689,6 +695,29 @@ class DreamShaderSettingsConfigurable(
         val autoResolved = DreamShaderBridgePathResolver.resolveProjectRootAutoFallback(project, null)
             ?: DreamShaderBundle.message("common.unknown")
         label.text = DreamShaderBundle.message("settings.projectRoot.autoResolvedHint", autoResolved)
+    }
+
+    /**
+     * 刷新 Bridge 识别状态提示：展示自动检测到的 Bridge 目录及四个已知文件的存在情况，
+     * 让用户无需手动配置即可确认插件已识别到 Bridge 产物。
+     */
+    private fun refreshBridgeStatusHint() {
+        val label = bridgeStatusLabel ?: return
+        val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, null)
+        if (bridgeDir.isNullOrBlank() || !File(bridgeDir).isDirectory) {
+            label.text = DreamShaderBundle.message("settings.bridgeStatus.notDetected")
+            return
+        }
+        val parts = BRIDGE_STATUS_FILE_NAMES.map { fileName ->
+            val present = File(bridgeDir, fileName).isFile
+            val mark = if (present) "✓" else "✗"
+            "$fileName $mark"
+        }
+        label.text = DreamShaderBundle.message(
+            "settings.bridgeStatus.detected",
+            bridgeDir,
+            parts.joinToString("  ·  ")
+        )
     }
 
     private fun autoDetectUnrealSourceRoot() {
@@ -1283,6 +1312,13 @@ class DreamShaderSettingsConfigurable(
         internal const val HOVER_DOCS_STATUS_LABEL_NAME = "dreamshader.hoverDocsOverrides.statusLabel"
         internal const val HOVER_DOCS_SYNTAX_HINT_LABEL_NAME = "dreamshader.hoverDocsOverrides.syntaxHintLabel"
         internal const val PROJECT_ROOT_AUTO_RESOLVED_LABEL_NAME = "dreamshader.projectRoot.autoResolvedLabel"
+        internal const val BRIDGE_STATUS_LABEL_NAME = "dreamshader.bridgeStatus.label"
         internal const val UNREAL_SOURCE_ROOT_AUTO_DETECT_BUTTON_NAME = "dreamshader.unrealSourceRoot.autoDetectButton"
+        private val BRIDGE_STATUS_FILE_NAMES = listOf(
+            "diagnostics.json",
+            "settings.json",
+            "material-expressions.json",
+            "substrate-builtins.json"
+        )
     }
 }

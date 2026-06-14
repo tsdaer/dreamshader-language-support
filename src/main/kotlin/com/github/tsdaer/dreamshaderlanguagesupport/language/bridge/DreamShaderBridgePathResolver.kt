@@ -12,10 +12,11 @@ import java.io.File
  *
  * 项目根回退顺序：
  * 1. 设置项 `projectRoot`
- * 2. 当活动文件位于项目内时使用 `project.basePath`
- * 3. 活动文件路径中 `/DShader/` 之前的前缀
- * 4. `project.basePath`
- * 5. 活动文件父目录
+ * 2. 从活动文件（其次 `project.basePath`）向上查找含 `*.uproject` 的目录
+ * 3. 当活动文件位于项目内时使用 `project.basePath`
+ * 4. 活动文件路径中 `/DShader/` 之前的前缀
+ * 5. `project.basePath`
+ * 6. 活动文件父目录
  */
 internal object DreamShaderBridgePathResolver {
     private const val BRIDGE_RELATIVE_PATH = "Saved/DreamShader/Bridge"
@@ -42,6 +43,11 @@ internal object DreamShaderBridgePathResolver {
         val projectBase = project.basePath?.takeIf { it.isNotBlank() }
         val activePath = activeFile?.path?.takeIf { it.isNotBlank() }
 
+        // 优先以 `.uproject` 作为 UE 项目根锚点：Bridge 目录就在 `.uproject` 同级的
+        // `Saved/DreamShader/Bridge` 下，比 `/DShader/` 路径标记更可靠。
+        findUprojectRoot(activePath)?.let { return it }
+        findUprojectRoot(projectBase)?.let { return it }
+
         if (projectBase != null && activePath != null) {
             val normalizedBase = normalizePath(projectBase)
             val normalizedActive = normalizePath(activePath)
@@ -66,6 +72,26 @@ internal object DreamShaderBridgePathResolver {
             return normalizePath(File(activePath).parent ?: activePath)
         }
 
+        return null
+    }
+
+    /**
+     * 从给定路径（文件则取其父目录）逐级向上查找含 `*.uproject` 文件的目录，
+     * 命中即返回该目录的规范化路径；到达文件系统根仍未命中返回 null。
+     */
+    private fun findUprojectRoot(startPath: String?): String? {
+        val raw = startPath?.takeIf { it.isNotBlank() } ?: return null
+        var dir: File? = File(raw).let { if (it.isFile) it.parentFile else it }
+        while (dir != null) {
+            val hasUproject = runCatching {
+                dir!!.listFiles { file -> file.isFile && file.name.endsWith(".uproject", ignoreCase = true) }
+                    ?.isNotEmpty() == true
+            }.getOrDefault(false)
+            if (hasUproject) {
+                return normalizePath(dir.path)
+            }
+            dir = dir.parentFile
+        }
         return null
     }
 

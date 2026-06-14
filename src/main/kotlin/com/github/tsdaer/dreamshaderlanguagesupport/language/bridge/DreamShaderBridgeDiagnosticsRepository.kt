@@ -13,9 +13,11 @@ import java.nio.charset.StandardCharsets
  * 负责读取 `Saved/DreamShader/Bridge/diagnostics.json`，将诊断项归一化后缓存，
  * 并按文件路径提供过滤后的诊断快照。
  *
- * 支持两种上游 JSON 结构：
+ * 支持三种上游 JSON 结构：
  * - 数组根：`[ {...}, ... ]`
- * - 对象根：`{ "diagnostics": [ ... ] }`
+ * - 对象根（扁平）：`{ "diagnostics": [ ... ] }`
+ * - 对象根（按文件分组）：`{ "files": [ { "path": "...", "diagnostics": [ ... ] } ] }`
+ *   此结构下每条诊断自身不带路径，继承所属 file 的 `path`。
  */
 @Service(Service.Level.PROJECT)
 /**
@@ -67,6 +69,12 @@ class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
         val text = rawJson.trim()
         if (text.isBlank()) return emptyList()
 
+        // 按文件分组的结构（Bridge 默认产物）：诊断对象不带路径，继承父级 file 的 path。
+        if (text.startsWith("{") && text.contains("\"files\"")) {
+            val grouped = parseGroupedByFile(text)
+            if (grouped.isNotEmpty()) return grouped
+        }
+
         val objectTexts = when {
             text.startsWith("[") -> extractTopLevelObjects(text)
             text.startsWith("{") && text.contains("\"diagnostics\"") -> {
@@ -81,8 +89,26 @@ class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
         return objectTexts.mapNotNull { parseDiagnosticObject(it) }
     }
 
-    private fun parseDiagnosticObject(objText: String): DreamShaderBridgeDiagnostic? {
-        val source = findStringField(objText, listOf("sourcePath", "file", "path")) ?: return null
+    /**
+     * 解析 `{ "files": [ { "path": "...", "diagnostics": [...] } ] }` 结构。
+     * 每个 file 对象提供 `path`，其下诊断对象若自身缺少路径字段则继承之。
+     */
+    private fun parseGroupedByFile(text: String): List<DreamShaderBridgeDiagnostic> {
+        val filesArray = extractArrayForField(text, "files") ?: return emptyList()
+        val fileObjects = extractTopLevelObjects(filesArray)
+        val result = mutableListOf<DreamShaderBridgeDiagnostic>()
+        fileObjects.forEach { fileObj ->
+            val filePath = findStringField(fileObj, listOf("path", "file", "sourcePath"))
+            val diagnosticsArray = extractArrayForField(fileObj, "diagnostics") ?: return@forEach
+            extractTopLevelObjects(diagnosticsArray).forEach { diagObj ->
+                parseDiagnosticObject(diagObj, fallbackPath = filePath)?.let(result::add)
+            }
+        }
+        return result
+    }
+
+    private fun parseDiagnosticObject(objText: String, fallbackPath: String? = null): DreamShaderBridgeDiagnostic? {
+        val source = findStringField(objText, listOf("sourcePath", "file", "path")) ?: fallbackPath ?: return null
         val line = findIntField(objText, listOf("line", "lineNumber")) ?: 1
         val column = findIntField(objText, listOf("column", "col")) ?: 1
         val severity = findStringField(objText, listOf("severity", "level")) ?: "error"

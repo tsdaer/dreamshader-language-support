@@ -113,4 +113,38 @@ class DreamShaderBridgeDiagnosticsTest : BasePlatformTestCase() {
         assertEquals(1, mapped.size)
         assertEquals("Bridge warning one", mapped.first().message)
     }
+
+    fun testParsesGroupedByFileStructure() {
+        val repository = project.getService(DreamShaderBridgeDiagnosticsRepository::class.java)
+        val json = """
+            {
+              "version": 1,
+              "files": [
+                {
+                  "path": "J:/honkai_rts_5_6/DShader/Materials/M_Sample.dsm",
+                  "diagnostics": [
+                    {
+                      "message": "Unknown Graph identifier 'Tint2'.",
+                      "stage": "generate",
+                      "code": "generate-error",
+                      "line": 18,
+                      "column": 9,
+                      "severity": "error",
+                      "source": "DreamShader Generate"
+                    }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = repository.parseDiagnosticsJson(json)
+        assertEquals(1, parsed.size)
+        val diagnostic = parsed.first()
+        assertEquals("J:/honkai_rts_5_6/DShader/Materials/M_Sample.dsm", diagnostic.sourcePath)
+        assertEquals(18, diagnostic.line)
+        assertEquals(9, diagnostic.column)
+        assertEquals("error", diagnostic.severity)
+        assertEquals("Unknown Graph identifier 'Tint2'.", diagnostic.message)
+    }
 }

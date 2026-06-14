@@ -1,3 +1,4 @@
+
 # Code Map
 
 Quick links to the main implementation files and tests. Keep this document focused on source navigation; move conceptual notes to `architecture.md` and milestone notes to `roadmap.md`.

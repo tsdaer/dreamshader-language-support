@@ -39,7 +39,19 @@ internal data class DreamShaderMaterialExpressionInfo(
  */
 internal object DreamShaderMaterialExpressionManifest {
     private const val BUNDLED_RESOURCE_PATH = "/messages/material-expression-manifest.json"
-    private const val DEFAULT_BRIDGE_RELATIVE_PATH = "Saved/DreamShader/Bridge/material-expression-manifest.json"
+    private const val BRIDGE_RELATIVE_DIR = "Saved/DreamShader/Bridge"
+
+    /**
+     * Bridge 目录下 material-expression catalog 的候选文件名，按优先级排列。
+     * `material-expressions.json` 为当前 Bridge 产物；`material-expression-manifest.json`
+     * 为兼容旧版的回退名。
+     */
+    private val BRIDGE_MANIFEST_FILE_NAMES = listOf(
+        "material-expressions.json",
+        "material-expression-manifest.json"
+    )
+
+    private const val SUBSTRATE_BUILTINS_FILE_NAME = "substrate-builtins.json"
 
     private val classNameRegex = Regex(
         """"className"\s*:\s*"([A-Za-z_][A-Za-z0-9_]*)"""",
@@ -68,6 +80,7 @@ internal object DreamShaderMaterialExpressionManifest {
 
         add(readCatalogEntriesFromConfiguredPath(explicitManifestPath))
         add(readCatalogEntriesFromBridgeManifest(project))
+        add(readSubstrateBuiltinsFromBridge(project))
         add(readCatalogEntriesFromScanCache(project))
         add(readCatalogEntriesFromBundledManifest())
         return merged.values.distinct()
@@ -103,16 +116,73 @@ internal object DreamShaderMaterialExpressionManifest {
         val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
         val root = settings?.projectRoot?.takeIf { it.isNotBlank() } ?: project.basePath
         if (root.isNullOrBlank()) return emptyList()
+        val bridgeDir = File(root, BRIDGE_RELATIVE_DIR)
+        for (fileName in BRIDGE_MANIFEST_FILE_NAMES) {
+            val vf = LocalFileSystem.getInstance()
+                .findFileByPath(File(bridgeDir, fileName).path)
+                ?: continue
+            if (!vf.isValid || vf.isDirectory) continue
+            val entries = runCatching {
+                parseCatalogEntries(
+                    rawJson = String(vf.contentsToByteArray(), StandardCharsets.UTF_8),
+                    source = DreamShaderMaterialExpressionSource.BRIDGE_MANIFEST
+                )
+            }.getOrDefault(emptyList())
+            if (entries.isNotEmpty()) return entries
+        }
+        return emptyList()
+    }
+
+    /**
+     * Reads `Saved/DreamShader/Bridge/substrate-builtins.json` and maps each builtin
+     * to a catalog entry under the `Substrate` namespace, so `Substrate.*` completion,
+     * signature help, and hover share the same pipeline as `UE.*`.
+     */
+    private fun readSubstrateBuiltinsFromBridge(project: Project?): List<DreamShaderMaterialExpressionInfo> {
+        if (project == null) return emptyList()
+        val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
+        val root = settings?.projectRoot?.takeIf { it.isNotBlank() } ?: project.basePath
+        if (root.isNullOrBlank()) return emptyList()
         val vf = LocalFileSystem.getInstance()
-            .findFileByPath(File(root, DEFAULT_BRIDGE_RELATIVE_PATH).path)
+            .findFileByPath(File(File(root, BRIDGE_RELATIVE_DIR), SUBSTRATE_BUILTINS_FILE_NAME).path)
             ?: return emptyList()
         if (!vf.isValid || vf.isDirectory) return emptyList()
         return runCatching {
-            parseCatalogEntries(
-                rawJson = String(vf.contentsToByteArray(), StandardCharsets.UTF_8),
-                source = DreamShaderMaterialExpressionSource.BRIDGE_MANIFEST
-            )
+            parseSubstrateBuiltins(String(vf.contentsToByteArray(), StandardCharsets.UTF_8))
         }.getOrDefault(emptyList())
+    }
+
+    internal fun parseSubstrateBuiltins(rawJson: String): List<DreamShaderMaterialExpressionInfo> {
+        val trimmed = rawJson.trim()
+        if (trimmed.isBlank()) return emptyList()
+        val arrayContent = findNamedArrayContent(trimmed, "builtins") ?: return emptyList()
+        return splitTopLevelArrayElements(arrayContent)
+            .filter { it.trim().startsWith("{") }
+            .mapNotNull(::parseSubstrateBuiltinObject)
+    }
+
+    private fun parseSubstrateBuiltinObject(objectText: String): DreamShaderMaterialExpressionInfo? {
+        val name = readStringField(objectText, "name")?.takeIf { it.isNotBlank() } ?: return null
+        val className = readStringField(objectText, "className")?.takeIf { it.isNotBlank() }
+            ?: "MaterialExpressionSubstrate$name"
+        val parameters = findNamedArrayContent(objectText, "parameters")
+            ?.let(::splitTopLevelArrayElements)
+            ?.filter { it.trim().startsWith("{") }
+            ?.mapNotNull(::parseParameterObject)
+            .orEmpty()
+        val example = readStringField(objectText, "example")?.takeIf { it.isNotBlank() }
+        val snippet = readStringField(objectText, "snippet")?.takeIf { it.isNotBlank() }
+        return DreamShaderMaterialExpressionInfo(
+            namespace = "Substrate",
+            className = className,
+            ueName = name,
+            signature = example ?: snippet ?: defaultSignature("Substrate", name),
+            parameters = parameters,
+            outputType = readStringField(objectText, "outputType")?.takeIf { it.isNotBlank() },
+            description = readStringField(objectText, "detail")?.takeIf { it.isNotBlank() }
+                ?: defaultDescription("Substrate", name, className),
+            source = DreamShaderMaterialExpressionSource.BRIDGE_MANIFEST
+        )
     }
 
     /**
