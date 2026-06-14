@@ -142,6 +142,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateDuplicateDeclarationNameDiagnostics(topLevelDeclarations, holder)
         annotateSettingsDiagnostics(topLevelDeclarations, holder)
         annotateBaseOutputMemberDiagnostics(topLevelDeclarations, holder)
+        annotateSubstrateBindingExclusivityDiagnostics(topLevelDeclarations, holder)
         annotateUnknownTypeDiagnostics(topLevelDeclarations, holder)
         annotateUnknownDeclarationParameterTypeDiagnostics(topLevelDeclarations, holder)
         annotateUnknownBodyLocalTypeDiagnostics(sourceText, topLevelDeclarations, holder)
@@ -268,12 +269,26 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
         if (declaration.keywordText() == "shaderlayerblend") {
             val inputsSection = sections.firstOrNull { canonicalSectionName(it.sectionName()) == "inputs" }
-            val inputsMaterialAttributesCount = topLevelTypedDeclarations(inputsSection)
+            val inputDeclarations = topLevelTypedDeclarations(inputsSection)
+            val materialAttributesInputs = inputDeclarations
                 .count { it.equals("materialattributes", ignoreCase = true) }
-            if (inputsMaterialAttributesCount < 2) {
+            // 上游收紧：ShaderLayerBlend 必须刚好两个输入，且都必须是 MaterialAttributes。
+            if (inputDeclarations.size != 2 || materialAttributesInputs != 2) {
                 holder.newAnnotation(
                     HighlightSeverity.ERROR,
                     DreamShaderBundle.message("diagnostic.layerBlendRequiresTwoMaterialAttributesInputs")
+                ).range(inputsSection ?: declaration).create()
+            }
+        } else {
+            val inputsSection = sections.firstOrNull { canonicalSectionName(it.sectionName()) == "inputs" }
+            val inputDeclarations = topLevelTypedDeclarations(inputsSection)
+            // 上游收紧：ShaderLayer 最多一个输入，且若存在必须是 MaterialAttributes。
+            val violatesInputShape = inputDeclarations.size > 1 ||
+                (inputDeclarations.size == 1 && !inputDeclarations.single().equals("materialattributes", ignoreCase = true))
+            if (violatesInputShape) {
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    DreamShaderBundle.message("diagnostic.layerRequiresMaterialAttributesInput")
                 ).range(inputsSection ?: declaration).create()
             }
         }
@@ -938,6 +953,41 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
+    private fun annotateSubstrateBindingExclusivityDiagnostics(
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        allDeclarations(topLevelDeclarations).forEach { declaration ->
+            val frontMaterialRanges = mutableListOf<TextRange>()
+            val materialAttributesRanges = mutableListOf<TextRange>()
+            directSectionsOf(declaration)
+                .filter {
+                    val sectionName = canonicalSectionName(it.sectionName())
+                    sectionName == "outputs" || sectionName == "graph"
+                }
+                .forEach { section ->
+                    val body = sectionBody(section) ?: return@forEach
+                    val matcher = BASE_BINDING_TARGET_PATTERN.matcher(body.text)
+                    while (matcher.find()) {
+                        val member = matcher.group(1)?.lowercase(Locale.ROOT) ?: continue
+                        val range = TextRange(body.startOffset + matcher.start(), body.startOffset + matcher.end(1))
+                        when (member) {
+                            "frontmaterial" -> frontMaterialRanges.add(range)
+                            "materialattributes" -> materialAttributesRanges.add(range)
+                        }
+                    }
+                }
+            if (frontMaterialRanges.isEmpty() || materialAttributesRanges.isEmpty()) return@forEach
+            // Base.FrontMaterial 绑定到 Substrate，与 Base.MaterialAttributes 互斥；在冲突的目标上各报一次。
+            (frontMaterialRanges + materialAttributesRanges).forEach { range ->
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    DreamShaderBundle.message("diagnostic.frontMaterialMaterialAttributesExclusive")
+                ).range(range).create()
+            }
+        }
+    }
+
     private fun annotateUnknownTypeDiagnostics(
         topLevelDeclarations: List<DreamShaderDeclaration>,
         holder: AnnotationHolder
@@ -1279,6 +1329,16 @@ internal class DreamShaderSemanticAnnotationPipeline {
                                 )
                             }
                             annotation.create()
+                        } else if (
+                            outputTypeArgument.value.equals("Substrate", ignoreCase = true) &&
+                            classArgument != null &&
+                            isCustomExpressionClass(classArgument.value)
+                        ) {
+                            // 上游约束：UMaterialExpressionCustom 不支持 OutputType="Substrate"。
+                            holder.newAnnotation(
+                                HighlightSeverity.ERROR,
+                                DreamShaderBundle.message("diagnostic.customExpressionDisallowsSubstrateOutput")
+                            ).range(outputTypeArgument.range).create()
                         }
                     }
                 }
@@ -1325,6 +1385,13 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
     private fun suggestExpressionOutputType(rawType: String): String? {
         return findClosestCandidate(rawType, UE_EXPRESSION_OUTPUT_TYPES_CANONICAL, maxDistance = 2)
+    }
+
+    private fun isCustomExpressionClass(rawClass: String): Boolean {
+        val normalized = rawClass.trim()
+            .removePrefix("UMaterialExpression")
+            .removePrefix("MaterialExpression")
+        return normalized.equals("Custom", ignoreCase = true)
     }
 
     private fun createInsertUeExpressionNamedArgumentQuickFix(
@@ -2889,6 +2956,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
 
         private val BASE_OUTPUT_MEMBERS = setOf(
+            "frontmaterial",
             "materialattributes", "attributes", "basecolor", "emissivecolor", "emissive", "opacity", "opacitymask",
             "metallic", "specular", "roughness", "normal", "ambientocclusion", "ao", "refraction", "worldpositionoffset",
             "wpo", "pixeldepthoffset", "pdo", "subsurfacecolor", "clearcoat", "clearcoatroughness", "customdata0",
@@ -2899,6 +2967,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
             "mooaencodedattribute2", "mooaencodedattribute3", "mooaencodedattribute4", "anisotropy", "tangent"
         )
         private val BASE_OUTPUT_MEMBERS_CANONICAL = listOf(
+            "FrontMaterial",
             "MaterialAttributes", "Attributes", "BaseColor", "EmissiveColor", "Emissive", "Opacity", "OpacityMask",
             "Metallic", "Specular", "Roughness", "Normal", "AmbientOcclusion", "AO", "Refraction", "WorldPositionOffset",
             "WPO", "PixelDepthOffset", "PDO", "SubsurfaceColor", "ClearCoat", "ClearCoatRoughness", "CustomData0",
@@ -2937,6 +3006,9 @@ internal class DreamShaderSemanticAnnotationPipeline {
         private val IMPORT_FILE_EXTENSIONS_ORDERED = listOf("dsh", "dsf", "dsm")
         private val IMPORT_FILE_EXTENSIONS = IMPORT_FILE_EXTENSIONS_ORDERED.toSet()
         private val BASE_MEMBER_PATTERN: Pattern = Pattern.compile("\\bBase\\.([A-Za-z_][A-Za-z0-9_]*)")
+        private val BASE_BINDING_TARGET_PATTERN: Pattern = Pattern.compile(
+            "(?i)\\bBase\\.(FrontMaterial|MaterialAttributes)\\b\\s*="
+        )
         private val TYPED_DECLARATION_PATTERN: Pattern = Pattern.compile(
             "(?m)(?:^|;)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=|;|\\n)"
         )

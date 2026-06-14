@@ -901,6 +901,91 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertTrue(myFixture.file.text.contains("""OutputType="float""""))
     }
 
+    fun testCustomExpressionRejectsSubstrateOutputType() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Substrate s = UE.Expression(Class="Custom", OutputType="Substrate");
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("ue_expression_custom_substrate.dsm", text)
+        assertHasError("UMaterialExpressionCustom does not support OutputType=\"Substrate\"")
+    }
+
+    fun testCustomExpressionRejectsSubstrateOutputTypeWithFullClassName() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Substrate s = UE.Expression(Class="UMaterialExpressionCustom", OutputType="Substrate");
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("ue_expression_custom_substrate_full.dsm", text)
+        assertHasError("UMaterialExpressionCustom does not support OutputType=\"Substrate\"")
+    }
+
+    fun testNonCustomExpressionAllowsSubstrateOutputType() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Substrate s = UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate");
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("ue_expression_substrate_ok.dsm", text)
+        assertNoError("UMaterialExpressionCustom does not support OutputType=\"Substrate\"")
+    }
+
+    fun testMaterialExpressionOutput() {
+        val text = """
+            Shader Main {
+                Graph {
+                    float x = UE.Expression(Class="Custom", OutputType="float1");
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("ue_expression_custom_float.dsm", text)
+        assertNoError("UMaterialExpressionCustom does not support OutputType=\"Substrate\"")
+    }
+
+    fun testFrontMaterialIsRecognizedBaseMember() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Base.FrontMaterial = UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate");
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("base_front_material.dsm", text)
+        assertNoError("Unknown material output member 'Base.FrontMaterial'")
+    }
+
+    fun testFrontMaterialAndMaterialAttributesAreMutuallyExclusive() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Base.FrontMaterial = UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate");
+                    Base.MaterialAttributes = UE.MakeMaterialAttributes();
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("base_front_material_exclusive.dsm", text)
+        assertHasError("A Shader cannot bind both Base.FrontMaterial and Base.MaterialAttributes")
+    }
+
+    fun testFrontMaterialAloneHasNoExclusivityError() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Base.FrontMaterial = UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate");
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("base_front_material_alone.dsm", text)
+        assertNoError("A Shader cannot bind both Base.FrontMaterial and Base.MaterialAttributes")
+    }
+
     fun testMissingOutArgumentInFunctionCall() {
         val text = """
             Function ApplyTint(in vec3 color, in vec3 tint, out vec3 result) {

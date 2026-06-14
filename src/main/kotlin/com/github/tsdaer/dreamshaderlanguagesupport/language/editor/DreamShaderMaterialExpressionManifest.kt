@@ -68,6 +68,7 @@ internal object DreamShaderMaterialExpressionManifest {
 
         add(readCatalogEntriesFromConfiguredPath(explicitManifestPath))
         add(readCatalogEntriesFromBridgeManifest(project))
+        add(readCatalogEntriesFromScanCache(project))
         add(readCatalogEntriesFromBundledManifest())
         return merged.values.distinct()
     }
@@ -111,6 +112,35 @@ internal object DreamShaderMaterialExpressionManifest {
                 rawJson = String(vf.contentsToByteArray(), StandardCharsets.UTF_8),
                 source = DreamShaderMaterialExpressionSource.BRIDGE_MANIFEST
             )
+        }.getOrDefault(emptyList())
+    }
+
+    /**
+     * Scanned-cache source: prefers a previously written cache JSON, and only
+     * falls back to a best-effort live scan of the configured Unreal source root
+     * when scanning is explicitly enabled and no cache exists yet.
+     */
+    private fun readCatalogEntriesFromScanCache(project: Project?): List<DreamShaderMaterialExpressionInfo> {
+        if (project == null) return emptyList()
+        val settings = project.getService(DreamShaderProjectSettings::class.java)?.state ?: return emptyList()
+
+        val cachePath = settings.materialExpressionScanCachePath.takeIf { it.isNotBlank() }
+        if (cachePath != null) {
+            val cacheFile = File(cachePath)
+            if (cacheFile.exists() && cacheFile.isFile) {
+                return runCatching {
+                    parseCatalogEntries(
+                        rawJson = cacheFile.readText(StandardCharsets.UTF_8),
+                        source = DreamShaderMaterialExpressionSource.SCANNED_CACHE
+                    )
+                }.getOrDefault(emptyList())
+            }
+        }
+
+        if (!settings.materialExpressionScanEnabled) return emptyList()
+        val sourceRoot = settings.unrealEngineSourceRoot.takeIf { it.isNotBlank() } ?: return emptyList()
+        return runCatching {
+            DreamShaderMaterialExpressionScanner.scanDirectory(File(sourceRoot))
         }.getOrDefault(emptyList())
     }
 

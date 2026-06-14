@@ -24,6 +24,12 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         var projectRoot: String = "",
         /** Optional explicit manifest path for `UE.Expression(Class="...")` completion. */
         var materialExpressionManifestPath: String = "",
+        /** Unreal Engine source root scanned for `UMaterialExpression` headers. */
+        var unrealEngineSourceRoot: String = "",
+        /** Whether best-effort source scanning of material expressions is enabled. */
+        var materialExpressionScanEnabled: Boolean = false,
+        /** Optional path where scanned material-expression cache JSON is stored. */
+        var materialExpressionScanCachePath: String = "",
         /** UI toggle for future status bar integration. */
         var showStatusBar: Boolean = true,
         /** UI toggle for future CodeLens integration. */

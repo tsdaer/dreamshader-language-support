@@ -3,10 +3,12 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationData
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgePathResolver
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderUnrealSourceLocator
 import com.intellij.codeInsight.hints.ParameterHintsPassFactory
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextArea
@@ -21,6 +23,7 @@ import java.awt.GridBagLayout
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.Dimension
+import java.io.File
 import java.util.Locale
 import javax.swing.AbstractCellEditor
 import javax.swing.JButton
@@ -44,6 +47,9 @@ class DreamShaderSettingsConfigurable(
     private var panel: JPanel? = null
     private var projectRootField: JBTextField? = null
     private var manifestPathField: JBTextField? = null
+    private var unrealSourceRootField: JBTextField? = null
+    private var materialExpressionScanEnabledBox: JBCheckBox? = null
+    private var materialExpressionScanCachePathField: JBTextField? = null
     private var showStatusBarBox: JBCheckBox? = null
     private var enableCodeLensBox: JBCheckBox? = null
     private var outArgumentPlaceholderSuffixField: JBTextField? = null
@@ -88,6 +94,47 @@ class DreamShaderSettingsConfigurable(
             }
             field.toolTipText = tooltip
             root.add(field, fieldConstraints)
+            row++
+        }
+
+        fun addLabelFieldAndButton(
+            label: String,
+            field: JBTextField,
+            button: JButton,
+            tooltip: String? = null
+        ) {
+            val labelConstraints = GridBagConstraints().apply {
+                gridx = 0
+                gridy = row
+                anchor = GridBagConstraints.WEST
+                insets = JBUI.insets(4, 4, 2, 8)
+            }
+            root.add(JLabel(label), labelConstraints)
+
+            val rowPanel = JPanel(GridBagLayout())
+            val fieldConstraints = GridBagConstraints().apply {
+                gridx = 0
+                gridy = 0
+                weightx = 1.0
+                fill = GridBagConstraints.HORIZONTAL
+            }
+            field.toolTipText = tooltip
+            rowPanel.add(field, fieldConstraints)
+            val buttonConstraints = GridBagConstraints().apply {
+                gridx = 1
+                gridy = 0
+                insets = JBUI.insetsLeft(6)
+            }
+            rowPanel.add(button, buttonConstraints)
+
+            val panelConstraints = GridBagConstraints().apply {
+                gridx = 1
+                gridy = row
+                weightx = 1.0
+                fill = GridBagConstraints.HORIZONTAL
+                insets = JBUI.insets(4, 0, 2, 4)
+            }
+            root.add(rowPanel, panelConstraints)
             row++
         }
 
@@ -414,6 +461,11 @@ class DreamShaderSettingsConfigurable(
         projectRootField = JBTextField()
         projectRootField?.name = PROJECT_ROOT_FIELD_NAME
         manifestPathField = JBTextField()
+        unrealSourceRootField = JBTextField()
+        materialExpressionScanEnabledBox = JBCheckBox(
+            DreamShaderBundle.message("settings.materialExpressionScanEnabled.checkbox")
+        )
+        materialExpressionScanCachePathField = JBTextField()
         showStatusBarBox = JBCheckBox(DreamShaderBundle.message("settings.showStatusBar.checkbox"))
         enableCodeLensBox = JBCheckBox(DreamShaderBundle.message("settings.enableCodeLens.checkbox"))
         outArgumentPlaceholderSuffixField = JBTextField()
@@ -438,6 +490,25 @@ class DreamShaderSettingsConfigurable(
             DreamShaderBundle.message("settings.manifestPath.label"),
             manifestPathField as JBTextField,
             DreamShaderBundle.message("settings.manifestPath.tooltip")
+        )
+        addLabelFieldAndButton(
+            DreamShaderBundle.message("settings.unrealSourceRoot.label"),
+            unrealSourceRootField as JBTextField,
+            JButton(DreamShaderBundle.message("settings.unrealSourceRoot.autoDetectButton")).apply {
+                name = UNREAL_SOURCE_ROOT_AUTO_DETECT_BUTTON_NAME
+                toolTipText = DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.tooltip")
+                addActionListener { autoDetectUnrealSourceRoot() }
+            },
+            DreamShaderBundle.message("settings.unrealSourceRoot.tooltip")
+        )
+        addCheckBox(
+            materialExpressionScanEnabledBox as JBCheckBox,
+            DreamShaderBundle.message("settings.materialExpressionScanEnabled.tooltip")
+        )
+        addLabelAndField(
+            DreamShaderBundle.message("settings.materialExpressionScanCachePath.label"),
+            materialExpressionScanCachePathField as JBTextField,
+            DreamShaderBundle.message("settings.materialExpressionScanCachePath.tooltip")
         )
         addCheckBox(
             showStatusBarBox as JBCheckBox,
@@ -517,6 +588,9 @@ class DreamShaderSettingsConfigurable(
         stopHoverOverridesTableEditing()
         return projectRootField?.text.orEmpty() != state.projectRoot ||
             manifestPathField?.text.orEmpty() != state.materialExpressionManifestPath ||
+            unrealSourceRootField?.text.orEmpty() != state.unrealEngineSourceRoot ||
+            (materialExpressionScanEnabledBox?.isSelected ?: false) != state.materialExpressionScanEnabled ||
+            materialExpressionScanCachePathField?.text.orEmpty() != state.materialExpressionScanCachePath ||
             showStatusBarBox?.isSelected != state.showStatusBar ||
             enableCodeLensBox?.isSelected != state.enableCodeLens ||
             outArgumentPlaceholderSuffixField?.text.orEmpty() != state.outArgumentPlaceholderSuffix ||
@@ -537,6 +611,9 @@ class DreamShaderSettingsConfigurable(
 
         state.projectRoot = projectRootField?.text.orEmpty().trim()
         state.materialExpressionManifestPath = manifestPathField?.text.orEmpty().trim()
+        state.unrealEngineSourceRoot = unrealSourceRootField?.text.orEmpty().trim()
+        state.materialExpressionScanEnabled = materialExpressionScanEnabledBox?.isSelected ?: false
+        state.materialExpressionScanCachePath = materialExpressionScanCachePathField?.text.orEmpty().trim()
         state.showStatusBar = showStatusBarBox?.isSelected ?: true
         state.enableCodeLens = enableCodeLensBox?.isSelected ?: true
         state.outArgumentPlaceholderSuffix = normalizeOutPlaceholderSuffix(outArgumentPlaceholderSuffixField?.text.orEmpty())
@@ -557,6 +634,9 @@ class DreamShaderSettingsConfigurable(
         val state = project.getService(DreamShaderProjectSettings::class.java).state
         projectRootField?.text = state.projectRoot
         manifestPathField?.text = state.materialExpressionManifestPath
+        unrealSourceRootField?.text = state.unrealEngineSourceRoot
+        materialExpressionScanEnabledBox?.isSelected = state.materialExpressionScanEnabled
+        materialExpressionScanCachePathField?.text = state.materialExpressionScanCachePath
         showStatusBarBox?.isSelected = state.showStatusBar
         enableCodeLensBox?.isSelected = state.enableCodeLens
         outArgumentPlaceholderSuffixField?.text = state.outArgumentPlaceholderSuffix
@@ -577,6 +657,9 @@ class DreamShaderSettingsConfigurable(
         panel = null
         projectRootField = null
         manifestPathField = null
+        unrealSourceRootField = null
+        materialExpressionScanEnabledBox = null
+        materialExpressionScanCachePathField = null
         showStatusBarBox = null
         enableCodeLensBox = null
         outArgumentPlaceholderSuffixField = null
@@ -606,6 +689,60 @@ class DreamShaderSettingsConfigurable(
         val autoResolved = DreamShaderBridgePathResolver.resolveProjectRootAutoFallback(project, null)
             ?: DreamShaderBundle.message("common.unknown")
         label.text = DreamShaderBundle.message("settings.projectRoot.autoResolvedHint", autoResolved)
+    }
+
+    private fun autoDetectUnrealSourceRoot() {
+        val startPath = sequenceOf(
+            projectRootField?.text?.trim().orEmpty(),
+            DreamShaderBridgePathResolver.resolveProjectRootAutoFallback(project, null).orEmpty(),
+            project.basePath.orEmpty()
+        ).firstOrNull { it.isNotBlank() }
+        val start = startPath?.let { File(it) }
+        val candidates = DreamShaderUnrealSourceLocator.locate(start)
+
+        val chosen = when {
+            candidates.isEmpty() -> {
+                Messages.showInfoMessage(
+                    project,
+                    DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.notFound"),
+                    DreamShaderBundle.message("settings.title")
+                )
+                return
+            }
+            candidates.size == 1 -> candidates.first()
+            else -> {
+                val labels = candidates
+                    .map { describeCandidate(it) }
+                    .toTypedArray()
+                val index = Messages.showChooseDialog(
+                    project,
+                    DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.chooseMessage"),
+                    DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.chooseTitle"),
+                    null,
+                    labels,
+                    labels.first()
+                )
+                if (index < 0) return
+                candidates[index]
+            }
+        }
+
+        unrealSourceRootField?.text = chosen.sourceRoot
+        val versionSuffix = chosen.version
+            ?.let { DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.versionSuffix", it) }
+            .orEmpty()
+        Messages.showInfoMessage(
+            project,
+            DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.filled", versionSuffix),
+            DreamShaderBundle.message("settings.title")
+        )
+    }
+
+    private fun describeCandidate(candidate: DreamShaderUnrealSourceLocator.Candidate): String {
+        val versionSuffix = candidate.version
+            ?.let { DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.versionSuffix", it) }
+            .orEmpty()
+        return "${candidate.sourceRoot}$versionSuffix"
     }
 
     private fun normalizeOutPlaceholderSuffix(raw: String): String {
@@ -1146,5 +1283,6 @@ class DreamShaderSettingsConfigurable(
         internal const val HOVER_DOCS_STATUS_LABEL_NAME = "dreamshader.hoverDocsOverrides.statusLabel"
         internal const val HOVER_DOCS_SYNTAX_HINT_LABEL_NAME = "dreamshader.hoverDocsOverrides.syntaxHintLabel"
         internal const val PROJECT_ROOT_AUTO_RESOLVED_LABEL_NAME = "dreamshader.projectRoot.autoResolvedLabel"
+        internal const val UNREAL_SOURCE_ROOT_AUTO_DETECT_BUTTON_NAME = "dreamshader.unrealSourceRoot.autoDetectButton"
     }
 }

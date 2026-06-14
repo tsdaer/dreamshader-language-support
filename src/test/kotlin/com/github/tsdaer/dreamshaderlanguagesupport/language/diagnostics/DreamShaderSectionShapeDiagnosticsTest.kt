@@ -243,7 +243,7 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.configureByText("layer_blend_invalid_inputs.dsf", text)
 
-        assertHasError("ShaderLayerBlend requires at least two MaterialAttributes inputs")
+        assertHasError("ShaderLayerBlend requires exactly two MaterialAttributes inputs")
     }
 
     fun testValidLayerBlendHasNoShapeErrors() {
@@ -261,7 +261,94 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
         myFixture.configureByText("layer_blend_valid.dsf", text)
 
         assertNoError(
-            "ShaderLayerBlend requires at least two MaterialAttributes inputs",
+            "ShaderLayerBlend requires exactly two MaterialAttributes inputs",
+            "ShaderLayer/ShaderLayerBlend must declare exactly one MaterialAttributes output"
+        )
+    }
+
+    fun testLayerBlendRejectsThreeInputs() {
+        val text = """
+            ShaderLayerBlend BlendA {
+                Inputs {
+                    MaterialAttributes A;
+                    MaterialAttributes B;
+                    MaterialAttributes C;
+                }
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("layer_blend_three_inputs.dsf", text)
+
+        assertHasError("ShaderLayerBlend requires exactly two MaterialAttributes inputs")
+    }
+
+    fun testLayerBlendRejectsNonMaterialAttributesInput() {
+        val text = """
+            ShaderLayerBlend BlendA {
+                Inputs {
+                    MaterialAttributes A;
+                    float3 B;
+                }
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("layer_blend_wrong_input_type.dsf", text)
+
+        assertHasError("ShaderLayerBlend requires exactly two MaterialAttributes inputs")
+    }
+
+    fun testLayerRejectsNonMaterialAttributesInput() {
+        val text = """
+            ShaderLayer LayerA {
+                Inputs {
+                    float3 Color;
+                }
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("layer_wrong_input_type.dsf", text)
+
+        assertHasError("ShaderLayer allows at most one input and it must be MaterialAttributes")
+    }
+
+    fun testLayerRejectsMultipleInputs() {
+        val text = """
+            ShaderLayer LayerA {
+                Inputs {
+                    MaterialAttributes A;
+                    MaterialAttributes B;
+                }
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("layer_multiple_inputs.dsf", text)
+
+        assertHasError("ShaderLayer allows at most one input and it must be MaterialAttributes")
+    }
+
+    fun testValidLayerWithSingleMaterialAttributesInputHasNoShapeErrors() {
+        val text = """
+            ShaderLayer LayerA {
+                Inputs {
+                    MaterialAttributes In;
+                }
+                Outputs {
+                    MaterialAttributes Out;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("layer_valid_input.dsf", text)
+
+        assertNoError(
+            "ShaderLayer allows at most one input and it must be MaterialAttributes",
             "ShaderLayer/ShaderLayerBlend must declare exactly one MaterialAttributes output"
         )
     }
