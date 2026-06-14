@@ -84,7 +84,7 @@ internal object DreamShaderBridgePathResolver {
         var dir: File? = File(raw).let { if (it.isFile) it.parentFile else it }
         while (dir != null) {
             val hasUproject = runCatching {
-                dir!!.listFiles { file -> file.isFile && file.name.endsWith(".uproject", ignoreCase = true) }
+                dir.listFiles { file -> file.isFile && file.name.endsWith(".uproject", ignoreCase = true) }
                     ?.isNotEmpty() == true
             }.getOrDefault(false)
             if (hasUproject) {

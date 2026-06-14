@@ -1,42 +1,28 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
 
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
-import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationData
-import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeDiagnosticsRepository
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgePathResolver
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderUnrealSourceLocator
+import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationData
 import com.intellij.codeInsight.hints.ParameterHintsPassFactory
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
-import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.JBUI
-import java.awt.Color
-import java.awt.Component
-import java.awt.FlowLayout
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
+import com.intellij.util.ui.UIUtil
+import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.awt.Dimension
 import java.io.File
-import java.util.Locale
-import javax.swing.AbstractCellEditor
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JComboBox
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.JScrollPane
-import javax.swing.JTable
-import javax.swing.ListSelectionModel
-import javax.swing.event.TableModelEvent
-import javax.swing.event.TableModelListener
+import java.util.*
+import javax.swing.*
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellEditor
@@ -46,11 +32,11 @@ class DreamShaderSettingsConfigurable(
     private val project: Project
 ) : Configurable {
     private var panel: JPanel? = null
-    private var projectRootField: JBTextField? = null
-    private var manifestPathField: JBTextField? = null
-    private var unrealSourceRootField: JBTextField? = null
+    private var projectRootField: TextFieldWithBrowseButton? = null
+    private var manifestPathField: TextFieldWithBrowseButton? = null
+    private var unrealSourceRootField: TextFieldWithBrowseButton? = null
     private var materialExpressionScanEnabledBox: JBCheckBox? = null
-    private var materialExpressionScanCachePathField: JBTextField? = null
+    private var materialExpressionScanCachePathField: TextFieldWithBrowseButton? = null
     private var showStatusBarBox: JBCheckBox? = null
     private var enableCodeLensBox: JBCheckBox? = null
     private var outArgumentPlaceholderSuffixField: JBTextField? = null
@@ -67,7 +53,6 @@ class DreamShaderSettingsConfigurable(
     private var recompileCurrentCommandField: JBTextField? = null
     private var recompileAllCommandField: JBTextField? = null
     private var cleanGeneratedCommandField: JBTextField? = null
-    private var projectRootAutoResolvedLabel: JLabel? = null
     private var bridgeStatusLabel: JLabel? = null
 
     override fun getDisplayName(): String = DreamShaderBundle.message("settings.title")
@@ -99,9 +84,34 @@ class DreamShaderSettingsConfigurable(
             row++
         }
 
-        fun addLabelFieldAndButton(
+        fun addLabelAndPathField(
             label: String,
-            field: JBTextField,
+            field: TextFieldWithBrowseButton,
+            tooltip: String? = null
+        ) {
+            val labelConstraints = GridBagConstraints().apply {
+                gridx = 0
+                gridy = row
+                anchor = GridBagConstraints.WEST
+                insets = JBUI.insets(4, 4, 2, 8)
+            }
+            root.add(JLabel(label), labelConstraints)
+
+            val fieldConstraints = GridBagConstraints().apply {
+                gridx = 1
+                gridy = row
+                weightx = 1.0
+                fill = GridBagConstraints.HORIZONTAL
+                insets = JBUI.insets(4, 0, 2, 4)
+            }
+            field.toolTipText = tooltip
+            root.add(field, fieldConstraints)
+            row++
+        }
+
+        fun addLabelPathFieldAndButton(
+            label: String,
+            field: TextFieldWithBrowseButton,
             button: JButton,
             tooltip: String? = null
         ) {
@@ -448,30 +458,52 @@ class DreamShaderSettingsConfigurable(
             root.add(syntaxHint, syntaxHintConstraints)
             row++
 
-            model.addTableModelListener(object : TableModelListener {
-                override fun tableChanged(e: TableModelEvent?) {
-                    refreshHoverOverridesStatus()
-                    refreshHoverOverridesButtonsState()
-                    hoverDocumentationOverridesTable?.repaint()
-                }
-            })
+            model.addTableModelListener {
+                refreshHoverOverridesStatus()
+                refreshHoverOverridesButtonsState()
+                hoverDocumentationOverridesTable?.repaint()
+            }
             table.selectionModel.addListSelectionListener {
                 refreshHoverOverridesButtonsState()
             }
         }
 
-        projectRootField = JBTextField()
-        projectRootField?.name = PROJECT_ROOT_FIELD_NAME
-        manifestPathField = JBTextField()
-        unrealSourceRootField = JBTextField()
+        projectRootField = TextFieldWithBrowseButton().apply {
+            textField.name = PROJECT_ROOT_FIELD_NAME
+            addBrowseFolderListener(
+                project,
+                FileChooserDescriptorFactory.createSingleFolderDescriptor()
+                    .withTitle(DreamShaderBundle.message("settings.projectRoot.browseTitle"))
+            )
+        }
+        manifestPathField = TextFieldWithBrowseButton().apply {
+            addBrowseFolderListener(
+                project,
+                FileChooserDescriptorFactory.createSingleFileDescriptor("json")
+                    .withTitle(DreamShaderBundle.message("settings.manifestPath.browseTitle"))
+            )
+        }
+        unrealSourceRootField = TextFieldWithBrowseButton().apply {
+            addBrowseFolderListener(
+                project,
+                FileChooserDescriptorFactory.createSingleFolderDescriptor()
+                    .withTitle(DreamShaderBundle.message("settings.unrealSourceRoot.browseTitle"))
+            )
+        }
         materialExpressionScanEnabledBox = JBCheckBox(
             DreamShaderBundle.message("settings.materialExpressionScanEnabled.checkbox")
         )
-        materialExpressionScanCachePathField = JBTextField()
+        materialExpressionScanCachePathField = TextFieldWithBrowseButton().apply {
+            addBrowseFolderListener(
+                project,
+                FileChooserDescriptorFactory.createSingleFileDescriptor("json")
+                    .withTitle(DreamShaderBundle.message("settings.materialExpressionScanCachePath.browseTitle"))
+            )
+        }
         showStatusBarBox = JBCheckBox(DreamShaderBundle.message("settings.showStatusBar.checkbox"))
         enableCodeLensBox = JBCheckBox(DreamShaderBundle.message("settings.enableCodeLens.checkbox"))
         outArgumentPlaceholderSuffixField = JBTextField()
-        preferredImportExtensionCombo = JComboBox(arrayOf(".dsh", ".dsf", ".dsm"))
+        preferredImportExtensionCombo = com.intellij.openapi.ui.ComboBox(arrayOf(".dsh", ".dsf", ".dsm"))
         preferredImportExtensionCombo?.name = PREFERRED_IMPORT_EXTENSION_COMBO_NAME
         autoUpdatePreferredImportExtensionBox = JBCheckBox(
             DreamShaderBundle.message("settings.autoUpdatePreferredImportExtension.checkbox")
@@ -482,21 +514,20 @@ class DreamShaderSettingsConfigurable(
         recompileAllCommandField = JBTextField()
         cleanGeneratedCommandField = JBTextField()
 
-        addLabelAndField(
+        addLabelAndPathField(
             DreamShaderBundle.message("settings.projectRoot.label"),
-            projectRootField as JBTextField,
+            projectRootField as TextFieldWithBrowseButton,
             DreamShaderBundle.message("settings.projectRoot.tooltip")
         )
-        projectRootAutoResolvedLabel = addInlineInfoLabel(PROJECT_ROOT_AUTO_RESOLVED_LABEL_NAME)
         bridgeStatusLabel = addInlineInfoLabel(BRIDGE_STATUS_LABEL_NAME)
-        addLabelAndField(
+        addLabelAndPathField(
             DreamShaderBundle.message("settings.manifestPath.label"),
-            manifestPathField as JBTextField,
+            manifestPathField as TextFieldWithBrowseButton,
             DreamShaderBundle.message("settings.manifestPath.tooltip")
         )
-        addLabelFieldAndButton(
+        addLabelPathFieldAndButton(
             DreamShaderBundle.message("settings.unrealSourceRoot.label"),
-            unrealSourceRootField as JBTextField,
+            unrealSourceRootField as TextFieldWithBrowseButton,
             JButton(DreamShaderBundle.message("settings.unrealSourceRoot.autoDetectButton")).apply {
                 name = UNREAL_SOURCE_ROOT_AUTO_DETECT_BUTTON_NAME
                 toolTipText = DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.tooltip")
@@ -508,9 +539,9 @@ class DreamShaderSettingsConfigurable(
             materialExpressionScanEnabledBox as JBCheckBox,
             DreamShaderBundle.message("settings.materialExpressionScanEnabled.tooltip")
         )
-        addLabelAndField(
+        addLabelAndPathField(
             DreamShaderBundle.message("settings.materialExpressionScanCachePath.label"),
-            materialExpressionScanCachePathField as JBTextField,
+            materialExpressionScanCachePathField as TextFieldWithBrowseButton,
             DreamShaderBundle.message("settings.materialExpressionScanCachePath.tooltip")
         )
         addCheckBox(
@@ -567,7 +598,7 @@ class DreamShaderSettingsConfigurable(
         autoUpdatePreferredImportExtensionBox?.addActionListener {
             refreshImportExtensionPreview()
         }
-        projectRootField?.document?.addDocumentListener(SimpleDocumentListener {
+        projectRootField?.textField?.document?.addDocumentListener(SimpleDocumentListener {
             refreshProjectRootAutoResolvedHint()
             refreshBridgeStatusHint()
         })
@@ -681,20 +712,15 @@ class DreamShaderSettingsConfigurable(
         recompileCurrentCommandField = null
         recompileAllCommandField = null
         cleanGeneratedCommandField = null
-        projectRootAutoResolvedLabel = null
         bridgeStatusLabel = null
     }
 
     private fun refreshProjectRootAutoResolvedHint() {
-        val input = projectRootField?.text.orEmpty().trim()
-        val label = projectRootAutoResolvedLabel ?: return
-        if (input.isNotBlank()) {
-            label.text = ""
-            return
-        }
+        val field = projectRootField ?: return
+        val emptyText = (field.textField as? JBTextField)?.emptyText ?: return
         val autoResolved = DreamShaderBridgePathResolver.resolveProjectRootAutoFallback(project, null)
             ?: DreamShaderBundle.message("common.unknown")
-        label.text = DreamShaderBundle.message("settings.projectRoot.autoResolvedHint", autoResolved)
+        emptyText.text = DreamShaderBundle.message("settings.projectRoot.autoResolvedHint", autoResolved)
     }
 
     /**
@@ -1206,7 +1232,7 @@ class DreamShaderSettingsConfigurable(
                 fill = GridBagConstraints.BOTH
                 insets = JBUI.insets(6)
             }
-            val scroll = JScrollPane(textArea).apply {
+            val scroll = com.intellij.ui.components.JBScrollPane(textArea).apply {
                 preferredSize = Dimension(760, 320)
             }
             panel.add(scroll, constraints)
@@ -1311,7 +1337,6 @@ class DreamShaderSettingsConfigurable(
         internal const val HOVER_DOCS_RESET_BUILTINS_BUTTON_NAME = "dreamshader.hoverDocsOverrides.resetBuiltinsButton"
         internal const val HOVER_DOCS_STATUS_LABEL_NAME = "dreamshader.hoverDocsOverrides.statusLabel"
         internal const val HOVER_DOCS_SYNTAX_HINT_LABEL_NAME = "dreamshader.hoverDocsOverrides.syntaxHintLabel"
-        internal const val PROJECT_ROOT_AUTO_RESOLVED_LABEL_NAME = "dreamshader.projectRoot.autoResolvedLabel"
         internal const val BRIDGE_STATUS_LABEL_NAME = "dreamshader.bridgeStatus.label"
         internal const val UNREAL_SOURCE_ROOT_AUTO_DETECT_BUTTON_NAME = "dreamshader.unrealSourceRoot.autoDetectButton"
         private val BRIDGE_STATUS_FILE_NAMES = listOf(

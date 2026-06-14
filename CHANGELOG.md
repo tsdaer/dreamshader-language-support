@@ -4,14 +4,6 @@
 
 ## [Unreleased]
 
-### Changed
-
-- Unified all JSON access (Bridge `settings.json` / `diagnostics.json`, package index, GitHub search, package metadata / lock, material-expression manifest, package scaffold) on `kotlinx.serialization`, replacing per-file hand-written regex/bracket-scanning parsers. This also fixes `\uXXXX`/`\/`/`\b`/`\f` escape handling, avoids deep-nested same-name field mismatches, and produces correctly-escaped output when writing the lock file and package metadata.
-
-### Removed
-
-- Removed the hard-coded `UE.*` built-in node documentation table (TexCoord/Time/Panner/WorldPosition/Expression). `UE.<Name>` hover documentation now flows entirely through the material-expression catalog (Bridge / configured / scanned / bundled manifest), so docs track the actual catalog data instead of a stale hard-coded list. User hover-documentation overrides (`ueBuiltins.<name>.description`) continue to take priority.
-
 ## [0.0.4] - 2026-06-14
 
 ### Added

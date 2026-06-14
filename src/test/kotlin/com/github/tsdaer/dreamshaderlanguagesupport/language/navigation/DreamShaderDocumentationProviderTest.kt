@@ -433,6 +433,54 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
         }
     }
 
+    fun testCatalogHoverRendersParameterList() {
+        val manifest = Files.createTempFile("ds-hover-params", ".json")
+        Files.writeString(
+            manifest,
+            """
+            {
+              "expressions": [
+                {
+                  "namespace": "Substrate",
+                  "className": "UMaterialExpressionSubstrateSlabBSDF",
+                  "ueName": "Slab",
+                  "signature": "Substrate.Slab(DiffuseAlbedo=Color)",
+                  "outputType": "Substrate",
+                  "description": "Substrate slab BSDF node.",
+                  "parameters": [
+                    { "qualifier": "in", "type": "value", "name": "DiffuseAlbedo", "placeholder": "Color" }
+                  ]
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        settings.materialExpressionManifestPath = manifest.toString()
+        try {
+            val file = myFixture.configureByText(
+                "hover_catalog_params.dsf",
+                """
+                Shader Main {
+                    Graph {
+                        Substrate x = Substrate.Slab(DiffuseAlbedo=0.0);
+                    }
+                }
+                """.trimIndent()
+            )
+
+            val offset = file.text.indexOf("Slab")
+            val element = file.findElementAt(offset)
+            val doc = provider.generateDoc(element, element)
+
+            assertNotNull(doc)
+            assertTrue(doc!!.contains("DiffuseAlbedo"))
+            assertTrue(doc.contains("Color"))
+        } finally {
+            settings.materialExpressionManifestPath = ""
+        }
+    }
+
     fun testCatalogHoverRespectsUserOverridePriority() {
         val manifest = Files.createTempFile("ds-hover-override", ".json")
         Files.writeString(

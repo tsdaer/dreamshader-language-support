@@ -140,6 +140,36 @@ class DreamShaderManifestCompletionTest : BasePlatformTestCase() {
         assertTrue(classes.contains("Sine"))
     }
 
+    fun testSubstrateBuiltinPreservesSnippetAndQualifier() {
+        val json = """
+            {
+              "schema": "DreamShader.SubstrateBuiltins",
+              "version": 1,
+              "builtins": [
+                {
+                  "name": "Slab",
+                  "className": "MaterialExpressionSubstrateSlabBSDF",
+                  "outputType": "Substrate",
+                  "detail": "Creates a Substrate slab BSDF.",
+                  "example": "Substrate.Slab(DiffuseAlbedo=Color)",
+                  "snippet": "Substrate.Slab(DiffuseAlbedo=${'$'}{1:Color}, Roughness=${'$'}{2:0.45})",
+                  "parameters": [
+                    { "qualifier": "in", "type": "value", "name": "DiffuseAlbedo", "placeholder": "Color" }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val entry = DreamShaderMaterialExpressionManifest.parseSubstrateBuiltins(json).single()
+        assertEquals("Substrate", entry.namespace)
+        assertEquals("Substrate.Slab(DiffuseAlbedo=${'$'}{1:Color}, Roughness=${'$'}{2:0.45})", entry.snippet)
+        val parameter = entry.parameters.single()
+        assertEquals("DiffuseAlbedo", parameter.name)
+        assertEquals("in", parameter.qualifier)
+        assertEquals("Color", parameter.placeholder)
+    }
+
     private fun createTempManifest(content: String): Path {
         val tempFile = Files.createTempFile("dreamshader-manifest-", ".json")
         Files.writeString(tempFile, content)

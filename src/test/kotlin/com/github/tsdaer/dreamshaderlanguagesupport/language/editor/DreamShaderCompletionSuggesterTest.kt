@@ -1,4 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -347,6 +348,45 @@ class DreamShaderCompletionSuggesterTest {
 
         assertTrue(slab != null)
         assertTrue(slab?.insertText == "Slab(BaseColor=Color)")
-        assertTrue(slab?.detail == "Substrate.Slab")
+        // detail 现在附带输出类型（需求 D）。
+        assertTrue(slab?.detail == "Substrate.Slab → Substrate")
+    }
+
+    @Test
+    fun `catalog snippet strips namespace prefix to avoid duplication`() {
+        val text = """
+            Shader MySurface {
+                Graph {
+                    UE.Mater
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("UE.Mater") + "UE.Mater".length
+        // 模拟 richEntry 合成的 snippet：含完整 `UE.` 前缀与 OutputType 制表位。
+        val catalogEntries = listOf(
+            DreamShaderMaterialExpressionInfo(
+                namespace = "UE",
+                className = "UMaterialExpressionMaterialXScreen",
+                ueName = "MaterialXScreen",
+                signature = "UE.MaterialXScreen(OutputType=\"float1\", A=Value, B=Value, Alpha=Value)",
+                outputType = "float1",
+                snippet = "UE.MaterialXScreen(OutputType=\"\${1:float1}\", A=\${2:Value}, B=\${3:Value}, Alpha=\${4:Value})\$0",
+                source = DreamShaderMaterialExpressionSource.CONFIGURED_MANIFEST
+            )
+        )
+
+        val suggestions = DreamShaderCompletionSuggester.suggest(
+            text = text,
+            offset = offset,
+            materialExpressionCatalogEntries = catalogEntries
+        )
+        val item = suggestions.firstOrNull { it.label == "MaterialXScreen" }
+
+        assertTrue(item != null)
+        // snippet 已去掉 `UE.` 前缀，插入后不会变成 `UE.UE.MaterialXScreen`。
+        assertEquals(
+            "MaterialXScreen(OutputType=\"\${1:float1}\", A=\${2:Value}, B=\${3:Value}, Alpha=\${4:Value})\$0",
+            item?.snippet
+        )
     }
 }

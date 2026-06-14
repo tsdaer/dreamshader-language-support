@@ -1,4 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
+import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeSettingsRepository
+import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderSettingMapping
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCallSignatureResolver
@@ -131,6 +133,13 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         val overrideKey = "settings.${info.key.lowercase(Locale.ROOT)}.description"
         val description = overrideDoc(element, overrideKey) ?: info.description
 
+        val bridgeMappings = bridgeMappingsForSettingKey(element, info.key)
+        val commonValues = bridgeMappings
+            .map { it.alias }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .ifEmpty { info.commonValues }
+
         return buildString {
             append("<b>")
             append(DreamShaderBundle.message("docs.label.settingsKey"))
@@ -138,11 +147,11 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             append(info.key)
             append("</b><br/>")
             append(description)
-            if (info.commonValues.isNotEmpty()) {
+            if (commonValues.isNotEmpty()) {
                 append("<br/>")
                 append(DreamShaderBundle.message("docs.label.commonValues"))
                 append(": ")
-                append(info.commonValues.joinToString(", "))
+                append(commonValues.joinToString(", "))
             }
         }
     }
@@ -151,6 +160,37 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         if (!isInSettingsOrOptionsSection(element)) return null
         val value = token.trim('"')
         if (value.isBlank()) return null
+
+        bridgeMappingForValue(element, value)?.let { (key, mapping) ->
+            return buildString {
+                append("<b>")
+                append(DreamShaderBundle.message("docs.label.settingValue"))
+                append(": ")
+                append(mapping.alias)
+                append("</b><br/>")
+                mapping.displayName?.takeIf { it.isNotBlank() }?.let {
+                    append(DreamShaderBundle.message("docs.label.displayName"))
+                    append(": ")
+                    append(it)
+                    append("<br/>")
+                }
+                mapping.name?.takeIf { it.isNotBlank() }?.let {
+                    append(DreamShaderBundle.message("docs.label.ueName"))
+                    append(": ")
+                    append(it)
+                    append("<br/>")
+                }
+                mapping.value?.let {
+                    append(DreamShaderBundle.message("docs.label.enumValue"))
+                    append(": ")
+                    append(it)
+                    append("<br/>")
+                }
+                append(DreamShaderBundle.message("docs.label.usedBy"))
+                append(": ")
+                append(key)
+            }
+        }
 
         val owners = DreamShaderDocumentationData.valueOwners(value)
         if (owners.isEmpty()) return null
@@ -165,6 +205,55 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             append(": ")
             append(owners.joinToString(", "))
         }
+    }
+
+    /**
+     * 将文档设置键（如 `Domain`/`MaterialDomain`/`RenderType`）归一为 Bridge `settings.json`
+     * 使用的小写键（`materialdomain`/`shadingmodel`/`blendmode`）。
+     */
+    private fun bridgeKeyFor(settingKey: String): String? = when (settingKey.lowercase(Locale.ROOT)) {
+        "domain", "materialdomain" -> "materialdomain"
+        "shadingmodel" -> "shadingmodel"
+        "blendmode", "rendertype" -> "blendmode"
+        else -> null
+    }
+
+    /** 返回某设置键在 Bridge 中的映射列表（不可用/缺失时为空）。 */
+    private fun bridgeMappingsForSettingKey(element: PsiElement, settingKey: String): List<DreamShaderSettingMapping> {
+        val bridgeKey = bridgeKeyFor(settingKey) ?: return emptyList()
+        val repository = element.project.getService(DreamShaderBridgeSettingsRepository::class.java)
+            ?: return emptyList()
+        return repository.mappingsForKey(bridgeKey)
+    }
+
+    /**
+     * 解析悬浮的设置值所属的 Bridge 映射：优先按同行键定位，键缺失时回退到「包含该别名的任一键」。
+     * 命中返回 (设置键, 映射)，否则 null（由调用方退化为硬编码 `valueOwners`）。
+     */
+    private fun bridgeMappingForValue(element: PsiElement, value: String): Pair<String, DreamShaderSettingMapping>? {
+        val repository = element.project.getService(DreamShaderBridgeSettingsRepository::class.java)
+            ?: return null
+        val ownerKey = settingKeyForValue(element)
+        if (ownerKey != null) {
+            val bridgeKey = bridgeKeyFor(ownerKey)
+            if (bridgeKey != null) {
+                repository.mappingForValue(bridgeKey, value)?.let { return ownerKey to it }
+            }
+        }
+        val fallbackKey = repository.keysContainingAlias(value).firstOrNull() ?: return null
+        val mapping = repository.mappingForValue(fallbackKey, value) ?: return null
+        return fallbackKey to mapping
+    }
+
+    /** 由悬浮的值元素向左扫描到 `=`，再取其前一个标识符 leaf 作为所属设置键。 */
+    private fun settingKeyForValue(element: PsiElement): String? {
+        var leaf: PsiElement? = PsiTreeUtil.prevVisibleLeaf(element)
+        while (leaf != null && leaf.text.trim() != "=") {
+            leaf = PsiTreeUtil.prevVisibleLeaf(leaf)
+        }
+        if (leaf == null) return null
+        val keyLeaf = PsiTreeUtil.prevVisibleLeaf(leaf) ?: return null
+        return keyLeaf.text.trim().takeIf { it.isNotBlank() }
     }
 
     private fun catalogExpressionDocumentation(element: PsiElement, token: String): String? {
@@ -195,6 +284,20 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
                 append(DreamShaderBundle.message("docs.label.type"))
                 append(": ")
                 append(outputType)
+            }
+            if (entry.parameters.isNotEmpty()) {
+                append("<br/>")
+                append(DreamShaderBundle.message("docs.label.parameters"))
+                append(":<ul>")
+                entry.parameters.forEach { parameter ->
+                    append("<li>")
+                    parameter.qualifier?.takeIf { it.isNotBlank() }?.let { append(it).append(' ') }
+                    append(parameter.name)
+                    parameter.type?.takeIf { it.isNotBlank() }?.let { append(": ").append(it) }
+                    parameter.placeholder?.takeIf { it.isNotBlank() }?.let { append(" = ").append(it) }
+                    append("</li>")
+                }
+                append("</ul>")
             }
         }
     }

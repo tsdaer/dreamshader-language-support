@@ -40,4 +40,24 @@ class DreamShaderBridgeSettingsRepositoryTest : BasePlatformTestCase() {
         assertTrue(repository.parseSettingsJson("").isEmpty())
         assertTrue(repository.parseSettingsJson("").isEmpty())
     }
+
+    fun testMappingForValueLooksUpByAliasCaseInsensitive() {
+        val repository = project.getService(DreamShaderBridgeSettingsRepository::class.java)
+        val mapping = repository.parseSettingsJson(
+            """
+            {
+              "mappings": {
+                "ShadingModel": [
+                  { "alias": "ClearCoat", "value": 4, "name": "MSM_ClearCoat", "displayName": "透明图层" }
+                ]
+              }
+            }
+            """.trimIndent()
+        )["shadingmodel"]?.firstOrNull { it.alias.equals("clearcoat", ignoreCase = true) }
+
+        assertNotNull(mapping)
+        assertEquals(4, mapping!!.value)
+        assertEquals("MSM_ClearCoat", mapping.name)
+        assertEquals("透明图层", mapping.displayName)
+    }
 }

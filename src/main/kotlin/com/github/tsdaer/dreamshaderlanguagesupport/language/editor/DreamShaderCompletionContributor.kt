@@ -12,11 +12,13 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSect
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.codeInsight.template.TemplateManager
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.search.FilenameIndex
@@ -325,7 +327,8 @@ internal data class DreamShaderCompletionItem(
     val label: String,
     val insertText: String = label,
     val detail: String? = null,
-    val caretOffset: Int? = null
+    val caretOffset: Int? = null,
+    val snippet: String? = null
 )
 
 /**
@@ -940,11 +943,35 @@ internal object DreamShaderCompletionSuggester {
                 DreamShaderCompletionItem(
                     label = entry.ueName,
                     insertText = catalogInsertText(entry),
-                    detail = entry.qualifiedName
+                    detail = buildCatalogDetail(entry),
+                    snippet = catalogSnippet(entry)
                 )
             }
             .distinctBy { it.label.lowercase(Locale.ROOT) }
             .toList()
+    }
+
+    /**
+     * 补全弹窗 detail：限定名加可选输出类型（`Substrate.Slab → Substrate`）。
+     * 保持简洁，完整描述/参数列表留给悬浮文档。
+     */
+    private fun buildCatalogDetail(entry: DreamShaderMaterialExpressionInfo): String {
+        val outputType = entry.outputType?.takeIf { it.isNotBlank() }
+        return if (outputType != null) "${entry.qualifiedName} → $outputType" else entry.qualifiedName
+    }
+
+    /**
+     * catalog 补全在 `Namespace.` 已输入后触发，故 snippet 需去掉 `Namespace.` 前缀，
+     * 避免插入出现重复命名空间（如 `UE.UE.MaterialXScreen(...)`）。前缀不匹配时返回原样。
+     */
+    private fun catalogSnippet(entry: DreamShaderMaterialExpressionInfo): String? {
+        val snippet = entry.snippet?.takeIf { it.isNotBlank() } ?: return null
+        val qualifiedPrefix = "${entry.namespace}.${entry.ueName}"
+        return if (snippet.startsWith(qualifiedPrefix)) {
+            snippet.removePrefix("${entry.namespace}.")
+        } else {
+            snippet
+        }
     }
 
     private fun catalogInsertText(entry: DreamShaderMaterialExpressionInfo): String {
@@ -976,6 +1003,31 @@ private class DreamShaderInsertTextHandler(
         insertionContext.document.replaceString(start, end, insertText)
         val finalCaret = start + (caretOffset ?: insertText.length)
         insertionContext.editor.caretModel.moveToOffset(finalCaret.coerceIn(start, start + insertText.length))
+    }
+}
+
+/**
+ * 将带 `${N:default}` 占位的 snippet 作为 IntelliJ 活动模板插入，使用户可 Tab 跳转占位符。
+ * 先删除 lookup 已插入的 label 文本，再从 [DreamShaderSnippetParser] 装配并启动模板。
+ */
+private class DreamShaderTemplateInsertHandler(
+    private val snippet: String
+) : InsertHandler<com.intellij.codeInsight.lookup.LookupElement> {
+    override fun handleInsert(
+        insertionContext: InsertionContext,
+        item: com.intellij.codeInsight.lookup.LookupElement
+    ) {
+        val editor = insertionContext.editor
+        val project = insertionContext.project
+        insertionContext.document.deleteString(insertionContext.startOffset, insertionContext.tailOffset)
+        editor.caretModel.moveToOffset(insertionContext.startOffset)
+        PsiDocumentManager.getInstance(project).commitDocument(insertionContext.document)
+
+        val templateManager = TemplateManager.getInstance(project)
+        val template = templateManager.createTemplate("", "")
+        template.isToReformat = false
+        DreamShaderSnippetParser.fill(template, snippet)
+        templateManager.startTemplate(editor, template)
     }
 }
 
@@ -1161,18 +1213,19 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                     suggestions.forEach { suggestion ->
                         val builder = LookupElementBuilder.create(suggestion.label)
                             .withTypeText(suggestion.detail, true)
-                        if (suggestion.insertText != suggestion.label) {
-                            result.addElement(
+                        val element = when {
+                            suggestion.snippet != null ->
+                                builder.withInsertHandler(DreamShaderTemplateInsertHandler(suggestion.snippet))
+                            suggestion.insertText != suggestion.label ->
                                 builder.withInsertHandler(
                                     DreamShaderInsertTextHandler(
                                         insertText = suggestion.insertText,
                                         caretOffset = suggestion.caretOffset
                                     )
                                 )
-                            )
-                        } else {
-                            result.addElement(builder)
+                            else -> builder
                         }
+                        result.addElement(element)
                     }
                 }
             }

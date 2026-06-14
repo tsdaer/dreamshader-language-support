@@ -17,7 +17,8 @@ internal data class DreamShaderMaterialExpressionParameter(
     val name: String,
     val type: String? = null,
     val required: Boolean = false,
-    val placeholder: String? = null
+    val placeholder: String? = null,
+    val qualifier: String? = null
 )
 
 internal enum class DreamShaderMaterialExpressionSource {
@@ -36,6 +37,7 @@ internal data class DreamShaderMaterialExpressionInfo(
     val parameters: List<DreamShaderMaterialExpressionParameter> = emptyList(),
     val outputType: String? = null,
     val description: String? = null,
+    val snippet: String? = null,
     val source: DreamShaderMaterialExpressionSource
 ) {
     val qualifiedName: String
@@ -86,7 +88,8 @@ internal object DreamShaderMaterialExpressionManifest {
         val name: String? = null,
         val type: String? = null,
         val required: Boolean = false,
-        val placeholder: String? = null
+        val placeholder: String? = null,
+        val qualifier: String? = null
     )
 
     /** Bridge `inputs[]` 元素，每个输入名作为一个 `Value` 占位实参。 */
@@ -228,6 +231,7 @@ internal object DreamShaderMaterialExpressionManifest {
             outputType = dto.outputType?.takeIf { it.isNotBlank() },
             description = dto.detail?.takeIf { it.isNotBlank() }
                 ?: defaultDescription("Substrate", name, className),
+            snippet = snippet,
             source = DreamShaderMaterialExpressionSource.BRIDGE_MANIFEST
         )
     }
@@ -354,6 +358,7 @@ internal object DreamShaderMaterialExpressionManifest {
             description = dto.description?.takeIf { it.isNotBlank() }
                 ?: dto.detail?.takeIf { it.isNotBlank() }
                 ?: defaultDescription(namespace, ueName, rawClassName),
+            snippet = synthesizeSnippet(namespace, ueName, parameters, outputType),
             source = source
         )
     }
@@ -382,13 +387,39 @@ internal object DreamShaderMaterialExpressionManifest {
         return "$namespace.$ueName(${args.joinToString(", ")})"
     }
 
+    /**
+     * 为条目合成活动模板 snippet，与 [synthesizeSignature] 保持一致，但把可编辑值包成
+     * `${N:default}` 制表位：`<ns>.<name>(OutputType="${1:float1}", A=${2:Value})$0`。
+     * 无 OutputType 且无参数时返回 null（由调用方退化为静态插入）。
+     */
+    private fun synthesizeSnippet(
+        namespace: String,
+        ueName: String,
+        parameters: List<DreamShaderMaterialExpressionParameter>,
+        outputType: String?
+    ): String? {
+        if (outputType == null && parameters.isEmpty()) return null
+        val args = mutableListOf<String>()
+        var stop = 1
+        if (outputType != null) {
+            args.add("OutputType=\"\${${stop}:$outputType}\"")
+            stop++
+        }
+        parameters.forEach { parameter ->
+            args.add("${parameter.name}=\${${stop}:${parameter.placeholder ?: "Value"}}")
+            stop++
+        }
+        return "$namespace.$ueName(${args.joinToString(", ")})\$0"
+    }
+
     private fun parameterFromDto(dto: ParameterDto): DreamShaderMaterialExpressionParameter? {
         val name = dto.name?.takeIf { it.isNotBlank() } ?: return null
         return DreamShaderMaterialExpressionParameter(
             name = name,
             type = dto.type?.takeIf { it.isNotBlank() },
             required = dto.required,
-            placeholder = dto.placeholder?.takeIf { it.isNotBlank() }
+            placeholder = dto.placeholder?.takeIf { it.isNotBlank() },
+            qualifier = dto.qualifier?.takeIf { it.isNotBlank() }
         )
     }
 

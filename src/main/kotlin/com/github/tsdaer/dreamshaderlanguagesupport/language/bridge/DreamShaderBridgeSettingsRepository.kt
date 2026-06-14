@@ -59,6 +59,21 @@ class DreamShaderBridgeSettingsRepository(private val project: Project) {
         return mappingsForKey(key).map { it.alias }.filter { it.isNotBlank() }.toSet()
     }
 
+    /** 在指定设置键下按别名（大小写不敏感）查找单条映射，未命中为 null。 */
+    internal fun mappingForValue(key: String, alias: String): DreamShaderSettingMapping? {
+        if (alias.isBlank()) return null
+        return mappingsForKey(key).firstOrNull { it.alias.equals(alias, ignoreCase = true) }
+    }
+
+    /** 返回映射列表中包含给定别名（大小写不敏感）的所有设置键（小写）。 */
+    internal fun keysContainingAlias(alias: String): List<String> {
+        if (!loaded) refresh(null)
+        if (alias.isBlank()) return emptyList()
+        return mappings.entries
+            .filter { (_, list) -> list.any { it.alias.equals(alias, ignoreCase = true) } }
+            .map { it.key }
+    }
+
     /** 标记缓存失效，下次访问时强制重读 `settings.json`（供 VFS 监听调用）。 */
     internal fun invalidate() {
         loaded = false

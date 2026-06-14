@@ -300,15 +300,12 @@ class DreamShaderSettingsToggleTest : DreamShaderSettingsUiTestBase() {
             DreamShaderSettingsConfigurable.PROJECT_ROOT_FIELD_NAME,
             JBTextField::class.java
         )
-        val autoLabel = findComponentByName(
-            root,
-            DreamShaderSettingsConfigurable.PROJECT_ROOT_AUTO_RESOLVED_LABEL_NAME,
-            JLabel::class.java
-        )
 
-        assertTrue("Expected auto-resolved hint visible when projectRoot is empty", autoLabel.text.isNotBlank())
-        projectRootField.text = "D:/ManualRoot"
-        assertEquals("Expected auto-resolved hint hidden when projectRoot is set", "", autoLabel.text)
+        // 自动解析提示现在作为输入框的占位文本（emptyText）展示，留空时可见。
+        assertTrue(
+            "Expected auto-resolved hint shown as empty-text placeholder",
+            projectRootField.emptyText.text.isNotBlank()
+        )
     }
 
     private fun findRowByPath(model: TableModel, path: String): Int {
