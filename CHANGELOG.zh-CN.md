@@ -4,6 +4,8 @@
 
 ## [未发布]
 
+## [0.0.4] - 2026-06-14
+
 ### 新增
 
 - 新增基于 catalog 的 Material Expression manifest 解析，并接入 `UE.*` 补全；兼容 rich `expressions` 条目与旧 class-name fallback，同时为后续 `Substrate.*` wrapper 预留 namespace 数据路径。
@@ -77,7 +79,8 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
-[未发布]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...HEAD
+[未发布]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...HEAD
+[0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4
 [0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3
 [0.0.2]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.1...0.0.2
 [0.0.1]: https://github.com/tsdaer/dreamshader-language-support/commits/0.0.1
