@@ -118,4 +118,81 @@ class DreamShaderSignatureHelpAnalyzerTest {
         assertEquals(1, signatures.size)
         assertEquals("Blend(localA, localB, localResult)", signatures.first().presentableText)
     }
+
+    @Test
+    fun `resolves catalog signature with explicit signature and parameters`() {
+        val entries = listOf(
+            DreamShaderMaterialExpressionInfo(
+                namespace = "UE",
+                className = "UMaterialExpressionDreamOnly",
+                ueName = "DreamOnly",
+                signature = "UE.DreamOnly(Input=Value, Scale=1.0)",
+                parameters = listOf(
+                    DreamShaderMaterialExpressionParameter("Input"),
+                    DreamShaderMaterialExpressionParameter("Scale")
+                ),
+                source = DreamShaderMaterialExpressionSource.CONFIGURED_MANIFEST
+            )
+        )
+
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveCatalogSignatures(
+            functionName = "UE.DreamOnly",
+            catalogEntries = entries,
+            requireComplete = true
+        )
+        assertEquals(1, signatures.size)
+        assertEquals("UE.DreamOnly(Input=Value, Scale=1.0)", signatures.first().presentableText)
+        assertEquals(2, signatures.first().parameterRanges.size)
+    }
+
+    @Test
+    fun `resolves catalog signature for non UE namespace`() {
+        val entries = listOf(
+            DreamShaderMaterialExpressionInfo(
+                namespace = "Substrate",
+                className = "UMaterialExpressionSubstrateSlabBSDF",
+                ueName = "Slab",
+                signature = "Substrate.Slab(BaseColor=Color)",
+                parameters = listOf(DreamShaderMaterialExpressionParameter("BaseColor")),
+                outputType = "Substrate",
+                source = DreamShaderMaterialExpressionSource.CONFIGURED_MANIFEST
+            )
+        )
+
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveCatalogSignatures(
+            functionName = "Substrate.Slab",
+            catalogEntries = entries,
+            requireComplete = true
+        )
+        assertEquals(1, signatures.size)
+        assertEquals("Substrate.Slab(BaseColor=Color)", signatures.first().presentableText)
+    }
+
+    @Test
+    fun `skips incomplete catalog entry when complete signature required`() {
+        val entries = listOf(
+            DreamShaderMaterialExpressionInfo(
+                namespace = "UE",
+                className = "UMaterialExpressionSparse",
+                ueName = "Sparse",
+                signature = "UE.Sparse(...)",
+                source = DreamShaderMaterialExpressionSource.BUNDLED_FALLBACK
+            )
+        )
+
+        val requireComplete = DreamShaderSignatureHelpAnalyzer.resolveCatalogSignatures(
+            functionName = "UE.Sparse",
+            catalogEntries = entries,
+            requireComplete = true
+        )
+        assertTrue(requireComplete.isEmpty())
+
+        val allowIncomplete = DreamShaderSignatureHelpAnalyzer.resolveCatalogSignatures(
+            functionName = "UE.Sparse",
+            catalogEntries = entries,
+            requireComplete = false
+        )
+        assertEquals(1, allowIncomplete.size)
+        assertEquals("UE.Sparse(...)", allowIncomplete.first().presentableText)
+    }
 }

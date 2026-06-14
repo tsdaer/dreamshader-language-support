@@ -1,6 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.nio.file.Files
 
 class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
     private val provider = DreamShaderDocumentationProvider()
@@ -311,6 +312,143 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
             assertTrue(doc!!.contains("Settings Key: Domain"))
             assertTrue(doc.contains("Custom Domain Description"))
         } finally {
+            settings.hoverDocumentationOverrides = ""
+        }
+    }
+
+    fun testCatalogProvidesUeMemberHoverDoc() {
+        val manifest = Files.createTempFile("ds-hover-catalog", ".json")
+        Files.writeString(
+            manifest,
+            """
+            {
+              "expressions": [
+                {
+                  "namespace": "UE",
+                  "className": "UMaterialExpressionDreamOnly",
+                  "ueName": "DreamOnly",
+                  "signature": "UE.DreamOnly(Input=Value)",
+                  "outputType": "float1",
+                  "description": "A catalog-only material expression."
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        settings.materialExpressionManifestPath = manifest.toString()
+        try {
+            val file = myFixture.configureByText(
+                "hover_catalog_ue.dsf",
+                """
+                Shader Main {
+                    Graph {
+                        float x = UE.DreamOnly(Input=0.0);
+                    }
+                }
+                """.trimIndent()
+            )
+
+            val offset = file.text.indexOf("DreamOnly")
+            val element = file.findElementAt(offset)
+            val doc = provider.generateDoc(element, element)
+
+            assertNotNull(doc)
+            assertTrue(doc!!.contains("UE.DreamOnly(Input=Value)"))
+            assertTrue(doc.contains("A catalog-only material expression."))
+            assertTrue(doc.contains("float1"))
+        } finally {
+            settings.materialExpressionManifestPath = ""
+        }
+    }
+
+    fun testCatalogProvidesSubstrateMemberHoverDoc() {
+        val manifest = Files.createTempFile("ds-hover-substrate", ".json")
+        Files.writeString(
+            manifest,
+            """
+            {
+              "expressions": [
+                {
+                  "namespace": "Substrate",
+                  "className": "UMaterialExpressionSubstrateSlabBSDF",
+                  "ueName": "Slab",
+                  "signature": "Substrate.Slab(BaseColor=Color)",
+                  "outputType": "Substrate",
+                  "description": "Substrate slab BSDF node."
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        settings.materialExpressionManifestPath = manifest.toString()
+        try {
+            val file = myFixture.configureByText(
+                "hover_catalog_substrate.dsf",
+                """
+                Shader Main {
+                    Graph {
+                        Substrate x = Substrate.Slab(BaseColor=0.0);
+                    }
+                }
+                """.trimIndent()
+            )
+
+            val offset = file.text.indexOf("Slab")
+            val element = file.findElementAt(offset)
+            val doc = provider.generateDoc(element, element)
+
+            assertNotNull(doc)
+            assertTrue(doc!!.contains("Substrate.Slab(BaseColor=Color)"))
+            assertTrue(doc.contains("Substrate slab BSDF node."))
+        } finally {
+            settings.materialExpressionManifestPath = ""
+        }
+    }
+
+    fun testCatalogHoverRespectsUserOverridePriority() {
+        val manifest = Files.createTempFile("ds-hover-override", ".json")
+        Files.writeString(
+            manifest,
+            """
+            {
+              "expressions": [
+                {
+                  "namespace": "UE",
+                  "className": "UMaterialExpressionDreamOnly",
+                  "ueName": "DreamOnly",
+                  "signature": "UE.DreamOnly(Input=Value)",
+                  "description": "Default catalog description."
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        settings.materialExpressionManifestPath = manifest.toString()
+        settings.hoverDocumentationOverrides = "ueBuiltins.dreamonly.description=Overridden hover text"
+        try {
+            val file = myFixture.configureByText(
+                "hover_catalog_override.dsf",
+                """
+                Shader Main {
+                    Graph {
+                        float x = UE.DreamOnly(Input=0.0);
+                    }
+                }
+                """.trimIndent()
+            )
+
+            val offset = file.text.indexOf("DreamOnly")
+            val element = file.findElementAt(offset)
+            val doc = provider.generateDoc(element, element)
+
+            assertNotNull(doc)
+            assertTrue(doc!!.contains("Overridden hover text"))
+            assertFalse(doc.contains("Default catalog description."))
+        } finally {
+            settings.materialExpressionManifestPath = ""
             settings.hoverDocumentationOverrides = ""
         }
     }

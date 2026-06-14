@@ -139,6 +139,44 @@ object DreamShaderSignatureHelpAnalyzer {
         return resolveDeclaredSignaturesInternal(functionName, sourceText, additionalSourceTexts)
     }
 
+    /**
+     * 从 catalog entries 解析 `Namespace.Member(...)` 形态的签名。
+     *
+     * 当 [requireComplete] 为 true 时，仅当条目带有显式 signature 文本或参数列表
+     * 才返回，确保数据不完整时调用方能回退到硬编码签名表。
+     */
+    internal fun resolveCatalogSignatures(
+        functionName: String,
+        catalogEntries: List<DreamShaderMaterialExpressionInfo>,
+        requireComplete: Boolean
+    ): List<DreamShaderCallSignature> {
+        val trimmed = functionName.trim()
+        if (trimmed.isBlank() || catalogEntries.isEmpty()) return emptyList()
+        return catalogEntries
+            .asSequence()
+            .filter { it.qualifiedName.equals(trimmed, ignoreCase = true) }
+            .filter { !requireComplete || isCompleteCatalogEntry(it) }
+            .map(::catalogSignature)
+            .toList()
+    }
+
+    private fun isCompleteCatalogEntry(entry: DreamShaderMaterialExpressionInfo): Boolean {
+        val hasExplicitSignature = entry.signature
+            ?.takeIf { it.isNotBlank() }
+            ?.let { it != defaultCatalogSignature(entry) }
+            ?: false
+        return hasExplicitSignature || entry.parameters.isNotEmpty()
+    }
+
+    private fun catalogSignature(entry: DreamShaderMaterialExpressionInfo): DreamShaderCallSignature {
+        val presentable = entry.signature?.takeIf { it.isNotBlank() } ?: defaultCatalogSignature(entry)
+        val parameterNames = entry.parameters.map { it.name }.toTypedArray()
+        return signature(presentable, *parameterNames)
+    }
+
+    private fun defaultCatalogSignature(entry: DreamShaderMaterialExpressionInfo): String =
+        "${entry.qualifiedName}(...)"
+
     fun findCallContext(text: String, offset: Int): DreamShaderCallContext? {
         if (text.isEmpty()) return null
         val safeOffset = offset.coerceIn(0, text.length)

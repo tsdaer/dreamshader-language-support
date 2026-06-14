@@ -4,6 +4,12 @@
 
 ## [未发布]
 
+### 新增
+
+- 新增基于 catalog 的 Material Expression manifest 解析，并接入 `UE.*` 补全；兼容 rich `expressions` 条目与旧 class-name fallback，同时为后续 `Substrate.*` wrapper 预留 namespace 数据路径。
+- 将 `UE.<Name>(...)` 与 `Substrate.<Name>(...)` 的签名帮助接入共享的 material expression catalog；catalog 数据不完整时回退到内置签名表。
+- 将 `UE.*` 与 `Substrate.*` 的悬浮文档接入共享 catalog，同时保留用户 hover documentation override 的优先级。
+
 ## [0.0.3] - 2026-05-30
 
 ### 新增

@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-06-11
+
+### Added
+
+- Added catalog-based material expression manifest parsing for `UE.*` completions, including rich `expressions` entries, class-name fallback compatibility, and namespace-ready catalog data for future `Substrate.*` wrappers.
+- Routed `UE.<Name>(...)` and `Substrate.<Name>(...)` signature help through the shared material expression catalog, falling back to the built-in signature table when catalog data is incomplete.
+- Routed `UE.*` and `Substrate.*` hover documentation through the shared catalog while preserving user hover-documentation override priority.
+
 ## [0.0.3] - 2026-05-30
 
 ### Added
@@ -67,7 +75,8 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
-[Unreleased]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...HEAD
+[Unreleased]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...HEAD
+[0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4
 [0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3
 [0.0.2]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.1...0.0.2
 [0.0.1]: https://github.com/tsdaer/dreamshader-language-support/commits/0.0.1

@@ -2,6 +2,8 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCallSignatureResolver
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMaterialExpressionInfo
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMaterialExpressionManifest
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSignatureHelpAnalyzer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
@@ -70,6 +72,9 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
 
             val settingsValueDoc = settingsValueDocumentation(tokenElement, token)
             if (settingsValueDoc != null) return settingsValueDoc
+
+            val catalogDoc = catalogExpressionDocumentation(tokenElement, token)
+            if (catalogDoc != null) return catalogDoc
 
             val ueBuiltinDoc = ueBuiltinDocumentation(tokenElement, token)
             if (ueBuiltinDoc != null) return ueBuiltinDoc
@@ -163,6 +168,63 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             append(": ")
             append(owners.joinToString(", "))
         }
+    }
+
+    private fun catalogExpressionDocumentation(element: PsiElement, token: String): String? {
+        if (!isGraphLikeContext(element)) return null
+        if (element.node?.elementType != DreamShaderTokenTypes.IDENTIFIER) return null
+
+        val namespace = namespaceQualifierOf(element) ?: return null
+        if (namespace.isBlank()) return null
+
+        val entries = collectCatalogEntries(element)
+        val qualifiedName = "$namespace.$token"
+        val entry = entries.firstOrNull { it.qualifiedName.equals(qualifiedName, ignoreCase = true) }
+            ?: return null
+
+        val overrideKey = "ueBuiltins.${entry.ueName.lowercase(Locale.ROOT)}.description"
+        val description = overrideDoc(element, overrideKey)
+            ?: entry.description
+            ?: DreamShaderBundle.message("docs.declaration.default")
+        val signature = entry.signature?.takeIf { it.isNotBlank() } ?: "${entry.qualifiedName}(...)"
+
+        return buildString {
+            append("<b>")
+            append(signature)
+            append("</b><br/>")
+            append(description)
+            entry.outputType?.takeIf { it.isNotBlank() }?.let { outputType ->
+                append("<br/>")
+                append(DreamShaderBundle.message("docs.label.type"))
+                append(": ")
+                append(outputType)
+            }
+        }
+    }
+
+    /**
+     * Resolves the namespace qualifier that immediately precedes [element] in a
+     * `Namespace.Member` access, e.g. `UE` for the `Sine` token in `UE.Sine`.
+     */
+    private fun namespaceQualifierOf(element: PsiElement): String? {
+        val dot = previousNonTriviaTokenText(element) ?: return null
+        if (dot != ".") return null
+        var leaf = PsiTreeUtil.prevVisibleLeaf(element) ?: return null
+        leaf = PsiTreeUtil.prevVisibleLeaf(leaf) ?: return null
+        val type = leaf.node?.elementType
+        if (type != DreamShaderTokenTypes.IDENTIFIER && type != DreamShaderTokenTypes.TYPE) return null
+        return leaf.text.trim().takeIf { it.isNotBlank() }
+    }
+
+    private fun collectCatalogEntries(element: PsiElement): List<DreamShaderMaterialExpressionInfo> {
+        val project = element.project
+        val settings = project.getService(
+            com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings::class.java
+        )
+        return DreamShaderMaterialExpressionManifest.catalogEntries(
+            project = project,
+            explicitManifestPath = settings?.state?.materialExpressionManifestPath
+        )
     }
 
     private fun ueBuiltinDocumentation(element: PsiElement, token: String): String? {

@@ -284,4 +284,69 @@ class DreamShaderCompletionSuggesterTest {
         assertTrue(labels.contains("Sine"))
         assertTrue(!labels.contains("Cosine"))
     }
+
+    @Test
+    fun `suggests UE members from catalog entries`() {
+        val text = """
+            Shader MySurface {
+                Graph {
+                    UE.Dr
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("UE.Dr") + "UE.Dr".length
+        val catalogEntries = listOf(
+            DreamShaderMaterialExpressionInfo(
+                namespace = "UE",
+                className = "UMaterialExpressionDreamOnly",
+                ueName = "DreamOnly",
+                signature = "UE.DreamOnly(Input=Value)",
+                source = DreamShaderMaterialExpressionSource.CONFIGURED_MANIFEST
+            )
+        )
+
+        val suggestions = DreamShaderCompletionSuggester.suggest(
+            text = text,
+            offset = offset,
+            materialExpressionCatalogEntries = catalogEntries
+        )
+        val dreamOnly = suggestions.firstOrNull { it.label == "DreamOnly" }
+
+        assertTrue(dreamOnly != null)
+        assertTrue(dreamOnly?.insertText == "DreamOnly(Input=Value)")
+        assertTrue(dreamOnly?.detail == "UE.DreamOnly")
+    }
+
+    @Test
+    fun `suggests namespaced catalog members`() {
+        val text = """
+            Shader MySurface {
+                Graph {
+                    Substrate.Sl
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("Substrate.Sl") + "Substrate.Sl".length
+        val catalogEntries = listOf(
+            DreamShaderMaterialExpressionInfo(
+                namespace = "Substrate",
+                className = "UMaterialExpressionSubstrateSlabBSDF",
+                ueName = "Slab",
+                signature = "Substrate.Slab(BaseColor=Color)",
+                outputType = "Substrate",
+                source = DreamShaderMaterialExpressionSource.CONFIGURED_MANIFEST
+            )
+        )
+
+        val suggestions = DreamShaderCompletionSuggester.suggest(
+            text = text,
+            offset = offset,
+            materialExpressionCatalogEntries = catalogEntries
+        )
+        val slab = suggestions.firstOrNull { it.label == "Slab" }
+
+        assertTrue(slab != null)
+        assertTrue(slab?.insertText == "Slab(BaseColor=Color)")
+        assertTrue(slab?.detail == "Substrate.Slab")
+    }
 }

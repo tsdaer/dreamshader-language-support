@@ -38,6 +38,82 @@ class DreamShaderManifestCompletionTest : BasePlatformTestCase() {
         assertTrue(labels.contains("ConfiguredNode"))
     }
 
+    fun testUsesConfiguredCatalogForUeMemberCompletion() {
+        val manifestPath = createTempManifest(
+            """
+            {
+              "expressions": [
+                {
+                  "namespace": "UE",
+                  "className": "UMaterialExpressionConfiguredCatalogNode",
+                  "ueName": "ConfiguredCatalogNode",
+                  "signature": "UE.ConfiguredCatalogNode(Input=Value)"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+        val settings = project.getService(DreamShaderProjectSettings::class.java)
+        settings.state.materialExpressionManifestPath = manifestPath.toString()
+
+        val text = """
+            Shader Main {
+                Graph {
+                    UE.Config
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("UE.Config") + "UE.Config".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(
+            text = text,
+            offset = offset,
+            materialExpressionCatalogEntries = DreamShaderMaterialExpressionManifest.catalogEntries(
+                project,
+                settings.state.materialExpressionManifestPath
+            )
+        ).map { it.label }.toSet()
+
+        assertTrue(labels.contains("ConfiguredCatalogNode"))
+    }
+
+    fun testExpressionClassCompletionUsesCatalogClassNameVariants() {
+        val manifestPath = createTempManifest(
+            """
+            {
+              "expressions": [
+                {
+                  "namespace": "UE",
+                  "className": "UMaterialExpressionConfiguredCatalogNode"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+        val settings = project.getService(DreamShaderProjectSettings::class.java)
+        settings.state.materialExpressionManifestPath = manifestPath.toString()
+
+        val text = """
+            Shader Main {
+                Graph {
+                    float x = UE.Expression(Class="MaterialExpressionCon");
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("\"MaterialExpressionCon") + "\"MaterialExpressionCon".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(
+            text = text,
+            offset = offset,
+            materialExpressionCatalogEntries = DreamShaderMaterialExpressionManifest.catalogEntries(
+                project,
+                settings.state.materialExpressionManifestPath
+            )
+        ).map { it.label }.toSet()
+
+        assertTrue(labels.contains("MaterialExpressionConfiguredCatalogNode"))
+    }
+
     fun testUeExpressionClassCompletionWithManifestAndFallback() {
         val projectBase = project.basePath ?: error("project base path is null")
         val bridgeManifestPath = Paths.get(projectBase, "Saved", "DreamShader", "Bridge", "material-expression-manifest.json")

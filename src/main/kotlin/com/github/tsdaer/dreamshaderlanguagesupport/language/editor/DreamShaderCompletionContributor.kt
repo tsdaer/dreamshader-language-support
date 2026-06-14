@@ -669,7 +669,8 @@ internal object DreamShaderCompletionSuggester {
         text: String,
         offset: Int,
         importCandidates: List<String> = emptyList(),
-        expressionClassCandidates: List<String> = emptyList()
+        expressionClassCandidates: List<String> = emptyList(),
+        materialExpressionCatalogEntries: List<DreamShaderMaterialExpressionInfo> = emptyList()
     ): List<DreamShaderCompletionItem> {
         val context = DreamShaderCompletionContextAnalyzer.analyze(text, offset)
         val suggestions = linkedMapOf<String, DreamShaderCompletionItem>()
@@ -692,7 +693,8 @@ internal object DreamShaderCompletionSuggester {
         val linePrefix = linePrefix(text, offset)
         val expressionClassContext = extractExpressionClassValueContext(text, offset)
         if (expressionClassContext != null) {
-            val candidates = expressionClassCandidates.ifEmpty {
+            val catalogClassCandidates = DreamShaderMaterialExpressionManifest.expressionClassNames(materialExpressionCatalogEntries)
+            val candidates = (expressionClassCandidates + catalogClassCandidates).distinct().ifEmpty {
                 DreamShaderCompletionData.defaultExpressionClasses
             }
             candidates
@@ -762,12 +764,38 @@ internal object DreamShaderCompletionSuggester {
             return suggestions.values.toList()
         }
 
-        val ueMemberPrefix = ueMemberPrefix(linePrefix)
-        if (ueMemberPrefix != null && isGraphLikeContext(context)) {
-            DreamShaderCompletionData.ueBuiltins
-                .filter { it.label.lowercase(Locale.ROOT).startsWith(ueMemberPrefix.lowercase(Locale.ROOT)) }
+        val namespaceMemberPrefix = namespaceMemberPrefix(linePrefix)
+        if (namespaceMemberPrefix != null && isGraphLikeContext(context)) {
+            val (namespace, memberPrefix) = namespaceMemberPrefix
+            catalogCompletionItems(materialExpressionCatalogEntries, namespace)
+                .filter { it.label.lowercase(Locale.ROOT).startsWith(memberPrefix.lowercase(Locale.ROOT)) }
                 .forEach(::add)
-            return suggestions.values.toList()
+            if (namespace.equals("UE", ignoreCase = true)) {
+                DreamShaderCompletionData.ueBuiltins
+                    .filter { it.label.lowercase(Locale.ROOT).startsWith(memberPrefix.lowercase(Locale.ROOT)) }
+                    .forEach(::add)
+            }
+            if (namespace.equals("UE", ignoreCase = true) || suggestions.isNotEmpty()) {
+                return suggestions.values.toList()
+            }
+        }
+
+        val catalogNamespaces = materialExpressionCatalogEntries
+            .map { it.namespace }
+            .filter { it.isNotBlank() && !it.equals("UE", ignoreCase = true) }
+            .distinctBy { it.lowercase(Locale.ROOT) }
+            .sortedBy { it.lowercase(Locale.ROOT) }
+
+        if (isGraphLikeContext(context)) {
+            catalogNamespaces
+                .map { namespace ->
+                    DreamShaderCompletionItem(
+                        label = namespace,
+                        insertText = "$namespace.",
+                        detail = "$namespace material graph namespace"
+                    )
+                }
+                .forEach(::add)
         }
 
         if (context.isTopLevel) {
@@ -871,9 +899,9 @@ internal object DreamShaderCompletionSuggester {
         return Regex("""\bBase\.([A-Za-z0-9_]*)$""").containsMatchIn(linePrefix)
     }
 
-    private fun ueMemberPrefix(linePrefix: String): String? {
-        val match = Regex("""\bUE\.([A-Za-z0-9_]*)$""").find(linePrefix) ?: return null
-        return match.groupValues[1]
+    private fun namespaceMemberPrefix(linePrefix: String): Pair<String, String>? {
+        val match = Regex("""\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z0-9_]*)$""").find(linePrefix) ?: return null
+        return match.groupValues[1] to match.groupValues[2]
     }
 
     private fun extractExpressionClassValueContext(
@@ -887,6 +915,36 @@ internal object DreamShaderCompletionSuggester {
         )
         val match = pattern.find(prefixText) ?: return null
         return DreamShaderExpressionClassValueContext(prefix = match.groupValues[1])
+    }
+
+    private fun catalogCompletionItems(
+        entries: List<DreamShaderMaterialExpressionInfo>,
+        namespace: String
+    ): List<DreamShaderCompletionItem> {
+        return entries
+            .asSequence()
+            .filter { it.namespace.equals(namespace, ignoreCase = true) }
+            .map { entry ->
+                DreamShaderCompletionItem(
+                    label = entry.ueName,
+                    insertText = catalogInsertText(entry),
+                    detail = entry.qualifiedName
+                )
+            }
+            .distinctBy { it.label.lowercase(Locale.ROOT) }
+            .toList()
+    }
+
+    private fun catalogInsertText(entry: DreamShaderMaterialExpressionInfo): String {
+        val signature = entry.signature?.trim().orEmpty()
+        val qualifiedPrefix = "${entry.namespace}.${entry.ueName}"
+        if (signature.startsWith(qualifiedPrefix)) {
+            return signature.removePrefix("${entry.namespace}.")
+        }
+        if (signature.startsWith("${entry.ueName}(")) {
+            return signature
+        }
+        return "${entry.ueName}(...)"
     }
 }
 
@@ -1007,9 +1065,9 @@ private fun readPackageManifestName(packageDir: VirtualFile): String? {
     return match.groupValues[1].trim().takeIf { it.isNotBlank() }
 }
 
-private fun collectMaterialExpressionClassCandidates(file: PsiFile): List<String> {
+private fun collectMaterialExpressionCatalogEntries(file: PsiFile): List<DreamShaderMaterialExpressionInfo> {
     val settings = file.project.getService(DreamShaderProjectSettings::class.java)
-    return DreamShaderMaterialExpressionManifest.expressionClassNames(
+    return DreamShaderMaterialExpressionManifest.catalogEntries(
         project = file.project,
         explicitManifestPath = settings?.state?.materialExpressionManifestPath
     )
@@ -1040,7 +1098,7 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                         text = file.text,
                         offset = parameters.offset,
                         importCandidates = collectProjectImportCandidates(file),
-                        expressionClassCandidates = collectMaterialExpressionClassCandidates(file)
+                        materialExpressionCatalogEntries = collectMaterialExpressionCatalogEntries(file)
                     )
                     suggestions.forEach { suggestion ->
                         val builder = LookupElementBuilder.create(suggestion.label)
