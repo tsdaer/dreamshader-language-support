@@ -13,7 +13,7 @@ Build a Rider plugin with feature parity to the VS Code DreamShaderLang extensio
 
 ## Active Version Plans
 
-- [`0.0.4`: catalog-based `UE.*` built-ins](plans/0.0.4-catalog-ue-builtins.md) - active implementation slice for moving Unreal material expression data out of scattered hard-coded tables and into a shared catalog.
+- [`0.0.4`: catalog-based `UE.*` built-ins](plans/0.0.4-catalog-ue-builtins.md) - all phases complete: Unreal material expression data moved out of scattered hard-coded tables into a shared catalog feeding completion / signature help / hover docs / diagnostics, plus a best-effort source scanner, source-root auto-detect, and Substrate / Layer coverage.
 
 ## Current Progress
 

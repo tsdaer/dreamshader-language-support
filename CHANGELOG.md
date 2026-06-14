@@ -11,6 +11,10 @@
 - Added catalog-based material expression manifest parsing for `UE.*` completions, including rich `expressions` entries, class-name fallback compatibility, and namespace-ready catalog data for future `Substrate.*` wrappers.
 - Routed `UE.<Name>(...)` and `Substrate.<Name>(...)` signature help through the shared material expression catalog, falling back to the built-in signature table when catalog data is incomplete.
 - Routed `UE.*` and `Substrate.*` hover documentation through the shared catalog while preserving user hover-documentation override priority.
+- Added a best-effort Unreal `UMaterialExpression` header scanner that emits catalog-compatible manifest JSON, wired into the catalog merge order ahead of the bundled fallback.
+- Added Unreal Engine source-root auto-detection (`.sln` / `.uproject` + registry lookups) with project settings for the source root, scan toggle, and scan cache path, exposed through the settings UI.
+- Added Substrate and Layer semantic diagnostics: `Base.FrontMaterial` / `Base.MaterialAttributes` binding exclusivity, tightened `ShaderLayer` / `ShaderLayerBlend` input/output shape rules, and rejection of `OutputType="Substrate"` on `UMaterialExpressionCustom`.
+- Extended the upstream `Examples.md` parse-coverage fixture with Substrate material, Substrate `ShaderFunction` / `VirtualFunction`, Substrate escape-hatch, and `ShaderLayer` / `ShaderLayerBlend` examples.
 
 ## [0.0.3] - 2026-05-30
 

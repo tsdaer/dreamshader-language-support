@@ -51,21 +51,105 @@ intellijPlatform {
         }
     }
 
-    fun parsePluginMetadataValue(block: String, key: String): String? {
+    // Extract a metadata value by key. Supports two shapes:
+    //   1) single line:  key: value
+    //   2) YAML-style block scalar:  key: |   (followed by more-indented lines)
+    // Block scalars keep blank lines (paragraph breaks) and strip the common indent.
+    fun extractPluginMetadataValue(block: String, key: String): String? {
+        val lines = block.lines()
         val prefix = "$key:"
-        return block.lineSequence()
-            .map { it.trim() }
-            .firstOrNull { it.startsWith(prefix) }
-            ?.substring(prefix.length)
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
+        for (i in lines.indices) {
+            val line = lines[i]
+            if (!line.trim().startsWith(prefix)) continue
+            val keyIndent = line.takeWhile { it == ' ' }.length
+            val after = line.trim().substring(prefix.length).trim()
+            if (after != "|" && after != "|-" && after != ">") {
+                return after.takeIf { it.isNotEmpty() }
+            }
+            // Block scalar: collect following blank or more-indented lines.
+            val collected = mutableListOf<String>()
+            var blockIndent = -1
+            var j = i + 1
+            while (j < lines.size) {
+                val l = lines[j]
+                if (l.isBlank()) {
+                    collected.add("")
+                } else {
+                    val indent = l.takeWhile { it == ' ' }.length
+                    if (indent <= keyIndent) break
+                    if (blockIndent < 0) blockIndent = indent
+                    collected.add(l.substring(minOf(blockIndent, indent)))
+                }
+                j++
+            }
+            while (collected.isNotEmpty() && collected.first().isBlank()) collected.removeAt(0)
+            while (collected.isNotEmpty() && collected.last().isBlank()) collected.removeAt(collected.size - 1)
+            return collected.joinToString("\n").takeIf { it.isNotEmpty() }
+        }
+        return null
+    }
+
+    // Render multi-line plain text into the HTML subset accepted by plugin.xml description:
+    //   blank-line-separated blocks -> <p> (or <ul> when every line starts with "- "),
+    //   single newlines -> <br>, `code` -> <code>, **bold** -> <b>.
+    fun renderPluginDescriptionHtml(raw: String): String {
+        fun escape(text: String): String = text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+
+        fun inline(text: String): String {
+            var rendered = escape(text)
+            rendered = Regex("`([^`]+)`").replace(rendered) { "<code>${it.groupValues[1]}</code>" }
+            rendered = Regex("\\*\\*([^*]+)\\*\\*").replace(rendered) { "<b>${it.groupValues[1]}</b>" }
+            return rendered
+        }
+
+        val html = StringBuilder()
+        for (paragraph in raw.trim().split(Regex("\\n[ \\t]*\\n"))) {
+            val nonBlank = paragraph.lines().map { it.trim() }.filter { it.isNotEmpty() }
+            if (nonBlank.isEmpty()) continue
+            // Within a block, group consecutive "- " lines into a <ul> and the rest into <p>,
+            // so a heading line followed by list items renders as <p>..</p><ul>..</ul>.
+            var idx = 0
+            while (idx < nonBlank.size) {
+                if (nonBlank[idx].startsWith("- ")) {
+                    html.append("<ul>")
+                    while (idx < nonBlank.size && nonBlank[idx].startsWith("- ")) {
+                        html.append("<li>${inline(nonBlank[idx].removePrefix("- ").trim())}</li>")
+                        idx++
+                    }
+                    html.append("</ul>")
+                } else {
+                    val textLines = mutableListOf<String>()
+                    while (idx < nonBlank.size && !nonBlank[idx].startsWith("- ")) {
+                        textLines.add(nonBlank[idx])
+                        idx++
+                    }
+                    html.append("<p>${textLines.joinToString("<br>") { inline(it) }}</p>")
+                }
+            }
+        }
+        return html.toString()
     }
 
     val pluginNameFromReadme = pluginMetadata.map { block ->
-        parsePluginMetadataValue(block, "name")
+        extractPluginMetadataValue(block, "name")
+            ?.lineSequence()
+            ?.firstOrNull { it.isNotBlank() }
+            ?.trim()
     }
-    val pluginDescriptionFromReadme = pluginMetadata.map { block ->
-        parsePluginMetadataValue(block, "description")
+    val pluginDescriptionHtmlFromReadme = pluginMetadata.map { block ->
+        val englishHtml = extractPluginMetadataValue(block, "description")
+            ?.let { renderPluginDescriptionHtml(it) }
+        val chineseHtml = extractPluginMetadataValue(block, "description_zh")
+            ?.let { renderPluginDescriptionHtml(it) }
+        // JetBrains plugin description has no native i18n, so render bilingual content
+        // as English + a separator + Chinese in a single field.
+        when {
+            englishHtml != null && chineseHtml != null -> "$englishHtml<hr/>$chineseHtml"
+            else -> englishHtml ?: chineseHtml
+        }
     }
 
     val secretsDirPath = providers.gradleProperty("jetbrainsSecretsDir")
@@ -112,8 +196,8 @@ intellijPlatform {
         }.orElse("com.github.tsdaer.dreamshaderlanguagesupport")
         name = pluginNameFromReadme.orElse("Dreamshader Language Extension")
         version = providers.gradleProperty("version")
-        description = pluginDescriptionFromReadme.map { metadataDescription ->
-            "<p>${metadataDescription ?: "DreamShaderLang language support for JetBrains Rider."}</p>"
+        description = pluginDescriptionHtmlFromReadme.map { html ->
+            html ?: "<p>DreamShaderLang language support for JetBrains Rider.</p>"
         }
         changeNotes = providers.fileContents(layout.projectDirectory.file("CHANGELOG.md")).asText.map { changelog ->
             "<pre>${changelog.trim()}</pre>"

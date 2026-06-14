@@ -1,6 +1,6 @@
 # DreamShaderLang 示例与模式
 
-本页提供可复制的 DreamShaderLang 片段。示例按常见工作流排列：最小材质、共享头文件、Package、函数调用、Graph 语法、UE 节点、`ShaderFunction` 和 `VirtualFunction`。
+本页提供可复制的 DreamShaderLang 片段。示例按常见工作流排列：最小材质、共享头文件、Package、函数调用、Graph 语法、UE 节点、`ShaderFunction`、`VirtualFunction`、Substrate 材质，以及 `ShaderLayer` / `ShaderLayerBlend`。
 
 ## 1. 最小材质
 
@@ -259,4 +259,128 @@ Graph = {
 ```
 
 `Asset` 支持 `Path(Game, "...")`、`Path(Engine, "...")`、`Path(Plugin.PluginName, "...")` / `Path(Plugins.PluginName, "...")`，也支持完整 Unreal object path。Material Function 资产右键菜单和 Material Function 编辑器工具栏里的 `DreamShader` 下拉菜单可以复制定义、创建 `.dsh` 定义文件，并复制 `Graph` 调用示例。
+
+## 13. Substrate 材质
+
+绑定 `Base.FrontMaterial` 时生成器会自动设置 `ShadingModel="Substrate"`。不要在同一个 `Shader` 中同时绑定 `Base.FrontMaterial` 和 `Base.MaterialAttributes`。
+
+```c
+Shader(Name="DreamMaterials/M_Substrate")
+{
+    Properties = {
+        vec3 BaseColor = vec3(0.8, 0.1, 0.1);
+        float Roughness = 0.4;
+    }
+
+    Outputs = {
+        Substrate Front;
+        Base.FrontMaterial = Front;
+    }
+
+    Graph = {
+        Front = Substrate.Slab(
+            DiffuseAlbedo=BaseColor,
+            Roughness=Roughness);
+    }
+}
+```
+
+## 14. Substrate `ShaderFunction` / `.dsf`
+
+`Substrate` 可作为 `ShaderFunction` 的输入输出类型。
+
+```c
+ShaderFunction(Name="Functions/F_SubstrateTint")
+{
+    Inputs = {
+        Substrate InMaterial;
+        vec3 InTint;
+    }
+
+    Outputs = {
+        Substrate OutMaterial;
+    }
+
+    Graph = {
+        OutMaterial = InMaterial;
+    }
+}
+```
+
+## 15. Substrate `VirtualFunction`
+
+```c
+VirtualFunction(Name="SubstrateBlend")
+{
+    Options = {
+        Asset = Path(Plugins.MoonToon, "MaterialFunctions/Substrate/Blend");
+    }
+
+    Inputs = {
+        Substrate A;
+        Substrate B;
+    }
+
+    Outputs = {
+        Substrate Result;
+    }
+}
+```
+
+## 16. Substrate escape hatch via `UE.Expression`
+
+`UMaterialExpressionCustom` 不支持 `OutputType="Substrate"`，但其它表达式可以作为 escape hatch。
+
+```c
+Graph = {
+    Substrate slab = UE.Expression(
+        Class="MaterialExpressionSubstrateSlabBSDF",
+        OutputType="Substrate");
+
+    Base.FrontMaterial = slab;
+}
+```
+
+## 17. `ShaderLayer`
+
+`ShaderLayer` 最多一个输入，且若存在必须是 `MaterialAttributes`；必须刚好声明一个 `MaterialAttributes` 输出。
+
+```c
+ShaderLayer(Name="Layers/L_Base")
+{
+    Inputs = {
+        MaterialAttributes In;
+    }
+
+    Outputs = {
+        MaterialAttributes Out;
+    }
+
+    Graph = {
+        Out = In;
+    }
+}
+```
+
+## 18. `ShaderLayerBlend`
+
+`ShaderLayerBlend` 必须刚好两个 `MaterialAttributes` 输入，并声明一个 `MaterialAttributes` 输出。
+
+```c
+ShaderLayerBlend(Name="Layers/LB_Mix")
+{
+    Inputs = {
+        MaterialAttributes Bottom;
+        MaterialAttributes Top;
+    }
+
+    Outputs = {
+        MaterialAttributes Out;
+    }
+
+    Graph = {
+        Out = Bottom;
+    }
+}
+```
 
