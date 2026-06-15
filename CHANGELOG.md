@@ -4,17 +4,6 @@
 
 ## [Unreleased]
 
-### Added
-
-- Added DreamShader native code style settings and wired the formatter to language-specific options for section blank lines and `::` spacing.
-- Added native File and Code Templates, including `New | DreamShader Material`, `DreamShader Function`, and `DreamShader Header` actions plus reusable graph-section and texture-sample code templates.
-- Added DreamShader gutter markers for imports, top-level declarations, and Bridge diagnostics.
-- Added editor platform integrations: quote handling, include/dependency provider for `import "..."`, Copy Reference qualified names, breadcrumbs, and inline color previews for constant `float3` / `float4` / `vec3` / `vec4` values.
-
-### Changed
-
-- Split parameter inlay hints from Code Vision settings with a new `enableInlayParameterHints` project option; disabling Code Vision no longer hides parameter hints.
-
 ## [0.0.5] - 2026-06-15
 
 ### Added

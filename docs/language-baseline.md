@@ -2,8 +2,6 @@
 
 Stable language-reference notes used by this Rider plugin. Refresh this file when upstream DreamShader language behavior changes.
 
-Active upstream-sync planning for `0.0.4` lives in [`plans/0.0.4-catalog-ue-builtins.md`](plans/0.0.4-catalog-ue-builtins.md). Move stable, implemented language behavior back here after the version plan lands.
-
 ## DreamShaderLang Syntax Baseline
 
 Primary language reference (upstream):
@@ -22,12 +20,18 @@ Examples conformance snapshot:
 - Upstream doc title: `DreamShaderLang 示例与模式`
 - Test mapping: `DreamShaderUpstreamExamplesTest.testUpstreamExamplesMarkdownCodeBlocksAreParsable()`
 
+0.0.4 upstream sync snapshot:
+- Checked on `2026-06-11`
+- Upstream `TypeDreamMoon/DreamShader` main: `406cefb960e81ff2c0b9d0138a7a05c656085944`
+- Relevant upstream changes: Substrate material generation (`caa00e8`), `.dsf` layer functions (`c8e65f9`), and `VolumeTexture` (`fef5feb`)
+- Synced docs: `Docs/LanguageReference.md`, `Docs/Examples.md`, `Docs/Packages.md`
+
 This section summarizes the language rules that this Rider plugin should follow.
 
 ### 1. File Roles and Constraints
 
 - `.dsm`: material-oriented source; usually contains `Shader(...)` and may include shared helpers/imports.
-- `.dsf`: function asset source; may contain `ShaderFunction(...)`, `Function`, `GraphFunction`, `VirtualFunction`, imports.
+- `.dsf`: function/layer asset source; may contain `ShaderFunction(...)`, `ShaderLayer(...)`, `ShaderLayerBlend(...)`, `Function`, `GraphFunction`, `VirtualFunction`, imports.
 - `.dsh`: shared header source; usually shared `Function`/`GraphFunction`/`Namespace`/`VirtualFunction`.
 
 Key constraints to enforce:
@@ -45,7 +49,10 @@ Expected declaration families:
 
 Important semantics to preserve:
 - `Root="..."` path semantics on asset declarations (e.g. `Game`, `Plugin.<Name>`, optional subfolders).
-- `ShaderLayer` / `ShaderLayerBlend` output-shape requirements (material attributes output constraints).
+- `ShaderLayer` / `ShaderLayerBlend` input/output-shape requirements:
+  - `ShaderLayer` may have at most one input, and if present it must be `MaterialAttributes`.
+  - `ShaderLayerBlend` must have exactly two inputs, and both must be `MaterialAttributes`.
+  - Both declaration kinds must declare exactly one `MaterialAttributes` output.
 - `VirtualFunction` participates in call signatures but does not generate/overwrite assets.
 
 ### 3. Section Model
@@ -73,10 +80,20 @@ Graph-level constructs expected by reference:
 - Calls to `GraphFunction(...)` and `Namespace::GraphFunction(...)`.
 - Calls to `ShaderFunction(...)` / `VirtualFunction(...)`.
 - `UE.*` builtins for Unreal material node creation.
+- `Substrate.*` wrappers for Substrate graph construction.
 
 Function-level semantics:
 - `Function` supports `in`/`out` style parameters; `out` arguments are explicit at call sites.
 - `GraphFunction` compiles as custom-node style reusable graph helper and can consume `UE.*` sources.
+
+Substrate semantics:
+- `Substrate` is a first-class type for `ShaderFunction`, `.dsf`, and `VirtualFunction` inputs/outputs.
+- `Shader` declarations can bind `Base.FrontMaterial`; upstream generation treats this as Substrate shading.
+- `Base.FrontMaterial` and `Base.MaterialAttributes` should not both be bound in the same `Shader`.
+- Supported wrapper namespace members include `Substrate.Unlit`, `Substrate.Slab`, `Substrate.VerticalLayer`, `Substrate.ConvertMaterialAttributes`, `Substrate.TransmittanceToMFP`, `Substrate.MetalnessToDiffuseAlbedoF0`, `Substrate.HazinessToSecondaryRoughness`, and `Substrate.ThinFilm`.
+- `UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate", ...)` is a supported Substrate escape hatch.
+- `UMaterialExpressionCustom` does not support `OutputType="Substrate"`.
+- `Substrate` values should not participate in arithmetic, vector construction, swizzle, or `if` branch merging. Rider diagnostics for these expression-level type rules are deferred until expression type inference is mature enough to avoid false positives.
 
 ### 5. Import, Path, and Type System
 
@@ -91,6 +108,8 @@ Type system expectations:
 - Scalar/vector/matrix families.
 - GLSL-style aliases (`vec*`, etc.) alongside Unreal/HLSL-like types.
 - Texture/sampler-related types.
+- `Substrate`.
+- `VolumeTexture` / `Texture3D`; `const TextureCube`, `const Texture2DArray`, and `const VolumeTexture` require explicit default assets.
 - Compatibility handling for removed/legacy aliases where applicable.
 
 ### 6. Known Language Limits (From Upstream Reference)
@@ -108,8 +127,8 @@ Already implemented in this plugin:
 - Top-level declaration and section tokenization/parsing foundations.
 - File-role declaration constraints baseline (`.dsf` uses top-level declaration whitelist; `.dsm` disallow top-level `ShaderFunction`/`ShaderLayer`/`ShaderLayerBlend`; `.dsh` disallow asset-generating top-level declarations).
 - Declaration section-shape diagnostics baseline with alias/compat behavior (`Results` compatibility for `ShaderFunction`/`VirtualFunction`, declaration-specific allowed/required section checks, duplicate section detection).
-- Context-aware completion for sections, types, settings values, `UE.*`, HLSL intrinsics, imports.
-- Navigation/symbols/folding/references/hover/signature help basics.
+- Context-aware completion for sections, types, settings values, catalog-driven `UE.*` / `Substrate.*`, HLSL intrinsics, imports.
+- Navigation/symbols/folding/references/hover/signature help basics, including shared catalog-backed docs/signatures for `UE.*` / `Substrate.*`.
 
 Current boundary and long-term parity notes:
 - `Partial`: section-shape diagnostics cover current declaration-aware baseline, but full parity for all upstream edge cases/future syntax revisions is an ongoing alignment target.
@@ -125,6 +144,9 @@ Current boundary and long-term parity notes:
   - `2026-05-30 update`: leading-slash quoted paths now extract root by first segment (`"/Project/..."` -> `Project`), preventing false `Game` classification and reporting correct unknown-root diagnostics.
   - `2026-05-30 update`: `Path(...)` asset-path validation now requires a non-empty object segment argument (for example rejects `Path(Game)` and requires at least root + object path).
   - `2026-05-30 update`: when `Path(...)` is missing object segment (`Path(rootOnly)`), diagnostics now provide `Complete Path(...) with object segment` quick-fix (auto-completes to `Path(<Root>, Textures/T_AutoAsset)` baseline).
+  - `2026-06-11 update`: `Base.FrontMaterial` is a known material output member and conflicts with `Base.MaterialAttributes` when both are bound in one declaration.
+  - `2026-06-11 update`: `ShaderLayer` and `ShaderLayerBlend` input-shape diagnostics follow upstream's stricter `MaterialAttributes` rules.
+  - `2026-06-11 update`: `UE.Expression(..., OutputType="Substrate")` rejects `Custom` / `MaterialExpressionCustom` / `UMaterialExpressionCustom`.
 - `Partial`: parser is intentionally permissive for IDE resilience; full strict Graph grammar validation is not the current parser mode.
 - `Implemented` (baseline): formatter handles indentation/spacing/braces/section layout; fine-grained parity with all DreamShader authoring conventions may continue to evolve.
 - `Implemented` (baseline): semantic token classification and inlay hints are available and tested; exact upstream VS Code parity is treated as iterative polish, not a release blocker.

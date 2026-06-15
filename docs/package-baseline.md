@@ -2,7 +2,7 @@
 
 Package-system behavior and Rider parity notes. Keep package import, install, index, and authoring rules here instead of in the README.
 
-Version-specific package impacts should first be captured in [`plans/`](plans/README.md), then moved here once they become stable behavior.
+Version-specific package impacts should first be captured in `roadmap.md` or a dedicated feature document, then moved here once they become stable behavior.
 
 ## DreamShader Package Baseline
 

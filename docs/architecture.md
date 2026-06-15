@@ -83,10 +83,24 @@ Design goal:
   - reads/normalizes `diagnostics.json`
   - exposes immutable snapshots
 - `DreamShaderMaterialExpressionManifest`
-  - completion data merge order:
+  - parses legacy `classes` payloads and rich `expressions` payloads into catalog entries.
+  - derives missing `ueName`, signature, namespace, and neutral descriptions when manifest data is partial.
+- `DreamShaderMaterialExpressionCatalog`
+  - shared data source for `UE.*` and `Substrate.*` completion, signature help, hover docs, and expression-class diagnostics.
+  - supports `namespace + member` lookup and preserves `expressionClassNames()` compatibility for older call sites.
+  - material expression data merge order:
     1. explicit settings path
     2. Bridge manifest
-    3. bundled fallback resource
+    3. scanned Unreal source cache
+    4. bundled fallback resource
+    5. migration fallback built-ins
+- `DreamShaderMaterialExpressionScanner`
+  - best-effort Unreal header scanner for `UMaterialExpression*` classes.
+  - extracts display names, input-like properties, nearby comments, and optional output type data when easily available.
+  - writes manifest-compatible JSON so scanner output, Bridge data, explicit manifests, and bundled data use the same parser path.
+- `DreamShaderUnrealSourceLocator`
+  - auto-detects Unreal source roots from generated `.sln` references or `.uproject` `EngineAssociation`.
+  - prefers narrow material-expression source directories under `Engine/Source` when available.
 
 ### 7. Package Index Data Layer (M5 Base)
 
@@ -162,7 +176,7 @@ This plugin currently follows a layered architecture:
 5. Bridge integration
 - `DreamShaderBridgePathResolver` resolves project root and Bridge folder with explicit-setting-first fallback.
 - `DreamShaderBridgeDiagnosticsRepository` loads and normalizes Bridge diagnostics snapshots.
-- `DreamShaderMaterialExpressionManifest` merges expression classes from explicit path, Bridge manifest, and bundled fallback.
+- `DreamShaderMaterialExpressionCatalog` merges explicit manifests, Bridge manifests, scanned cache data, bundled fallback data, and migration fallback built-ins for shared `UE.*` / `Substrate.*` editor intelligence.
 
 6. Package index data layer (M5 completed)
 - `DreamShaderPackageIndexLoader` resolves package index sources (multi-source, legacy single-source, default upstream).
@@ -171,9 +185,8 @@ This plugin currently follows a layered architecture:
 
 7. Project-level persistent settings
 - `DreamShaderProjectSettings` stores project-scoped configuration for Bridge and package tooling.
-- Current keys: `projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`, `outArgumentPlaceholderSuffix`, `preferredImportExtension`, `autoUpdatePreferredImportExtension`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `packageStoreGitHubToken`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`.
+- Current keys: `projectRoot`, `materialExpressionManifestPath`, `unrealEngineSourceRoot`, `materialExpressionScanEnabled`, `materialExpressionScanCachePath`, `showStatusBar`, `enableCodeLens`, `outArgumentPlaceholderSuffix`, `preferredImportExtension`, `autoUpdatePreferredImportExtension`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `packageStoreGitHubToken`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`.
 
 Related docs:
 - [`code-map.md`](code-map.md) for source entry points.
 - [`roadmap.md`](roadmap.md) for milestone status and implementation planning.
-- [`plans/0.0.4-catalog-ue-builtins.md`](plans/0.0.4-catalog-ue-builtins.md) for the current scanned/catalog-based `UE.*` built-in completion plan.

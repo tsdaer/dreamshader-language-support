@@ -2,16 +2,8 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
-import com.intellij.application.options.CodeStyleAbstractConfigurable
-import com.intellij.application.options.CodeStyleAbstractPanel
-import com.intellij.application.options.IndentOptionsEditor
-import com.intellij.application.options.SmartIndentOptionsEditor
-import com.intellij.application.options.TabbedLanguageCodeStylePanel
-import com.intellij.psi.codeStyle.CodeStyleSettings
-import com.intellij.psi.codeStyle.CodeStyleSettingsProvider
-import com.intellij.psi.codeStyle.CodeStyleSettingsCustomizable
-import com.intellij.psi.codeStyle.CustomCodeStyleSettings
-import com.intellij.psi.codeStyle.LanguageCodeStyleSettingsProvider
+import com.intellij.application.options.*
+import com.intellij.psi.codeStyle.*
 
 class DreamShaderCodeStyleSettingsProvider : CodeStyleSettingsProvider() {
     override fun createCustomSettings(settings: CodeStyleSettings): CustomCodeStyleSettings {
@@ -47,6 +39,8 @@ class DreamShaderLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsPr
         consumer: CodeStyleSettingsCustomizable,
         settingsType: SettingsType
     ) {
+        val customizableOptions = CodeStyleSettingsCustomizableOptions.getInstance()
+
         when (settingsType) {
             SettingsType.SPACING_SETTINGS -> {
                 consumer.showStandardOptions(
@@ -68,7 +62,7 @@ class DreamShaderLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsPr
                     DreamShaderCodeStyleSettings::class.java,
                     "SPACE_AROUND_DOUBLE_COLON",
                     DreamShaderBundle.message("codeStyle.spaceAroundDoubleColon"),
-                    CodeStyleSettingsCustomizable.SPACES_OTHER
+                    customizableOptions.SPACES_OTHER
                 )
             }
             SettingsType.BLANK_LINES_SETTINGS -> {
@@ -76,7 +70,7 @@ class DreamShaderLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsPr
                     DreamShaderCodeStyleSettings::class.java,
                     "BLANK_LINES_BETWEEN_SECTIONS",
                     DreamShaderBundle.message("codeStyle.blankLinesBetweenSections"),
-                    CodeStyleSettingsCustomizable.BLANK_LINES
+                    customizableOptions.BLANK_LINES
                 )
             }
             SettingsType.WRAPPING_AND_BRACES_SETTINGS -> {

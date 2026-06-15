@@ -13,9 +13,9 @@ Build a Rider plugin with feature parity to the VS Code DreamShaderLang extensio
 Current parity baseline: VS Code DreamShaderLang extension v1.5.3.
 
 
-## Active Version Plans
+## Completed Version Archives
 
-- [`0.0.4`: catalog-based `UE.*` built-ins](plans/0.0.4-catalog-ue-builtins.md) - all phases complete: Unreal material expression data moved out of scattered hard-coded tables into a shared catalog feeding completion / signature help / hover docs / diagnostics, plus a best-effort source scanner, source-root auto-detect, and Substrate / Layer coverage.
+- `0.0.4`: catalog-based `UE.*` / `Substrate.*` built-ins completed. Unreal material expression data moved out of scattered hard-coded tables into a shared catalog feeding completion, signature help, hover docs, and diagnostics. The release also added best-effort Unreal source scanning, source-root auto-detect, `OutputType="Substrate"` support, and stricter Substrate / Layer diagnostics.
 
 ## Current Progress
 
