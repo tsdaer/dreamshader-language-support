@@ -100,6 +100,21 @@ internal object DreamShaderBridgePathResolver {
         return normalizePath(File(root, BRIDGE_RELATIVE_PATH).path)
     }
 
+    fun resolvePreviewFilePath(project: Project, activeFile: VirtualFile?): String? {
+        val bridge = resolveBridgeDirectory(project, activeFile) ?: return null
+        return normalizePath(File(bridge, "preview.json").path)
+    }
+
+    fun resolvePreviewDirectory(project: Project, activeFile: VirtualFile?): String? {
+        val bridge = resolveBridgeDirectory(project, activeFile) ?: return null
+        return normalizePath(File(bridge, "Preview").path)
+    }
+
+    fun resolveRequestDirectory(project: Project, activeFile: VirtualFile?): String? {
+        val bridge = resolveBridgeDirectory(project, activeFile) ?: return null
+        return normalizePath(File(bridge, "Requests").path)
+    }
+
     private fun normalizePath(path: String): String {
         return path.replace('\\', '/').trimEnd('/')
     }

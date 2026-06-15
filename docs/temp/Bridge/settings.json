@@ -1,0 +1,302 @@
+{
+	"schema": "DreamShader.Settings",
+	"version": 1,
+	"generatedAt": "2026-06-14T07:08:06.446Z",
+	"mappings":
+	{
+		"ShadingModel": [
+			{
+				"alias": "Clear Coat",
+				"value": 4,
+				"name": "MSM_ClearCoat",
+				"displayName": "透明图层"
+			},
+			{
+				"alias": "ClearCoat",
+				"value": 4,
+				"name": "MSM_ClearCoat",
+				"displayName": "透明图层"
+			},
+			{
+				"alias": "Cloth",
+				"value": 8,
+				"name": "MSM_Cloth",
+				"displayName": "布料"
+			},
+			{
+				"alias": "Default Lit",
+				"value": 1,
+				"name": "MSM_DefaultLit",
+				"displayName": "默认光照"
+			},
+			{
+				"alias": "DefaultLit",
+				"value": 1,
+				"name": "MSM_DefaultLit",
+				"displayName": "默认光照"
+			},
+			{
+				"alias": "Eye",
+				"value": 9,
+				"name": "MSM_Eye",
+				"displayName": "眼睛"
+			},
+			{
+				"alias": "Hair",
+				"value": 7,
+				"name": "MSM_Hair",
+				"displayName": "头发"
+			},
+			{
+				"alias": "Lit",
+				"value": 1,
+				"name": "MSM_DefaultLit",
+				"displayName": "默认光照"
+			},
+			{
+				"alias": "Preintegrated Skin",
+				"value": 3,
+				"name": "MSM_PreintegratedSkin",
+				"displayName": "预整合蒙皮"
+			},
+			{
+				"alias": "PreintegratedSkin",
+				"value": 3,
+				"name": "MSM_PreintegratedSkin",
+				"displayName": "预整合蒙皮"
+			},
+			{
+				"alias": "Single Layer Water",
+				"value": 10,
+				"name": "MSM_SingleLayerWater",
+				"displayName": "单层水面"
+			},
+			{
+				"alias": "SingleLayerWater",
+				"value": 10,
+				"name": "MSM_SingleLayerWater",
+				"displayName": "单层水面"
+			},
+			{
+				"alias": "Strata",
+				"value": 12,
+				"name": "MSM_Strata",
+				"displayName": "Substrate"
+			},
+			{
+				"alias": "Substrate",
+				"value": 12,
+				"name": "MSM_Strata",
+				"displayName": "Substrate"
+			},
+			{
+				"alias": "Subsurface",
+				"value": 2,
+				"name": "MSM_Subsurface",
+				"displayName": "次表面"
+			},
+			{
+				"alias": "Subsurface Profile",
+				"value": 5,
+				"name": "MSM_SubsurfaceProfile",
+				"displayName": "次表面轮廓"
+			},
+			{
+				"alias": "SubsurfaceProfile",
+				"value": 5,
+				"name": "MSM_SubsurfaceProfile",
+				"displayName": "次表面轮廓"
+			},
+			{
+				"alias": "Thin Translucent",
+				"value": 11,
+				"name": "MSM_ThinTranslucent",
+				"displayName": "薄半透明"
+			},
+			{
+				"alias": "ThinTranslucent",
+				"value": 11,
+				"name": "MSM_ThinTranslucent",
+				"displayName": "薄半透明"
+			},
+			{
+				"alias": "Two Sided Foliage",
+				"value": 6,
+				"name": "MSM_TwoSidedFoliage",
+				"displayName": "双面植物"
+			},
+			{
+				"alias": "TwoSidedFoliage",
+				"value": 6,
+				"name": "MSM_TwoSidedFoliage",
+				"displayName": "双面植物"
+			},
+			{
+				"alias": "Unlit",
+				"value": 0,
+				"name": "MSM_Unlit",
+				"displayName": "无光照"
+			}
+		],
+		"BlendMode": [
+			{
+				"alias": "Additive",
+				"value": 3,
+				"name": "BLEND_Additive",
+				"displayName": "Additive"
+			},
+			{
+				"alias": "AlphaComposite",
+				"value": 5,
+				"name": "BLEND_AlphaComposite",
+				"displayName": "透明度合成（预乘透明度）"
+			},
+			{
+				"alias": "AlphaHoldout",
+				"value": 6,
+				"name": "BLEND_AlphaHoldout",
+				"displayName": "透明度维持"
+			},
+			{
+				"alias": "Cutout",
+				"value": 1,
+				"name": "BLEND_Masked",
+				"displayName": "已遮罩"
+			},
+			{
+				"alias": "Masked",
+				"value": 1,
+				"name": "BLEND_Masked",
+				"displayName": "已遮罩"
+			},
+			{
+				"alias": "Modulate",
+				"value": 4,
+				"name": "BLEND_Modulate",
+				"displayName": "调制"
+			},
+			{
+				"alias": "Opaque",
+				"value": 0,
+				"name": "BLEND_Opaque",
+				"displayName": "不透明"
+			},
+			{
+				"alias": "Premultiplied",
+				"value": 5,
+				"name": "BLEND_AlphaComposite",
+				"displayName": "透明度合成（预乘透明度）"
+			},
+			{
+				"alias": "PremultipliedAlpha",
+				"value": 5,
+				"name": "BLEND_AlphaComposite",
+				"displayName": "透明度合成（预乘透明度）"
+			},
+			{
+				"alias": "Translucent",
+				"value": 2,
+				"name": "BLEND_Translucent",
+				"displayName": "半透明"
+			},
+			{
+				"alias": "Transparent",
+				"value": 2,
+				"name": "BLEND_Translucent",
+				"displayName": "半透明"
+			}
+		],
+		"MaterialDomain": [
+			{
+				"alias": "Decal",
+				"value": 1,
+				"name": "MD_DeferredDecal",
+				"displayName": "延迟贴花"
+			},
+			{
+				"alias": "DeferredDecal",
+				"value": 1,
+				"name": "MD_DeferredDecal",
+				"displayName": "延迟贴花"
+			},
+			{
+				"alias": "Light Function",
+				"value": 2,
+				"name": "MD_LightFunction",
+				"displayName": "光照函数"
+			},
+			{
+				"alias": "LightFunction",
+				"value": 2,
+				"name": "MD_LightFunction",
+				"displayName": "光照函数"
+			},
+			{
+				"alias": "Post Process",
+				"value": 4,
+				"name": "MD_PostProcess",
+				"displayName": "后期处理"
+			},
+			{
+				"alias": "PostProcess",
+				"value": 4,
+				"name": "MD_PostProcess",
+				"displayName": "后期处理"
+			},
+			{
+				"alias": "Runtime Virtual Texture",
+				"value": 6,
+				"name": "MD_RuntimeVirtualTexture",
+				"displayName": "MD运行时虚拟纹理"
+			},
+			{
+				"alias": "RuntimeVirtualTexture",
+				"value": 6,
+				"name": "MD_RuntimeVirtualTexture",
+				"displayName": "MD运行时虚拟纹理"
+			},
+			{
+				"alias": "Surface",
+				"value": 0,
+				"name": "MD_Surface",
+				"displayName": "表面"
+			},
+			{
+				"alias": "UI",
+				"value": 5,
+				"name": "MD_UI",
+				"displayName": "用户界面"
+			},
+			{
+				"alias": "User Interface",
+				"value": 5,
+				"name": "MD_UI",
+				"displayName": "用户界面"
+			},
+			{
+				"alias": "UserInterface",
+				"value": 5,
+				"name": "MD_UI",
+				"displayName": "用户界面"
+			},
+			{
+				"alias": "Virtual Texture",
+				"value": 6,
+				"name": "MD_RuntimeVirtualTexture",
+				"displayName": "MD运行时虚拟纹理"
+			},
+			{
+				"alias": "VirtualTexture",
+				"value": 6,
+				"name": "MD_RuntimeVirtualTexture",
+				"displayName": "MD运行时虚拟纹理"
+			},
+			{
+				"alias": "Volume",
+				"value": 3,
+				"name": "MD_Volume",
+				"displayName": "体积"
+			}
+		]
+	}
+}

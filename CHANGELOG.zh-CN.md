@@ -4,6 +4,14 @@
 
 ## [未发布]
 
+## [0.0.5] - 2026-06-15
+
+### 新增
+
+- 新增对齐 VS Code 1.5.3 的材质预览能力：通过 DreamShader Bridge 文件传输写出预览请求、读取预览结果与图片，提供右侧 ToolWindow、跟随编辑器与自动刷新延迟设置。
+- 新增贴图采样与噪声材质 `.dsm` 模板操作。
+- 新增“分步创建包”向导，支持填写包元数据并选择是否生成示例材质。
+
 ## [0.0.4] - 2026-06-14
 
 ### 新增
@@ -87,7 +95,8 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
-[未发布]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...HEAD
+[未发布]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.5...HEAD
+[0.0.5]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...0.0.5
 [0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4
 [0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3
 [0.0.2]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.1...0.0.2

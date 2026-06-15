@@ -1,5 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.preview.DreamShaderPreviewListener
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -40,6 +41,9 @@ internal class DreamShaderBridgeFileWatcher : ProjectActivity {
         val path = event.path.replace('\\', '/')
         if (!path.contains("/$BRIDGE_RELATIVE_DIR/")) return false
         val fileName = path.substringAfterLast('/')
+        if (path.contains("/$BRIDGE_RELATIVE_DIR/Preview/") && fileName.endsWith(".png", ignoreCase = true)) {
+            return true
+        }
         return fileName in BRIDGE_FILE_NAMES
     }
 
@@ -52,6 +56,7 @@ internal class DreamShaderBridgeFileWatcher : ProjectActivity {
             project.getService(DreamShaderBridgeDiagnosticsRepository::class.java)?.refresh(activeFile)
             DaemonCodeAnalyzer.getInstance(project).restart()
             WindowManager.getInstance().getStatusBar(project)?.updateWidget(WIDGET_ID)
+            project.messageBus.syncPublisher(DreamShaderPreviewListener.TOPIC).previewBridgeChanged()
         }
     }
 
@@ -62,7 +67,8 @@ internal class DreamShaderBridgeFileWatcher : ProjectActivity {
             "diagnostics.json",
             "settings.json",
             "material-expressions.json",
-            "substrate-builtins.json"
+            "substrate-builtins.json",
+            "preview.json"
         )
     }
 }
