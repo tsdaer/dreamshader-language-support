@@ -1,4 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
 import java.util.regex.Pattern
 import java.util.*
 
@@ -10,7 +11,8 @@ import java.util.*
  */
 data class DreamShaderCallSignature(
     val presentableText: String,
-    val parameterRanges: List<IntRange>
+    val parameterRanges: List<IntRange>,
+    val parameterNames: List<String> = emptyList()
 )
 
 /**
@@ -20,6 +22,36 @@ data class DreamShaderCallContext(
     val functionName: String,
     val nameStartOffset: Int,
     val leftParenOffset: Int
+)
+
+/**
+ * A parsed call argument shared by parameter info and inlay hints.
+ */
+data class DreamShaderCallArgument(
+    val text: String,
+    val startOffset: Int,
+    val endOffset: Int,
+    val isNamed: Boolean
+)
+
+/**
+ * A complete call-site shape around an invocation.
+ */
+data class DreamShaderParsedCall(
+    val functionName: String,
+    val nameStartOffset: Int,
+    val nameEndOffset: Int,
+    val leftParenOffset: Int,
+    val rightParenOffset: Int?,
+    val arguments: List<DreamShaderCallArgument>
+)
+
+/**
+ * A callable declaration discovered from DreamShader source text.
+ */
+data class DreamShaderDeclaredCallable(
+    val name: String,
+    val signature: DreamShaderCallSignature
 )
 
 /**
@@ -178,8 +210,18 @@ object DreamShaderSignatureHelpAnalyzer {
         "${entry.qualifiedName}(...)"
 
     fun findCallContext(text: String, offset: Int): DreamShaderCallContext? {
+        val call = findEnclosingCall(text, offset) ?: return null
+        return DreamShaderCallContext(
+            functionName = call.functionName,
+            nameStartOffset = call.nameStartOffset,
+            leftParenOffset = call.leftParenOffset
+        )
+    }
+
+    fun findEnclosingCall(text: String, offset: Int): DreamShaderParsedCall? {
         if (text.isEmpty()) return null
         val safeOffset = offset.coerceIn(0, text.length)
+        if (isOffsetInCommentOrString(text, safeOffset)) return null
         var depth = 0
         var i = safeOffset - 1
 
@@ -190,10 +232,17 @@ object DreamShaderSignatureHelpAnalyzer {
                     if (depth == 0) {
                         val nameRange = findFunctionNameRange(text, i) ?: return null
                         val functionName = text.substring(nameRange.first, nameRange.last + 1)
-                        return DreamShaderCallContext(
+                        if (isDeclarationHead(text, nameRange.first)) return null
+                        val rightParen = findMatchingRightParen(text, i)
+                        if (rightParen != null && safeOffset > rightParen + 1) return null
+                        val argumentEnd = (rightParen ?: safeOffset).coerceAtLeast(i + 1)
+                        return DreamShaderParsedCall(
                             functionName = functionName,
                             nameStartOffset = nameRange.first,
-                            leftParenOffset = i
+                            nameEndOffset = nameRange.last + 1,
+                            leftParenOffset = i,
+                            rightParenOffset = rightParen,
+                            arguments = parseArguments(text, i + 1, argumentEnd)
                         )
                     }
                     depth--
@@ -202,6 +251,52 @@ object DreamShaderSignatureHelpAnalyzer {
             i--
         }
         return null
+    }
+
+    fun findCallAtName(text: String, nameStartOffset: Int, nameEndOffset: Int): DreamShaderParsedCall? {
+        if (text.isEmpty()) return null
+        val safeStart = nameStartOffset.coerceIn(0, text.length)
+        val safeEnd = nameEndOffset.coerceIn(safeStart, text.length)
+        var left = safeStart
+        while (left > 0 && text[left - 1].isWhitespace()) left--
+        when {
+            left > 0 && text[left - 1] == '.' -> {
+                left--
+                while (left > 0 && text[left - 1].isWhitespace()) left--
+                while (left > 0 && isFunctionNameChar(text[left - 1])) left--
+            }
+            left > 1 && text[left - 1] == ':' && text[left - 2] == ':' -> {
+                left -= 2
+                while (left > 0 && text[left - 1].isWhitespace()) left--
+                while (left > 0) {
+                    if (isFunctionNameChar(text[left - 1])) {
+                        left--
+                        continue
+                    }
+                    if (left > 1 && text[left - 1] == ':' && text[left - 2] == ':') {
+                        left -= 2
+                        continue
+                    }
+                    break
+                }
+            }
+        }
+
+        var i = safeEnd
+        while (i < text.length && text[i].isWhitespace()) i++
+        if (i >= text.length || text[i] != '(') return null
+        if (isDeclarationHead(text, left)) return null
+        val rightParen = findMatchingRightParen(text, i) ?: return null
+        val functionName = text.substring(left, safeEnd).trim()
+        if (functionName.isBlank()) return null
+        return DreamShaderParsedCall(
+            functionName = functionName,
+            nameStartOffset = left,
+            nameEndOffset = safeEnd,
+            leftParenOffset = i,
+            rightParenOffset = rightParen,
+            arguments = parseArguments(text, i + 1, rightParen)
+        )
     }
 
     fun parameterIndex(text: String, call: DreamShaderCallContext, offset: Int): Int {
@@ -262,9 +357,15 @@ object DreamShaderSignatureHelpAnalyzer {
         var start = end
         while (start >= 0) {
             val ch = text[start]
-            val isNameChar = ch == '.' || ch == '_' || ch.isLetterOrDigit()
-            if (!isNameChar) break
-            start--
+            if (isFunctionNameChar(ch)) {
+                start--
+                continue
+            }
+            if (ch == ':' && start > 0 && text[start - 1] == ':') {
+                start -= 2
+                continue
+            }
+            break
         }
         val actualStart = start + 1
         if (actualStart > end) return null
@@ -286,8 +387,26 @@ object DreamShaderSignatureHelpAnalyzer {
         }
         return DreamShaderCallSignature(
             presentableText = presentableText,
-            parameterRanges = ranges
+            parameterRanges = ranges,
+            parameterNames = parameters.toList()
         )
+    }
+
+    fun collectDeclaredCallables(
+        sourceText: String?,
+        additionalSourceTexts: List<String> = emptyList()
+    ): List<DreamShaderDeclaredCallable> {
+        val declarations = linkedMapOf<String, DreamShaderDeclaredCallable>()
+        fun append(text: String?) {
+            if (text.isNullOrBlank()) return
+            parseDeclaredFunctionSignatures(text).forEach { (key, signature) ->
+                val name = signature.presentableText.substringBefore("(").trim()
+                declarations.putIfAbsent(key, DreamShaderDeclaredCallable(name, signature))
+            }
+        }
+        append(sourceText)
+        additionalSourceTexts.forEach(::append)
+        return declarations.values.toList()
     }
 
     private fun resolveDeclaredSignaturesInternal(
@@ -460,6 +579,164 @@ object DreamShaderSignatureHelpAnalyzer {
         }
         return candidates.toList()
     }
+
+    private fun parseArguments(text: String, start: Int, endExclusive: Int): List<DreamShaderCallArgument> {
+        val args = mutableListOf<DreamShaderCallArgument>()
+        var segmentStart = start
+        var i = start
+        var parenDepth = 0
+        var bracketDepth = 0
+        var braceDepth = 0
+        var inString = false
+        var escaped = false
+
+        while (i < endExclusive) {
+            val ch = text[i]
+            if (inString) {
+                if (escaped) {
+                    escaped = false
+                } else if (ch == '\\') {
+                    escaped = true
+                } else if (ch == '"') {
+                    inString = false
+                }
+                i++
+                continue
+            }
+
+            when (ch) {
+                '"' -> inString = true
+                '(' -> parenDepth++
+                ')' -> if (parenDepth > 0) parenDepth--
+                '[' -> bracketDepth++
+                ']' -> if (bracketDepth > 0) bracketDepth--
+                '{' -> braceDepth++
+                '}' -> if (braceDepth > 0) braceDepth--
+                ',' -> {
+                    if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+                        addArgumentSegment(args, text, segmentStart, i)
+                        segmentStart = i + 1
+                    }
+                }
+            }
+            i++
+        }
+        addArgumentSegment(args, text, segmentStart, endExclusive)
+        return args
+    }
+
+    private fun addArgumentSegment(
+        out: MutableList<DreamShaderCallArgument>,
+        text: String,
+        rawStart: Int,
+        rawEndExclusive: Int
+    ) {
+        var start = rawStart
+        while (start < rawEndExclusive && text[start].isWhitespace()) start++
+        var end = rawEndExclusive
+        while (end > start && text[end - 1].isWhitespace()) end--
+        if (start >= end) return
+        val argumentText = text.substring(start, end)
+        out.add(
+            DreamShaderCallArgument(
+                text = argumentText,
+                startOffset = start,
+                endOffset = end,
+                isNamed = isNamedArgument(argumentText)
+            )
+        )
+    }
+
+    private fun isNamedArgument(argumentText: String): Boolean {
+        var parenDepth = 0
+        var bracketDepth = 0
+        var braceDepth = 0
+        var inString = false
+        var escaped = false
+
+        for (ch in argumentText) {
+            if (inString) {
+                if (escaped) {
+                    escaped = false
+                } else if (ch == '\\') {
+                    escaped = true
+                } else if (ch == '"') {
+                    inString = false
+                }
+                continue
+            }
+
+            when (ch) {
+                '"' -> inString = true
+                '(' -> parenDepth++
+                ')' -> if (parenDepth > 0) parenDepth--
+                '[' -> bracketDepth++
+                ']' -> if (bracketDepth > 0) bracketDepth--
+                '{' -> braceDepth++
+                '}' -> if (braceDepth > 0) braceDepth--
+                '=' -> if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0) return true
+            }
+        }
+        return false
+    }
+
+    private fun isDeclarationHead(text: String, functionNameStartOffset: Int): Boolean {
+        var i = functionNameStartOffset - 1
+        while (i >= 0 && text[i].isWhitespace()) i--
+        if (i < 0 || !isIdentifierChar(text[i])) return false
+
+        val end = i + 1
+        while (i >= 0 && isIdentifierChar(text[i])) i--
+        val token = text.substring(i + 1, end).lowercase(Locale.ROOT)
+        return token in DreamShaderLanguageKeywords.DECLARATION_KEYWORDS
+    }
+
+    private fun isOffsetInCommentOrString(text: String, offset: Int): Boolean {
+        var i = 0
+        var inString = false
+        var escaped = false
+        var inLineComment = false
+        var inBlockComment = false
+        val safeOffset = offset.coerceIn(0, text.length)
+        while (i < safeOffset) {
+            val ch = text[i]
+            val next = text.getOrNull(i + 1)
+            when {
+                inLineComment -> {
+                    if (ch == '\n' || ch == '\r') inLineComment = false
+                }
+                inBlockComment -> {
+                    if (ch == '*' && next == '/') {
+                        inBlockComment = false
+                        i++
+                    }
+                }
+                inString -> {
+                    if (escaped) {
+                        escaped = false
+                    } else if (ch == '\\') {
+                        escaped = true
+                    } else if (ch == '"') {
+                        inString = false
+                    }
+                }
+                ch == '/' && next == '/' -> {
+                    inLineComment = true
+                    i++
+                }
+                ch == '/' && next == '*' -> {
+                    inBlockComment = true
+                    i++
+                }
+                ch == '"' -> inString = true
+            }
+            i++
+        }
+        return inString || inLineComment || inBlockComment
+    }
+
+    private fun isFunctionNameChar(ch: Char): Boolean = ch == '.' || ch == '_' || ch.isLetterOrDigit()
+    private fun isIdentifierChar(ch: Char): Boolean = ch == '_' || ch.isLetterOrDigit()
 
     private val USER_FUNCTION_DECLARATION_HEAD_PATTERN: Pattern = Pattern.compile(
         "(?is)\\b(function|graphfunction|virtualfunction)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\("

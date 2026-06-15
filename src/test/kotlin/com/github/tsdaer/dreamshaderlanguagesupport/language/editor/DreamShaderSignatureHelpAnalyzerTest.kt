@@ -90,7 +90,7 @@ class DreamShaderSignatureHelpAnalyzerTest {
         val callOffset = text.indexOf("0.2")
         val call = DreamShaderSignatureHelpAnalyzer.findCallContext(text, callOffset)
         assertNotNull(call)
-        assertEquals("Blend", call!!.functionName)
+        assertEquals("Utils::Blend", call!!.functionName)
 
         val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName, text)
         assertEquals(1, signatures.size)
@@ -194,5 +194,39 @@ class DreamShaderSignatureHelpAnalyzerTest {
         )
         assertEquals(1, allowIncomplete.size)
         assertEquals("UE.Sparse(...)", allowIncomplete.first().presentableText)
+    }
+
+    @Test
+    fun `signature stores structured parameter names`() {
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures("UE.Panner")
+
+        assertEquals(listOf("Coordinate", "Time", "Speed"), signatures.first().parameterNames)
+    }
+
+    @Test
+    fun `finds namespace qualified call at identifier name`() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Tools::ApplyTint(float3(1,1,1), tint, finalColor);
+                }
+            }
+        """.trimIndent()
+        val start = text.indexOf("ApplyTint")
+        val call = DreamShaderSignatureHelpAnalyzer.findCallAtName(text, start, start + "ApplyTint".length)
+
+        assertNotNull(call)
+        assertEquals("Tools::ApplyTint", call!!.functionName)
+        assertEquals(3, call.arguments.size)
+        assertEquals("float3(1,1,1)", call.arguments.first().text)
+    }
+
+    @Test
+    fun `does not resolve call context from comments or strings`() {
+        val commentText = "// UE.TexCoord(0"
+        val stringText = "float label = \"UE.TexCoord(0\";"
+
+        assertNull(DreamShaderSignatureHelpAnalyzer.findEnclosingCall(commentText, commentText.length))
+        assertNull(DreamShaderSignatureHelpAnalyzer.findEnclosingCall(stringText, stringText.indexOf("0") + 1))
     }
 }

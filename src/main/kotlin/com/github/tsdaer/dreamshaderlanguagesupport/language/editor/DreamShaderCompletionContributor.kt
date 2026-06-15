@@ -1,20 +1,27 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeSettingsRepository
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderIcons
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderParserDefinition
 import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderPsiParser
+import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
+import com.intellij.codeInsight.AutoPopupController
 import com.intellij.codeInsight.completion.*
+import com.intellij.codeInsight.completion.PrioritizedLookupElement
+import com.intellij.codeInsight.editorActions.TypedHandlerDelegate
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.codeInsight.template.TemplateManager
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns
@@ -27,6 +34,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import java.nio.charset.StandardCharsets
 import java.util.*
+import javax.swing.Icon
 
 private val TYPE_KEYWORDS = DreamShaderLexer.TYPES.sorted()
 private val PARSER_DEFINITION = DreamShaderParserDefinition()
@@ -327,6 +335,10 @@ internal data class DreamShaderCompletionItem(
     val label: String,
     val insertText: String = label,
     val detail: String? = null,
+    val tailText: String? = null,
+    val typeText: String? = detail,
+    val icon: Icon? = null,
+    val priority: Double = 0.0,
     val caretOffset: Int? = null,
     val snippet: String? = null
 )
@@ -674,6 +686,7 @@ internal object DreamShaderCompletionSuggester {
         offset: Int,
         importCandidates: List<String> = emptyList(),
         expressionClassCandidates: List<String> = emptyList(),
+        callableCandidates: List<DreamShaderCompletionItem> = emptyList(),
         materialExpressionCatalogEntries: List<DreamShaderMaterialExpressionInfo> = emptyList(),
         bridgeSettingValueOverrides: Map<String, List<String>> = emptyMap(),
         bridgeSettingValueDisplayNames: Map<String, Map<String, String>> = emptyMap()
@@ -681,7 +694,11 @@ internal object DreamShaderCompletionSuggester {
         val context = DreamShaderCompletionContextAnalyzer.analyze(text, offset)
         val suggestions = linkedMapOf<String, DreamShaderCompletionItem>()
         fun add(item: DreamShaderCompletionItem) {
-            suggestions.putIfAbsent(item.label.lowercase(Locale.ROOT), item)
+            val key = item.label.lowercase(Locale.ROOT)
+            val existing = suggestions[key]
+            if (existing == null || item.priority > existing.priority) {
+                suggestions[key] = item
+            }
         }
         fun addAll(items: Iterable<DreamShaderCompletionItem>) = items.forEach(::add)
 
@@ -772,7 +789,10 @@ internal object DreamShaderCompletionSuggester {
                     DreamShaderCompletionItem(
                         label = member,
                         insertText = "$member = ;",
-                        detail = "Base.$member"
+                        detail = "Base.$member",
+                        typeText = "output",
+                        icon = DreamShaderIcons.SECTION_OUTPUTS,
+                        priority = 90.0
                     )
                 )
             }
@@ -802,12 +822,19 @@ internal object DreamShaderCompletionSuggester {
             .sortedBy { it.lowercase(Locale.ROOT) }
 
         if (isGraphLikeContext(context)) {
+            callableCandidates
+                .filter { it.label.isNotBlank() }
+                .forEach(::add)
+            localSymbolCompletionItems(text, offset).forEach(::add)
             catalogNamespaces
                 .map { namespace ->
                     DreamShaderCompletionItem(
                         label = namespace,
                         insertText = "$namespace.",
-                        detail = "$namespace material graph namespace"
+                        detail = "$namespace material graph namespace",
+                        typeText = "namespace",
+                        icon = DreamShaderIcons.DECLARATION,
+                        priority = 70.0
                     )
                 }
                 .forEach(::add)
@@ -815,30 +842,91 @@ internal object DreamShaderCompletionSuggester {
 
         if (context.isTopLevel) {
             DreamShaderLanguageKeywords.TOP_LEVEL_KEYWORDS.forEach { keyword ->
-                add(DreamShaderCompletionItem(keyword))
+                add(
+                    DreamShaderCompletionItem(
+                        label = keyword,
+                        typeText = "declaration",
+                        icon = DreamShaderIcons.DECLARATION,
+                        priority = 40.0
+                    )
+                )
             }
         }
 
         if (context.isInDeclarationBody) {
             DreamShaderLanguageKeywords.SECTION_KEYWORDS.forEach { section ->
-                add(DreamShaderCompletionItem(section))
+                add(
+                    DreamShaderCompletionItem(
+                        label = section,
+                        typeText = "section",
+                        icon = DreamShaderIcons.SECTION,
+                        priority = 45.0
+                    )
+                )
             }
         }
 
         if (context.isTypeCompletionContext) {
             TYPE_KEYWORDS.forEach { type ->
-                add(DreamShaderCompletionItem(type))
+                add(
+                    DreamShaderCompletionItem(
+                        label = type,
+                        insertText = type,
+                        typeText = "type",
+                        priority = 35.0
+                    )
+                )
             }
         }
 
         if (isOutputsSection(context) && !linePrefix.contains("Base.")) {
-            add(DreamShaderCompletionItem(label = "Base", insertText = "Base.", detail = "Root material output namespace"))
+            add(
+                DreamShaderCompletionItem(
+                    label = "Base",
+                    insertText = "Base.",
+                    detail = "Root material output namespace",
+                    typeText = "output",
+                    icon = DreamShaderIcons.SECTION_OUTPUTS,
+                    priority = 85.0
+                )
+            )
         }
 
         if (isGraphLikeContext(context)) {
-            add(DreamShaderCompletionItem(label = "UE", insertText = "UE.", detail = "Unreal material graph namespace"))
+            add(
+                DreamShaderCompletionItem(
+                    label = "UE",
+                    insertText = "UE.",
+                    detail = "Unreal material graph namespace",
+                    typeText = "namespace",
+                    icon = DreamShaderIcons.DECLARATION,
+                    priority = 80.0
+                )
+            )
             DreamShaderCompletionData.hlslIntrinsics.forEach { intrinsic ->
-                add(DreamShaderCompletionItem(label = intrinsic, insertText = "$intrinsic()", detail = "HLSL intrinsic"))
+                add(
+                    DreamShaderCompletionItem(
+                        label = intrinsic,
+                        insertText = "$intrinsic()",
+                        detail = "HLSL intrinsic",
+                        tailText = "()",
+                        typeText = "HLSL",
+                        icon = DreamShaderIcons.FUNCTION,
+                        priority = 30.0
+                    )
+                )
+            }
+            TYPE_KEYWORDS.forEach { constructor ->
+                add(
+                    DreamShaderCompletionItem(
+                        label = constructor,
+                        insertText = "$constructor()",
+                        detail = "DreamShader type constructor",
+                        tailText = "()",
+                        typeText = "constructor",
+                        priority = 25.0
+                    )
+                )
             }
         }
 
@@ -856,6 +944,31 @@ internal object DreamShaderCompletionSuggester {
             context.currentSectionName == OUTPUTS_SECTION ||
             context.currentSectionName == INPUTS_SECTION ||
             context.currentSectionName == RESULTS_SECTION
+    }
+
+    private fun localSymbolCompletionItems(text: String, offset: Int): List<DreamShaderCompletionItem> {
+        val safeOffset = offset.coerceIn(0, text.length)
+        val prefix = text.substring(0, safeOffset)
+        val results = linkedMapOf<String, DreamShaderCompletionItem>()
+        val declarationPattern = Regex("""\b(?:const\s+)?([A-Za-z_][A-Za-z0-9_<>,]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?==|;|,|\))""")
+        declarationPattern.findAll(prefix).forEach { match ->
+            val type = match.groupValues[1]
+            val name = match.groupValues[2]
+            val normalized = name.lowercase(Locale.ROOT)
+            if (normalized in DreamShaderLanguageKeywords.DECLARATION_KEYWORDS) return@forEach
+            if (normalized in DreamShaderLanguageKeywords.SECTION_KEYWORDS.map { it.lowercase(Locale.ROOT) }) return@forEach
+            if (name.isBlank() || type.equals("import", ignoreCase = true)) return@forEach
+            results.putIfAbsent(
+                normalized,
+                DreamShaderCompletionItem(
+                    label = name,
+                    detail = type,
+                    typeText = "local",
+                    priority = 20.0
+                )
+            )
+        }
+        return results.values.toList()
     }
 
     private fun linePrefix(text: String, offset: Int): String {
@@ -944,6 +1057,12 @@ internal object DreamShaderCompletionSuggester {
                     label = entry.ueName,
                     insertText = catalogInsertText(entry),
                     detail = buildCatalogDetail(entry),
+                    tailText = entry.signature
+                        ?.substringAfter(entry.ueName, missingDelimiterValue = "")
+                        ?.takeIf { it.startsWith("(") },
+                    typeText = entry.outputType?.takeIf { it.isNotBlank() } ?: entry.namespace,
+                    icon = DreamShaderIcons.FUNCTION,
+                    priority = if (entry.namespace.equals("UE", ignoreCase = true)) 75.0 else 78.0,
                     snippet = catalogSnippet(entry)
                 )
             }
@@ -1137,6 +1256,27 @@ private fun collectMaterialExpressionCatalogEntries(file: PsiFile): List<DreamSh
     )
 }
 
+private fun collectCallableCompletionCandidates(file: PsiFile): List<DreamShaderCompletionItem> {
+    val importedSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(file)
+        .drop(1)
+        .map { it.text }
+    return DreamShaderSignatureHelpAnalyzer.collectDeclaredCallables(
+        sourceText = file.text,
+        additionalSourceTexts = importedSourceTexts
+    ).map { callable ->
+        DreamShaderCompletionItem(
+            label = callable.name,
+            insertText = "${callable.name}()",
+            detail = callable.signature.presentableText,
+            tailText = callable.signature.presentableText.substringAfter(callable.name, missingDelimiterValue = ""),
+            typeText = "callable",
+            icon = DreamShaderIcons.FUNCTION,
+            priority = 65.0,
+            caretOffset = callable.name.length + 1
+        )
+    }
+}
+
 /**
  * Bridge `settings.json` 提供的枚举别名，按补全使用的小写键展开（含同义键，
  * 如 materialdomain/domain、blendmode/rendertype）。缺失时返回空表，由调用方回退硬编码。
@@ -1206,13 +1346,16 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                         text = file.text,
                         offset = parameters.offset,
                         importCandidates = collectProjectImportCandidates(file),
+                        callableCandidates = collectCallableCompletionCandidates(file),
                         materialExpressionCatalogEntries = collectMaterialExpressionCatalogEntries(file),
                         bridgeSettingValueOverrides = collectBridgeSettingValueOverrides(file),
                         bridgeSettingValueDisplayNames = collectBridgeSettingValueDisplayNames(file)
                     )
                     suggestions.forEach { suggestion ->
                         val builder = LookupElementBuilder.create(suggestion.label)
-                            .withTypeText(suggestion.detail, true)
+                            .withTailText(suggestion.tailText, true)
+                            .withTypeText(suggestion.typeText ?: suggestion.detail, true)
+                            .withIcon(suggestion.icon)
                         val element = when {
                             suggestion.snippet != null ->
                                 builder.withInsertHandler(DreamShaderTemplateInsertHandler(suggestion.snippet))
@@ -1225,10 +1368,106 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                                 )
                             else -> builder
                         }
-                        result.addElement(element)
+                        result.addElement(PrioritizedLookupElement.withPriority(element, suggestion.priority))
                     }
                 }
             }
         )
+    }
+}
+
+internal object DreamShaderCompletionAutoPopup {
+    fun shouldAutoPopup(text: String, offset: Int, charTyped: Char): Boolean {
+        val safeOffset = offset.coerceIn(0, text.length)
+        if (charTyped == '"') {
+            return isImportStringStart(text, safeOffset) || isSettingValueStringStart(text, safeOffset)
+        }
+        if (isOffsetInCommentOrString(text, safeOffset)) return false
+        val context = DreamShaderCompletionContextAnalyzer.analyze(text, safeOffset)
+        if (context.isInCommentOrString) return false
+        return when (charTyped) {
+            '.' -> context.isInSectionBody || context.isFunctionLikeDeclaration
+            '(' -> context.isInSectionBody || context.isFunctionLikeDeclaration
+            '=' -> context.isInSettingsOrOptionsSection
+            else -> false
+        }
+    }
+
+    private fun isImportStringStart(text: String, offset: Int): Boolean {
+        val linePrefix = linePrefix(text, offset)
+        return Regex("""^\s*import\s+"[^"]*$""").matches(linePrefix)
+    }
+
+    private fun isSettingValueStringStart(text: String, offset: Int): Boolean {
+        val linePrefix = linePrefix(text, offset)
+        return linePrefix.contains('=') && linePrefix.count { it == '"' } % 2 == 1
+    }
+
+    private fun linePrefix(text: String, offset: Int): String {
+        val safeOffset = offset.coerceIn(0, text.length)
+        val lineStart = text.lastIndexOfAny(charArrayOf('\n', '\r'), safeOffset - 1).let { if (it < 0) 0 else it + 1 }
+        return text.substring(lineStart, safeOffset)
+    }
+
+    private fun isOffsetInCommentOrString(text: String, offset: Int): Boolean {
+        var i = 0
+        var inString = false
+        var escaped = false
+        var inLineComment = false
+        var inBlockComment = false
+        val safeOffset = offset.coerceIn(0, text.length)
+        while (i < safeOffset) {
+            val ch = text[i]
+            val next = text.getOrNull(i + 1)
+            when {
+                inLineComment -> {
+                    if (ch == '\n' || ch == '\r') inLineComment = false
+                }
+                inBlockComment -> {
+                    if (ch == '*' && next == '/') {
+                        inBlockComment = false
+                        i++
+                    }
+                }
+                inString -> {
+                    if (escaped) {
+                        escaped = false
+                    } else if (ch == '\\') {
+                        escaped = true
+                    } else if (ch == '"') {
+                        inString = false
+                    }
+                }
+                ch == '/' && next == '/' -> {
+                    inLineComment = true
+                    i++
+                }
+                ch == '/' && next == '*' -> {
+                    inBlockComment = true
+                    i++
+                }
+                ch == '"' -> inString = true
+            }
+            i++
+        }
+        return inString || inLineComment || inBlockComment
+    }
+}
+
+class DreamShaderCompletionTypedHandler : TypedHandlerDelegate() {
+    override fun checkAutoPopup(
+        charTyped: Char,
+        project: Project,
+        editor: Editor,
+        file: PsiFile
+    ): Result {
+        if (file.language != DreamShaderLanguage) return Result.CONTINUE
+        val text = editor.document.charsSequence.toString()
+        val offset = editor.caretModel.offset.coerceIn(0, text.length)
+        if (!DreamShaderCompletionAutoPopup.shouldAutoPopup(text, offset, charTyped)) {
+            return Result.CONTINUE
+        }
+        AutoPopupController.getInstance(project).scheduleAutoPopup(editor)
+        return Result.STOP
     }
 }

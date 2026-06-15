@@ -176,7 +176,8 @@ Configurable fields:
 - `Project Root`
 - `Material Manifest Path`
 - `Show DreamShader status bar widget`
-- `Enable DreamShader in-editor code lens hints` (currently controls both inlay-parameter-hints output and IntelliJ Code Vision hints)
+- `Enable DreamShader in-editor code lens hints` (controls IntelliJ Code Vision hints)
+- `Enable DreamShader parameter inlay hints` (controls inline parameter-name hints before positional function/node arguments)
 - `Out Placeholder Suffix` (used by missing `out` argument quick-fix placeholder generation; sanitized to identifier-safe form)
 - `Preferred Import Extension` (default extension preference for unsupported import-extension quick-fix ordering: `.dsh` / `.dsf` / `.dsm`)
 - `Auto-update preferred extension from quick-fix` (when enabled, applying unsupported import-extension quick-fix persists chosen extension as new preferred default)

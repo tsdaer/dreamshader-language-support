@@ -196,4 +196,48 @@ class DreamShaderInlayParameterHintsProviderTest : BasePlatformTestCase() {
 
         assertEquals(listOf("slot:", "scale:", "uv:"), hints.map { it.text })
     }
+
+    fun testProducesHintsForNamespaceQualifiedFunctionCall() {
+        val file = myFixture.configureByText(
+            "inlay_namespace_call.dsm",
+            """
+            Namespace Tools {
+                Function ApplyTint(in vec3 color, in vec3 tint, out vec3 result) {
+                    result = color * tint;
+                }
+            }
+
+            Shader Main {
+                Graph {
+                    Tools::ApplyTint(float3(1,1,1), float3(1,0,0), finalColor);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers
+            .flatMap { provider.getParameterHints(it) }
+            .sortedBy { it.offset }
+
+        assertEquals(listOf("color:", "tint:", "result:"), hints.map { it.text })
+    }
+
+    fun testSuppressesHintsForIncompleteCalls() {
+        val file = myFixture.configureByText(
+            "inlay_incomplete_call.dsm",
+            """
+            Shader Main {
+                Graph {
+                    float2 uv = UE.TexCoord(0;
+                }
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers.flatMap { provider.getParameterHints(it) }
+
+        assertTrue(hints.isEmpty())
+    }
 }

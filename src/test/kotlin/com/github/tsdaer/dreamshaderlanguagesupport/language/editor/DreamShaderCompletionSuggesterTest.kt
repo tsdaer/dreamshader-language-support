@@ -389,4 +389,74 @@ class DreamShaderCompletionSuggesterTest {
             item?.snippet
         )
     }
+
+    @Test
+    fun `suggests callable candidates in graph section with function presentation`() {
+        val text = """
+            Shader MySurface {
+                Graph {
+                    Ap
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("Ap") + "Ap".length
+
+        val suggestions = DreamShaderCompletionSuggester.suggest(
+            text = text,
+            offset = offset,
+            callableCandidates = listOf(
+                DreamShaderCompletionItem(
+                    label = "ApplyTint",
+                    insertText = "ApplyTint()",
+                    detail = "ApplyTint(color, tint, result)",
+                    tailText = "(color, tint, result)",
+                    typeText = "callable",
+                    priority = 65.0
+                )
+            )
+        )
+        val callable = suggestions.firstOrNull { it.label == "ApplyTint" }
+
+        assertTrue(callable != null)
+        assertEquals("ApplyTint()", callable?.insertText)
+        assertEquals("(color, tint, result)", callable?.tailText)
+        assertEquals("callable", callable?.typeText)
+    }
+
+    @Test
+    fun `suggests local symbols in graph section`() {
+        val text = """
+            Shader MySurface {
+                Graph {
+                    float roughness = 0.5;
+                    rou
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("rou\n") + "rou".length
+
+        val suggestions = DreamShaderCompletionSuggester.suggest(text, offset)
+        val local = suggestions.firstOrNull { it.label == "roughness" }
+
+        assertTrue(local != null)
+        assertEquals("float", local?.detail)
+        assertEquals("local", local?.typeText)
+    }
+
+    @Test
+    fun `auto popup triggers only in high value DreamShader contexts`() {
+        val graphText = """
+            Shader MySurface {
+                Graph {
+                    UE.
+                }
+            }
+        """.trimIndent()
+        val graphOffset = graphText.indexOf("UE.") + "UE.".length
+        val importText = """import "Lib"""
+
+        assertTrue(DreamShaderCompletionAutoPopup.shouldAutoPopup(graphText, graphOffset, '.'))
+        assertTrue(DreamShaderCompletionAutoPopup.shouldAutoPopup(importText, importText.length, '"'))
+        assertTrue(!DreamShaderCompletionAutoPopup.shouldAutoPopup("// UE.", "// UE.".length, '.'))
+    }
 }

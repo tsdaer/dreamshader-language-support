@@ -75,6 +75,8 @@
         <completion.contributor
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionContributor"/>
+        <typedHandler
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionTypedHandler"/>
         <completion.plainTextSymbol
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderPlainTextSymbolCompletionContributor"/>
         <codeInsight.lineMarkerProvider

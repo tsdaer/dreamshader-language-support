@@ -876,8 +876,8 @@ Rule format:
 
 10. `ID`: `DBRG-105`  
 `Priority`: `P2`  
-`Rule`: `enableCodeLens` currently toggles both DreamShader inlay-parameter-hints output and IntelliJ Code Vision hints.  
-`Expected`: inlay hints and Code Vision hints appear/disappear without restart when setting changes  
+`Rule`: `enableCodeLens` controls IntelliJ Code Vision hints, while `enableInlayParameterHints` controls DreamShader parameter-name inlay hints.
+`Expected`: inlay hints and Code Vision hints appear/disappear independently without restart when their respective settings change
 `Test`: `testEnableCodeLensToggleControlsInlayHintsProviderOutput()`, `testCodeVisionRespectsEnableCodeLensSetting()`
 
 #### C. Authoring Template / Scaffold Commands

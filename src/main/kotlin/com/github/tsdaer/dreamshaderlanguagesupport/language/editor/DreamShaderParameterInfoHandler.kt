@@ -16,7 +16,7 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
     override fun findElementForParameterInfo(context: CreateParameterInfoContext): PsiFile? {
         val file = context.file
         if (file.language != DreamShaderLanguage) return null
-        val call = DreamShaderSignatureHelpAnalyzer.findCallContext(file.text, context.offset) ?: return null
+        val call = DreamShaderSignatureHelpAnalyzer.findEnclosingCall(file.text, context.offset) ?: return null
         val signatures = DreamShaderCallSignatureResolver.resolveSignatures(call.functionName, file)
         if (signatures.isEmpty()) return null
         context.itemsToShow = signatures.toTypedArray()
@@ -30,9 +30,10 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
 
     override fun findElementForUpdatingParameterInfo(context: UpdateParameterInfoContext): PsiFile? {
         val owner = context.parameterOwner as? PsiFile
-        if (owner != null && owner.isValid) return owner
         val file = context.file
         if (file.language != DreamShaderLanguage) return null
+        val call = DreamShaderSignatureHelpAnalyzer.findEnclosingCall(file.text, context.offset) ?: return null
+        if (owner != null && owner.isValid && owner == file) return owner
         return file
     }
 
