@@ -1,6 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeDiagnosticsRepository
+import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeDiagnostic
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderIcons
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
@@ -8,13 +9,19 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTo
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.daemon.RelatedItemLineMarkerInfo
 import com.intellij.codeInsight.daemon.RelatedItemLineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.pom.Navigatable
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
+import java.awt.event.MouseEvent
 import java.util.Locale
 
 class DreamShaderLineMarkerProvider : RelatedItemLineMarkerProvider() {
@@ -95,8 +102,51 @@ class DreamShaderLineMarkerProvider : RelatedItemLineMarkerProvider() {
         val builder = NavigationGutterIconBuilder
             .create(icon)
             .setTargets(element)
-            .setTooltipText(DreamShaderBundle.message("lineMarker.bridge.tooltip", diagnostic.message))
-        result.add(builder.createLineMarkerInfo(element))
+            .setTooltipText(bridgeDiagnosticTooltip(diagnostic))
+        result.add(
+            builder.createLineMarkerInfo(
+                element,
+                GutterIconNavigationHandler<PsiElement> { _: MouseEvent?, psiElement: PsiElement ->
+                    val descriptor = bridgeDiagnosticDescriptor(psiElement.project, diagnostic)
+                    if (descriptor != null) {
+                        descriptor.navigate(true)
+                    } else {
+                        (psiElement as? Navigatable)?.navigate(true)
+                    }
+                }
+            )
+        )
+    }
+
+    internal fun testBridgeDiagnosticDescriptor(project: Project, diagnostic: DreamShaderBridgeDiagnostic): OpenFileDescriptor? {
+        return bridgeDiagnosticDescriptor(project, diagnostic)
+    }
+
+    internal fun testBridgeDiagnosticTooltip(diagnostic: DreamShaderBridgeDiagnostic): String {
+        return bridgeDiagnosticTooltip(diagnostic)
+    }
+
+    private fun bridgeDiagnosticDescriptor(project: Project, diagnostic: DreamShaderBridgeDiagnostic): OpenFileDescriptor? {
+        val sourcePath = diagnostic.sourcePath.replace('\\', '/')
+        val sourceFile = LocalFileSystem.getInstance().findFileByPath(sourcePath)
+        if (sourceFile == null || !sourceFile.isValid || sourceFile.isDirectory) return null
+        return OpenFileDescriptor(
+            project,
+            sourceFile,
+            (diagnostic.line - 1).coerceAtLeast(0),
+            (diagnostic.column - 1).coerceAtLeast(0)
+        )
+    }
+
+    private fun bridgeDiagnosticTooltip(diagnostic: DreamShaderBridgeDiagnostic): String {
+        return DreamShaderBundle.message(
+            "lineMarker.bridge.tooltip",
+            diagnostic.severity.uppercase(Locale.ROOT),
+            diagnostic.sourcePath,
+            diagnostic.line,
+            diagnostic.column,
+            diagnostic.message
+        )
     }
 
     private companion object {

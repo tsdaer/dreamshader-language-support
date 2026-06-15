@@ -57,8 +57,16 @@
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationProvider"/>
         <breadcrumbsInfoProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderBreadcrumbsInfoProvider"/>
+        <declarationRangeHandler
+                key="com.github.tsdaer.dreamshaderlanguagesupport.language.psi.impl.DreamShaderDeclarationImpl"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDeclarationRangeHandler"/>
+        <declarationRangeHandler
+                key="com.github.tsdaer.dreamshaderlanguagesupport.language.psi.impl.DreamShaderSectionImpl"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDeclarationRangeHandler"/>
         <qualifiedNameProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderQualifiedNameProvider"/>
+        <nameSuggestionProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderNameSuggestionProvider"/>
         <annotator
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticAnnotator"/>
@@ -67,6 +75,8 @@
         <completion.contributor
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionContributor"/>
+        <completion.plainTextSymbol
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderPlainTextSymbolCompletionContributor"/>
         <codeInsight.lineMarkerProvider
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderLineMarkerProvider"/>

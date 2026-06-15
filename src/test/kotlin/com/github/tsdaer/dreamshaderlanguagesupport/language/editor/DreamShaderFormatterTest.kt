@@ -177,4 +177,54 @@ class DreamShaderFormatterTest : BasePlatformTestCase() {
         assertTrue(file.text.contains("Tools :: Util"))
         assertTrue(file.text.contains("Settings {\n        Domain = Surface;\n    }\n\n\n    Graph"))
     }
+
+    fun testFormattingAlignsSectionAssignmentsWhenEnabled() {
+        val file = myFixture.configureByText(
+            "formatter_align_assignments.dsm",
+            """
+            Shader Main {
+                Settings {
+                    Domain = Surface;
+                    ShadingModel = DefaultLit;
+
+                    BlendMode = Opaque;
+                    TwoSided = true;
+                }
+
+                Graph {
+                    float3 Color = float3(1, 1, 1);
+                    Base.BaseColor = Color;
+                    if (ready) {
+                        Nested = 1;
+                    }
+                    Base.Roughness = 0.5;
+                }
+            }
+            """.trimIndent()
+        )
+
+        @Suppress("DEPRECATION")
+        val settings = CodeStyle.getSettings(project).clone()
+        settings.getCustomSettings(DreamShaderCodeStyleSettings::class.java).ALIGN_SECTION_ASSIGNMENTS = true
+
+        val manager = CodeStyleSettingsManager.getInstance(project)
+        val oldTemporary = manager.temporarySettings
+        manager.setTemporarySettings(settings)
+        try {
+            WriteCommandAction.runWriteCommandAction(project) {
+                CodeStyleManager.getInstance(project).reformat(file)
+            }
+        } finally {
+            if (oldTemporary != null) {
+                manager.setTemporarySettings(oldTemporary)
+            } else {
+                manager.dropTemporarySettings()
+            }
+        }
+
+        assertTrue(file.text, file.text.contains("Domain       = Surface;\n        ShadingModel = DefaultLit;"))
+        assertTrue(file.text, file.text.contains("BlendMode = Opaque;\n        TwoSided  = true;"))
+        assertTrue(file.text, file.text.contains("float3 Color   = float3(1, 1, 1);\n        Base.BaseColor = Color;"))
+        assertTrue(file.text, file.text.contains("Nested = 1;"))
+    }
 }

@@ -172,11 +172,12 @@ private class DreamShaderFormattingBlock(
             return spaces(0)
         }
 
-        if (leftType == DreamShaderTokenTypes.OPERATOR && isAssignmentOperator(left.text)) {
+        if (rightType == DreamShaderTokenTypes.OPERATOR && isAssignmentOperator(rightText)) {
+            sectionAssignmentSpacesBeforeEquals(right)?.let { return spaces(it) }
             return spaces(if (common.SPACE_AROUND_ASSIGNMENT_OPERATORS) 1 else 0)
         }
 
-        if (rightType == DreamShaderTokenTypes.OPERATOR && isAssignmentOperator(rightText)) {
+        if (leftType == DreamShaderTokenTypes.OPERATOR && isAssignmentOperator(left.text)) {
             return spaces(if (common.SPACE_AROUND_ASSIGNMENT_OPERATORS) 1 else 0)
         }
 
@@ -214,6 +215,102 @@ private class DreamShaderFormattingBlock(
 
     private fun lineBreak(lineFeeds: Int = 1): Spacing {
         return Spacing.createSpacing(0, 0, lineFeeds, common.KEEP_LINE_BREAKS, common.KEEP_BLANK_LINES_IN_CODE)
+    }
+
+    private fun isSimpleSectionAssignmentOperator(operator: ASTNode): Boolean {
+        val left = previousSignificantNode(operator) ?: return false
+        val right = nextSignificantNode(operator) ?: return false
+        if (right.elementType == DreamShaderTokenTypes.OPERATOR && right.text == "=") return false
+        return isSimpleAssignmentLeft(left)
+    }
+
+    private fun isSimpleAssignmentLeft(node: ASTNode): Boolean {
+        if (node.elementType == DreamShaderTokenTypes.IDENTIFIER || node.elementType == DreamShaderTokenTypes.TYPE) {
+            return true
+        }
+        if (node.elementType != DreamShaderTokenTypes.OPERATOR || node.text != ".") return false
+        val beforeDot = previousSignificantNode(node) ?: return false
+        val afterDot = nextSignificantNode(node) ?: return false
+        return beforeDot.elementType == DreamShaderTokenTypes.IDENTIFIER &&
+            afterDot.elementType == DreamShaderTokenTypes.IDENTIFIER
+    }
+
+    private fun previousWhitespaceHadBlankLine(node: ASTNode): Boolean {
+        val text = node.text.replace("\r\n", "\n").replace('\r', '\n')
+        return text.contains("\n\n")
+    }
+
+    private fun sectionAssignmentSpacesBeforeEquals(operator: ASTNode): Int? {
+        if (!custom.ALIGN_SECTION_ASSIGNMENTS) return null
+        val section = sectionAncestor(operator) ?: return null
+        if (!isSimpleSectionAssignmentOperator(operator)) return null
+        val group = sectionAssignmentGroup(section, operator)
+        if (group.size < 2) return null
+        val maxLeftWidth = group.maxOf { assignmentLeftWidth(section, it) }
+        val currentWidth = assignmentLeftWidth(section, operator)
+        val baseSpaces = if (common.SPACE_AROUND_ASSIGNMENT_OPERATORS) 1 else 0
+        return (maxLeftWidth - currentWidth + baseSpaces).coerceAtLeast(0)
+    }
+
+    private fun sectionAssignmentGroup(section: ASTNode, target: ASTNode): List<ASTNode> {
+        val groups = mutableListOf<MutableList<ASTNode>>()
+        var currentGroup = mutableListOf<ASTNode>()
+        var child = section.firstChildNode
+        var braceDepth = 0
+
+        fun finishGroup() {
+            if (currentGroup.isNotEmpty()) {
+                groups.add(currentGroup)
+                currentGroup = mutableListOf()
+            }
+        }
+
+        while (child != null) {
+            if (FormatterUtil.containsWhiteSpacesOnly(child)) {
+                if (previousWhitespaceHadBlankLine(child)) finishGroup()
+                child = child.treeNext
+                continue
+            }
+
+            when (child.elementType) {
+                DreamShaderTokenTypes.LBRACE -> {
+                    braceDepth++
+                    if (braceDepth > 1) finishGroup()
+                }
+                DreamShaderTokenTypes.RBRACE -> {
+                    finishGroup()
+                    if (braceDepth > 0) braceDepth--
+                }
+                DreamShaderTokenTypes.OPERATOR -> {
+                    if (braceDepth == 1 && child.text == "=" && isSimpleSectionAssignmentOperator(child)) {
+                        currentGroup.add(child)
+                    }
+                }
+            }
+            child = child.treeNext
+        }
+        finishGroup()
+        return groups.firstOrNull { group -> group.any { it === target } }.orEmpty()
+    }
+
+    private fun assignmentLeftWidth(section: ASTNode, operator: ASTNode): Int {
+        val sectionText = section.text.replace("\r\n", "\n").replace('\r', '\n')
+        val relativeOffset = (operator.startOffset - section.startOffset).coerceIn(0, sectionText.length)
+        val lineStart = sectionText.lastIndexOf('\n', (relativeOffset - 1).coerceAtLeast(0)).let { if (it < 0) 0 else it + 1 }
+        val rawLeft = sectionText.substring(lineStart, relativeOffset).trim()
+        return rawLeft
+            .replace(Regex("\\s+"), " ")
+            .replace(Regex("\\s*\\.\\s*"), ".")
+            .length
+    }
+
+    private fun sectionAncestor(node: ASTNode): ASTNode? {
+        var current: ASTNode? = node
+        while (current != null) {
+            if (current.elementType == DreamShaderElementTypes.SECTION) return current
+            current = current.treeParent
+        }
+        return null
     }
 
     private fun spaceBeforeLeftParen(left: ASTNode): Boolean {

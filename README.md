@@ -15,12 +15,12 @@ description: |
   **Language core**
   - Lexer, parser, PSI, and symbol model foundations
   - Syntax highlighting with semantic classification, color settings, and inline color previews for constant vector colors
-  - Formatter, DreamShader code style settings, commenter, quote handling, brace matching, folding, and structure view
+  - Formatter with DreamShader code style settings, section assignment alignment, commenter, quote handling, brace matching, folding, and structure view
 
   **Editing and navigation**
   - Context-aware completion for sections, types, settings values, catalog-driven `UE.*` / `Substrate.*`, HLSL, and imports
-  - Goto declaration, find usages, references, Copy Reference, breadcrumbs, hover docs, and signature help, with `UE.*` / `Substrate.*` served from the shared material-expression catalog
-  - Inlay parameter hints, Code Vision hints, declaration/import gutter markers, and Bridge diagnostic line markers
+  - Goto declaration, find usages, references, Copy/Paste Reference, breadcrumbs, Context Info, hover docs, signature help, plain-text symbol completion, and rename suggestions, with `UE.*` / `Substrate.*` served from the shared material-expression catalog
+  - Inlay parameter hints, Code Vision hints, declaration/import gutter markers, and Bridge diagnostic line markers with source-location navigation
   - IDE include/dependency integration for DreamShader `import "..."` statements
 
   **Diagnostics and project integration**
@@ -39,12 +39,12 @@ description_zh: |
   **语言核心**
   - 词法、语法、PSI 与符号模型基础
   - 语法高亮，含语义分类、颜色设置，以及常量向量颜色的内联预览
-  - 格式化、DreamShader 代码样式设置、注释、引号处理、括号匹配、折叠与结构视图
+  - 格式化、DreamShader 代码样式设置、section 赋值对齐、注释、引号处理、括号匹配、折叠与结构视图
 
   **编辑与导航**
   - 上下文感知补全：sections、类型、设置值、catalog 驱动的 `UE.*` / `Substrate.*`、HLSL 与 imports
-  - 跳转声明、查找用法、引用、Copy Reference、面包屑、悬浮文档与签名帮助，`UE.*` / `Substrate.*` 由共享的 material-expression catalog 提供
-  - 内联参数提示、Code Vision 提示、声明/import gutter 标记，以及 Bridge 诊断行标记
+  - 跳转声明、查找用法、引用、Copy/Paste Reference、面包屑、Context Info、悬浮文档、签名帮助、纯文本符号补全与重命名建议，`UE.*` / `Substrate.*` 由共享的 material-expression catalog 提供
+  - 内联参数提示、Code Vision 提示、声明/import gutter 标记，以及可跳转源码位置的 Bridge 诊断行标记
   - 将 DreamShader `import "..."` 接入 IDE include/dependency 机制
 
   **诊断与项目集成**
