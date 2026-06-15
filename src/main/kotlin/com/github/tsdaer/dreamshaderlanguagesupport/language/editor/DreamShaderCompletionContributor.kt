@@ -3,6 +3,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderB
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderIcons
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguageRules
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
@@ -360,6 +361,24 @@ private data class DreamShaderExpressionClassValueContext(
 )
 
 /**
+ * Data model for namespace-qualified callable completion.
+ */
+internal data class DreamShaderNamespaceCallableCandidate(
+    val namespacePath: List<String>,
+    val item: DreamShaderCompletionItem
+)
+
+/**
+ * Data model for declaration-head named-argument completion.
+ */
+private data class DreamShaderDeclarationHeadCompletionContext(
+    val declarationKeyword: String,
+    val keyPrefix: String,
+    val valueKey: String? = null,
+    val valuePrefix: String = ""
+)
+
+/**
  * Singleton for DreamShaderCompletionData.
  */
 private object DreamShaderCompletionData {
@@ -687,6 +706,7 @@ internal object DreamShaderCompletionSuggester {
         importCandidates: List<String> = emptyList(),
         expressionClassCandidates: List<String> = emptyList(),
         callableCandidates: List<DreamShaderCompletionItem> = emptyList(),
+        namespaceCallableCandidates: List<DreamShaderNamespaceCallableCandidate> = emptyList(),
         materialExpressionCatalogEntries: List<DreamShaderMaterialExpressionInfo> = emptyList(),
         bridgeSettingValueOverrides: Map<String, List<String>> = emptyMap(),
         bridgeSettingValueDisplayNames: Map<String, Map<String, String>> = emptyMap()
@@ -714,6 +734,12 @@ internal object DreamShaderCompletionSuggester {
         }
 
         val linePrefix = linePrefix(text, offset)
+        val declarationHeadContext = extractDeclarationHeadCompletionContext(text, offset)
+        if (declarationHeadContext != null) {
+            addAll(declarationHeadCompletionItems(declarationHeadContext))
+            if (suggestions.isNotEmpty()) return suggestions.values.toList()
+        }
+
         val expressionClassContext = extractExpressionClassValueContext(text, offset)
         if (expressionClassContext != null) {
             val catalogClassCandidates = DreamShaderMaterialExpressionManifest.expressionClassNames(materialExpressionCatalogEntries)
@@ -799,6 +825,26 @@ internal object DreamShaderCompletionSuggester {
             return suggestions.values.toList()
         }
 
+        val namespaceQualifiedPrefix = namespaceQualifiedMemberPrefix(linePrefix)
+        if (namespaceQualifiedPrefix != null && isGraphLikeContext(context)) {
+            val (namespacePath, memberPrefix) = namespaceQualifiedPrefix
+            namespaceCallableCandidates
+                .filter { candidate ->
+                    candidate.namespacePath.equalsPath(namespacePath) &&
+                        candidate.item.label.startsWith(memberPrefix, ignoreCase = true)
+                }
+                .forEach { candidate ->
+                    add(
+                        candidate.item.copy(
+                            insertText = "${candidate.item.label}()",
+                            caretOffset = candidate.item.label.length + 1,
+                            priority = candidate.item.priority.coerceAtLeast(72.0)
+                        )
+                    )
+                }
+            if (suggestions.isNotEmpty()) return suggestions.values.toList()
+        }
+
         val namespaceMemberPrefix = namespaceMemberPrefix(linePrefix)
         if (namespaceMemberPrefix != null && isGraphLikeContext(context)) {
             val (namespace, memberPrefix) = namespaceMemberPrefix
@@ -825,7 +871,7 @@ internal object DreamShaderCompletionSuggester {
             callableCandidates
                 .filter { it.label.isNotBlank() }
                 .forEach(::add)
-            localSymbolCompletionItems(text, offset).forEach(::add)
+            localSymbolCompletionItems(text, offset, context).forEach(::add)
             catalogNamespaces
                 .map { namespace ->
                     DreamShaderCompletionItem(
@@ -854,7 +900,7 @@ internal object DreamShaderCompletionSuggester {
         }
 
         if (context.isInDeclarationBody) {
-            DreamShaderLanguageKeywords.SECTION_KEYWORDS.forEach { section ->
+            DreamShaderLanguageRules.completionSectionsForDeclaration(context.declarationKeyword).forEach { section ->
                 add(
                     DreamShaderCompletionItem(
                         label = section,
@@ -867,6 +913,7 @@ internal object DreamShaderCompletionSuggester {
         }
 
         if (context.isTypeCompletionContext) {
+            qualifierCompletionItems(context, linePrefix).forEach(::add)
             TYPE_KEYWORDS.forEach { type ->
                 add(
                     DreamShaderCompletionItem(
@@ -946,9 +993,14 @@ internal object DreamShaderCompletionSuggester {
             context.currentSectionName == RESULTS_SECTION
     }
 
-    private fun localSymbolCompletionItems(text: String, offset: Int): List<DreamShaderCompletionItem> {
+    private fun localSymbolCompletionItems(
+        text: String,
+        offset: Int,
+        context: DreamShaderCompletionContext
+    ): List<DreamShaderCompletionItem> {
         val safeOffset = offset.coerceIn(0, text.length)
-        val prefix = text.substring(0, safeOffset)
+        val scopeStart = currentGraphLikeScopeStart(text, safeOffset, context)
+        val prefix = text.substring(scopeStart, safeOffset)
         val results = linkedMapOf<String, DreamShaderCompletionItem>()
         val declarationPattern = Regex("""\b(?:const\s+)?([A-Za-z_][A-Za-z0-9_<>,]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?==|;|,|\))""")
         declarationPattern.findAll(prefix).forEach { match ->
@@ -969,6 +1021,29 @@ internal object DreamShaderCompletionSuggester {
             )
         }
         return results.values.toList()
+    }
+
+    private fun currentGraphLikeScopeStart(
+        text: String,
+        offset: Int,
+        context: DreamShaderCompletionContext
+    ): Int {
+        val safeOffset = offset.coerceIn(0, text.length)
+        if (!context.isInSectionBody && !context.isFunctionLikeDeclaration) return 0
+        val sectionHeader = when (context.currentSectionName) {
+            GRAPH_SECTION -> "Graph"
+            INPUTS_SECTION -> "Inputs"
+            OUTPUTS_SECTION -> "Outputs"
+            RESULTS_SECTION -> "Results"
+            else -> null
+        }
+        if (sectionHeader != null) {
+            val pattern = Regex("""(?i)\b$sectionHeader\s*(?:=\s*)?\{""")
+            pattern.findAll(text.substring(0, safeOffset)).lastOrNull()?.let { match ->
+                return match.range.last + 1
+            }
+        }
+        return text.lastIndexOf('{', (safeOffset - 1).coerceAtLeast(0)).let { if (it >= 0) it + 1 else 0 }
     }
 
     private fun linePrefix(text: String, offset: Int): String {
@@ -1032,6 +1107,123 @@ internal object DreamShaderCompletionSuggester {
         return match.groupValues[1] to match.groupValues[2]
     }
 
+    private fun namespaceQualifiedMemberPrefix(linePrefix: String): Pair<List<String>, String>? {
+        val match = Regex("""\b([A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)*)::([A-Za-z0-9_]*)$""")
+            .find(linePrefix) ?: return null
+        return match.groupValues[1].split("::").filter { it.isNotBlank() } to match.groupValues[2]
+    }
+
+    private fun List<String>.equalsPath(other: List<String>): Boolean {
+        if (size != other.size) return false
+        return indices.all { this[it].equals(other[it], ignoreCase = true) }
+    }
+
+    private fun qualifierCompletionItems(
+        context: DreamShaderCompletionContext,
+        linePrefix: String
+    ): List<DreamShaderCompletionItem> {
+        val trimmed = linePrefix.trimStart()
+        if (trimmed.contains('=')) return emptyList()
+        if (trimmed.contains(Regex("""\b[A-Za-z_][A-Za-z0-9_]*\s+[A-Za-z_][A-Za-z0-9_]*"""))) return emptyList()
+        val inInputLikeSection = context.currentSectionName == INPUTS_SECTION || context.isFunctionLikeDeclaration
+        if (!inInputLikeSection) return emptyList()
+        return listOf("in", "out", "inout", "opt", "const")
+            .filter { it.startsWith(trimmed, ignoreCase = true) || trimmed.isBlank() }
+            .map {
+                DreamShaderCompletionItem(
+                    label = it,
+                    insertText = "$it ",
+                    typeText = "qualifier",
+                    priority = 38.0
+                )
+            }
+    }
+
+    private fun extractDeclarationHeadCompletionContext(
+        text: String,
+        offset: Int
+    ): DreamShaderDeclarationHeadCompletionContext? {
+        val safeOffset = offset.coerceIn(0, text.length)
+        if (isOffsetInCommentLight(text, safeOffset)) return null
+        val prefix = text.substring(0, safeOffset)
+        val headStartMatch = Regex(
+            """(?is)\b(Shader|ShaderFunction|ShaderLayer|ShaderLayerBlend|VirtualFunction)\s*\([^{};]*$"""
+        ).find(prefix.takeLast(500)) ?: return null
+        val fragment = headStartMatch.value
+        val keyword = headStartMatch.groupValues[1].lowercase(Locale.ROOT)
+        val afterParen = fragment.substringAfter('(', missingDelimiterValue = "")
+        val assignment = Regex("""(?is)\b(Name|Root)\s*=\s*"?([A-Za-z0-9_./-]*)$""").find(afterParen)
+        if (assignment != null) {
+            return DreamShaderDeclarationHeadCompletionContext(
+                declarationKeyword = keyword,
+                keyPrefix = "",
+                valueKey = assignment.groupValues[1].lowercase(Locale.ROOT),
+                valuePrefix = assignment.groupValues[2]
+            )
+        }
+        val keyPrefix = Regex("""([A-Za-z_]*)$""").find(afterParen)?.groupValues?.getOrNull(1).orEmpty()
+        return DreamShaderDeclarationHeadCompletionContext(
+            declarationKeyword = keyword,
+            keyPrefix = keyPrefix
+        )
+    }
+
+    private fun declarationHeadCompletionItems(
+        context: DreamShaderDeclarationHeadCompletionContext
+    ): List<DreamShaderCompletionItem> {
+        val valueKey = context.valueKey
+        if (valueKey == "root") {
+            return listOf("Game", "Plugin.MyPlugin", "Plugins.MyPlugin")
+                .filter { it.startsWith(context.valuePrefix, ignoreCase = true) }
+                .map {
+                    DreamShaderCompletionItem(
+                        label = it,
+                        insertText = it,
+                        detail = "DreamShader asset root",
+                        typeText = "root",
+                        priority = 82.0
+                    )
+                }
+        }
+        if (valueKey == "name") {
+            val templates = when (context.declarationKeyword) {
+                "shader" -> listOf("Materials/M_Material")
+                "shaderfunction", "virtualfunction" -> listOf("Functions/F_Function")
+                "shaderlayer" -> listOf("Layers/SL_Layer")
+                "shaderlayerblend" -> listOf("Layers/SLB_Blend")
+                else -> emptyList()
+            }
+            return templates
+                .filter { it.startsWith(context.valuePrefix, ignoreCase = true) }
+                .map {
+                    DreamShaderCompletionItem(
+                        label = it,
+                        insertText = it,
+                        detail = "DreamShader asset name",
+                        typeText = "name",
+                        priority = 81.0
+                    )
+                }
+        }
+        val keys = when (context.declarationKeyword) {
+            "shader", "shaderfunction", "shaderlayer", "shaderlayerblend" -> listOf("Name", "Root")
+            "virtualfunction" -> listOf("Name")
+            else -> emptyList()
+        }
+        return keys
+            .filter { it.startsWith(context.keyPrefix, ignoreCase = true) }
+            .map { key ->
+                DreamShaderCompletionItem(
+                    label = key,
+                    insertText = "$key=\"\"",
+                    detail = "declaration argument",
+                    typeText = "argument",
+                    priority = 83.0,
+                    caretOffset = key.length + 2
+                )
+            }
+    }
+
     private fun extractExpressionClassValueContext(
         text: String,
         offset: Int
@@ -1043,6 +1235,46 @@ internal object DreamShaderCompletionSuggester {
         )
         val match = pattern.find(prefixText) ?: return null
         return DreamShaderExpressionClassValueContext(prefix = match.groupValues[1])
+    }
+
+    private fun isOffsetInCommentLight(text: String, offset: Int): Boolean {
+        var i = 0
+        var inString = false
+        var escaped = false
+        var inLineComment = false
+        var inBlockComment = false
+        val safeOffset = offset.coerceIn(0, text.length)
+        while (i < safeOffset) {
+            val ch = text[i]
+            val next = text.getOrNull(i + 1)
+            when {
+                inLineComment -> if (ch == '\n' || ch == '\r') inLineComment = false
+                inBlockComment -> if (ch == '*' && next == '/') {
+                    inBlockComment = false
+                    i++
+                }
+                inString -> {
+                    if (escaped) {
+                        escaped = false
+                    } else if (ch == '\\') {
+                        escaped = true
+                    } else if (ch == '"') {
+                        inString = false
+                    }
+                }
+                ch == '/' && next == '/' -> {
+                    inLineComment = true
+                    i++
+                }
+                ch == '/' && next == '*' -> {
+                    inBlockComment = true
+                    i++
+                }
+                ch == '"' -> inString = true
+            }
+            i++
+        }
+        return inLineComment || inBlockComment
     }
 
     private fun catalogCompletionItems(
@@ -1277,6 +1509,34 @@ private fun collectCallableCompletionCandidates(file: PsiFile): List<DreamShader
     }
 }
 
+private fun collectNamespaceCallableCompletionCandidates(file: PsiFile): List<DreamShaderNamespaceCallableCandidate> {
+    val importedSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(file)
+        .drop(1)
+        .map { it.text }
+    return DreamShaderSignatureHelpAnalyzer.collectDeclaredCallables(
+        sourceText = file.text,
+        additionalSourceTexts = importedSourceTexts
+    ).mapNotNull { callable ->
+        val parts = callable.name.split("::").filter { it.isNotBlank() }
+        if (parts.size < 2) return@mapNotNull null
+        val memberName = parts.last()
+        DreamShaderNamespaceCallableCandidate(
+            namespacePath = parts.dropLast(1),
+            item = DreamShaderCompletionItem(
+                label = memberName,
+                insertText = "$memberName()",
+                detail = callable.signature.presentableText,
+                tailText = callable.signature.presentableText.substringAfter(callable.name, missingDelimiterValue = "")
+                    .ifBlank { callable.signature.presentableText.substringAfter(memberName, missingDelimiterValue = "") },
+                typeText = "callable",
+                icon = DreamShaderIcons.FUNCTION,
+                priority = 72.0,
+                caretOffset = memberName.length + 1
+            )
+        )
+    }
+}
+
 /**
  * Bridge `settings.json` 提供的枚举别名，按补全使用的小写键展开（含同义键，
  * 如 materialdomain/domain、blendmode/rendertype）。缺失时返回空表，由调用方回退硬编码。
@@ -1347,6 +1607,7 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                         offset = parameters.offset,
                         importCandidates = collectProjectImportCandidates(file),
                         callableCandidates = collectCallableCompletionCandidates(file),
+                        namespaceCallableCandidates = collectNamespaceCallableCompletionCandidates(file),
                         materialExpressionCatalogEntries = collectMaterialExpressionCatalogEntries(file),
                         bridgeSettingValueOverrides = collectBridgeSettingValueOverrides(file),
                         bridgeSettingValueDisplayNames = collectBridgeSettingValueDisplayNames(file)
@@ -1387,6 +1648,7 @@ internal object DreamShaderCompletionAutoPopup {
         if (context.isInCommentOrString) return false
         return when (charTyped) {
             '.' -> context.isInSectionBody || context.isFunctionLikeDeclaration
+            ':' -> context.isInSectionBody || context.isFunctionLikeDeclaration
             '(' -> context.isInSectionBody || context.isFunctionLikeDeclaration
             '=' -> context.isInSettingsOrOptionsSection
             else -> false

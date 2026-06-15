@@ -103,8 +103,9 @@ Runtime prerequisite:
 ### 7. Rider Coverage Mapping
 
 Already implemented in this plugin:
-- Import completion can suggest project `.dsh` / `.dsf` files.
-- Import navigation resolves to local files when paths are valid.
-
-Implemented in M5:
-- Optional GitHub package discovery integration (`DreamShaderGitHubPackageSearch`) is available.
+- Import completion can suggest project `.dsh` / `.dsf` / `.dsm` files and package root imports.
+- Import navigation resolves local files, package files, and package metadata `dreamshader.entry` roots when paths are valid.
+- Package diagnostics distinguish missing package entry files from invalid/unsafe package entry metadata and map them to dedicated messages/quick-fixes.
+- Package install, update, and remove actions update the package install folder and lock file.
+- Package store UI supports search, install, update, remove, open repository, refresh, installed/updates filters, and index source management.
+- GitHub package discovery integration (`DreamShaderGitHubPackageSearch`) is available.

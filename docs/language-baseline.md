@@ -127,7 +127,7 @@ Already implemented in this plugin:
 - Top-level declaration and section tokenization/parsing foundations.
 - File-role declaration constraints baseline (`.dsf` uses top-level declaration whitelist; `.dsm` disallow top-level `ShaderFunction`/`ShaderLayer`/`ShaderLayerBlend`; `.dsh` disallow asset-generating top-level declarations).
 - Declaration section-shape diagnostics baseline with alias/compat behavior (`Results` compatibility for `ShaderFunction`/`VirtualFunction`, declaration-specific allowed/required section checks, duplicate section detection).
-- Context-aware completion for sections, types, settings values, catalog-driven `UE.*` / `Substrate.*`, HLSL intrinsics, imports.
+- Context-aware completion for declaration-aware sections, declaration-head `Name`/`Root` arguments, `Root` values, scoped local symbols, namespace-qualified callables, input/function qualifiers, types, settings values, catalog-driven `UE.*` / `Substrate.*`, HLSL intrinsics, imports.
 - Navigation/symbols/folding/references/hover/signature help basics, including shared catalog-backed docs/signatures for `UE.*` / `Substrate.*`.
 
 Current boundary and long-term parity notes:
@@ -147,6 +147,9 @@ Current boundary and long-term parity notes:
   - `2026-06-11 update`: `Base.FrontMaterial` is a known material output member and conflicts with `Base.MaterialAttributes` when both are bound in one declaration.
   - `2026-06-11 update`: `ShaderLayer` and `ShaderLayerBlend` input-shape diagnostics follow upstream's stricter `MaterialAttributes` rules.
   - `2026-06-11 update`: `UE.Expression(..., OutputType="Substrate")` rejects `Custom` / `MaterialExpressionCustom` / `UMaterialExpressionCustom`.
+  - `2026-06-16 update`: `opt` inputs in `Inputs` sections and `Function` / `GraphFunction` signatures now warn when no default value is provided, and warn on obviously malformed default values (empty value, unclosed string, or unmatched delimiters).
+- `Implemented`: completion and section-shape diagnostics now share the same declaration section schema (`Results` -> `Outputs` alias rules, allowed/required sections, declaration display names), reducing divergence between suggested structure and reported structure.
 - `Partial`: parser is intentionally permissive for IDE resilience; full strict Graph grammar validation is not the current parser mode.
+- `Deferred`: Substrate expression-level type rules remain out of scope until a later lightweight/full expression type-inference pass can handle arithmetic, swizzle, constructor, and branch-merge cases with low false positives.
 - `Implemented` (baseline): formatter handles indentation/spacing/braces/section layout; fine-grained parity with all DreamShader authoring conventions may continue to evolve.
 - `Implemented` (baseline): semantic token classification and inlay hints are available and tested; exact upstream VS Code parity is treated as iterative polish, not a release blocker.

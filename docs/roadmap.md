@@ -117,6 +117,11 @@ Implemented:
 - HLSL intrinsic completion in graph-like/function-like contexts.
 - Import path completion for project `.dsh` / `.dsf` / `.dsm` files and package files under `DShader/Packages`.
 - Import candidate path normalization now converts package physical paths (`DShader/Packages/...`) to import-ready package syntax (`@scope/name/...` or `name/...`) before completion display/insertion.
+- Section completion now filters by declaration schema, so completion no longer suggests unsupported sections such as `Inputs` in `Shader` or `Graph` in `VirtualFunction`.
+- Declaration-head completion suggests supported `Name`/`Root` arguments and `Root` values (`Game`, `Plugin.<Name>`, `Plugins.<Name>`).
+- Namespace-qualified callable completion now supports `Tools::` / `A::B::` member suggestions from the current file plus import closure.
+- Local symbol completion is scoped to the current graph/function-like body before the caret, and input/function qualifier completion suggests `in`, `out`, `inout`, `opt`, and `const`.
+- Substrate expression-level diagnostics remain deferred to a later lightweight/full type-inference pass; this pass should separately cover arithmetic, swizzle, constructor, and branch-merge rules.
 
 ### Milestone M3: Navigation and Symbols
 
@@ -345,6 +350,7 @@ Rule format:
 | `DSYN-212` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testShaderRootRejectsEngineRoot()` + `testShaderRootAcceptsPluginRoot()`                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `DSYN-213` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testVirtualFunctionOptionDescriptionWarnsWhenNotQuoted()` + `testVirtualFunctionOptionDescriptionNotQuotedQuickFixAddsQuotes()` + `testVirtualFunctionOptionDescriptionWarnsWhenEmpty()` + `testVirtualFunctionOptionDescriptionEmptyQuickFixFillsDefault()` + `testVirtualFunctionOptionDescriptionSettingsAliasAcceptsQuotedText()` + `testVirtualFunctionOptionDescriptionRecommendedWhenMissing()` + `testVirtualFunctionOptionDescriptionRecommendedQuickFixAddsDescription()` |
 | `DSYN-214` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testDuplicateTopLevelDeclarationNameIsReported()` + `testDuplicateNamespaceChildDeclarationNameIsReported()` + `testSameNameInDifferentNamespacesIsAllowed()` + `testDuplicateTopLevelDeclarationNameQuickFixRenamesToUniqueName()` + `testDuplicateNamespaceChildDeclarationNameQuickFixRenamesToUniqueName()` + `testDuplicateNameAttributePathLeafIsReported()` + `testDuplicateNameAttributePathLeafQuickFixKeepsPrefixAndRenamesLeaf()` + `testSameNameAttributeLeafInDifferentNamespacesIsAllowed()`                                                                                           |
+| `DSYN-215` | `Implemented` | `DreamShaderSemanticDiagnosticsTest.testOptionalInputRequiresDefaultInInputsSection()` + `testOptionalInputWithDefaultDoesNotWarn()` + `testOptionalInputMalformedDefaultWarns()` + `testOptionalFunctionParameterRequiresDefault()`                                                                                                                                                                                                                                                                                    |
 
 #### A. Local Parser Diagnostics (`P1`)
 
@@ -631,6 +637,33 @@ VirtualFunction(Name="VF_NoDescription") {
 `Note`: same declaration name is allowed across different namespace scopes.  
 `QuickFix`: `Rename declaration to 'BuildNoise2'` (suggests a unique numeric-suffix name within current scope; for path-form `Name`, only leaf is replaced and prefix is preserved, for example `Functions/F_Blend` -> `Functions/F_Blend2`)  
 `Test`: `testDuplicateTopLevelDeclarationNameIsReported()` / `testDuplicateNamespaceChildDeclarationNameIsReported()` / `testSameNameInDifferentNamespacesIsAllowed()` / `testDuplicateNameAttributePathLeafIsReported()` / `testDuplicateNameAttributePathLeafQuickFixKeepsPrefixAndRenamesLeaf()` / `testSameNameAttributeLeafInDifferentNamespacesIsAllowed()`
+
+29. `ID`: `DSYN-215`  
+`Priority`: `P2`  
+`Rule`: `opt` inputs should provide a default value in `Inputs` sections and `Function` / `GraphFunction` signatures; obviously malformed defaults should warn while the parser remains permissive.  
+`Invalid`:
+```c
+ShaderFunction MyFunction {
+    Inputs = {
+        opt float Strength;
+    }
+    Outputs = {
+        float Out;
+    }
+    Graph = {
+        Out = Strength;
+    }
+}
+```
+`Expected`: `Optional input 'Strength' should provide a default value`  
+`Additional invalid`:
+```c
+Function ApplyTint(in float3 Color, opt float Strength) {
+}
+```
+`Expected`: `Optional input 'Strength' should provide a default value`  
+`Malformed default examples`: empty initializer, unclosed string, or unmatched `(`/`[`/`{` delimiters.  
+`Test`: `testOptionalInputRequiresDefaultInInputsSection()` / `testOptionalInputWithDefaultDoesNotWarn()` / `testOptionalInputMalformedDefaultWarns()` / `testOptionalFunctionParameterRequiresDefault()`
 
 #### C. Semantic Diagnostics (`P2`)
 

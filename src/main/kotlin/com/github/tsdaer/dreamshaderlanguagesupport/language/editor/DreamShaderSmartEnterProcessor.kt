@@ -10,6 +10,12 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import java.util.Locale
+import kotlin.collections.ArrayDeque
+import kotlin.collections.any
+import kotlin.collections.asReversed
+import kotlin.collections.isNotEmpty
+import kotlin.collections.joinToString
+import kotlin.collections.setOf
 
 class DreamShaderSmartEnterProcessor : SmartEnterProcessor() {
     override fun process(project: Project, editor: Editor, psiFile: PsiFile): Boolean {
@@ -57,11 +63,11 @@ class DreamShaderSmartEnterProcessor : SmartEnterProcessor() {
         }
 
         if (normalized.startsWith("import ") && !completedText.endsWith(";")) {
-            return Completion(closers + ";", closers.length + 1)
+            return Completion("$closers;", closers.length + 1)
         }
 
         if (shouldTerminateStatement(completedText)) {
-            val suffix = if (completedText.endsWith(";")) closers else closers + ";"
+            val suffix = if (completedText.endsWith(";")) closers else "$closers;"
             return Completion(suffix, suffix.length)
         }
 
@@ -76,7 +82,7 @@ class DreamShaderSmartEnterProcessor : SmartEnterProcessor() {
         if (completedText.trimEnd().endsWith("{")) return null
         val beforeBlock = if (completedText.trimEnd().endsWith("=")) " {" else " {"
         val childIndent = lineIndent + indentUnit
-        val insertion = closers + beforeBlock + "\n$childIndent\n$lineIndent}"
+        val insertion = "$closers$beforeBlock\n$childIndent\n$lineIndent}"
         return Completion(insertion, closers.length + beforeBlock.length + 1 + childIndent.length)
     }
 

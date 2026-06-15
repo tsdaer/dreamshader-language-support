@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeDiagnosticsPass
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeSettingsRepository
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguageRules
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMaterialExpressionManifest
 import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.DreamShaderSemanticTokenClassifier
@@ -80,9 +81,9 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val extension = file.virtualFile?.extension?.lowercase(Locale.ROOT)
         if (extension == "dsf") {
             topLevelDeclarations
-                .filter { declaration -> declaration.keywordText() !in DSF_ALLOWED_TOP_LEVEL_DECLARATIONS }
+                .filter { declaration -> declaration.keywordText() !in DreamShaderLanguageRules.dsfAllowedTopLevelDeclarations }
                 .forEach { declaration ->
-                    val declarationKeyword = DISPLAY_DECLARATION_KEYWORDS[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
+                    val declarationKeyword = DreamShaderLanguageRules.displayDeclarationKeywords[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
                     holder.newAnnotation(
                         HighlightSeverity.ERROR,
                         DreamShaderBundle.message(
@@ -94,9 +95,9 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
         if (extension == "dsm") {
             topLevelDeclarations
-                .filter { declaration -> declaration.keywordText() in DSM_DISALLOWED_TOP_LEVEL_DECLARATIONS }
+                .filter { declaration -> declaration.keywordText() in DreamShaderLanguageRules.dsmDisallowedTopLevelDeclarations }
                 .forEach { declaration ->
-                    val declarationKeyword = DISPLAY_DECLARATION_KEYWORDS[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
+                    val declarationKeyword = DreamShaderLanguageRules.displayDeclarationKeywords[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
                     holder.newAnnotation(
                         HighlightSeverity.ERROR,
                         DreamShaderBundle.message(
@@ -108,9 +109,9 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
         if (extension == "dsh") {
             topLevelDeclarations
-                .filter { declaration -> declaration.keywordText() in DSH_DISALLOWED_TOP_LEVEL_DECLARATIONS }
+                .filter { declaration -> declaration.keywordText() in DreamShaderLanguageRules.dshDisallowedTopLevelDeclarations }
                 .forEach { declaration ->
-                    val declarationKeyword = DISPLAY_DECLARATION_KEYWORDS[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
+                    val declarationKeyword = DreamShaderLanguageRules.displayDeclarationKeywords[declaration.keywordText()] ?: declaration.keywordText().orEmpty()
                     holder.newAnnotation(
                         HighlightSeverity.ERROR,
                         DreamShaderBundle.message(
@@ -148,6 +149,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateUnknownDeclarationParameterTypeDiagnostics(topLevelDeclarations, holder)
         annotateUnknownBodyLocalTypeDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateConstTextureDefaultAssetDiagnostics(topLevelDeclarations, holder)
+        annotateOptionalInputDefaultDiagnostics(topLevelDeclarations, holder)
         annotateUnknownExpressionClassDiagnostics(file, sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphLoopDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphSwitchDiagnostics(sourceText, topLevelDeclarations, holder)
@@ -300,12 +302,12 @@ internal class DreamShaderSemanticAnnotationPipeline {
         holder: AnnotationHolder
     ) {
         val keyword = declaration.keywordText() ?: return
-        val allowedSections = DECLARATION_ALLOWED_SECTIONS[keyword] ?: return
-        val requiredSections = DECLARATION_REQUIRED_SECTIONS[keyword].orEmpty()
+        val allowedSections = DreamShaderLanguageRules.declarationAllowedSections[keyword] ?: return
+        val requiredSections = DreamShaderLanguageRules.declarationRequiredSections[keyword].orEmpty()
         val sections = directSectionsOf(declaration)
 
         val groupedByName = sections
-            .mapNotNull { section -> canonicalSectionNameForDeclaration(keyword, section.sectionName())?.let { name -> name to section } }
+            .mapNotNull { section -> DreamShaderLanguageRules.canonicalSectionNameForDeclaration(keyword, section.sectionName())?.let { name -> name to section } }
             .groupBy({ it.first }, { it.second })
 
         groupedByName.forEach { (sectionName, entries) ->
@@ -323,7 +325,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
 
         sections.forEach { section ->
-            val sectionName = canonicalSectionNameForDeclaration(keyword, section.sectionName()) ?: return@forEach
+            val sectionName = DreamShaderLanguageRules.canonicalSectionNameForDeclaration(keyword, section.sectionName()) ?: return@forEach
             if (sectionName !in allowedSections) {
                 holder.newAnnotation(
                     HighlightSeverity.ERROR,
@@ -1216,6 +1218,123 @@ internal class DreamShaderSemanticAnnotationPipeline {
                     }
                 }
         }
+    }
+
+    private fun annotateOptionalInputDefaultDiagnostics(
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        allDeclarations(topLevelDeclarations).forEach { declaration ->
+            directSectionsOf(declaration)
+                .filter { canonicalSectionName(it.sectionName()) == "inputs" }
+                .forEach { section ->
+                    val body = sectionBody(section) ?: return@forEach
+                    splitTopLevelWithOffsets(body.text, ';').forEach { segment ->
+                        val optionalInput = parseOptionalInputDeclaration(segment.text) ?: return@forEach
+                        val range = TextRange(
+                            body.startOffset + segment.startOffset + optionalInput.highlightStartInSegment,
+                            body.startOffset + segment.startOffset + optionalInput.highlightEndInSegment
+                        )
+                        annotateOptionalInputDefault(
+                            name = optionalInput.name,
+                            defaultValue = optionalInput.defaultValue,
+                            range = range,
+                            holder = holder
+                        )
+                    }
+                }
+
+            val keyword = declaration.keywordText()
+            if (keyword != "function" && keyword != "graphfunction") return@forEach
+            val signature = parseDeclarationParameters(declaration.text) ?: return@forEach
+            signature.params
+                .filter { it.isOptional }
+                .forEach { param ->
+                    val rangeInDeclaration = param.parameterRangeInDeclaration ?: param.typeRangeInDeclaration ?: return@forEach
+                    val range = TextRange(
+                        declaration.textRange.startOffset + rangeInDeclaration.startOffset,
+                        declaration.textRange.startOffset + rangeInDeclaration.endOffset
+                    )
+                    annotateOptionalInputDefault(
+                        name = param.name,
+                        defaultValue = param.defaultValue,
+                        range = range,
+                        holder = holder
+                    )
+                }
+        }
+    }
+
+    private fun annotateOptionalInputDefault(
+        name: String,
+        defaultValue: String?,
+        range: TextRange,
+        holder: AnnotationHolder
+    ) {
+        if (defaultValue == null) {
+            holder.newAnnotation(
+                HighlightSeverity.WARNING,
+                DreamShaderBundle.message("diagnostic.optionalInputRequiresDefault", name)
+            ).range(range).create()
+            return
+        }
+
+        if (isMalformedDefaultValue(defaultValue)) {
+            holder.newAnnotation(
+                HighlightSeverity.WARNING,
+                DreamShaderBundle.message("diagnostic.inputDefaultValueMalformed", name)
+            ).range(range).create()
+        }
+    }
+
+    private fun parseOptionalInputDeclaration(segmentText: String): OptionalInputDeclaration? {
+        val trimmedStart = segmentText.indexOfFirst { !it.isWhitespace() }
+        if (trimmedStart < 0) return null
+        val text = segmentText.substring(trimmedStart).trimEnd()
+        if (!OPTIONAL_INPUT_DECLARATION_PATTERN.matcher(text).find()) return null
+        val nameMatch = PARAM_NAME_BEFORE_DEFAULT_PATTERN.matcher(text)
+        if (!nameMatch.find()) return null
+        val name = nameMatch.group(1) ?: return null
+        val equalsIndex = text.indexOf('=')
+        val defaultValue = if (equalsIndex >= 0) text.substring(equalsIndex + 1).trim() else null
+        return OptionalInputDeclaration(
+            name = name,
+            defaultValue = defaultValue,
+            highlightStartInSegment = trimmedStart,
+            highlightEndInSegment = trimmedStart + text.length
+        )
+    }
+
+    private fun isMalformedDefaultValue(value: String): Boolean {
+        val trimmed = value.trim()
+        if (trimmed.isBlank()) return true
+        var parenDepth = 0
+        var bracketDepth = 0
+        var braceDepth = 0
+        var inString = false
+        var escaped = false
+        trimmed.forEach { ch ->
+            if (inString) {
+                if (escaped) {
+                    escaped = false
+                } else if (ch == '\\') {
+                    escaped = true
+                } else if (ch == '"') {
+                    inString = false
+                }
+                return@forEach
+            }
+            when (ch) {
+                '"' -> inString = true
+                '(' -> parenDepth++
+                ')' -> parenDepth--
+                '[' -> bracketDepth++
+                ']' -> bracketDepth--
+                '{' -> braceDepth++
+                '}' -> braceDepth--
+            }
+        }
+        return inString || parenDepth != 0 || bracketDepth != 0 || braceDepth != 0
     }
 
     private fun annotateUnknownExpressionClassDiagnostics(
@@ -2301,7 +2420,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     ) {
         topLevelDeclarations.forEach { declaration ->
             val keyword = declaration.keywordText() ?: return@forEach
-            if (keyword !in ASSET_DECLARATION_KEYWORDS) return@forEach
+            if (keyword !in DreamShaderLanguageRules.assetDeclarationKeywords) return@forEach
             val header = declarationHeaderText(declaration.text) ?: return@forEach
             val rootAssignment = findNamedAssignmentValue(header, "root") ?: return@forEach
             val rootValue = rootAssignment.value.trim().trim('"')
@@ -2336,10 +2455,13 @@ internal class DreamShaderSemanticAnnotationPipeline {
             val rawParam = segment.text
             val trimmed = rawParam.trim()
             if (trimmed.isBlank()) return@mapNotNull null
-            val nameMatch = PARAM_NAME_PATTERN.matcher(trimmed)
+            val defaultSeparatorIndex = rawParam.indexOf('=')
+            val rawParamBeforeDefault = if (defaultSeparatorIndex >= 0) rawParam.substring(0, defaultSeparatorIndex) else rawParam
+            val trimmedBeforeDefault = rawParamBeforeDefault.trim()
+            val nameMatch = PARAM_NAME_PATTERN.matcher(trimmedBeforeDefault)
             if (!nameMatch.find()) return@mapNotNull null
             val name = nameMatch.group(1) ?: return@mapNotNull null
-            val nameStartInRaw = rawParam.lastIndexOf(name).takeIf { it >= 0 } ?: rawParam.length
+            val nameStartInRaw = rawParamBeforeDefault.lastIndexOf(name).takeIf { it >= 0 } ?: rawParamBeforeDefault.length
             val parameterType = parseDeclarationParameterType(rawParam, nameStartInRaw)
             val typeRangeInDeclaration = parameterType?.rangeInParameter?.let { rangeInParameter ->
                 TextRange(
@@ -2347,11 +2469,19 @@ internal class DreamShaderSemanticAnnotationPipeline {
                     paramsStartOffset + segment.startOffset + rangeInParameter.endOffset
                 )
             }
+            val parameterStart = rawParam.indexOfFirst { !it.isWhitespace() }.let { if (it >= 0) it else 0 }
+            val parameterEnd = rawParam.indexOfLast { !it.isWhitespace() }.let { if (it >= 0) it + 1 else rawParam.length }
             ParsedParam(
                 name = name,
-                isOut = OUT_QUALIFIER_PATTERN.matcher(trimmed).find(),
+                isOut = OUT_QUALIFIER_PATTERN.matcher(trimmedBeforeDefault).find(),
+                isOptional = OPT_QUALIFIER_PATTERN.matcher(trimmedBeforeDefault).find(),
+                defaultValue = if (defaultSeparatorIndex >= 0) rawParam.substring(defaultSeparatorIndex + 1).trim() else null,
                 typeName = parameterType?.typeName,
-                typeRangeInDeclaration = typeRangeInDeclaration
+                typeRangeInDeclaration = typeRangeInDeclaration,
+                parameterRangeInDeclaration = TextRange(
+                    paramsStartOffset + segment.startOffset + parameterStart,
+                    paramsStartOffset + segment.startOffset + parameterEnd
+                )
             )
         }
         return ParsedSignature(params)
@@ -2607,24 +2737,19 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     private fun displaySectionName(sectionName: String): String {
-        return DISPLAY_SECTION_NAMES[sectionName] ?: sectionName.replaceFirstChar { it.uppercase(Locale.ROOT) }
+        return DreamShaderLanguageRules.displaySectionName(sectionName)
     }
 
     private fun canonicalSectionName(sectionName: String?): String? {
-        if (sectionName == null) return null
-        return SECTION_NAME_ALIASES[sectionName] ?: sectionName
+        return DreamShaderLanguageRules.canonicalSectionName(sectionName)
     }
 
     private fun canonicalSectionNameForDeclaration(declarationKeyword: String, sectionName: String?): String? {
-        val name = canonicalSectionName(sectionName) ?: return null
-        if (sectionName == "results" && declarationKeyword !in DECLARATIONS_ALLOW_RESULTS_ALIAS) {
-            return sectionName
-        }
-        return name
+        return DreamShaderLanguageRules.canonicalSectionNameForDeclaration(declarationKeyword, sectionName)
     }
 
     private fun displayDeclarationKeyword(keyword: String): String {
-        return DISPLAY_DECLARATION_KEYWORDS[keyword] ?: keyword.replaceFirstChar { it.uppercase(Locale.ROOT) }
+        return DreamShaderLanguageRules.displayDeclarationKeyword(keyword)
     }
 
     private fun suggestSettingsKey(rawKey: String): String? {
@@ -2858,8 +2983,11 @@ internal class DreamShaderSemanticAnnotationPipeline {
     private data class ParsedParam(
         val name: String,
         val isOut: Boolean,
+        val isOptional: Boolean,
+        val defaultValue: String?,
         val typeName: String?,
-        val typeRangeInDeclaration: TextRange?
+        val typeRangeInDeclaration: TextRange?,
+        val parameterRangeInDeclaration: TextRange?
     )
 
     /**
@@ -2892,6 +3020,13 @@ internal class DreamShaderSemanticAnnotationPipeline {
     private data class SectionBody(
         val text: String,
         val startOffset: Int
+    )
+
+    private data class OptionalInputDeclaration(
+        val name: String,
+        val defaultValue: String?,
+        val highlightStartInSegment: Int,
+        val highlightEndInSegment: Int
     )
 
     /**
@@ -3053,78 +3188,13 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
         // 正则模式：调用签名相关诊断。
         private val PARAM_NAME_PATTERN: Pattern = Pattern.compile("([A-Za-z_][A-Za-z0-9_]*)\\s*$")
+        private val PARAM_NAME_BEFORE_DEFAULT_PATTERN: Pattern = Pattern.compile(
+            "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?:=|$)"
+        )
         private val OUT_QUALIFIER_PATTERN: Pattern = Pattern.compile("\\bout\\b")
-
-        private val DSH_DISALLOWED_TOP_LEVEL_DECLARATIONS = setOf(
-            "shader",
-            "shaderfunction",
-            "shaderlayer",
-            "shaderlayerblend"
-        )
-        private val ASSET_DECLARATION_KEYWORDS = setOf(
-            "shader",
-            "shaderfunction",
-            "shaderlayer",
-            "shaderlayerblend"
-        )
-        private val DSF_ALLOWED_TOP_LEVEL_DECLARATIONS = setOf(
-            "shaderfunction",
-            "shaderlayer",
-            "shaderlayerblend",
-            "virtualfunction",
-            "function",
-            "graphfunction"
-        )
-        private val DSM_DISALLOWED_TOP_LEVEL_DECLARATIONS = setOf(
-            "shaderfunction",
-            "shaderlayer",
-            "shaderlayerblend"
-        )
-
-        private val DISPLAY_DECLARATION_KEYWORDS = mapOf(
-            "shader" to "Shader",
-            "shaderfunction" to "ShaderFunction",
-            "shaderlayer" to "ShaderLayer",
-            "shaderlayerblend" to "ShaderLayerBlend",
-            "virtualfunction" to "VirtualFunction",
-            "function" to "Function",
-            "graphfunction" to "GraphFunction",
-            "namespace" to "Namespace"
-        )
-        private val DISPLAY_SECTION_NAMES = mapOf(
-            "properties" to "Properties",
-            "inputs" to "Inputs",
-            "outputs" to "Outputs",
-            "results" to "Results",
-            "settings" to "Settings",
-            "options" to "Options",
-            "graph" to "Graph"
-        )
-
-        private val SECTION_NAME_ALIASES = mapOf(
-            "results" to "outputs"
-        )
-
-        private val DECLARATIONS_ALLOW_RESULTS_ALIAS = setOf(
-            "shaderfunction",
-            "virtualfunction"
-        )
-
-        private val DECLARATION_ALLOWED_SECTIONS = mapOf(
-            "shader" to setOf("properties", "outputs", "settings", "graph"),
-            "shaderfunction" to setOf("properties", "inputs", "outputs", "settings", "graph"),
-            "shaderlayer" to setOf("properties", "inputs", "outputs", "settings", "graph"),
-            "shaderlayerblend" to setOf("properties", "inputs", "outputs", "settings", "graph"),
-            "virtualfunction" to setOf("properties", "inputs", "outputs", "settings", "options"),
-            "function" to emptySet(),
-            "graphfunction" to emptySet()
-        )
-
-        private val DECLARATION_REQUIRED_SECTIONS = mapOf(
-            "shader" to setOf("graph"),
-            "shaderfunction" to setOf("graph"),
-            "shaderlayer" to setOf("outputs"),
-            "shaderlayerblend" to setOf("inputs", "outputs")
+        private val OPT_QUALIFIER_PATTERN: Pattern = Pattern.compile("\\bopt\\b")
+        private val OPTIONAL_INPUT_DECLARATION_PATTERN: Pattern = Pattern.compile(
+            "(?i)^(?=.*\\bopt\\b)(?:\\b(?:in|out|inout|const|static|opt)\\b\\s+)*[A-Za-z_][A-Za-z0-9_<>,]*\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=.*)?$"
         )
 
         private val UNSUPPORTED_GRAPH_LOOP_KEYWORDS = setOf("for", "while", "do")

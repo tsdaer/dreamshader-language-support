@@ -431,6 +431,71 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertNoError("Shader Root value 'Plugin.MyPack' is not allowed. Use Game, Plugin.<Name>, or Plugins.<Name>")
     }
 
+    fun testOptionalInputRequiresDefaultInInputsSection() {
+        val text = """
+            ShaderFunction MyFunction {
+                Inputs {
+                    opt float Strength;
+                }
+                Outputs {
+                    float Out;
+                }
+                Graph {
+                    Out = Strength;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("optional_input_requires_default.dsf", text)
+        assertHasWarning("Optional input 'Strength' should provide a default value")
+    }
+
+    fun testOptionalInputWithDefaultDoesNotWarn() {
+        val text = """
+            ShaderFunction MyFunction {
+                Inputs {
+                    opt float Strength = 1.0;
+                }
+                Outputs {
+                    float Out;
+                }
+                Graph {
+                    Out = Strength;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("optional_input_with_default.dsf", text)
+        assertNoWarning("Optional input 'Strength' should provide a default value")
+        assertNoWarning("Input 'Strength' default value appears malformed")
+    }
+
+    fun testOptionalInputMalformedDefaultWarns() {
+        val text = """
+            ShaderFunction MyFunction {
+                Inputs {
+                    opt float Strength = float2(1.0;
+                }
+                Outputs {
+                    float Out;
+                }
+                Graph {
+                    Out = Strength;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("optional_input_malformed_default.dsf", text)
+        assertHasWarning("Input 'Strength' default value appears malformed")
+    }
+
+    fun testOptionalFunctionParameterRequiresDefault() {
+        val text = """
+            Function ApplyTint(in float3 Color, opt float Strength) {
+                return;
+            }
+        """.trimIndent()
+        myFixture.configureByText("optional_function_parameter_requires_default.dsh", text)
+        assertHasWarning("Optional input 'Strength' should provide a default value")
+    }
+
     fun testUnknownBaseOutputMember() {
         val text = """
             Shader Main {

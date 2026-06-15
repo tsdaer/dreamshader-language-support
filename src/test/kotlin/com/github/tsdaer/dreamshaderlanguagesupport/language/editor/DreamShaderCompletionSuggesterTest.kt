@@ -444,6 +444,141 @@ class DreamShaderCompletionSuggesterTest {
     }
 
     @Test
+    fun `filters section completions by declaration kind`() {
+        val shaderText = """
+            Shader MySurface {
+                <caret>
+            }
+        """.trimIndent().replace("<caret>", "")
+        val shaderOffset = shaderText.indexOf("    \n")
+        val shaderLabels = DreamShaderCompletionSuggester.suggest(shaderText, shaderOffset).map { it.label }.toSet()
+        assertTrue(!shaderLabels.contains("Inputs"))
+        assertTrue(shaderLabels.contains("Graph"))
+
+        val virtualFunctionText = """
+            VirtualFunction BufferWriter {
+                <caret>
+            }
+        """.trimIndent().replace("<caret>", "")
+        val virtualFunctionOffset = virtualFunctionText.indexOf("    \n")
+        val virtualFunctionLabels = DreamShaderCompletionSuggester.suggest(virtualFunctionText, virtualFunctionOffset).map { it.label }.toSet()
+        assertTrue(!virtualFunctionLabels.contains("Graph"))
+        assertTrue(virtualFunctionLabels.contains("Options"))
+
+        val functionText = """
+            Function Util {
+                <caret>
+            }
+        """.trimIndent().replace("<caret>", "")
+        val functionOffset = functionText.indexOf("    \n")
+        val functionLabels = DreamShaderCompletionSuggester.suggest(functionText, functionOffset).map { it.label }.toSet()
+        assertTrue(!functionLabels.contains("Graph"))
+        assertTrue(!functionLabels.contains("Inputs"))
+    }
+
+    @Test
+    fun `suggests declaration head arguments and root values`() {
+        val shaderText = """Shader("""
+        val shaderLabels = DreamShaderCompletionSuggester.suggest(shaderText, shaderText.length).map { it.label }.toSet()
+        assertTrue(shaderLabels.contains("Name"))
+        assertTrue(shaderLabels.contains("Root"))
+
+        val rootText = """Shader(Root="P"""
+        val rootLabels = DreamShaderCompletionSuggester.suggest(rootText, rootText.length).map { it.label }.toSet()
+        assertTrue(rootLabels.contains("Plugin.MyPlugin"))
+        assertTrue(rootLabels.contains("Plugins.MyPlugin"))
+
+        val virtualFunctionText = """VirtualFunction("""
+        val virtualFunctionLabels = DreamShaderCompletionSuggester.suggest(
+            virtualFunctionText,
+            virtualFunctionText.length
+        ).map { it.label }.toSet()
+        assertTrue(virtualFunctionLabels.contains("Name"))
+        assertTrue(!virtualFunctionLabels.contains("Root"))
+    }
+
+    @Test
+    fun `suggests namespace qualified callable members`() {
+        val text = """
+            Shader MySurface {
+                Graph {
+                    Tools::Ap
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("Tools::Ap") + "Tools::Ap".length
+
+        val suggestions = DreamShaderCompletionSuggester.suggest(
+            text = text,
+            offset = offset,
+            namespaceCallableCandidates = listOf(
+                DreamShaderNamespaceCallableCandidate(
+                    namespacePath = listOf("Tools"),
+                    item = DreamShaderCompletionItem(
+                        label = "ApplyTint",
+                        detail = "Tools::ApplyTint(color, tint)",
+                        typeText = "callable",
+                        priority = 65.0
+                    )
+                ),
+                DreamShaderNamespaceCallableCandidate(
+                    namespacePath = listOf("Other"),
+                    item = DreamShaderCompletionItem(label = "ApplyOther")
+                )
+            )
+        )
+        val callable = suggestions.firstOrNull { it.label == "ApplyTint" }
+
+        assertTrue(callable != null)
+        assertEquals("ApplyTint()", callable?.insertText)
+        assertEquals("callable", callable?.typeText)
+        assertTrue(suggestions.none { it.label == "ApplyOther" })
+    }
+
+    @Test
+    fun `scopes local symbol completion to current graph body before caret`() {
+        val text = """
+            Shader MySurface {
+                Graph {
+                    float localBefore = 0.5;
+                    loc
+                    float localAfter = 1.0;
+                }
+            }
+
+            Shader OtherSurface {
+                Graph {
+                    float outside = 0.0;
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("loc\n") + "loc".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("localBefore"))
+        assertTrue(!labels.contains("localAfter"))
+        assertTrue(!labels.contains("outside"))
+    }
+
+    @Test
+    fun `suggests qualifiers at input declaration starts`() {
+        val text = """
+            ShaderFunction MyFunction {
+                Inputs {
+                    o
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("o\n") + "o".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("out"))
+        assertTrue(labels.contains("opt"))
+    }
+
+    @Test
     fun `auto popup triggers only in high value DreamShader contexts`() {
         val graphText = """
             Shader MySurface {
