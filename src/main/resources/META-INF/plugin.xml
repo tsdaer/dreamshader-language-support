@@ -76,11 +76,6 @@
                     icon="/icons/dreamshaderToolWindow.svg"
                     factoryClass="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeToolWindowFactory"
                     canCloseContents="false"/>
-        <toolWindow id="DreamShader Material Preview"
-                    anchor="right"
-                    icon="/icons/dreamshaderToolWindow.svg"
-                    factoryClass="com.github.tsdaer.dreamshaderlanguagesupport.language.preview.DreamShaderMaterialPreviewToolWindowFactory"
-                    canCloseContents="false"/>
         <statusBarWidgetFactory
                 id="DreamShaderBridgeStatus"
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeStatusBarWidgetFactory"/>
@@ -102,8 +97,6 @@
 
             <action id="DreamShader.Tools.OpenHub"
                     class="com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderOpenHubAction"/>
-            <action id="DreamShader.Tools.ShowMaterialPreview"
-                    class="com.github.tsdaer.dreamshaderlanguagesupport.language.preview.DreamShaderShowMaterialPreviewAction"/>
 
             <separator/>
 
@@ -163,15 +156,9 @@
                         class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateFunctionTemplateAction"/>
                 <action id="DreamShader.TemplateTools.CreateHeader"
                         class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateHeaderTemplateAction"/>
-                <action id="DreamShader.TemplateTools.CreateTextureSample"
-                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateTextureSampleTemplateAction"/>
-                <action id="DreamShader.TemplateTools.CreateNoiseMaterial"
-                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateNoiseMaterialTemplateAction"/>
 
                 <separator/>
 
-                <action id="DreamShader.TemplateTools.CreatePackageWizard"
-                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreatePackageWizardAction"/>
                 <action id="DreamShader.TemplateTools.CreatePackageScaffold"
                         class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreatePackageScaffoldAction"/>
             </group>

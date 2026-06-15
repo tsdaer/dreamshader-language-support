@@ -29,9 +29,8 @@ description: |
 
   **Packages, templates, and hub**
   - Package tooling: package store dialog with search/filter/details/install-state markers, background install-update-remove, add-remove index sources, GitHub install/update/remove, open packages folder, and package-aware import resolution
-  - Template tools for material/function/header, texture sample, noise material, package scaffold, and package wizard workflows
-  - Material preview tool window backed by the portable DreamShader Bridge file transport
-  - Unified DreamShader Hub entry for settings, diagnostics, preview, package, and template workflows
+  - Template tools for material/function/header and package scaffolds
+  - Unified DreamShader Hub entry for settings, diagnostics, package, and template workflows
 description_zh: |
   面向 JetBrains Rider 的完整 DreamShaderLang 支持，覆盖 `.dsm`、`.dsf`、`.dsh` 文件，从语言核心到工具集成。
 
@@ -52,9 +51,8 @@ description_zh: |
 
   **包、模板与 Hub**
   - 包工具：带搜索/筛选/详情/安装状态标记的 package store 对话框、后台安装-更新-移除、增删索引源、GitHub 安装/更新/移除、打开包目录，以及包感知的 import 解析
-  - 材质/函数/头文件、贴图采样、噪声材质、包脚手架与包向导的模板工具
-  - 基于 DreamShader Bridge 文件传输的材质预览工具窗口
-  - 统一的 DreamShader Hub 入口，整合设置、诊断、预览、包与模板工作流
+  - 材质/函数/头文件与包脚手架的模板工具
+  - 统一的 DreamShader Hub 入口，整合设置、诊断、包与模板工作流
 <!-- plugin-metadata:end -->
 
 JetBrains Rider plugin for DreamShaderLang (`.dsm`, `.dsf`, `.dsh`).
@@ -62,8 +60,6 @@ Built on IntelliJ Platform SDK with platform module dependency (`com.intellij.mo
 
 Target reference (VS Code extension):
 https://github.com/TypeDreamMoon/dreamshader-language-support
-
-Parity baseline: VS Code extension v1.5.3.
 
 ## Documentation
 
@@ -94,39 +90,31 @@ For detailed milestone status and TODOs, see [`docs/roadmap.md`](docs/roadmap.md
 Requirements:
 
 - JDK 17+ (recommended 21)
+- Gradle user home pinned to `J:/Gradle` for local terminal runs
 
 Build:
 
 ```powershell
-.\gradlew.bat build --no-configuration-cache
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat build --no-configuration-cache
 ```
 
 Test:
 
 ```powershell
-.\gradlew.bat test --no-configuration-cache
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat test --no-configuration-cache
 ```
 
 Run plugin in sandbox:
 
 ```powershell
-.\gradlew.bat runIde --no-configuration-cache
+$env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat runIde --no-configuration-cache
 ```
 
 More workflow details are in [`docs/development.md`](docs/development.md).
 
-## Build and Release Conventions
-
-- `gradle.properties` is the source of truth for the plugin version. `build.gradle.kts` reads `version` from that file and uses it for plugin metadata, resource expansion, and release packaging.
-- The plugin Marketplace description is generated from the `<!-- plugin-metadata:start -->` / `<!-- plugin-metadata:end -->` block in this README. Keep `name`, `description`, and `description_zh` in that block valid when updating release-facing copy.
-- `CHANGELOG.md` is the English changelog consumed by `build.gradle.kts` for plugin change notes. `CHANGELOG.zh-CN.md` is used by the localized welcome page and by the GitHub Build workflow when composing bilingual draft release notes.
-- Keep `## [Unreleased]` present in both changelog files. For versioned work, add a `## [x.y.z] - YYYY-MM-DD` section directly below it and update the compare links at the bottom.
-- The GitHub Build workflow creates draft release notes from `Unreleased` first. If `Unreleased` is empty, it falls back to the first versioned changelog section, so the newest release section must remain immediately below `Unreleased`.
-
 ## Rider Entry Points
 
 - `Tools` -> `DreamShader` -> `Open DreamShader Hub`
-- `Tools` -> `DreamShader` -> `Show Material Preview`
 - `Tools` -> `DreamShader` -> `DreamShader Packages`
 - `Tools` -> `DreamShader` -> `DreamShader Templates`
 - `Settings` -> `Tools` -> `DreamShader`

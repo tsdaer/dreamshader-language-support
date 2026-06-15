@@ -4,14 +4,6 @@
 
 ## [Unreleased]
 
-## [0.0.5] - 2026-06-15
-
-### Added
-
-- Added Material Preview parity with VS Code 1.5.3 via the DreamShader Bridge file transport, including a right-side ToolWindow, preview request writer, preview result/image reader, editor-follow behavior, and debounced auto-refresh setting.
-- Added Texture Sample and Noise Material `.dsm` template actions.
-- Added Create Package Step by Step wizard with package metadata fields and an example-material toggle.
-
 ## [0.0.4] - 2026-06-14
 
 ### Added
@@ -87,8 +79,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
-[Unreleased]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.5...HEAD
-[0.0.5]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...0.0.5
+[Unreleased]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...HEAD
 [0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4
 [0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3
 [0.0.2]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.1...0.0.2

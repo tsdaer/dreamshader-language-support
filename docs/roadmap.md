@@ -10,8 +10,6 @@ Build a Rider plugin with feature parity to the VS Code DreamShaderLang extensio
 - diagnostics and tool integration third
 - package tooling and UX polish last
 
-Current parity baseline: VS Code DreamShaderLang extension v1.5.3.
-
 
 ## Active Version Plans
 
@@ -42,8 +40,7 @@ Current parity baseline: VS Code DreamShaderLang extension v1.5.3.
 | Bridge actions                                 | Done   | Refresh/open-location/open bridge path + configurable recompile/clean command execution                                                                                                                                                  |
 | Status bar / CodeLens                          | Done   | Status widget is gated by `showStatusBar`; inlay hints and IntelliJ daemon-bound Code Vision are gated by `enableCodeLens`                                                                                                               |
 | Package commands                               | Done   | install/update/remove/browse/open folder + source add/remove wired                                                                                                                                                                       |
-| Authoring templates / scaffold commands        | Done   | Material/function/header/texture sample/noise material/package scaffold/package wizard commands implemented and covered by tests                                                                                                           |
-| Material Preview                               | Done   | File-bridge preview request writer, result reader, right-side ToolWindow, editor-follow, edit debounce, and Bridge preview file watcher integration                                                                                        |
+| Authoring templates / scaffold commands        | Done   | Material/function/header/package scaffold commands implemented and covered by tests (`DTPL-001` to `DTPL-004`)                                                                                                                           |
 
 ## Detailed TODO
 
@@ -1193,19 +1190,6 @@ Acceptance criteria:
 | `P2` large-file performance smoke tests               | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest`                                                                                                                                                                                                                                   |
 | `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`, file-based signing env/properties + legacy env fallback), `.github/workflows/build.yml`, `.github/workflows/release.yml` (writes cert/key secrets to temp files and publishes with file-path env)        |
 | `P3` changelog aligned with release tags              | `Implemented` | `CHANGELOG.md` + release workflow `patchChangelog` step in `.github/workflows/release.yml`                                                                                                                                                                                   |
-
-### Milestone M7: Material Preview and Authoring Parity (VS Code 1.5.3)
-
-- [x] `P1` Add Material Preview action and right-side ToolWindow.
-- [x] `P1` Use the portable file-bridge contract: write `Saved/DreamShader/Bridge/Requests/request-*.json`, read `preview.json`, and render `Bridge/Preview/*.png`.
-- [x] `P1` Add preview auto-refresh delay setting. `previewTransport`, `previewWebSocketPort`, and `previewLiveFrameRate` are stored for parity/future use; WebSocket streaming is intentionally not implemented in this milestone.
-- [x] `P2` Add Texture Sample and Noise Material authoring templates.
-- [x] `P2` Add Create Package Step by Step wizard that writes package metadata and can omit examples.
-
-Acceptance criteria:
-- `Tools | DreamShader | Show Material Preview` opens the preview panel and writes a valid preview request for the active `.dsm`.
-- Bridge writes to `preview.json` / `Preview/*.png` refresh the panel without manual reload.
-- Template and package wizard commands generate valid on-disk scaffolds and are covered by tests.
 
 ### Changelog Localization
 

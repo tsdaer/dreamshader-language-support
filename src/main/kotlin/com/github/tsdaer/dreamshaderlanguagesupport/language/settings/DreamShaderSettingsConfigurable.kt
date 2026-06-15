@@ -53,7 +53,6 @@ class DreamShaderSettingsConfigurable(
     private var recompileCurrentCommandField: JBTextField? = null
     private var recompileAllCommandField: JBTextField? = null
     private var cleanGeneratedCommandField: JBTextField? = null
-    private var previewAutoRefreshDelayField: JBTextField? = null
     private var bridgeStatusLabel: JLabel? = null
 
     override fun getDisplayName(): String = DreamShaderBundle.message("settings.title")
@@ -514,7 +513,6 @@ class DreamShaderSettingsConfigurable(
         recompileCurrentCommandField = JBTextField()
         recompileAllCommandField = JBTextField()
         cleanGeneratedCommandField = JBTextField()
-        previewAutoRefreshDelayField = JBTextField()
 
         addLabelAndPathField(
             DreamShaderBundle.message("settings.projectRoot.label"),
@@ -593,11 +591,6 @@ class DreamShaderSettingsConfigurable(
             cleanGeneratedCommandField as JBTextField,
             DreamShaderBundle.message("settings.bridgeCleanGenerated.tooltip")
         )
-        addLabelAndField(
-            DreamShaderBundle.message("settings.previewAutoRefreshDelay.label"),
-            previewAutoRefreshDelayField as JBTextField,
-            DreamShaderBundle.message("settings.previewAutoRefreshDelay.tooltip")
-        )
 
         preferredImportExtensionCombo?.addActionListener {
             refreshImportExtensionPreview()
@@ -642,8 +635,7 @@ class DreamShaderSettingsConfigurable(
             buildHoverOverridesRawFromTable() != state.hoverDocumentationOverrides.trim() ||
             recompileCurrentCommandField?.text.orEmpty() != state.bridgeRecompileCurrentCommand ||
             recompileAllCommandField?.text.orEmpty() != state.bridgeRecompileAllCommand ||
-            cleanGeneratedCommandField?.text.orEmpty() != state.bridgeCleanGeneratedShadersCommand ||
-            normalizePreviewDelay(previewAutoRefreshDelayField?.text.orEmpty()) != state.previewAutoRefreshDelayMs.coerceIn(250, 10000)
+            cleanGeneratedCommandField?.text.orEmpty() != state.bridgeCleanGeneratedShadersCommand
     }
 
     override fun apply() {
@@ -667,8 +659,6 @@ class DreamShaderSettingsConfigurable(
         state.bridgeRecompileCurrentCommand = recompileCurrentCommandField?.text.orEmpty().trim()
         state.bridgeRecompileAllCommand = recompileAllCommandField?.text.orEmpty().trim()
         state.bridgeCleanGeneratedShadersCommand = cleanGeneratedCommandField?.text.orEmpty().trim()
-        state.previewTransport = "file"
-        state.previewAutoRefreshDelayMs = normalizePreviewDelay(previewAutoRefreshDelayField?.text.orEmpty())
 
         if (oldEnableCodeLens != state.enableCodeLens) {
             ParameterHintsPassFactory.forceHintsUpdateOnNextPass()
@@ -692,7 +682,6 @@ class DreamShaderSettingsConfigurable(
         recompileCurrentCommandField?.text = state.bridgeRecompileCurrentCommand
         recompileAllCommandField?.text = state.bridgeRecompileAllCommand
         cleanGeneratedCommandField?.text = state.bridgeCleanGeneratedShadersCommand
-        previewAutoRefreshDelayField?.text = state.previewAutoRefreshDelayMs.coerceIn(250, 10000).toString()
         refreshImportExtensionPreview()
         refreshProjectRootAutoResolvedHint()
         refreshBridgeStatusHint()
@@ -723,7 +712,6 @@ class DreamShaderSettingsConfigurable(
         recompileCurrentCommandField = null
         recompileAllCommandField = null
         cleanGeneratedCommandField = null
-        previewAutoRefreshDelayField = null
         bridgeStatusLabel = null
     }
 
@@ -823,10 +811,6 @@ class DreamShaderSettingsConfigurable(
     private fun normalizePreferredImportExtension(raw: String?): String {
         val normalized = raw.orEmpty().trim().removePrefix(".").lowercase()
         return if (normalized in SUPPORTED_IMPORT_EXTENSIONS) normalized else "dsh"
-    }
-
-    private fun normalizePreviewDelay(raw: String): Int {
-        return raw.trim().toIntOrNull()?.coerceIn(250, 10000) ?: 1200
     }
 
     private fun refreshImportExtensionPreview() {
@@ -941,7 +925,6 @@ class DreamShaderSettingsConfigurable(
 
     internal fun testNormalizeOutPlaceholderSuffix(raw: String): String = normalizeOutPlaceholderSuffix(raw)
     internal fun testNormalizePreferredImportExtension(raw: String?): String = normalizePreferredImportExtension(raw)
-    internal fun testNormalizePreviewDelay(raw: String): Int = normalizePreviewDelay(raw)
     internal fun testBuildImportExtensionPreviewText(rawExtension: String?, autoUpdate: Boolean): String =
         buildImportExtensionPreviewText(".${normalizePreferredImportExtension(rawExtension)}", autoUpdate)
     internal fun testBuildHoverOverridesStatusText(raw: String): String =

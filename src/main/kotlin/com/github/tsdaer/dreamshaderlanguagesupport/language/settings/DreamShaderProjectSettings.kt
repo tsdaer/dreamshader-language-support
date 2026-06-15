@@ -53,15 +53,7 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         /** External command template for recompiling all DreamShader assets. */
         var bridgeRecompileAllCommand: String = "",
         /** External command template for cleaning generated DreamShader shaders/assets. */
-        var bridgeCleanGeneratedShadersCommand: String = "",
-        /** Material preview transport. Rider currently implements the portable file bridge path. */
-        var previewTransport: String = "file",
-        /** Reserved for future WebSocket material preview transport parity. */
-        var previewWebSocketPort: Int = 17864,
-        /** Reserved for future live frame streaming parity. */
-        var previewLiveFrameRate: Int = 2,
-        /** Debounce delay before preview refresh requests are written after edits. */
-        var previewAutoRefreshDelayMs: Int = 1200
+        var bridgeCleanGeneratedShadersCommand: String = ""
     )
 
     private var state = State()

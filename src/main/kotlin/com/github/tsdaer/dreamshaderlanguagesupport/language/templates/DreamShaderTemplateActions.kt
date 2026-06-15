@@ -88,54 +88,6 @@ class DreamShaderCreateHeaderTemplateAction : DumbAwareAction() {
 }
 
 /**
- * Action implementation for DreamShaderCreateTextureSampleTemplateAction.
- */
-class DreamShaderCreateTextureSampleTemplateAction : DumbAwareAction() {
-    init {
-        templatePresentation.text = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateTextureSample.text")
-        templatePresentation.description = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateTextureSample.description")
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val input = Messages.showInputDialog(
-            project,
-            DreamShaderBundle.message("templates.dialog.texture.input"),
-            DreamShaderBundle.message("templates.dialog.texture.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
-
-        val result = DreamShaderTemplateService(project).createTextureSampleTemplate(input)
-        notifyTemplateResult(project, result)
-    }
-}
-
-/**
- * Action implementation for DreamShaderCreateNoiseMaterialTemplateAction.
- */
-class DreamShaderCreateNoiseMaterialTemplateAction : DumbAwareAction() {
-    init {
-        templatePresentation.text = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateNoiseMaterial.text")
-        templatePresentation.description = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateNoiseMaterial.description")
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val input = Messages.showInputDialog(
-            project,
-            DreamShaderBundle.message("templates.dialog.noise.input"),
-            DreamShaderBundle.message("templates.dialog.noise.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
-
-        val result = DreamShaderTemplateService(project).createNoiseMaterialTemplate(input)
-        notifyTemplateResult(project, result)
-    }
-}
-
-/**
  * Action implementation for DreamShaderCreatePackageScaffoldAction.
  */
 class DreamShaderCreatePackageScaffoldAction : DumbAwareAction() {
@@ -155,25 +107,6 @@ class DreamShaderCreatePackageScaffoldAction : DumbAwareAction() {
         if (input.isBlank()) return
 
         val result = DreamShaderTemplateService(project).createPackageScaffold(input)
-        notifyTemplateResult(project, result)
-    }
-}
-
-/**
- * Action implementation for DreamShaderCreatePackageWizardAction.
- */
-class DreamShaderCreatePackageWizardAction : DumbAwareAction() {
-    init {
-        templatePresentation.text = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreatePackageWizard.text")
-        templatePresentation.description = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreatePackageWizard.description")
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val dialog = DreamShaderCreatePackageWizardDialog(project)
-        if (!dialog.showAndGet()) return
-
-        val result = DreamShaderTemplateService(project).createPackageScaffold(dialog.toRequest())
         notifyTemplateResult(project, result)
     }
 }

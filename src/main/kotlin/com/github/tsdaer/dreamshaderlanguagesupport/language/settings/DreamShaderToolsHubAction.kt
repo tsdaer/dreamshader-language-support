@@ -66,9 +66,6 @@ private class DreamShaderHubDialog(
                             .getToolWindow(DreamShaderBundle.message("toolwindow.dreamshader.bridge.displayName"))
                             ?.show()
                     },
-                    button("hub.button.showMaterialPreview") {
-                        invokeActionById("DreamShader.Tools.ShowMaterialPreview")
-                    },
                     button("hub.button.refreshBridgeDiagnostics") {
                         invokeActionById("DreamShader.BridgeTools.RefreshDiagnostics")
                     }
@@ -125,15 +122,6 @@ private class DreamShaderHubDialog(
                     },
                     button("hub.button.createHeaderTemplate") {
                         invokeActionById("DreamShader.TemplateTools.CreateHeader")
-                    },
-                    button("hub.button.createTextureSampleTemplate") {
-                        invokeActionById("DreamShader.TemplateTools.CreateTextureSample")
-                    },
-                    button("hub.button.createNoiseMaterialTemplate") {
-                        invokeActionById("DreamShader.TemplateTools.CreateNoiseMaterial")
-                    },
-                    button("hub.button.createPackageWizard") {
-                        invokeActionById("DreamShader.TemplateTools.CreatePackageWizard")
                     },
                     button("hub.button.createPackageScaffold") {
                         invokeActionById("DreamShader.TemplateTools.CreatePackageScaffold")
