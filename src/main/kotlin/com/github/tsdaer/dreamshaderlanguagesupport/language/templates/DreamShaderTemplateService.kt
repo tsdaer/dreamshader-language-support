@@ -15,12 +15,25 @@ import kotlin.io.path.*
 private data class PackageScaffoldMetadata(
     val name: String,
     val version: String,
+    val displayName: String? = null,
+    val description: String? = null,
+    val author: String? = null,
     val repository: String,
     val dreamshader: DreamShaderEntry
 ) {
     @Serializable
     data class DreamShaderEntry(val entry: String)
 }
+
+internal data class DreamShaderPackageScaffoldRequest(
+    val name: String,
+    val displayName: String = "",
+    val description: String = "",
+    val namespaceName: String = "",
+    val author: String = "",
+    val repository: String = "",
+    val includeExample: Boolean = true
+)
 
 /**
  * Service implementation for DreamShaderTemplateService.
@@ -67,6 +80,101 @@ internal class DreamShaderTemplateService(
         """.trimIndent() + "\n"
 
         return writeFile(target, content, DreamShaderBundle.message("templates.success.materialCreated", target.invariantSeparatorsPathString))
+    }
+
+    fun createTextureSampleTemplate(targetPathInput: String): DreamShaderTemplateOperationResult {
+        val target = resolveTargetFile(targetPathInput, "dsm")
+            ?: return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.invalidTargetPath")
+            )
+        if (target.exists()) {
+            return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.targetExists", target.invariantSeparatorsPathString)
+            )
+        }
+
+        val stem = fileStem(target.name)
+        val symbol = toIdentifier(stem, "M_TextureSample")
+        val content = """
+            import "Builtin/Texture.dsh";
+
+            Shader(Name="Materials/$symbol") {
+                Properties = {
+                    const Texture2D AlbedoTexture = Path(Game, Textures, T_Default);
+                    float2 UVScale = float2(1.0, 1.0);
+                    float3 Tint = float3(1.0, 1.0, 1.0);
+                }
+
+                Outputs = {
+                    float3 Color;
+                }
+
+                Settings = {
+                    Domain = Surface;
+                    ShadingModel = DefaultLit;
+                    BlendMode = Opaque;
+                }
+
+                Graph = {
+                    float2 UV = TexCoord0 * UVScale;
+                    Color = Texture::Sample2DRGB(AlbedoTexture, UV) * Tint;
+                    Base.BaseColor = Color;
+                }
+            }
+        """.trimIndent() + "\n"
+
+        return writeFile(target, content, DreamShaderBundle.message("templates.success.textureSampleCreated", target.invariantSeparatorsPathString))
+    }
+
+    fun createNoiseMaterialTemplate(targetPathInput: String): DreamShaderTemplateOperationResult {
+        val target = resolveTargetFile(targetPathInput, "dsm")
+            ?: return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.invalidTargetPath")
+            )
+        if (target.exists()) {
+            return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.targetExists", target.invariantSeparatorsPathString)
+            )
+        }
+
+        val stem = fileStem(target.name)
+        val symbol = toIdentifier(stem, "M_NoiseMaterial")
+        val content = """
+            import "Builtin/Noise.dsh";
+
+            Shader(Name="Materials/$symbol") {
+                Properties = {
+                    float Scale = 8.0;
+                    float Contrast = 1.0;
+                    float3 ColorA = float3(0.04, 0.08, 0.12);
+                    float3 ColorB = float3(0.7, 0.9, 1.0);
+                }
+
+                Outputs = {
+                    float3 Color;
+                }
+
+                Settings = {
+                    Domain = Surface;
+                    ShadingModel = DefaultLit;
+                    BlendMode = Opaque;
+                }
+
+                Graph = {
+                    float2 UV = TexCoord0 * Scale;
+                    float Mask = saturate(Noise::FBM2D(UV) * Contrast);
+                    Color = lerp(ColorA, ColorB, Mask);
+                    Base.BaseColor = Color;
+                    Base.Roughness = 0.65;
+                }
+            }
+        """.trimIndent() + "\n"
+
+        return writeFile(target, content, DreamShaderBundle.message("templates.success.noiseMaterialCreated", target.invariantSeparatorsPathString))
     }
 
     fun createFunctionTemplate(targetPathInput: String): DreamShaderTemplateOperationResult {
@@ -131,10 +239,14 @@ internal class DreamShaderTemplateService(
     }
 
     fun createPackageScaffold(packageNameInput: String): DreamShaderTemplateOperationResult {
-        val normalizedName = normalizePackageName(packageNameInput)
+        return createPackageScaffold(DreamShaderPackageScaffoldRequest(name = packageNameInput))
+    }
+
+    fun createPackageScaffold(request: DreamShaderPackageScaffoldRequest): DreamShaderTemplateOperationResult {
+        val normalizedName = normalizePackageName(request.name)
             ?: return DreamShaderTemplateOperationResult(
                 false,
-                DreamShaderBundle.message("templates.error.invalidPackageName", packageNameInput)
+                DreamShaderBundle.message("templates.error.invalidPackageName", request.name)
             )
         val packageRoot = packageRootForName(normalizedName)
 
@@ -154,13 +266,18 @@ internal class DreamShaderTemplateService(
 
         val packageId = normalizedName.substringAfterLast('/')
         val entryFileName = "${toIdentifier(packageId, "Main")}Lib.dsh"
-        val namespaceName = toIdentifier(packageId, "Library")
+        val namespaceName = toIdentifier(request.namespaceName.ifBlank { packageId }, "Library")
+        val repository = request.repository.ifBlank { "https://github.com/owner/repository" }
+        val description = request.description.ifBlank { "DreamShader package scaffold." }
 
         val metadataContent = DreamShaderJson.encodePretty(
             PackageScaffoldMetadata(
                 name = normalizedName,
                 version = "0.1.0",
-                repository = "https://github.com/owner/repository",
+                displayName = request.displayName.trim().takeIf { it.isNotBlank() },
+                description = request.description.trim().takeIf { it.isNotBlank() },
+                author = request.author.trim().takeIf { it.isNotBlank() },
+                repository = repository,
                 dreamshader = PackageScaffoldMetadata.DreamShaderEntry(
                     entry = "Library/$entryFileName"
                 )
@@ -169,7 +286,7 @@ internal class DreamShaderTemplateService(
         val readmeContent = """
             # $normalizedName
 
-            DreamShader package scaffold.
+            $description
         """.trimIndent() + "\n"
         val licenseContent = "MIT\n"
         val libraryContent = """
@@ -195,12 +312,16 @@ internal class DreamShaderTemplateService(
         return runCatching {
             ensureUnderProject(packageRoot)
             Files.createDirectories(packageRoot.resolve("Library"))
-            Files.createDirectories(packageRoot.resolve("Examples"))
+            if (request.includeExample) {
+                Files.createDirectories(packageRoot.resolve("Examples"))
+            }
             Files.writeString(packageRoot.resolve("dreamshader.package.json"), metadataContent, StandardCharsets.UTF_8)
             Files.writeString(packageRoot.resolve("README.md"), readmeContent, StandardCharsets.UTF_8)
             Files.writeString(packageRoot.resolve("LICENSE"), licenseContent, StandardCharsets.UTF_8)
             Files.writeString(packageRoot.resolve("Library").resolve(entryFileName), libraryContent, StandardCharsets.UTF_8)
-            Files.writeString(packageRoot.resolve("Examples").resolve("Sample.dsm"), exampleContent, StandardCharsets.UTF_8)
+            if (request.includeExample) {
+                Files.writeString(packageRoot.resolve("Examples").resolve("Sample.dsm"), exampleContent, StandardCharsets.UTF_8)
+            }
             DreamShaderTemplateOperationResult(
                 true,
                 DreamShaderBundle.message("templates.success.packageCreated", normalizedName, packageRoot.invariantSeparatorsPathString),
@@ -250,7 +371,7 @@ internal class DreamShaderTemplateService(
         return resolved
     }
 
-    private fun normalizePackageName(raw: String): String? {
+    internal fun normalizePackageName(raw: String): String? {
         val trimmed = raw.trim().replace('\\', '/').trim('/')
         if (trimmed.isBlank()) return null
         val scopedPattern = Regex("^@[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")

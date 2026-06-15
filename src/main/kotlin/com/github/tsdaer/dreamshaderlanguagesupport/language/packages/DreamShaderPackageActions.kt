@@ -22,6 +22,13 @@ internal object DreamShaderPackageNotifier {
             .notify(project)
     }
 
+    fun warn(project: Project, title: String, content: String) {
+        NotificationGroupManager.getInstance()
+            .getNotificationGroup(NOTIFICATION_GROUP_ID)
+            .createNotification(title, content, NotificationType.WARNING)
+            .notify(project)
+    }
+
     fun error(project: Project, title: String, content: String) {
         NotificationGroupManager.getInstance()
             .getNotificationGroup(NOTIFICATION_GROUP_ID)
