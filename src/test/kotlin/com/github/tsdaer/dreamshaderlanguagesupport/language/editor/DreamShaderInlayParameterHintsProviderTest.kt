@@ -1,5 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.codeInsight.hints.InlayInfo
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -122,6 +123,48 @@ class DreamShaderInlayParameterHintsProviderTest : BasePlatformTestCase() {
             "Expected inlay at imported function first argument",
             hints.any { it.text == "color:" && file.text.substring(it.offset).startsWith("float3(1,1,1)") }
         )
+    }
+
+    fun testInlayHintsUseDedicatedSettingIndependentFromCodeLens() {
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        settings.enableCodeLens = false
+        settings.enableInlayParameterHints = true
+        val file = myFixture.configureByText(
+            "inlay_setting_independent.dsm",
+            """
+            Shader Main {
+                Graph {
+                    float2 uv = UE.TexCoord(0);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers.flatMap { provider.getParameterHints(it) }
+
+        assertEquals(listOf("Index:"), hints.map { it.text })
+    }
+
+    fun testInlayHintsCanBeDisabledWithDedicatedSetting() {
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        settings.enableCodeLens = true
+        settings.enableInlayParameterHints = false
+        val file = myFixture.configureByText(
+            "inlay_setting_disabled.dsm",
+            """
+            Shader Main {
+                Graph {
+                    float2 uv = UE.TexCoord(0);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers.flatMap { provider.getParameterHints(it) }
+
+        assertTrue(hints.isEmpty())
     }
 
     fun testPrefersImportedDeclarationSignatureOverBuiltinSignature() {

@@ -26,9 +26,16 @@
         <lang.formatter
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderFormattingModelBuilder"/>
+        <codeStyleSettingsProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCodeStyleSettingsProvider"/>
+        <langCodeStyleSettingsProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderLanguageCodeStyleSettingsProvider"/>
         <lang.commenter
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCommenter"/>
+        <lang.quoteHandler
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderQuoteHandler"/>
         <lang.braceMatcher
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderBraceMatcher"/>
@@ -48,12 +55,21 @@
         <lang.documentationProvider
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationProvider"/>
+        <breadcrumbsInfoProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderBreadcrumbsInfoProvider"/>
+        <qualifiedNameProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderQualifiedNameProvider"/>
         <annotator
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticAnnotator"/>
+        <include.provider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderFileIncludeProvider"/>
         <completion.contributor
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionContributor"/>
+        <codeInsight.lineMarkerProvider
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderLineMarkerProvider"/>
         <codeInsight.daemonBoundCodeVisionProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCodeVisionProvider"/>
         <codeInsight.parameterInfo
@@ -64,6 +80,12 @@
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderInlayParameterHintsProvider"/>
         <colorSettingsPage
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.DreamShaderColorSettingsPage"/>
+        <colorProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderColorProvider"/>
+        <fileTemplateGroup
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderFileTemplateGroupFactory"/>
+        <defaultTemplatePropertiesProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderDefaultTemplatePropertiesProvider"/>
         <projectConfigurable
                 id="dreamshader.settings"
                 groupId="tools"
@@ -176,5 +198,10 @@
                         class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreatePackageScaffoldAction"/>
             </group>
         </group>
+
+        <action id="DreamShader.NewFile"
+                class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateFileFromTemplateAction">
+            <add-to-group group-id="NewGroup" anchor="last"/>
+        </action>
     </actions>
 </idea-plugin>

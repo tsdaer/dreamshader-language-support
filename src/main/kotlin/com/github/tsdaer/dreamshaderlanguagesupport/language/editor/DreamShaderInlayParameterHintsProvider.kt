@@ -14,7 +14,7 @@ import java.util.*
 class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     override fun getParameterHints(element: PsiElement): List<InlayInfo> {
         val settings = element.project.getService(DreamShaderProjectSettings::class.java)?.state
-        if (settings != null && !settings.enableCodeLens) return emptyList()
+        if (settings != null && !settings.enableInlayParameterHints) return emptyList()
 
         if (element.node.elementType != DreamShaderTokenTypes.IDENTIFIER) return emptyList()
 
@@ -43,7 +43,7 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
 
     override fun getHintInfo(element: PsiElement): HintInfo? {
         val settings = element.project.getService(DreamShaderProjectSettings::class.java)?.state
-        if (settings != null && !settings.enableCodeLens) return null
+        if (settings != null && !settings.enableInlayParameterHints) return null
 
         val callInfo = findCallAtIdentifier(element) ?: return null
         val signatures = DreamShaderCallSignatureResolver.resolveSignatures(callInfo.functionName, element.containingFile)

@@ -1,0 +1,10 @@
+Properties = {
+    const Texture2D MainTex = Path(Game, "/Textures/T_Default");
+}
+
+Graph = {
+    float2 uv = UE.TexCoord(Index=0);
+    float3 sampled;
+    Texture::Sample2DRGB(MainTex, uv, sampled);
+    Base.BaseColor = sampled;
+}

@@ -46,6 +46,7 @@ class DreamShaderFormatterTest : BasePlatformTestCase() {
                 Settings {
                     Domain = "Surface";
                 }
+
                 Graph = {
                     float2 uv = UE.TexCoord(0);
                     float v = saturate(uv.x);
@@ -136,5 +137,44 @@ class DreamShaderFormatterTest : BasePlatformTestCase() {
         assertFalse(file.text.contains("Tools:: Util"))
         assertFalse(file.text.contains("Tools ::Util"))
         assertFalse(file.text.contains("Tools : : Util"))
+    }
+
+    fun testFormattingRespectsDreamShaderCustomCodeStyleSettings() {
+        val file = myFixture.configureByText(
+            "formatter_custom_settings.dsh",
+            """
+            Shader Main {
+                Settings {
+                    Domain = Surface;
+                }
+                Graph {
+                    float3 c = Tools::Util();
+                }
+            }
+            """.trimIndent()
+        )
+
+        @Suppress("DEPRECATION")
+        val settings = CodeStyle.getSettings(project).clone()
+        settings.getCustomSettings(DreamShaderCodeStyleSettings::class.java).SPACE_AROUND_DOUBLE_COLON = true
+        settings.getCustomSettings(DreamShaderCodeStyleSettings::class.java).BLANK_LINES_BETWEEN_SECTIONS = 2
+
+        val manager = CodeStyleSettingsManager.getInstance(project)
+        val oldTemporary = manager.temporarySettings
+        manager.setTemporarySettings(settings)
+        try {
+            WriteCommandAction.runWriteCommandAction(project) {
+                CodeStyleManager.getInstance(project).reformat(file)
+            }
+        } finally {
+            if (oldTemporary != null) {
+                manager.setTemporarySettings(oldTemporary)
+            } else {
+                manager.dropTemporarySettings()
+            }
+        }
+
+        assertTrue(file.text.contains("Tools :: Util"))
+        assertTrue(file.text.contains("Settings {\n        Domain = Surface;\n    }\n\n\n    Graph"))
     }
 }

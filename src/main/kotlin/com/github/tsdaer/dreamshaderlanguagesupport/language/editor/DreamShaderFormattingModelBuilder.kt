@@ -43,6 +43,8 @@ private class DreamShaderFormattingBlock(
     private val indent: Indent?
 ) : AbstractBlock(node, Wrap.createWrap(WrapType.NONE, false), Alignment.createAlignment()) {
     private val common: CommonCodeStyleSettings = settings.getCommonSettings(DreamShaderLanguage)
+    private val custom: DreamShaderCodeStyleSettings =
+        settings.getCustomSettings(DreamShaderCodeStyleSettings::class.java)
 
     override fun buildChildren(): List<Block> {
         val result = ArrayList<Block>()
@@ -91,11 +93,11 @@ private class DreamShaderFormattingBlock(
         }
 
         if (isBeforeDoubleColon(left, right)) {
-            return spaces(0)
+            return spaces(if (custom.SPACE_AROUND_DOUBLE_COLON) 1 else 0)
         }
 
         if (isAfterDoubleColon(left, right)) {
-            return spaces(0)
+            return spaces(if (custom.SPACE_AROUND_DOUBLE_COLON) 1 else 0)
         }
 
         if (rightType == DreamShaderTokenTypes.RBRACE) {
@@ -103,7 +105,7 @@ private class DreamShaderFormattingBlock(
         }
 
         if (leftType == DreamShaderElementTypes.SECTION && rightType == DreamShaderElementTypes.SECTION) {
-            return lineBreak()
+            return lineBreak(custom.BLANK_LINES_BETWEEN_SECTIONS.coerceIn(0, 4) + 1)
         }
 
         if (leftType == DreamShaderElementTypes.SECTION && rightType == DreamShaderTokenTypes.RBRACE) {
@@ -210,8 +212,8 @@ private class DreamShaderFormattingBlock(
         )
     }
 
-    private fun lineBreak(): Spacing {
-        return Spacing.createSpacing(0, 0, 1, common.KEEP_LINE_BREAKS, common.KEEP_BLANK_LINES_IN_CODE)
+    private fun lineBreak(lineFeeds: Int = 1): Spacing {
+        return Spacing.createSpacing(0, 0, lineFeeds, common.KEEP_LINE_BREAKS, common.KEEP_BLANK_LINES_IN_CODE)
     }
 
     private fun spaceBeforeLeftParen(left: ASTNode): Boolean {

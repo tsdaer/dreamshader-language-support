@@ -1,0 +1,4 @@
+Graph = {
+    float2 uv = UE.TexCoord(Index=0);
+    Base.BaseColor = float3(1.0, 1.0, 1.0);
+}

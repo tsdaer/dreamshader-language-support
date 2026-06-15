@@ -12,11 +12,11 @@ import javax.swing.JTable
 import javax.swing.table.TableModel
 
 class DreamShaderSettingsToggleTest : DreamShaderSettingsUiTestBase() {
-    fun testEnableCodeLensToggleControlsInlayHintsProviderOutput() {
+    fun testInlayParameterHintsUseIndependentSetting() {
         val settings = project.getService(DreamShaderProjectSettings::class.java).state
         val provider = DreamShaderInlayParameterHintsProvider()
         val file = myFixture.configureByText(
-            "code_lens_toggle.dsm",
+            "inlay_parameter_hints_toggle.dsm",
             """
             Shader Main {
                 Graph {
@@ -26,15 +26,16 @@ class DreamShaderSettingsToggleTest : DreamShaderSettingsUiTestBase() {
             """.trimIndent()
         )
 
-        settings.enableCodeLens = true
+        settings.enableCodeLens = false
+        settings.enableInlayParameterHints = true
         val enabledHints = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
             .flatMap { provider.getParameterHints(it) }
-        assertTrue("Expected hints when enableCodeLens=true", enabledHints.isNotEmpty())
+        assertTrue("Expected hints when enableInlayParameterHints=true even if enableCodeLens=false", enabledHints.isNotEmpty())
 
-        settings.enableCodeLens = false
+        settings.enableInlayParameterHints = false
         val disabledHints = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
             .flatMap { provider.getParameterHints(it) }
-        assertTrue("Expected no hints when enableCodeLens=false", disabledHints.isEmpty())
+        assertTrue("Expected no hints when enableInlayParameterHints=false", disabledHints.isEmpty())
     }
 
     fun testOutArgumentPlaceholderSuffixNormalization() {

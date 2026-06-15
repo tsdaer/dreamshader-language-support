@@ -34,6 +34,8 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         var showStatusBar: Boolean = true,
         /** UI toggle for future CodeLens integration. */
         var enableCodeLens: Boolean = true,
+        /** UI toggle for DreamShader parameter name inlay hints. */
+        var enableInlayParameterHints: Boolean = true,
         /** Suffix used when generating placeholder variable names for missing out arguments. */
         var outArgumentPlaceholderSuffix: String = "Out",
         /** Preferred replacement extension for unsupported import-extension quick fixes. */

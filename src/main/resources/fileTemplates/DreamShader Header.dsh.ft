@@ -1,0 +1,5 @@
+Namespace ${DREAMSHADER_NAMESPACE_NAME} {
+    Function ApplyTint(in float3 InColor, in float Strength, out float3 OutColor) {
+        OutColor = InColor * Strength;
+    }
+}

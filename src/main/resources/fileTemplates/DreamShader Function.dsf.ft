@@ -1,0 +1,14 @@
+ShaderFunction(Name="Functions/${DREAMSHADER_SYMBOL_NAME}") {
+    Inputs = {
+        float3 InColor;
+        float Strength = 1.0;
+    }
+
+    Outputs = {
+        float3 OutColor;
+    }
+
+    Graph = {
+        OutColor = InColor * Strength;
+    }
+}

@@ -39,6 +39,7 @@ class DreamShaderSettingsConfigurable(
     private var materialExpressionScanCachePathField: TextFieldWithBrowseButton? = null
     private var showStatusBarBox: JBCheckBox? = null
     private var enableCodeLensBox: JBCheckBox? = null
+    private var enableInlayParameterHintsBox: JBCheckBox? = null
     private var outArgumentPlaceholderSuffixField: JBTextField? = null
     private var preferredImportExtensionCombo: JComboBox<String>? = null
     private var autoUpdatePreferredImportExtensionBox: JBCheckBox? = null
@@ -503,6 +504,7 @@ class DreamShaderSettingsConfigurable(
         }
         showStatusBarBox = JBCheckBox(DreamShaderBundle.message("settings.showStatusBar.checkbox"))
         enableCodeLensBox = JBCheckBox(DreamShaderBundle.message("settings.enableCodeLens.checkbox"))
+        enableInlayParameterHintsBox = JBCheckBox(DreamShaderBundle.message("settings.enableInlayParameterHints.checkbox"))
         outArgumentPlaceholderSuffixField = JBTextField()
         preferredImportExtensionCombo = com.intellij.openapi.ui.ComboBox(arrayOf(".dsh", ".dsf", ".dsm"))
         preferredImportExtensionCombo?.name = PREFERRED_IMPORT_EXTENSION_COMBO_NAME
@@ -553,6 +555,10 @@ class DreamShaderSettingsConfigurable(
         addCheckBox(
             enableCodeLensBox as JBCheckBox,
             DreamShaderBundle.message("settings.enableCodeLens.tooltip")
+        )
+        addCheckBox(
+            enableInlayParameterHintsBox as JBCheckBox,
+            DreamShaderBundle.message("settings.enableInlayParameterHints.tooltip")
         )
         addLabelAndField(
             DreamShaderBundle.message("settings.outArgumentPlaceholderSuffix.label"),
@@ -635,6 +641,7 @@ class DreamShaderSettingsConfigurable(
             materialExpressionScanCachePathField?.text.orEmpty() != state.materialExpressionScanCachePath ||
             showStatusBarBox?.isSelected != state.showStatusBar ||
             enableCodeLensBox?.isSelected != state.enableCodeLens ||
+            enableInlayParameterHintsBox?.isSelected != state.enableInlayParameterHints ||
             outArgumentPlaceholderSuffixField?.text.orEmpty() != state.outArgumentPlaceholderSuffix ||
             normalizePreferredImportExtension(preferredImportExtensionCombo?.selectedItem as? String) != normalizePreferredImportExtension(state.preferredImportExtension) ||
             (autoUpdatePreferredImportExtensionBox?.isSelected ?: false) != state.autoUpdatePreferredImportExtension ||
@@ -649,6 +656,7 @@ class DreamShaderSettingsConfigurable(
     override fun apply() {
         val state = project.getService(DreamShaderProjectSettings::class.java).state
         val oldEnableCodeLens = state.enableCodeLens
+        val oldEnableInlayParameterHints = state.enableInlayParameterHints
 
         stopHoverOverridesTableEditing()
 
@@ -659,6 +667,7 @@ class DreamShaderSettingsConfigurable(
         state.materialExpressionScanCachePath = materialExpressionScanCachePathField?.text.orEmpty().trim()
         state.showStatusBar = showStatusBarBox?.isSelected ?: true
         state.enableCodeLens = enableCodeLensBox?.isSelected ?: true
+        state.enableInlayParameterHints = enableInlayParameterHintsBox?.isSelected ?: true
         state.outArgumentPlaceholderSuffix = normalizeOutPlaceholderSuffix(outArgumentPlaceholderSuffixField?.text.orEmpty())
         state.preferredImportExtension = normalizePreferredImportExtension(preferredImportExtensionCombo?.selectedItem as? String)
         state.autoUpdatePreferredImportExtension = autoUpdatePreferredImportExtensionBox?.isSelected ?: false
@@ -670,7 +679,7 @@ class DreamShaderSettingsConfigurable(
         state.previewTransport = "file"
         state.previewAutoRefreshDelayMs = normalizePreviewDelay(previewAutoRefreshDelayField?.text.orEmpty())
 
-        if (oldEnableCodeLens != state.enableCodeLens) {
+        if (oldEnableCodeLens != state.enableCodeLens || oldEnableInlayParameterHints != state.enableInlayParameterHints) {
             ParameterHintsPassFactory.forceHintsUpdateOnNextPass()
         }
     }
@@ -684,6 +693,7 @@ class DreamShaderSettingsConfigurable(
         materialExpressionScanCachePathField?.text = state.materialExpressionScanCachePath
         showStatusBarBox?.isSelected = state.showStatusBar
         enableCodeLensBox?.isSelected = state.enableCodeLens
+        enableInlayParameterHintsBox?.isSelected = state.enableInlayParameterHints
         outArgumentPlaceholderSuffixField?.text = state.outArgumentPlaceholderSuffix
         preferredImportExtensionCombo?.selectedItem = ".${normalizePreferredImportExtension(state.preferredImportExtension)}"
         autoUpdatePreferredImportExtensionBox?.isSelected = state.autoUpdatePreferredImportExtension
@@ -709,6 +719,7 @@ class DreamShaderSettingsConfigurable(
         materialExpressionScanCachePathField = null
         showStatusBarBox = null
         enableCodeLensBox = null
+        enableInlayParameterHintsBox = null
         outArgumentPlaceholderSuffixField = null
         preferredImportExtensionCombo = null
         autoUpdatePreferredImportExtensionBox = null

@@ -4,6 +4,17 @@
 
 ## [未发布]
 
+### 新增
+
+- 新增 DreamShader 原生代码样式设置，并让 formatter 读取语言专属选项，支持 section 间空行与 `::` 空格控制。
+- 新增原生 File and Code Templates，包括 `New | DreamShader Material`、`DreamShader Function`、`DreamShader Header` 操作，以及可复用的 graph section 与 texture sample 代码模板。
+- 新增 DreamShader gutter 标记，覆盖 import、顶层声明与 Bridge 诊断位置。
+- 新增编辑器平台集成：引号处理、`import "..."` 的 include/dependency provider、Copy Reference 限定名、面包屑，以及常量 `float3` / `float4` / `vec3` / `vec4` 颜色预览。
+
+### 变更
+
+- 将参数内联提示从 Code Vision 设置中拆分出来，新增 `enableInlayParameterHints` 项目设置；关闭 Code Vision 不再隐藏参数提示。
+
 ## [0.0.5] - 2026-06-15
 
 ### 新增

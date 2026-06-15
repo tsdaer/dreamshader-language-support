@@ -1,0 +1,21 @@
+Shader(Name="${DREAMSHADER_ASSET_NAME}") {
+    Properties = {
+        float Roughness = 0.5;
+    }
+
+    Outputs = {
+        float3 Color;
+    }
+
+    Settings = {
+        Domain = Surface;
+        ShadingModel = DefaultLit;
+        BlendMode = Opaque;
+    }
+
+    Graph = {
+        Color = float3(1.0, 1.0, 1.0);
+        Base.BaseColor = Color;
+        Base.Roughness = Roughness;
+    }
+}

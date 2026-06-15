@@ -1,0 +1,6 @@
+Shader Main {
+    Graph = {
+        float2 uv = UE.TexCoord(0);
+        float v = saturate(roughness);
+    }
+}
