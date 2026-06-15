@@ -38,6 +38,36 @@ class DreamShaderPreviewResultReaderTest : BasePlatformTestCase() {
         assertEquals(image.toString().replace('\\', '/'), result?.imagePath)
     }
 
+    fun testReadPreviewResultResolvesRelativeBridgePreviewImagePath() {
+        val base = Path.of(project.basePath!!)
+        Files.createDirectories(base)
+        base.resolve("Demo.uproject").writeText("{}")
+        val source = base.resolve("DShader").resolve("Materials").resolve("M_Test2.dsm")
+        Files.createDirectories(source.parent)
+        source.writeText("Shader(Name=\"Materials/M_Test2\") { Graph = { } }")
+        val bridge = base.resolve("Saved").resolve("DreamShader").resolve("Bridge")
+        val image = bridge.resolve("Preview").resolve("M_Test2-d4b9c6b2.png")
+        Files.createDirectories(image.parent)
+        image.writeText("png")
+        bridge.resolve("preview.json").writeText(
+            """
+            {
+              "sourceFile": "${source.toString().replace('\\', '/')}",
+              "status": "ready",
+              "message": "ok",
+              "imagePath": "../../../../../honkai_rts_5_6/Saved/DreamShader/Bridge/Preview/M_Test2-d4b9c6b2.png",
+              "assetPath": "/Game/M_Test2",
+              "updatedAtUtc": "2026-06-15T00:00:00Z"
+            }
+            """.trimIndent()
+        )
+
+        val result = DreamShaderPreviewResultReader().readPreviewResult(project, source.toString())
+
+        assertNotNull(result)
+        assertEquals(image.toString().replace('\\', '/'), result?.imagePath)
+    }
+
     fun testReadPreviewResultIgnoresDifferentSourceFileAndBadJson() {
         val base = Path.of(project.basePath!!)
         Files.createDirectories(base)
