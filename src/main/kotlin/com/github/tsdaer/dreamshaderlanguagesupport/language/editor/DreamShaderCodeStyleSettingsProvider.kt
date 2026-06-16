@@ -10,7 +10,7 @@ class DreamShaderCodeStyleSettingsProvider : CodeStyleSettingsProvider() {
         return DreamShaderCodeStyleSettings(settings)
     }
 
-    override fun createSettingsPage(settings: CodeStyleSettings, originalSettings: CodeStyleSettings): CodeStyleAbstractConfigurable {
+    override fun createConfigurable(settings: CodeStyleSettings, originalSettings: CodeStyleSettings): CodeStyleConfigurable {
         return object : CodeStyleAbstractConfigurable(settings, originalSettings, configurableDisplayName) {
             override fun createPanel(settings: CodeStyleSettings): CodeStyleAbstractPanel {
                 return DreamShaderCodeStyleMainPanel(currentSettings, settings)

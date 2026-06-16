@@ -10,6 +10,7 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.WindowManager
+import com.intellij.psi.PsiManager
 import com.intellij.util.Alarm
 
 /**
@@ -51,10 +52,21 @@ internal class DreamShaderBridgeFileWatcher : ProjectActivity {
         if (project.isDisposed) return
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
-            val activeFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
+            val fileEditorManager = FileEditorManager.getInstance(project)
+            val activeFile = fileEditorManager.selectedFiles.firstOrNull()
             project.getService(DreamShaderBridgeSettingsRepository::class.java)?.invalidate()
             project.getService(DreamShaderBridgeDiagnosticsRepository::class.java)?.refresh(activeFile)
-            DaemonCodeAnalyzer.getInstance(project).restart()
+            val psiManager = PsiManager.getInstance(project)
+            val filesToRestart = buildSet {
+                activeFile?.let(::add)
+                addAll(fileEditorManager.openFiles.asIterable())
+            }
+            val daemonCodeAnalyzer = DaemonCodeAnalyzer.getInstance(project)
+            filesToRestart.forEach { virtualFile ->
+                psiManager.findFile(virtualFile)?.let { psiFile ->
+                    daemonCodeAnalyzer.restart(psiFile, RESTART_REASON)
+                }
+            }
             WindowManager.getInstance().getStatusBar(project)?.updateWidget(WIDGET_ID)
             project.messageBus.syncPublisher(DreamShaderPreviewListener.TOPIC).previewBridgeChanged()
         }
@@ -63,6 +75,7 @@ internal class DreamShaderBridgeFileWatcher : ProjectActivity {
     private companion object {
         const val DEBOUNCE_MS = 250
         const val BRIDGE_RELATIVE_DIR = "Saved/DreamShader/Bridge"
+        const val RESTART_REASON = "DreamShader bridge file changed"
         val BRIDGE_FILE_NAMES = setOf(
             "diagnostics.json",
             "settings.json",

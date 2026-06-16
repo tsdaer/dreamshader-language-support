@@ -13,6 +13,7 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
@@ -789,19 +790,7 @@ class DreamShaderSettingsConfigurable(
             }
             candidates.size == 1 -> candidates.first()
             else -> {
-                val labels = candidates
-                    .map { describeCandidate(it) }
-                    .toTypedArray()
-                val index = Messages.showChooseDialog(
-                    project,
-                    DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.chooseMessage"),
-                    DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.chooseTitle"),
-                    null,
-                    labels,
-                    labels.first()
-                )
-                if (index < 0) return
-                candidates[index]
+                ChooseUnrealSourceRootDialog(project, candidates).showAndGetCandidate() ?: return
             }
         }
 
@@ -1306,6 +1295,52 @@ class DreamShaderSettingsConfigurable(
             val ok = showAndGet()
             if (!ok) return null
             return textField.text.trim()
+        }
+    }
+
+    private class ChooseUnrealSourceRootDialog(
+        project: Project,
+        private val candidates: List<DreamShaderUnrealSourceLocator.Candidate>
+    ) : DialogWrapper(project, true) {
+        private val list = JBList(
+            candidates.map { candidate ->
+                val versionSuffix = candidate.version
+                    ?.let { DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.versionSuffix", it) }
+                    .orEmpty()
+                "${candidate.sourceRoot}$versionSuffix"
+            }
+        ).apply {
+            selectionMode = ListSelectionModel.SINGLE_SELECTION
+            selectedIndex = 0
+        }
+
+        init {
+            title = DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.chooseTitle")
+            setOKButtonText(DreamShaderBundle.message("common.ok"))
+            setCancelButtonText(DreamShaderBundle.message("common.cancel"))
+            init()
+        }
+
+        override fun createCenterPanel(): JComponent {
+            val panel = JPanel(BorderLayout(JBUI.scale(8), JBUI.scale(8)))
+            panel.add(
+                JLabel(DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.chooseMessage")),
+                BorderLayout.NORTH
+            )
+            panel.add(
+                com.intellij.ui.components.JBScrollPane(list).apply {
+                    preferredSize = Dimension(720, 180)
+                },
+                BorderLayout.CENTER
+            )
+            return panel
+        }
+
+        override fun getPreferredFocusedComponent(): JComponent = list
+
+        fun showAndGetCandidate(): DreamShaderUnrealSourceLocator.Candidate? {
+            if (!showAndGet()) return null
+            return candidates.getOrNull(list.selectedIndex)
         }
     }
 

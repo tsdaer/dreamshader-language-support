@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.intellij.application.options.CodeStyle
+import com.intellij.application.options.CodeStyleAbstractConfigurable
 import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
@@ -23,8 +24,8 @@ class DreamShaderCodeStyleSettingsProviderTest : BasePlatformTestCase() {
 
     fun testCodeStyleProviderCreatesSettingsPage() {
         val provider = DreamShaderCodeStyleSettingsProvider()
-        val settings = CodeStyleSettings()
-        val page = provider.createSettingsPage(settings, settings)
+        val settings = CodeStyle.createTestSettings()
+        val page = provider.createConfigurable(settings, settings) as CodeStyleAbstractConfigurable
 
         assertNotNull(page)
         assertEquals("DreamShader", page.displayName)

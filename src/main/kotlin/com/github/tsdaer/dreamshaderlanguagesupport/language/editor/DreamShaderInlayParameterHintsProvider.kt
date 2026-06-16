@@ -66,14 +66,4 @@ class DreamShaderInlayParameterHintsProvider : InlayParameterHintsProvider {
     @Deprecated("Required by legacy InlayParameterHintsProvider API.")
     @Suppress("OVERRIDE_DEPRECATION")
     override fun getBlacklistExplanationHTML(): String = "DreamShader inlay hints are based on built-in callable signatures."
-
-    @Suppress("OVERRIDE_DEPRECATION")
-    override fun getSettingsPreview(): String = """
-        Shader Main {
-            Graph {
-                float2 uv = UE.TexCoord(0);
-                float v = saturate(roughness);
-            }
-        }
-    """.trimIndent()
 }

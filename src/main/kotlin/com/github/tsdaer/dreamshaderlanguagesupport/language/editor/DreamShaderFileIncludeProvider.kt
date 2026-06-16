@@ -18,13 +18,17 @@ class DreamShaderFileIncludeProvider : FileIncludeProvider() {
 
     override fun getId(): String = "dreamshader"
 
+    private fun hasDreamShaderExtension(extension: String?): Boolean {
+        val normalizedExtension = extension?.lowercase() ?: return false
+        return normalizedExtension in setOf("dsm", "dsf", "dsh")
+    }
+
     override fun acceptFile(file: VirtualFile): Boolean {
-        val extension = file.extension?.lowercase() ?: return false
-        return extension in setOf("dsm", "dsf", "dsh")
+        return hasDreamShaderExtension(file.extension)
     }
 
     override fun getIncludeInfos(content: FileContent): Array<FileIncludeInfo> {
-        if (!acceptFile(content.file)) return emptyArray()
+        if (!hasDreamShaderExtension(content.file.extension)) return emptyArray()
         return importRegex.findAll(content.contentAsText)
             .mapNotNull { match ->
                 val path = match.groupValues.getOrNull(1)?.trim().orEmpty()
