@@ -2,8 +2,6 @@
 
 # dreamshader-language-support Changelog
 
-## [Unreleased]
-
 ## [0.0.5] - 2026-06-15
 
 ### Added
@@ -11,6 +9,16 @@
 - Added Material Preview parity with VS Code 1.5.3 via the DreamShader Bridge file transport, including a right-side ToolWindow, preview request writer, preview result/image reader, editor-follow behavior, and debounced auto-refresh setting.
 - Added Texture Sample and Noise Material `.dsm` template actions.
 - Added Create Package Step by Step wizard with package metadata fields and an example-material toggle.
+- Added native DreamShader code style settings and formatter support for language-specific options, including blank lines between sections and `::` spacing.
+- Added native File and Code Templates, including `New | DreamShader Material`, `DreamShader Function`, `DreamShader Header`, and reusable graph section / texture sample code templates.
+- Added DreamShader gutter markers for imports, top-level declarations, and Bridge diagnostic locations.
+- Added editor platform integrations for quote handling, import gutter markers, Copy Reference qualified names, breadcrumbs, and constant `float3` / `float4` / `vec3` / `vec4` color previews.
+- Added more IntelliJ editor integrations: declaration / section Context Info, plain-text symbol completion, rename name suggestions, and qualified-name reverse parsing for Copy/Paste Reference.
+
+### Changed
+
+- Split parameter inlay hints from the Code Vision setting by adding the `enableInlayParameterHints` project setting; disabling Code Vision no longer hides parameter hints.
+- `ALIGN_SECTION_ASSIGNMENTS` now aligns direct simple assignments inside sections by blank-line and nested-block groups, and Bridge diagnostic gutter markers prefer jumping to the diagnostic source line/column.
 
 ## [0.0.4] - 2026-06-14
 
@@ -87,7 +95,6 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
-[Unreleased]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.5...HEAD
 [0.0.5]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...0.0.5
 [0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4
 [0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3

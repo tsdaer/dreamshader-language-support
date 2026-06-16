@@ -1,5 +1,4 @@
 
-import org.jetbrains.changelog.tasks.PatchChangelogTask
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import java.nio.file.Files
 import java.nio.file.Path
@@ -8,7 +7,6 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("org.jetbrains.intellij.platform")
-    id("org.jetbrains.changelog")
 }
 
 dependencies {
@@ -24,12 +22,10 @@ dependencies {
 }
 
 tasks.processResources {
-    val patchChangelogTask = tasks.named<PatchChangelogTask>("patchChangelog")
     val pluginVersion = providers.gradleProperty("version")
     inputs.property("pluginVersion", pluginVersion)
-    // Keep an explicit producer-consumer link for Gradle 9 task output validation.
-    dependsOn(patchChangelogTask)
-    from(patchChangelogTask.flatMap { it.outputFile })
+    from(layout.projectDirectory.file("CHANGELOG.md"))
+    from(layout.projectDirectory.file("CHANGELOG.zh-CN.md"))
     filesMatching("dreamshader-plugin.properties") {
         val resolvedVersion = pluginVersion.orNull ?: "0.0.0"
         expand(
@@ -135,6 +131,32 @@ intellijPlatform {
         return html.toString()
     }
 
+    fun escapePluginHtml(text: String): String = text
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+
+    fun extractCurrentChangelogSection(changelog: String, version: String): String {
+        val lines = changelog.lines()
+        val exactHeading = Regex("^## \\[${Regex.escape(version)}\\].*$")
+        val versionHeading = Regex("^## \\[\\d+\\.\\d+\\.\\d+(?:[-+][^]]+)?\\].*$")
+        val anySectionHeading = Regex("^## \\[[^]]+].*$")
+        val linkReference = Regex("^\\[[^]]+]:\\s+.*$")
+        val exactStart = lines.indexOfFirst { exactHeading.matches(it.trim()) }
+        val start = exactStart.takeIf { it >= 0 }
+            ?: lines.indexOfFirst { versionHeading.matches(it.trim()) }
+        if (start < 0) return changelog.trim()
+
+        return lines.asSequence()
+            .drop(start + 1)
+            .takeWhile { line ->
+                val trimmed = line.trim()
+                !anySectionHeading.matches(trimmed) && !linkReference.matches(trimmed)
+            }
+            .joinToString("\n")
+            .trim()
+    }
+
     val pluginNameFromReadme = pluginMetadata.map { block ->
         extractPluginMetadataValue(block, "name")
             ?.lineSequence()
@@ -201,9 +223,10 @@ intellijPlatform {
         description = pluginDescriptionHtmlFromReadme.map { html ->
             html ?: "<p>DreamShaderLang language support for JetBrains Rider.</p>"
         }
-        changeNotes = providers.fileContents(layout.projectDirectory.file("CHANGELOG.md")).asText.map { changelog ->
-            "<pre>${changelog.trim()}</pre>"
-        }
+        changeNotes = providers.fileContents(layout.projectDirectory.file("CHANGELOG.md")).asText
+            .zip(providers.gradleProperty("version")) { changelog, version ->
+                "<pre>${escapePluginHtml(extractCurrentChangelogSection(changelog, version))}</pre>"
+            }
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild").orElse("252")
             val untilBuildProperty = providers.gradleProperty("pluginUntilBuild")

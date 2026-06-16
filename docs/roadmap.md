@@ -1225,7 +1225,7 @@ Acceptance criteria:
 | `P1` localization parity guard                        | `Implemented` | `DreamShaderBundleLocalizationTest` (base bundle keys must exist in `DreamShaderBundle_zh_CN.properties`)                                                                                                                                                                    |
 | `P2` large-file performance smoke tests               | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest`                                                                                                                                                                                                                                   |
 | `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`, file-based signing env/properties + legacy env fallback), `.github/workflows/build.yml`, `.github/workflows/release.yml` (writes cert/key secrets to temp files and publishes with file-path env)        |
-| `P3` changelog aligned with release tags              | `Implemented` | `CHANGELOG.md` + release workflow `patchChangelog` step in `.github/workflows/release.yml`                                                                                                                                                                                   |
+| `P3` changelog aligned with release tags              | `Implemented` | `CHANGELOG.md` / `CHANGELOG.zh-CN.md` + current-version release note extraction in `.github/workflows/build.yml`                                                                                                                                                              |
 
 ### Milestone M7: Material Preview and Authoring Parity (VS Code 1.5.3)
 
@@ -1251,6 +1251,6 @@ Acceptance criteria:
 
 ### Changelog Versioning Policy
 
-- Between version bumps, record new updates under the current released version section (for example, keep adding to `0.0.3` until `0.0.4` is actually created).
-- Keep `Unreleased` empty by default during normal development.
+- Between version bumps, record new updates under the current `gradle.properties` version section (for example, keep adding to `0.0.5` until `0.0.6` is actually created).
+- Do not keep an `Unreleased` section. The first versioned changelog section is the active development log until the next version bump.
 - Use Git commit history as the source of truth for detailed update chronology before each version bump.

@@ -93,7 +93,7 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
     )
     val titleText = DreamShaderBundle.message("welcome.header.title", decision.currentVersion)
     val subtitleText = buildSubtitleText(decision)
-    val changes = extractChangeNotesHtml()
+    val changes = extractChangeNotesHtml(decision.currentVersion)
     val features = DreamShaderBundle.message("welcome.section.features.html")
     val howTo = DreamShaderBundle.message("welcome.section.howTo.html")
     val setup = DreamShaderBundle.message("welcome.section.setup.html")
@@ -311,12 +311,33 @@ private fun buildSubtitleText(decision: DreamShaderWelcomeStateService.WelcomeDe
     }
 }
 
-private fun extractChangeNotesHtml(): String {
-    val notes = readBundledChangelogByLocale().trim()
+private fun extractChangeNotesHtml(currentVersion: String): String {
+    val notes = extractCurrentChangelogSection(readBundledChangelogByLocale(), currentVersion).trim()
     if (notes.isNotBlank()) {
-        return "<pre>$notes</pre>"
+        return "<pre>${escapeHtml(notes)}</pre>"
     }
     return DreamShaderBundle.message("welcome.section.changes.fallback")
+}
+
+private fun extractCurrentChangelogSection(changelog: String, currentVersion: String): String {
+    val lines = changelog.lines()
+    val exactHeading = Regex("^## \\[${Regex.escape(currentVersion)}\\].*$")
+    val versionHeading = Regex("^## \\[\\d+\\.\\d+\\.\\d+(?:[-+][^]]+)?\\].*$")
+    val anySectionHeading = Regex("^## \\[[^]]+].*$")
+    val linkReference = Regex("^\\[[^]]+]:\\s+.*$")
+    val exactStart = lines.indexOfFirst { exactHeading.matches(it.trim()) }
+    val start = exactStart.takeIf { it >= 0 }
+        ?: lines.indexOfFirst { versionHeading.matches(it.trim()) }
+    if (start < 0) return changelog.trim()
+
+    return lines.asSequence()
+        .drop(start + 1)
+        .takeWhile { line ->
+            val trimmed = line.trim()
+            !anySectionHeading.matches(trimmed) && !linkReference.matches(trimmed)
+        }
+        .joinToString("\n")
+        .trim()
 }
 
 private fun readPluginVersion(): String? {

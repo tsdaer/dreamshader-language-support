@@ -2,21 +2,6 @@
 
 # dreamshader-language-support 更新日志
 
-## [未发布]
-
-### 新增
-
-- 新增 DreamShader 原生代码样式设置，并让 formatter 读取语言专属选项，支持 section 间空行与 `::` 空格控制。
-- 新增原生 File and Code Templates，包括 `New | DreamShader Material`、`DreamShader Function`、`DreamShader Header` 操作，以及可复用的 graph section 与 texture sample 代码模板。
-- 新增 DreamShader gutter 标记，覆盖 import、顶层声明与 Bridge 诊断位置。
-- 新增编辑器平台集成：引号处理、`import "..."` 的 include/dependency provider、Copy Reference 限定名、面包屑，以及常量 `float3` / `float4` / `vec3` / `vec4` 颜色预览。
-- 新增更多 IntelliJ 小功能集成：声明 / section 的 Context Info、纯文本符号补全、重命名名称建议，以及 Copy/Paste Reference 的限定名反向解析。
-
-### 变更
-
-- 将参数内联提示从 Code Vision 设置中拆分出来，新增 `enableInlayParameterHints` 项目设置；关闭 Code Vision 不再隐藏参数提示。
-- `ALIGN_SECTION_ASSIGNMENTS` 现在会实际对齐 section 内直接简单赋值，并按空行和嵌套 block 分组；Bridge 诊断 gutter marker 会优先跳转到诊断的源码行列。
-
 ## [0.0.5] - 2026-06-15
 
 ### 新增
@@ -24,6 +9,16 @@
 - 新增对齐 VS Code 1.5.3 的材质预览能力：通过 DreamShader Bridge 文件传输写出预览请求、读取预览结果与图片，提供右侧 ToolWindow、跟随编辑器与自动刷新延迟设置。
 - 新增贴图采样与噪声材质 `.dsm` 模板操作。
 - 新增“分步创建包”向导，支持填写包元数据并选择是否生成示例材质。
+- 新增 DreamShader 原生代码样式设置，并让 formatter 读取语言专属选项，支持 section 间空行与 `::` 空格控制。
+- 新增原生 File and Code Templates，包括 `New | DreamShader Material`、`DreamShader Function`、`DreamShader Header` 操作，以及可复用的 graph section 与 texture sample 代码模板。
+- 新增 DreamShader gutter 标记，覆盖 import、顶层声明与 Bridge 诊断位置。
+- 新增编辑器平台集成：引号处理、import gutter 标记、Copy Reference 限定名、面包屑，以及常量 `float3` / `float4` / `vec3` / `vec4` 颜色预览。
+- 新增更多 IntelliJ 小功能集成：声明 / section 的 Context Info、纯文本符号补全、重命名名称建议，以及 Copy/Paste Reference 的限定名反向解析。
+
+### 变更
+
+- 将参数内联提示从 Code Vision 设置中拆分出来，新增 `enableInlayParameterHints` 项目设置；关闭 Code Vision 不再隐藏参数提示。
+- `ALIGN_SECTION_ASSIGNMENTS` 现在会实际对齐 section 内直接简单赋值，并按空行和嵌套 block 分组；Bridge 诊断 gutter marker 会优先跳转到诊断的源码行列。
 
 ## [0.0.4] - 2026-06-14
 
@@ -108,7 +103,6 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
-[未发布]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.5...HEAD
 [0.0.5]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...0.0.5
 [0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4
 [0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3

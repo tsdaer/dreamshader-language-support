@@ -203,21 +203,31 @@ jobs:
 
           extract_changelog_section() {
             local file="$1"
-            local header="$2"
-            awk -v header="$header" '
-              $0 ~ "^## \\[" header "\\][[:space:]]*$" { in_section=1; next }
-              in_section && $0 ~ "^## \\[" { exit }
+            local version="$2"
+            awk -v version="$version" '
+              /^## \[/ {
+                header=$0
+                sub(/^## \[/, "", header)
+                sub(/\].*$/, "", header)
+                if (in_section) exit
+                if (header == version) { in_section=1; next }
+              }
+              in_section && /^\[[^]]+\]:/ { exit }
               in_section { print }
             ' "$file"
           }
 
           extract_latest_release_section() {
             local file="$1"
-            local unreleased_header="$2"
-            awk -v unreleased="$unreleased_header" '
-              $0 ~ "^## \\[" unreleased "\\][[:space:]]*$" { seen_unreleased=1; next }
-              seen_unreleased && $0 ~ "^## \\[" && !in_section { in_section=1; next }
-              in_section && ($0 ~ "^## \\[" || $0 ~ "^\\[[^]]+\\]:") { exit }
+            awk '
+              /^## \[/ {
+                header=$0
+                sub(/^## \[/, "", header)
+                sub(/\].*$/, "", header)
+                if (in_section) exit
+                if (header ~ /^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$/) { in_section=1; next }
+              }
+              in_section && /^\[[^]]+\]:/ { exit }
               in_section { print }
             ' "$file"
           }
@@ -227,21 +237,18 @@ jobs:
             grep -q '[^[:space:]]' "$file"
           }
 
-          extract_changelog_section "CHANGELOG.md" "Unreleased" > "$RELEASE_NOTE_EN"
-          extract_changelog_section "CHANGELOG.zh-CN.md" "未发布" > "$RELEASE_NOTE_ZH"
+          extract_changelog_section "CHANGELOG.md" "$VERSION" > "$RELEASE_NOTE_EN"
+          extract_changelog_section "CHANGELOG.zh-CN.md" "$VERSION" > "$RELEASE_NOTE_ZH"
 
           if ! has_non_whitespace_content "$RELEASE_NOTE_EN"; then
-            extract_latest_release_section "CHANGELOG.md" "Unreleased" > "$RELEASE_NOTE_EN"
-          fi
-          if ! has_non_whitespace_content "$RELEASE_NOTE_EN"; then
-            ./gradlew getChangelog --unreleased --no-header --quiet --console=plain --output-file="$RELEASE_NOTE_EN" || true
+            extract_latest_release_section "CHANGELOG.md" > "$RELEASE_NOTE_EN"
           fi
           if ! has_non_whitespace_content "$RELEASE_NOTE_EN"; then
             echo "- No changelog entries found." > "$RELEASE_NOTE_EN"
           fi
 
           if ! has_non_whitespace_content "$RELEASE_NOTE_ZH"; then
-            extract_latest_release_section "CHANGELOG.zh-CN.md" "未发布" > "$RELEASE_NOTE_ZH"
+            extract_latest_release_section "CHANGELOG.zh-CN.md" > "$RELEASE_NOTE_ZH"
           fi
           if ! has_non_whitespace_content "$RELEASE_NOTE_ZH"; then
             echo "- 暂无。" > "$RELEASE_NOTE_ZH"

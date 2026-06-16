@@ -21,19 +21,6 @@ class DreamShaderMinorEditorFeaturesTest : BasePlatformTestCase() {
         assertEquals("_123Start", provider.testIdentifier("123Start"))
     }
 
-    fun testIncludeProviderExtractsImports() {
-        val provider = DreamShaderFileIncludeProvider()
-        val imports = provider.testIncludeInfos(
-            """
-            import "Shared/Common.dsh";
-            import "@scope/pkg/Library/Main.dsh";
-            Shader Main {}
-            """.trimIndent()
-        )
-
-        assertEquals(listOf("Shared/Common.dsh", "@scope/pkg/Library/Main.dsh"), imports)
-    }
-
     fun testQualifiedNameProviderForNamespaceMemberAndSection() {
         val file = myFixture.configureByText(
             "qualified_name.dsh",
