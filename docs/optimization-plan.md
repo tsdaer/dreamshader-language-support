@@ -39,9 +39,9 @@ Last updated: 2026-06-16
 | 7. Integrate spellchecking | P1 | Done | Added `spellchecker.support` for DreamShader comments plus `VirtualFunction` `Description` string contexts, while keeping paths and code-like strings out of spellchecking. |
 | 8. Expand color preview coverage | P1 | Done | Color previews now cover `Color(...)` / `LinearColor(...)`, `0xRRGGBB` / `0xRRGGBBAA`, and conservative 0-255 integer channels. |
 | 9. Show `opt` and default values in hover signatures | P1 | Done | Declared callable signatures now preserve parameter qualifiers, types, and default values in signature help and hover docs. |
-| 10. Share declaration context across diagnostic passes | P2 | Not started | Best handled after cache boundaries stabilize. |
-| 11. Let parser emit recoverable error markers | P2 | Not started | Pending parser recovery cleanup. |
-| 12. Validate `Path(...)` object-segment suffixes | P2 | Not started | Pending diagnostics patch. |
+| 10. Share declaration context across diagnostic passes | P2 | Done | Added cached `DeclarationContext` indexing for sections, section bodies, typed declarations, child declarations, and callable signatures, then migrated hot semantic passes to reuse it. |
+| 11. Let parser emit recoverable error markers | P2 | Done | Malformed declaration and section headers now emit recoverable parser error markers, while duplicate token-level malformed syntax diagnostics were retired. |
+| 12. Validate `Path(...)` object-segment suffixes | P2 | Done | Added targeted warnings for invalid asset object-segment suffixes such as `.uasset`, `.umap`, and common image extensions while ignoring dotted folder names. |
 | 13. Add GLSL legacy-alias compatibility diagnostics | P2 | Blocked | Requires upstream confirmation of the alias list. |
 
 Current verification:

@@ -5,7 +5,9 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDecl
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.intellij.lang.ASTNode
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
+import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.tree.IElementType
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class DreamShaderPsiParserTest : BasePlatformTestCase() {
@@ -109,6 +111,60 @@ class DreamShaderPsiParserTest : BasePlatformTestCase() {
 
         val declarationCount = countNodesByType(root, DreamShaderElementTypes.DECLARATION)
         assertTrue("Expected namespace + nested declarations", declarationCount >= 3)
+    }
+
+    fun testParserEmitsRecoverableErrorForMalformedTopLevelDeclarationAndKeepsFollowingDeclaration() {
+        val file = myFixture.configureByText(
+            "malformed_top_level_recovery.dsm",
+            """
+                Shader {
+                    Graph {
+                    }
+                }
+
+                Shader Valid {
+                    Graph {
+                    }
+                }
+            """.trimIndent()
+        )
+
+        val psiErrors = PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java)
+        assertTrue(
+            "Expected malformed declaration parser error, actual: ${psiErrors.map { it.errorDescription }}",
+            psiErrors.any { it.errorDescription == "Malformed declaration: expected declaration name or argument list" }
+        )
+
+        val declarations = PsiTreeUtil.collectElementsOfType(file, DreamShaderDeclaration::class.java)
+        assertTrue(
+            "Expected recovery to keep following declaration, actual names: ${declarations.map { it.declarationName() }}",
+            declarations.any { it.declarationName() == "Valid" }
+        )
+    }
+
+    fun testParserEmitsRecoverableErrorForMalformedSectionAndKeepsFollowingSection() {
+        val file = myFixture.configureByText(
+            "malformed_section_recovery.dsm",
+            """
+                Shader Main {
+                    Outputs
+                    Graph {
+                    }
+                }
+            """.trimIndent()
+        )
+
+        val psiErrors = PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java)
+        assertTrue(
+            "Expected malformed section parser error, actual: ${psiErrors.map { it.errorDescription }}",
+            psiErrors.any { it.errorDescription == "Malformed section: expected '{'" }
+        )
+
+        val sections = PsiTreeUtil.collectElementsOfType(file, DreamShaderSection::class.java)
+        assertTrue(
+            "Expected recovery to keep following section, actual sections: ${sections.map { it.sectionName() }}",
+            sections.any { it.sectionName() == "graph" }
+        )
     }
 
     private fun countNodesByType(node: ASTNode?, elementType: com.intellij.psi.tree.IElementType): Int {

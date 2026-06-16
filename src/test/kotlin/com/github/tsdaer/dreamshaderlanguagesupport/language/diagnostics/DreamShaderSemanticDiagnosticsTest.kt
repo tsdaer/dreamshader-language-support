@@ -209,6 +209,18 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertNoError("VirtualFunction Options.Asset path root 'Engine' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>")
     }
 
+    fun testVirtualFunctionOptionAssetWarnsOnUassetObjectSuffix() {
+        val text = """
+            VirtualFunction BufferWriter {
+                Options {
+                    Asset = <caret>Path(Game, Materials/M_VFAsset.uasset);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("virtual_function_asset_invalid_object_suffix.dsh", text)
+        assertHasWarning("Path object segment should not end with '.uasset'")
+    }
+
     fun testVirtualFunctionOptionAssetRejectsUnknownPathRoot() {
         val text = """
             VirtualFunction BufferWriter {
@@ -830,6 +842,20 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         myFixture.configureByText("const_texturecube_default_asset_quoted_path_ok.dsm", text)
         assertNoError("const TextureCube default asset must be an asset path (quoted object path or Path(...)).")
         assertNoError("const TextureCube default asset path root '/Game' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>.")
+    }
+
+    fun testConstTextureCubeDefaultAssetWarnsOnImageObjectSuffix() {
+        val text = """
+            Shader Main {
+                Properties {
+                    const TextureCube Env = <caret>"/Game/Textures/T_Env.png";
+                }
+                Graph {
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("const_texturecube_default_asset_invalid_object_suffix.dsm", text)
+        assertHasWarning("Path object segment should not end with '.png'")
     }
 
     fun testConstTexture2DStillAllowsOmittedDefaultAsset() {

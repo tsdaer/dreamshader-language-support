@@ -1,4 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.parser
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
@@ -40,6 +41,7 @@ class DreamShaderPsiParser : PsiParser {
 
         val marker = builder.mark()
         builder.advanceLexer() // declaration keyword
+        val recoveryMode = validateDeclarationHeader(builder)
 
         var foundBody = false
         while (!builder.eof()) {
@@ -51,6 +53,13 @@ class DreamShaderPsiParser : PsiParser {
             }
             if (tokenType == DreamShaderTokenTypes.OPERATOR && builder.tokenText == ";") {
                 builder.advanceLexer()
+                break
+            }
+            if (recoveryMode == HeaderRecoveryMode.STOP_AT_DECLARATION_BOUNDARY &&
+                (tokenType == DreamShaderTokenTypes.KEYWORD ||
+                    tokenType == DreamShaderTokenTypes.SECTION ||
+                    tokenType == DreamShaderTokenTypes.RBRACE)
+            ) {
                 break
             }
             builder.advanceLexer()
@@ -107,6 +116,7 @@ class DreamShaderPsiParser : PsiParser {
         if (builder.tokenType != DreamShaderTokenTypes.SECTION) return false
         val marker = builder.mark()
         builder.advanceLexer() // section keyword
+        val recoveryMode = validateSectionHeader(builder)
 
         while (!builder.eof()) {
             val tokenType = builder.tokenType
@@ -119,6 +129,13 @@ class DreamShaderPsiParser : PsiParser {
                 builder.advanceLexer()
                 marker.done(DreamShaderElementTypes.SECTION)
                 return true
+            }
+            if (recoveryMode == HeaderRecoveryMode.STOP_AT_DECLARATION_BOUNDARY &&
+                (tokenType == DreamShaderTokenTypes.KEYWORD ||
+                    tokenType == DreamShaderTokenTypes.SECTION ||
+                    tokenType == DreamShaderTokenTypes.RBRACE)
+            ) {
+                break
             }
             if (tokenType == DreamShaderTokenTypes.KEYWORD || tokenType == DreamShaderTokenTypes.SECTION) {
                 break
@@ -143,5 +160,70 @@ class DreamShaderPsiParser : PsiParser {
             }
             builder.advanceLexer()
         }
+    }
+
+    private fun validateDeclarationHeader(builder: PsiBuilder): HeaderRecoveryMode {
+        skipTrivia(builder)
+        val tokenType = builder.tokenType
+        return when (tokenType) {
+            null -> {
+                builder.error(DreamShaderBundle.message("diagnostic.malformedDeclarationExpectedNameOrArgs"))
+                HeaderRecoveryMode.STOP_AT_DECLARATION_BOUNDARY
+            }
+            DreamShaderTokenTypes.IDENTIFIER,
+            DreamShaderTokenTypes.LPAREN -> HeaderRecoveryMode.NONE
+            DreamShaderTokenTypes.LBRACE -> {
+                builder.error(DreamShaderBundle.message("diagnostic.malformedDeclarationExpectedNameOrArgs"))
+                HeaderRecoveryMode.NONE
+            }
+            else -> {
+                builder.error(DreamShaderBundle.message("diagnostic.malformedDeclarationExpectedNameOrArgs"))
+                HeaderRecoveryMode.STOP_AT_DECLARATION_BOUNDARY
+            }
+        }
+    }
+
+    private fun validateSectionHeader(builder: PsiBuilder): HeaderRecoveryMode {
+        skipTrivia(builder)
+        val tokenType = builder.tokenType
+        return when {
+            tokenType == null -> {
+                builder.error(DreamShaderBundle.message("diagnostic.malformedSectionExpectedLBrace"))
+                HeaderRecoveryMode.STOP_AT_DECLARATION_BOUNDARY
+            }
+            tokenType == DreamShaderTokenTypes.LBRACE -> HeaderRecoveryMode.NONE
+            tokenType == DreamShaderTokenTypes.OPERATOR && builder.tokenText == ";" -> HeaderRecoveryMode.NONE
+            tokenType == DreamShaderTokenTypes.OPERATOR && builder.tokenText == "=" -> {
+                builder.advanceLexer()
+                skipTrivia(builder)
+                if (builder.tokenType == DreamShaderTokenTypes.LBRACE) {
+                    HeaderRecoveryMode.NONE
+                } else {
+                    builder.error(DreamShaderBundle.message("diagnostic.malformedSectionExpectedLBrace"))
+                    HeaderRecoveryMode.STOP_AT_DECLARATION_BOUNDARY
+                }
+            }
+            else -> {
+                builder.error(DreamShaderBundle.message("diagnostic.malformedSectionExpectedLBrace"))
+                HeaderRecoveryMode.STOP_AT_DECLARATION_BOUNDARY
+            }
+        }
+    }
+
+    private fun skipTrivia(builder: PsiBuilder) {
+        while (isTrivia(builder.tokenType)) {
+            builder.advanceLexer()
+        }
+    }
+
+    private fun isTrivia(tokenType: IElementType?): Boolean {
+        return tokenType == DreamShaderTokenTypes.WHITE_SPACE ||
+            tokenType == DreamShaderTokenTypes.LINE_COMMENT ||
+            tokenType == DreamShaderTokenTypes.BLOCK_COMMENT
+    }
+
+    private enum class HeaderRecoveryMode {
+        NONE,
+        STOP_AT_DECLARATION_BOUNDARY
     }
 }
