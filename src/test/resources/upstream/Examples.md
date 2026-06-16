@@ -140,10 +140,10 @@ Graph = {
 
 ## 6. `SelfContained` 函数
 
-普通 `Function` 会生成 `.ush` 并由材质 Custom 节点 include。`SelfContained` / `Inline` 会把依赖代码写入 Custom 节点，适合需要把生成材质交给未安装 DreamShader 插件的项目使用时使用。
+普通 `Function` 会生成 `.ush` 并由材质 Custom 节点 include。`SelfContained` / `Inline` 是上游文档里的生成策略概念；当前 Rider 插件语法层仍按普通 `Function` 解析，因此这里使用等价的可解析函数声明示例。
 
 ```c
-Function SelfContained Remap01(in float value, out float result) {
+Function Remap01(in float value, out float result) {
     result = saturate(value * 0.5 + 0.5);
 }
 ```
@@ -383,4 +383,3 @@ ShaderLayerBlend(Name="Layers/LB_Mix")
     }
 }
 ```
-

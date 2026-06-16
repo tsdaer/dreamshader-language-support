@@ -12,7 +12,12 @@ plugins {
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    testImplementation(platform("org.junit:junit-bom:6.1.0"))
+    // Keep JUnit 4 APIs on the test compile/runtime classpath during the transition.
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
 
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
@@ -21,6 +26,10 @@ dependencies {
         bundledModule("intellij.spellchecker")
         testFramework(TestFrameworkType.Platform)
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.processResources {

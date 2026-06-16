@@ -108,6 +108,8 @@ Test:
 .\gradlew.bat test --no-configuration-cache
 ```
 
+Gradle test execution now runs on JUnit Platform. Legacy JUnit 4-style tests remain temporarily supported through the Vintage engine while new non-platform tests should prefer JUnit Jupiter APIs.
+
 Run plugin in sandbox:
 
 ```powershell
@@ -123,6 +125,7 @@ More workflow details are in [`docs/development.md`](docs/development.md).
 - `CHANGELOG.md` is the English changelog consumed by `build.gradle.kts` for plugin change notes. `CHANGELOG.zh-CN.md` is used by the localized welcome page and by the GitHub Build workflow when composing bilingual draft release notes.
 - Keep the current `gradle.properties` version section (`## [x.y.z] - YYYY-MM-DD`) as the first changelog section in both files. Until the next version is created, add all development log entries under that current version section instead of using an `Unreleased` section.
 - The GitHub Build workflow creates draft release notes from the current version section, with a fallback to the first versioned changelog section. When bumping the version, add the new section above the previous one and update the compare links at the bottom.
+- Gradle test discovery uses JUnit Platform with temporary Vintage compatibility for the remaining JUnit 4-style tests. Prefer JUnit Jupiter APIs for new non-platform tests.
 
 ## Rider Entry Points
 
