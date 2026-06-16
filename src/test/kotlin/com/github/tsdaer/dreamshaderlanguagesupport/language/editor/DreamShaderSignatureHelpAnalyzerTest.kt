@@ -69,7 +69,24 @@ class DreamShaderSignatureHelpAnalyzerTest {
 
         val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName, text)
         assertEquals(1, signatures.size)
-        assertEquals("ApplyTint(color, tint, result)", signatures.first().presentableText)
+        assertEquals("ApplyTint(in vec3 color, in vec3 tint, out vec3 result)", signatures.first().presentableText)
+    }
+
+    @Test
+    fun `preserves opt qualifier type and default values in declared signatures`() {
+        val text = """
+            Function ApplyTint(in vec3 color, opt float strength = 1.0, out vec3 result) {
+                result = color * strength;
+            }
+        """.trimIndent()
+
+        val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures("ApplyTint", text)
+        assertEquals(1, signatures.size)
+        assertEquals(
+            "ApplyTint(in vec3 color, opt float strength = 1.0, out vec3 result)",
+            signatures.first().presentableText
+        )
+        assertEquals(listOf("color", "strength", "result"), signatures.first().parameterNames)
     }
 
     @Test
@@ -94,7 +111,7 @@ class DreamShaderSignatureHelpAnalyzerTest {
 
         val signatures = DreamShaderSignatureHelpAnalyzer.resolveSignatures(call.functionName, text)
         assertEquals(1, signatures.size)
-        assertEquals("Blend(a, b, result)", signatures.first().presentableText)
+        assertEquals("Blend(in float a, in float b, out float result)", signatures.first().presentableText)
     }
 
     @Test
@@ -116,7 +133,10 @@ class DreamShaderSignatureHelpAnalyzerTest {
             additionalSourceTexts = listOf(importedText)
         )
         assertEquals(1, signatures.size)
-        assertEquals("Blend(localA, localB, localResult)", signatures.first().presentableText)
+        assertEquals(
+            "Blend(in float localA, in float localB, out float localResult)",
+            signatures.first().presentableText
+        )
     }
 
     @Test

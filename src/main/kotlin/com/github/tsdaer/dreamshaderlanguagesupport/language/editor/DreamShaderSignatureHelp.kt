@@ -54,6 +54,13 @@ data class DreamShaderDeclaredCallable(
     val signature: DreamShaderCallSignature
 )
 
+private data class DreamShaderDeclaredParameter(
+    val name: String,
+    val qualifier: String?,
+    val typeName: String?,
+    val defaultValue: String?
+)
+
 /**
  * 用于调用上下文和参数索引解析的无状态分析器。
  *
@@ -449,13 +456,14 @@ object DreamShaderSignatureHelpAnalyzer {
             val leftParenOffset = matcher.end() - 1
             val rightParenOffset = findMatchingRightParen(sourceText, leftParenOffset) ?: continue
             val rawParameters = sourceText.substring(leftParenOffset + 1, rightParenOffset)
-            val parameterNames = splitTopLevelCommaSegments(rawParameters)
-                .mapNotNull { extractDeclaredParameterName(it) }
+            val parameters = splitTopLevelCommaSegments(rawParameters)
+                .mapNotNull { parseDeclaredParameter(it) }
+            val parameterNames = parameters.map { it.name }
 
             val presentableText = buildString {
                 append(functionName)
                 append("(")
-                append(parameterNames.joinToString(", "))
+                append(parameters.joinToString(", ") { formatDeclaredParameter(it) })
                 append(")")
             }
             signatures[functionName.lowercase(Locale.ROOT)] = signature(presentableText, *parameterNames.toTypedArray())
@@ -549,10 +557,11 @@ object DreamShaderSignatureHelpAnalyzer {
         return null
     }
 
-    private fun extractDeclaredParameterName(rawParameter: String): String? {
+    private fun parseDeclaredParameter(rawParameter: String): DreamShaderDeclaredParameter? {
         val head = rawParameter.substringBefore('=').trim()
         if (head.isBlank()) return null
 
+        val defaultValue = rawParameter.substringAfter('=', "").trim().ifBlank { null }
         val identifiers = mutableListOf<String>()
         val matcher = DECLARATION_IDENTIFIER_PATTERN.matcher(head)
         while (matcher.find()) {
@@ -562,7 +571,33 @@ object DreamShaderSignatureHelpAnalyzer {
 
         val name = identifiers.last()
         if (identifiers.size == 1 && name.lowercase(Locale.ROOT) in PARAMETER_QUALIFIERS) return null
-        return name
+        val qualifier = identifiers.firstOrNull { it.lowercase(Locale.ROOT) in PARAMETER_QUALIFIERS }
+        val typeName = identifiers.dropLast(1)
+            .lastOrNull { it.lowercase(Locale.ROOT) !in PARAMETER_QUALIFIERS }
+        return DreamShaderDeclaredParameter(
+            name = name,
+            qualifier = qualifier,
+            typeName = typeName,
+            defaultValue = defaultValue
+        )
+    }
+
+    private fun formatDeclaredParameter(parameter: DreamShaderDeclaredParameter): String {
+        return buildString {
+            parameter.qualifier?.let {
+                append(it)
+                append(' ')
+            }
+            parameter.typeName?.let {
+                append(it)
+                append(' ')
+            }
+            append(parameter.name)
+            parameter.defaultValue?.let {
+                append(" = ")
+                append(it)
+            }
+        }
     }
 
     private fun buildLookupCandidates(functionName: String): List<String> {

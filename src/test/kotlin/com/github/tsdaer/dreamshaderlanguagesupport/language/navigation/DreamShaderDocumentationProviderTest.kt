@@ -222,7 +222,7 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
 
         assertNotNull(doc)
         assertTrue(doc!!.contains("Function Call: Blend"))
-        assertTrue(doc.contains("Blend(a, b, result)"))
+        assertTrue(doc.contains("Blend(in float a, in float b, out float result)"))
     }
 
     fun testFunctionCallHoverUsesOriginalElementWhenResolveTargetDiffers() {
@@ -252,7 +252,32 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
 
         assertNotNull(doc)
         assertTrue(doc!!.contains("Function Call: Blend"))
-        assertTrue(doc.contains("Blend(a, b, result)"))
+        assertTrue(doc.contains("Blend(in float a, in float b, out float result)"))
+    }
+
+    fun testFunctionCallHoverShowsOptAndDefaultValues() {
+        val file = myFixture.configureByText(
+            "hover_function_call_optional_defaults.dsf",
+            """
+            Function Blend(in float a, opt float strength = 1.0, out float result) {
+                result = lerp(a, strength, 0.5);
+            }
+
+            Shader Main {
+                Graph {
+                    float outValue = 0.0;
+                    Blend(0.2, result=outValue);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val offset = file.text.lastIndexOf("Blend(")
+        val element = file.findElementAt(offset)
+        val doc = provider.generateDoc(element, element)
+
+        assertNotNull(doc)
+        assertTrue(doc!!.contains("Blend(in float a, opt float strength = 1.0, out float result)"))
     }
 
     fun testImportedFunctionCallProvidesHoverDoc() {
@@ -286,7 +311,7 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
 
         assertNotNull(doc)
         assertTrue(doc!!.contains("Function Call: Blend"))
-        assertTrue(doc.contains("Blend(a, b, result)"))
+        assertTrue(doc.contains("Blend(in float a, in float b, out float result)"))
     }
 
     fun testLocalVariableProvidesHoverDoc() {

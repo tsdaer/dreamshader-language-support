@@ -124,6 +124,31 @@ class DreamShaderMinorEditorFeaturesTest : BasePlatformTestCase() {
         assertNull(provider.testColorCall("float3(foo, 0.5, 0.0)"))
     }
 
+    fun testColorProviderRecognizesColorAliasesHexAndByteChannels() {
+        val provider = DreamShaderColorProvider()
+
+        val byteColor = provider.testColorCall("Color(255, 128, 0, 64)")
+        assertNotNull(byteColor)
+        assertEquals(255, byteColor!!.red)
+        assertEquals(128, byteColor.green)
+        assertEquals(0, byteColor.blue)
+        assertEquals(64, byteColor.alpha)
+
+        val hexRgb = provider.testColorCall("0xFF8040")
+        assertNotNull(hexRgb)
+        assertEquals(255, hexRgb!!.red)
+        assertEquals(128, hexRgb.green)
+        assertEquals(64, hexRgb.blue)
+        assertEquals(255, hexRgb.alpha)
+
+        val hexRgba = provider.testColorCall("0xFF804020")
+        assertNotNull(hexRgba)
+        assertEquals(32, hexRgba!!.alpha)
+
+        assertNull(provider.testColorCall("Color(256, 0, 0)"))
+        assertNull(provider.testColorCall("Color(1.0, 128, 0)"))
+    }
+
     fun testDeclarationRangeHandlerReturnsHeaderRanges() {
         val file = myFixture.configureByText(
             "context_info.dsm",

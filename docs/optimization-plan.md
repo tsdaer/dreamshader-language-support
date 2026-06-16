@@ -37,8 +37,8 @@ Last updated: 2026-06-16
 | 5. Add Live Templates and Postfix Templates | P1 | Not started | Pending independent editor-experience patch. |
 | 6. Add Goto Symbol / Goto Class contributors | P1 | Not started | Pending independent navigation patch. |
 | 7. Integrate spellchecking | P1 | Not started | Pending independent editor-experience patch. |
-| 8. Expand color preview coverage | P1 | Not started | Pending independent editor-experience patch. |
-| 9. Show `opt` and default values in hover signatures | P1 | Not started | Pending independent documentation/signature rendering patch. |
+| 8. Expand color preview coverage | P1 | Done | Color previews now cover `Color(...)` / `LinearColor(...)`, `0xRRGGBB` / `0xRRGGBBAA`, and conservative 0-255 integer channels. |
+| 9. Show `opt` and default values in hover signatures | P1 | Done | Declared callable signatures now preserve parameter qualifiers, types, and default values in signature help and hover docs. |
 | 10. Share declaration context across diagnostic passes | P2 | Not started | Best handled after cache boundaries stabilize. |
 | 11. Let parser emit recoverable error markers | P2 | Not started | Pending parser recovery cleanup. |
 | 12. Validate `Path(...)` object-segment suffixes | P2 | Not started | Pending diagnostics patch. |
@@ -48,6 +48,7 @@ Current verification:
 
 - `./gradlew test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticDiagnosticsTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticAnnotatorTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolverTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoDeclarationHandlerTest`
 - `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticDiagnosticsTest`
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMinorEditorFeaturesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSignatureHelpAnalyzerTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationProviderTest`
 
 ## P0: Performance and Bridge-Failure Prevention
 

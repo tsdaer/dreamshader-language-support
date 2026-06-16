@@ -101,6 +101,15 @@ class DreamShaderLexer : LexerBase() {
 
         if (c.isDigit() || (c == '.' && i + 1 < endOffset && buffer[i + 1].isDigit())) {
             var j = i
+            if (buffer[j] == '0' && j + 2 < endOffset && (buffer[j + 1] == 'x' || buffer[j + 1] == 'X') && buffer[j + 2].isHexDigit()) {
+                j += 2
+                while (j < endOffset && buffer[j].isHexDigit()) {
+                    j++
+                }
+                tokenEnd = j
+                tokenType = DreamShaderTokenTypes.NUMBER
+                return
+            }
             if (buffer[j] == '.') {
                 j++
             }
@@ -160,6 +169,8 @@ class DreamShaderLexer : LexerBase() {
     private fun isIdentifierStart(c: Char): Boolean = c == '_' || c.isLetter()
 
     private fun isIdentifierPart(c: Char): Boolean = c == '_' || c.isLetterOrDigit()
+
+    private fun Char.isHexDigit(): Boolean = this in '0'..'9' || this in 'a'..'f' || this in 'A'..'F'
 
     private fun classifyBrace(c: Char): IElementType? {
         return when (c) {
