@@ -11,15 +11,26 @@
 - Added Create Package Step by Step wizard with package metadata fields and an example-material toggle.
 - Added native DreamShader code style settings and formatter support for language-specific options, including blank lines between sections and `::` spacing.
 - Added native File and Code Templates, including `New | DreamShader Material`, `DreamShader Function`, `DreamShader Header`, and reusable graph section / texture sample code templates.
+- Added DreamShader live templates and conservative postfix templates for common shader/function/control-flow authoring patterns.
 - Added DreamShader gutter markers for imports, top-level declarations, and Bridge diagnostic locations.
 - Added editor platform integrations for quote handling, import gutter markers, Copy Reference qualified names, breadcrumbs, and constant `float3` / `float4` / `vec3` / `vec4` color previews.
 - Added more IntelliJ editor integrations: declaration / section Context Info, plain-text symbol completion, rename name suggestions, and qualified-name reverse parsing for Copy/Paste Reference.
 - Added declaration-level Rename input validation and Safe Delete availability for DreamShader declarations, backed by the existing namespace-aware reference search and `Name="Path/Leaf"` rename behavior.
+- Added Goto Symbol and Goto Class contributors for DreamShader asset declarations, functions, graph functions, virtual functions, namespaces, and namespace members.
+- Added spellchecking support for DreamShader comments and `VirtualFunction` `Description` strings while avoiding noisy checks for paths and code-like strings.
+- Added conservative `Substrate` expression diagnostics for arithmetic, swizzles, vector constructor arguments, and ternary branch merges that can fail later in the Bridge stage.
+- Added targeted `Path(...)` object-segment suffix warnings for Bridge-breaking asset suffixes such as `.uasset`, `.umap`, and common image extensions.
 
 ### Changed
 
 - Split parameter inlay hints from the Code Vision setting by adding the `enableInlayParameterHints` project setting; disabling Code Vision no longer hides parameter hints.
 - `ALIGN_SECTION_ASSIGNMENTS` now aligns direct simple assignments inside sections by blank-line and nested-block groups, and Bridge diagnostic gutter markers prefer jumping to the diagnostic source line/column.
+- Cached semantic diagnostic inputs more aggressively: file diagnostics now reuse cached source text, whole-file tokens, declaration contexts, section bodies, typed declarations, callable signatures, and body-level token slices across hot semantic passes.
+- Cached direct import and import-closure resolution so navigation, signature help, references, inlay hints, hover, and import diagnostics share results for unchanged files.
+- `UE.<Name>` go-to declaration now prefers Unreal source locations when source scanning resolves a matching header target, while preserving catalog/documentation fallback behavior.
+- Hover and signature rendering now preserve `opt` qualifiers and default values for declared callable parameters.
+- Inline color previews now cover `Color(...)` / `LinearColor(...)`, `0xRRGGBB` / `0xRRGGBBAA`, and conservative 0-255 integer channel forms in addition to vector constructors.
+- Malformed declaration and section headers now produce recoverable parser error markers; duplicate token-level malformed syntax diagnostics were removed.
 
 ## [0.0.4] - 2026-06-14
 

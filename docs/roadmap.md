@@ -17,6 +17,38 @@ Current parity baseline: VS Code DreamShaderLang extension v1.5.3.
 
 - `0.0.4`: catalog-based `UE.*` / `Substrate.*` built-ins completed. Unreal material expression data moved out of scattered hard-coded tables into a shared catalog feeding completion, signature help, hover docs, and diagnostics. The release also added best-effort Unreal source scanning, source-root auto-detect, `OutputType="Substrate"` support, and stricter Substrate / Layer diagnostics.
 
+### 2026-06-16 Optimization Archive
+
+This archive folds the temporary optimization plan into the long-term roadmap.
+The temporary plan covered edit-time performance for large `.dsh`, `.dsf`, and
+`.dsm` files, Bridge-failure-prevention diagnostics, and editor/navigation
+polish not yet captured by the implemented roadmap inventory.
+
+Completed:
+- Cached semantic diagnostic lexical inputs: file diagnostics now reuse cached file text, whole-file tokens, declaration contexts, and body-level token slices instead of independently re-lexing unchanged bodies in hot semantic passes.
+- Cached import closure resolution: direct imports and import closures share cached results invalidated by PSI modification count and VFS structure changes.
+- Added conservative `Substrate` expression diagnostics for arithmetic, swizzles, vector constructors, and ternary branch merges.
+- Wired `UE.*` go-to declaration to the Unreal source locator, preferring Unreal header targets when source scanning resolves a match and preserving catalog fallback behavior.
+- Added DreamShader live templates and conservative postfix templates.
+- Added Goto Symbol and Goto Class contributors backed by DreamShader declaration search.
+- Integrated spellchecking for comments and `VirtualFunction` `Description` strings while avoiding noisy path/code-like string checks.
+- Expanded inline color preview coverage for color constructor aliases, hex colors, and conservative 0-255 channel forms.
+- Rendered `opt` qualifiers and default values in callable hover/signature output.
+- Shared declaration context across diagnostic passes by caching sections, section bodies, typed declarations, child declarations, callable signatures, and reusable body tokens.
+- Moved parser-obvious malformed declaration/section diagnostics into recoverable parser error markers and removed duplicate token-level malformed syntax diagnostics.
+- Added targeted `Path(...)` object-segment suffix warnings for Bridge-breaking asset suffixes such as `.uasset`, `.umap`, and common image extensions.
+
+Remaining blocked item:
+- GLSL legacy-alias compatibility diagnostics are intentionally not implemented yet. The removed/legacy alias list needs upstream confirmation before the plugin can warn safely or offer replacement quick fixes.
+
+Verification used during the optimization pass:
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticDiagnosticsTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticAnnotatorTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.integration.DreamShaderLargeFilePerformanceSmokeTest`
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderPsiParserTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSyntaxDiagnosticsTest`
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMinorEditorFeaturesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSignatureHelpAnalyzerTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationProviderTest`
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoContributorsTest`
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSpellcheckingStrategyTest`
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderPostfixTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateCommandsTest`
+
 ## Current Progress
 
 | Area                                           | Status | Notes                                                                                                                                                                                                                                    |

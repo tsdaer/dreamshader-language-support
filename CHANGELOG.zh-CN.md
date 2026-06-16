@@ -11,15 +11,26 @@
 - 新增“分步创建包”向导，支持填写包元数据并选择是否生成示例材质。
 - 新增 DreamShader 原生代码样式设置，并让 formatter 读取语言专属选项，支持 section 间空行与 `::` 空格控制。
 - 新增原生 File and Code Templates，包括 `New | DreamShader Material`、`DreamShader Function`、`DreamShader Header` 操作，以及可复用的 graph section 与 texture sample 代码模板。
+- 新增 DreamShader Live Templates 与保守的 Postfix Templates，覆盖常见 shader/function/control-flow 编写模式。
 - 新增 DreamShader gutter 标记，覆盖 import、顶层声明与 Bridge 诊断位置。
 - 新增编辑器平台集成：引号处理、`import "..."` 的 include/dependency provider、Copy Reference 限定名、面包屑，以及常量 `float3` / `float4` / `vec3` / `vec4` 颜色预览。
 - 新增更多 IntelliJ 小功能集成：声明 / section 的 Context Info、纯文本符号补全、重命名名称建议，以及 Copy/Paste Reference 的限定名反向解析。
 - 新增 DreamShader 声明级重命名输入校验与安全删除可用性，复用已有的命名空间感知引用搜索，并保留 `Name="Path/Leaf"` 声明重命名时只替换叶子名的行为。
+- 新增 Goto Symbol 与 Goto Class contributor，支持 DreamShader 资产声明、Function、GraphFunction、VirtualFunction、Namespace 及命名空间成员搜索。
+- 新增拼写检查支持：覆盖 DreamShader 注释与 `VirtualFunction` 的 `Description` 字符串，同时避免对路径和代码风格字符串产生噪声。
+- 新增保守的 `Substrate` 表达式诊断，覆盖算术、swizzle、向量构造参数与三元分支合并等可能在 Bridge 阶段失败的场景。
+- 新增 `Path(...)` 对象段后缀警告，可提示 `.uasset`、`.umap` 与常见图片扩展名等会破坏 Bridge 的资源后缀。
 
 ### 变更
 
 - 将参数内联提示从 Code Vision 设置中拆分出来，新增 `enableInlayParameterHints` 项目设置；关闭 Code Vision 不再隐藏参数提示。
 - `ALIGN_SECTION_ASSIGNMENTS` 现在会实际对齐 section 内直接简单赋值，并按空行和嵌套 block 分组；Bridge 诊断 gutter marker 会优先跳转到诊断的源码行列。
+- 更积极地缓存语义诊断输入：文件诊断现在会复用源码文本、整文件 token、声明上下文、section body、类型声明、可调用签名与 body 级 token 切片，减少热路径重复分析。
+- 缓存 direct import 与 import closure 解析结果，让导航、签名帮助、引用搜索、内联提示、悬浮文档和 import 诊断在未修改文件上共享结果。
+- `UE.<Name>` 跳转声明在源码扫描能解析到 Unreal 头文件目标时会优先跳转源码，同时保留 catalog/documentation 兜底。
+- Hover 与签名渲染现在会保留声明式可调用参数的 `opt` 修饰符与默认值。
+- 内联颜色预览扩展到 `Color(...)` / `LinearColor(...)`、`0xRRGGBB` / `0xRRGGBBAA`，以及保守的 0-255 整数通道形式，不再只限于向量构造。
+- 声明头与 section 头格式错误现在由 parser 生成可恢复错误标记；原先重复的 token 级 malformed 语法诊断已移除。
 
 ## [0.0.4] - 2026-06-14
 

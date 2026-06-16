@@ -174,11 +174,11 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateConstTextureDefaultAssetDiagnostics(declarationContexts, holder)
         annotateOptionalInputDefaultDiagnostics(declarationContexts, holder)
         annotateUnknownExpressionClassDiagnostics(file, sourceText, topLevelDeclarations, holder)
-        annotateSubstrateExpressionDiagnostics(sourceText, declarationContexts, holder)
-        annotateUnsupportedGraphLoopDiagnostics(sourceText, declarationContexts, holder)
-        annotateUnsupportedGraphSwitchDiagnostics(sourceText, declarationContexts, holder)
-        annotateUnsupportedGraphBreakContinueDiagnostics(sourceText, declarationContexts, holder)
-        annotateUnsupportedGraphReturnDiagnostics(sourceText, declarationContexts, holder)
+        annotateSubstrateExpressionDiagnostics(declarationContexts, holder)
+        annotateUnsupportedGraphLoopDiagnostics(declarationContexts, holder)
+        annotateUnsupportedGraphSwitchDiagnostics(declarationContexts, holder)
+        annotateUnsupportedGraphBreakContinueDiagnostics(declarationContexts, holder)
+        annotateUnsupportedGraphReturnDiagnostics(declarationContexts, holder)
         annotateMissingOutArgumentDiagnostics(file, sourceText, tokens, topLevelDeclarations, holder)
         annotateAssetRootPathDiagnostics(topLevelDeclarations, holder)
         annotateUnresolvedImportDiagnostics(file, tokens, holder)
@@ -259,7 +259,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
     // Section 形状诊断：声明作用域下的 section 兼容性与必需项检查。
     private fun annotateVirtualFunctionRules(sourceText: String, context: DeclarationContext, holder: AnnotationHolder) {
         val graphSection = context.firstSection("graph")
-        val codeSectionRange = topLevelSectionHeaderRange(sourceText, context.declaration.bodyTextRange(), "code")
+        val codeSectionRange = context.topLevelSectionHeaderRange("code")
         if (graphSection != null || codeSectionRange != null) {
             val annotation = holder.newAnnotation(
                 HighlightSeverity.ERROR,
@@ -1388,16 +1388,10 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 knownClassByLower.putIfAbsent(className.lowercase(Locale.ROOT), className)
             }
 
-        topLevelDeclarations.forEach { declaration ->
-            directSectionsOf(declaration)
-                .filter {
-                    val sectionName = canonicalSectionName(it.sectionName())
-                    sectionName == "graph" || sectionName == "outputs"
-                }
+        allDeclarationContexts(topLevelDeclarations).forEach { context ->
+            context.graphLikeSections()
                 .forEach { section ->
-                    val body = sectionBody(section) ?: return@forEach
-                    val bodyEnd = body.startOffset + body.text.length
-                    val tokens = lexTokens(sourceText, body.startOffset, bodyEnd)
+                    val tokens = context.sectionTokens(section).orEmpty()
                     tokens.indices.forEach { index ->
                         val token = tokens[index]
                         if (!token.text.equals("UE", ignoreCase = true)) return@forEach
@@ -1795,13 +1789,8 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
-    private fun annotateSubstrateExpressionDiagnostics(
-        sourceText: String,
-        declarationContexts: List<DeclarationContext>,
-        holder: AnnotationHolder
-    ) {
-        graphConstrainedBodyRanges(declarationContexts).forEach { bodyRange ->
-            val tokens = lexTokens(sourceText, bodyRange.startOffset, bodyRange.endOffset)
+    private fun annotateSubstrateExpressionDiagnostics(declarationContexts: List<DeclarationContext>, holder: AnnotationHolder) {
+        graphConstrainedBodyTokens(declarationContexts).forEach { tokens ->
             val substrateSymbols = collectSubstrateLocalSymbols(tokens)
             if (substrateSymbols.isEmpty()) return@forEach
 
@@ -2000,13 +1989,8 @@ internal class DreamShaderSemanticAnnotationPipeline {
         return tokens.lastIndex
     }
 
-    private fun annotateUnsupportedGraphLoopDiagnostics(
-        sourceText: String,
-        declarationContexts: List<DeclarationContext>,
-        holder: AnnotationHolder
-    ) {
+    private fun annotateUnsupportedGraphLoopDiagnostics(declarationContexts: List<DeclarationContext>, holder: AnnotationHolder) {
         annotateUnsupportedGraphKeywordDiagnostics(
-            sourceText = sourceText,
             declarationContexts = declarationContexts,
             holder = holder,
             keywords = UNSUPPORTED_GRAPH_LOOP_KEYWORDS
@@ -2015,13 +1999,8 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
-    private fun annotateUnsupportedGraphSwitchDiagnostics(
-        sourceText: String,
-        declarationContexts: List<DeclarationContext>,
-        holder: AnnotationHolder
-    ) {
+    private fun annotateUnsupportedGraphSwitchDiagnostics(declarationContexts: List<DeclarationContext>, holder: AnnotationHolder) {
         annotateUnsupportedGraphKeywordDiagnostics(
-            sourceText = sourceText,
             declarationContexts = declarationContexts,
             holder = holder,
             keywords = UNSUPPORTED_GRAPH_SWITCH_KEYWORDS
@@ -2030,13 +2009,8 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
-    private fun annotateUnsupportedGraphBreakContinueDiagnostics(
-        sourceText: String,
-        declarationContexts: List<DeclarationContext>,
-        holder: AnnotationHolder
-    ) {
+    private fun annotateUnsupportedGraphBreakContinueDiagnostics(declarationContexts: List<DeclarationContext>, holder: AnnotationHolder) {
         annotateUnsupportedGraphKeywordDiagnostics(
-            sourceText = sourceText,
             declarationContexts = declarationContexts,
             holder = holder,
             keywords = UNSUPPORTED_GRAPH_FLOW_KEYWORDS
@@ -2045,13 +2019,8 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
-    private fun annotateUnsupportedGraphReturnDiagnostics(
-        sourceText: String,
-        declarationContexts: List<DeclarationContext>,
-        holder: AnnotationHolder
-    ) {
+    private fun annotateUnsupportedGraphReturnDiagnostics(declarationContexts: List<DeclarationContext>, holder: AnnotationHolder) {
         annotateUnsupportedGraphKeywordDiagnostics(
-            sourceText = sourceText,
             declarationContexts = declarationContexts,
             holder = holder,
             keywords = setOf(UNSUPPORTED_GRAPH_RETURN_KEYWORD)
@@ -2061,7 +2030,6 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     private fun annotateUnsupportedGraphKeywordDiagnostics(
-        sourceText: String,
         declarationContexts: List<DeclarationContext>,
         holder: AnnotationHolder,
         keywords: Set<String>,
@@ -2071,8 +2039,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         if (normalizedKeywords.isEmpty()) return
 
         val visitedKeywordOffsets = mutableSetOf<Int>()
-        graphConstrainedBodyRanges(declarationContexts).forEach { range ->
-            val tokens = lexTokens(sourceText, range.startOffset, range.endOffset)
+        graphConstrainedBodyTokens(declarationContexts).forEach { tokens ->
             tokens.forEach { token ->
                 if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
                 val normalized = token.text.lowercase(Locale.ROOT)
@@ -2087,21 +2054,28 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     private fun graphConstrainedBodyRanges(declarationContexts: List<DeclarationContext>): List<TextRange> {
-        val ranges = mutableListOf<TextRange>()
+        return graphConstrainedBodyTokens(declarationContexts).mapNotNull { tokens ->
+            val first = tokens.firstOrNull() ?: return@mapNotNull null
+            val last = tokens.lastOrNull() ?: return@mapNotNull null
+            TextRange(first.range.startOffset, last.range.endOffset)
+        }
+    }
+
+    private fun graphConstrainedBodyTokens(declarationContexts: List<DeclarationContext>): List<List<DreamShaderLexedToken>> {
+        val tokenLists = mutableListOf<List<DreamShaderLexedToken>>()
         declarationContexts.forEach { context ->
             context.directSections
                 .filter { context.canonicalSectionName(it) == "graph" }
                 .forEach { section ->
-                    val body = context.sectionBody(section) ?: return@forEach
-                    ranges.add(TextRange(body.startOffset, body.startOffset + body.text.length))
+                    context.sectionTokens(section)?.takeIf { it.isNotEmpty() }?.let(tokenLists::add)
                 }
 
             val keyword = context.keyword
             if (keyword == "function" || keyword == "graphfunction") {
-                context.declaration.bodyTextRange()?.let { ranges.add(it) }
+                context.declarationBodyTokens.takeIf { it.isNotEmpty() }?.let(tokenLists::add)
             }
         }
-        return ranges
+        return tokenLists
     }
 
     private fun allDeclarations(topLevelDeclarations: List<DreamShaderDeclaration>): List<DreamShaderDeclaration> {
@@ -2129,6 +2103,10 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val sectionBodies = directSections.mapNotNull { section ->
             sectionBody(section)?.let { body -> section to body }
         }.toMap()
+        val sectionTokensBySection = directSections.mapNotNull { section ->
+            val body = sectionBodies[section] ?: return@mapNotNull null
+            section to lexTokens(declaration.containingFile.text, body.startOffset, body.startOffset + body.text.length)
+        }.toMap()
         val sectionsByCanonicalNameForDeclaration =
             if (keyword == null) {
                 emptyMap()
@@ -2149,9 +2127,16 @@ internal class DreamShaderSemanticAnnotationPipeline {
             directSections = directSections,
             directChildDeclarations = directChildDeclarations(declaration),
             sectionBodies = sectionBodies,
+            sectionTokensBySection = sectionTokensBySection,
             sectionsByCanonicalNameForDeclaration = sectionsByCanonicalNameForDeclaration,
             typedDeclarationsBySection = typedDeclarationsBySection,
-            parsedSignature = parseDeclarationParameters(declaration.text)
+            parsedSignature = parseDeclarationParameters(declaration.text),
+            declarationBodyTokens = declaration.bodyTextRange()
+                ?.let { range -> lexTokens(declaration.containingFile.text, range.startOffset, range.endOffset) }
+                .orEmpty(),
+            topLevelBodyTokens = declaration.bodyTextRange()
+                ?.let { range -> lexTokens(declaration.containingFile.text, range.startOffset, range.endOffset) }
+                .orEmpty()
         )
     }
 
@@ -2973,12 +2958,9 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     private fun topLevelSectionHeaderRange(
-        sourceText: String,
-        bodyRange: TextRange?,
+        tokens: List<DreamShaderLexedToken>,
         sectionName: String
     ): TextRange? {
-        if (bodyRange == null) return null
-        val tokens = lexTokens(sourceText, bodyRange.startOffset, bodyRange.endOffset)
         for (index in tokens.indices) {
             val token = tokens[index]
             if (token.depthBefore != 1) continue
@@ -3294,9 +3276,12 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val directSections: List<DreamShaderSection>,
         val directChildDeclarations: List<DreamShaderDeclaration>,
         val sectionBodies: Map<DreamShaderSection, SectionBody>,
+        val sectionTokensBySection: Map<DreamShaderSection, List<DreamShaderLexedToken>>,
         val sectionsByCanonicalNameForDeclaration: Map<String, List<DreamShaderSection>>,
         val typedDeclarationsBySection: Map<DreamShaderSection, List<String>>,
-        val parsedSignature: ParsedSignature?
+        val parsedSignature: ParsedSignature?,
+        val declarationBodyTokens: List<DreamShaderLexedToken>,
+        val topLevelBodyTokens: List<DreamShaderLexedToken>
     ) {
         fun canonicalSectionName(section: DreamShaderSection): String? =
             DreamShaderLanguageRules.canonicalSectionName(section.sectionName())
@@ -3311,8 +3296,19 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
         fun sectionBody(section: DreamShaderSection): SectionBody? = sectionBodies[section]
 
+        fun sectionTokens(section: DreamShaderSection): List<DreamShaderLexedToken>? = sectionTokensBySection[section]
+
         fun topLevelTypedDeclarations(section: DreamShaderSection?): List<String> =
             if (section == null) emptyList() else typedDeclarationsBySection[section].orEmpty()
+
+        fun topLevelSectionHeaderRange(sectionName: String): TextRange? =
+            topLevelSectionHeaderRangeStatic(topLevelBodyTokens, sectionName)
+
+        fun graphLikeSections(): List<DreamShaderSection> =
+            directSections.filter {
+                val sectionName = canonicalSectionName(it)
+                sectionName == "graph" || sectionName == "outputs"
+            }
     }
 
     /**
@@ -3469,6 +3465,11 @@ internal class DreamShaderSemanticAnnotationPipeline {
             val sectionBodies = directSections.mapNotNull { section ->
                 sectionBodyStatic(section)?.let { body -> section to body }
             }.toMap()
+            val fileText = declaration.containingFile.text
+            val sectionTokensBySection = directSections.mapNotNull { section ->
+                val body = sectionBodies[section] ?: return@mapNotNull null
+                section to lexFileTokens(fileText, body.startOffset, body.startOffset + body.text.length)
+            }.toMap()
             val sectionsByCanonicalNameForDeclaration =
                 if (keyword == null) {
                     emptyMap()
@@ -3489,9 +3490,16 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 directSections = directSections,
                 directChildDeclarations = directChildDeclarationsStatic(declaration),
                 sectionBodies = sectionBodies,
+                sectionTokensBySection = sectionTokensBySection,
                 sectionsByCanonicalNameForDeclaration = sectionsByCanonicalNameForDeclaration,
                 typedDeclarationsBySection = typedDeclarationsBySection,
-                parsedSignature = parseDeclarationParametersStatic(declaration.text)
+                parsedSignature = parseDeclarationParametersStatic(declaration.text),
+                declarationBodyTokens = declaration.bodyTextRange()
+                    ?.let { range -> lexFileTokens(fileText, range.startOffset, range.endOffset) }
+                    .orEmpty(),
+                topLevelBodyTokens = declaration.bodyTextRange()
+                    ?.let { range -> lexFileTokens(fileText, range.startOffset, range.endOffset) }
+                    .orEmpty()
             )
         }
 
@@ -3532,6 +3540,45 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 if (!typeName.isNullOrBlank()) result.add(typeName)
             }
             return result
+        }
+
+        private fun topLevelSectionHeaderRangeStatic(
+            tokens: List<DreamShaderLexedToken>,
+            sectionName: String
+        ): TextRange? {
+            for (index in tokens.indices) {
+                val token = tokens[index]
+                if (token.depthBefore != 1) continue
+                if (!token.text.equals(sectionName, ignoreCase = true)) continue
+                if (
+                    token.type != DreamShaderTokenTypes.IDENTIFIER &&
+                    token.type != DreamShaderTokenTypes.SECTION &&
+                    token.type != DreamShaderTokenTypes.KEYWORD
+                ) {
+                    continue
+                }
+
+                val next = nextSignificantTokenStatic(tokens, index) ?: continue
+                if (next.type == DreamShaderTokenTypes.LBRACE) return token.range
+                if (next.type == DreamShaderTokenTypes.OPERATOR && next.text == "=") {
+                    val afterEquals = nextSignificantTokenStatic(tokens, tokens.indexOf(next))
+                    if (afterEquals?.type == DreamShaderTokenTypes.LBRACE) return token.range
+                }
+            }
+            return null
+        }
+
+        private fun nextSignificantTokenStatic(
+            tokens: List<DreamShaderLexedToken>,
+            index: Int
+        ): DreamShaderLexedToken? {
+            var i = index + 1
+            while (i < tokens.size) {
+                val token = tokens[i]
+                if (!token.isTrivia) return token
+                i++
+            }
+            return null
         }
 
         private fun parseDeclarationParametersStatic(declarationText: String): ParsedSignature? {

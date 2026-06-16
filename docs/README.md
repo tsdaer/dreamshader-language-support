@@ -10,7 +10,6 @@ This directory is the long-form home for project knowledge. The top-level README
 - [DreamShaderLang Baseline](language-baseline.md): upstream language rules and Rider coverage mapping.
 - [Package Baseline](package-baseline.md): package layout, import resolution, store/index behavior, and parity targets.
 - [Roadmap and Progress](roadmap.md): project goal, current progress, detailed TODOs, audit matrices, and changelog policy.
-- [Temporary Optimization Plan](optimization-plan.md): audit-driven, short-term optimization and polish plan.
 - [Development Guide](development.md): build/test/run commands, signing/publishing, Rider actions, settings, and troubleshooting.
 
 ## Maintenance Rules

@@ -14,7 +14,7 @@ description: |
 
   **Language core**
   - Lexer, parser, PSI, and symbol model foundations
-  - Syntax highlighting with semantic classification, color settings, and inline color previews for constant vector colors
+  - Syntax highlighting with semantic classification, color settings, and inline color previews for vector constructors, color aliases, hex colors, and conservative 0-255 channel values
   - Formatter with DreamShader code style settings, section assignment alignment, commenter, quote handling, brace matching, folding, and structure view
 
   **Editing and navigation**
@@ -24,7 +24,7 @@ description: |
   - IDE include/dependency integration for DreamShader `import "..."` statements
 
   **Diagnostics and project integration**
-  - Semantic diagnostics (syntax, section-shape, semantic) plus Bridge diagnostics mapping
+  - Cached semantic diagnostics (syntax, section-shape, semantic) plus Bridge diagnostics mapping, with parser recovery and targeted Bridge-failure-prevention checks
   - Configurable project settings: project root, manifest path, Unreal Engine source root with auto-detect, material-expression scan toggle and cache path, status bar, code lens, inlay parameter hints, out placeholder suffix, import extension strategy, hover doc overrides, and Bridge commands
   - Bridge tool window and workflow actions (refresh diagnostics, recompile current or all, clean generated shaders, open Bridge paths)
 
@@ -38,7 +38,7 @@ description_zh: |
 
   **语言核心**
   - 词法、语法、PSI 与符号模型基础
-  - 语法高亮，含语义分类、颜色设置，以及常量向量颜色的内联预览
+  - 语法高亮，含语义分类、颜色设置，以及向量构造、颜色别名、十六进制颜色和保守 0-255 通道值的内联预览
   - 格式化、DreamShader 代码样式设置、section 赋值对齐、注释、引号处理、括号匹配、折叠与结构视图
 
   **编辑与导航**
@@ -48,7 +48,7 @@ description_zh: |
   - 将 DreamShader `import "..."` 接入 IDE include/dependency 机制
 
   **诊断与项目集成**
-  - 语义诊断（语法、section-shape、语义）以及 Bridge 诊断映射
+  - 带缓存的语义诊断（语法、section-shape、语义）以及 Bridge 诊断映射，包含 parser 恢复与针对 Bridge 失败的预防性检查
   - 可配置项目设置：项目根、manifest 路径、可自动检测的 Unreal Engine 源码根、material-expression 扫描开关与缓存路径、状态栏、code lens、内联参数提示、out 占位后缀、import 扩展名策略、悬浮文档覆盖与 Bridge 命令
   - Bridge 工具窗口与工作流操作（刷新诊断、重编译当前或全部、清理生成的 shader、打开 Bridge 路径）
 
