@@ -1,0 +1,7 @@
+Shader(Name="DreamMaterials/Test") {
+    Graph = {
+        if (UE.TexCoord(Index=0)) {
+            
+        }
+    }
+}
