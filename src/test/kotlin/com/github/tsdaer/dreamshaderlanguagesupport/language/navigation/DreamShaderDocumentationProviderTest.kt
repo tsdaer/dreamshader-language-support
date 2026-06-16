@@ -338,6 +338,49 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
         assertTrue(doc.contains("Scope: Graph"))
     }
 
+    fun testMaterialOutputMemberProvidesHoverDoc() {
+        val file = myFixture.configureByText(
+            "hover_material_output_member.dsm",
+            """
+            Shader Main {
+                Outputs = {
+                    vec3 Color;
+                    Base.EmissiveColor = Color;
+                }
+            }
+            """.trimIndent()
+        )
+
+        val offset = file.text.indexOf("EmissiveColor")
+        val element = file.findElementAt(offset)
+        val doc = provider.generateDoc(element, element)
+
+        assertNotNull(doc)
+        assertTrue(doc!!.contains("EmissiveColor"))
+        assertTrue(doc.contains("self-illumination"))
+    }
+
+    fun testPathCallableProvidesHoverDoc() {
+        val file = myFixture.configureByText(
+            "hover_path_callable.dsm",
+            """
+            Shader Main {
+                Properties = {
+                    Texture2D MainTex = Path(Engine, "/EngineResources/DefaultTexture");
+                }
+            }
+            """.trimIndent()
+        )
+
+        val offset = file.text.indexOf("Path")
+        val element = file.findElementAt(offset)
+        val doc = provider.generateDoc(element, element)
+
+        assertNotNull(doc)
+        assertTrue(doc!!.contains("Function Call: Path"))
+        assertTrue(doc.contains("Path(Root, ObjectPath)"))
+    }
+
     fun testSettingsKeyHoverCanBeOverriddenFromProjectSettings() {
         val settings = project.getService(DreamShaderProjectSettings::class.java).state
         settings.hoverDocumentationOverrides = """

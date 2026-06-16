@@ -382,6 +382,34 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         assertEquals("F_PulseTint", declaration.name)
     }
 
+    fun testRenameShaderNameAttributeUpdatesStringAndExposesFullDisplayName() {
+        val file = myFixture.configureByText(
+            "rename_shader_name_attr.dsm",
+            """
+            Shader(Name="DreamMaterials/M_Test2")
+            {
+                Graph = {
+                    float3 Color = float3(1.0, 1.0, 1.0);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val declarationOffset = file.text.indexOf("\"DreamMaterials/M_Test2\"") + 1
+        val nameElement = file.findElementAt(declarationOffset)
+        assertNotNull("Expected shader declaration identifier", nameElement)
+        val declaration = nameElement!!.parent as DreamShaderDeclaration
+
+        runRenameAndCommit(declaration, "M_Test3")
+        val updated = file.text
+        assertTrue(
+            "Updated text:\n$updated",
+            Regex("""Shader\(\s*Name\s*=\s*"DreamMaterials/M_Test3"\s*\)""").containsMatchIn(updated)
+        )
+        assertEquals("M_Test3", declaration.declarationName())
+        assertEquals("DreamMaterials/M_Test3", declaration.explicitNameAttributeValue())
+    }
+
     fun testRefactoringSupportProviderAllowsSafeDeleteForDeclarationsOnly() {
         val file = myFixture.configureByText(
             "safe_delete_available.dsh",

@@ -27,11 +27,18 @@ class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), Dr
     override fun declarationName(): String? {
         val identifier = nameIdentifier ?: return null
         if (identifier.node?.elementType == DreamShaderTokenTypes.STRING) {
-            val raw = trimQuotes(identifier.text).trim()
+            val raw = explicitNameAttributeValue().orEmpty()
             if (raw.isBlank()) return null
             return raw.substringAfterLast('/').substringAfterLast('\\')
         }
         return identifier.text
+    }
+
+    override fun explicitNameAttributeValue(): String? {
+        val identifier = nameAttributeValueElement() ?: return null
+        if (identifier.node?.elementType != DreamShaderTokenTypes.STRING) return null
+        val raw = trimQuotes(identifier.text).trim()
+        return raw.takeIf { it.isNotBlank() }
     }
 
     override fun bodyTextRange(): TextRange? {
@@ -173,6 +180,7 @@ class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), Dr
 
     companion object {
         private val NAME_ATTRIBUTE_DECLARATION_KEYWORDS = setOf(
+            "shader",
             "namespace",
             "virtualfunction",
             "shaderfunction",

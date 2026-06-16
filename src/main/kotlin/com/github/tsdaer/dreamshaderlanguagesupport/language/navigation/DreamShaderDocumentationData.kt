@@ -11,6 +11,11 @@ internal data class DreamShaderSettingInfo(
     val commonValues: List<String> = emptyList()
 )
 
+internal data class DreamShaderMaterialOutputMemberInfo(
+    val key: String,
+    val description: String
+)
+
 /**
  * Singleton for DreamShaderDocumentationData.
  */
@@ -56,7 +61,28 @@ internal object DreamShaderDocumentationData {
         "settings.twosided.commonValues" to listOf("true", "false"),
         "settings.wireframe.key" to "Wireframe",
         "settings.wireframe.description" to DreamShaderBundle.message("docs.settings.wireframe.description"),
-        "settings.wireframe.commonValues" to listOf("true", "false")
+        "settings.wireframe.commonValues" to listOf("true", "false"),
+
+        "materialOutput.basecolor.key" to "BaseColor",
+        "materialOutput.basecolor.description" to "Sets the surface base color/albedo contribution.",
+        "materialOutput.emissivecolor.key" to "EmissiveColor",
+        "materialOutput.emissivecolor.description" to "Sets the surface self-illumination output.",
+        "materialOutput.opacity.key" to "Opacity",
+        "materialOutput.opacity.description" to "Controls the translucent opacity contribution.",
+        "materialOutput.opacitymask.key" to "OpacityMask",
+        "materialOutput.opacitymask.description" to "Controls masked cutout visibility.",
+        "materialOutput.normal.key" to "Normal",
+        "materialOutput.normal.description" to "Supplies the shading normal for the material.",
+        "materialOutput.roughness.key" to "Roughness",
+        "materialOutput.roughness.description" to "Controls the surface micro-roughness response.",
+        "materialOutput.metallic.key" to "Metallic",
+        "materialOutput.metallic.description" to "Controls metallic versus dielectric shading behavior.",
+        "materialOutput.specular.key" to "Specular",
+        "materialOutput.specular.description" to "Controls the dielectric specular reflectance contribution.",
+        "materialOutput.materialattributes.key" to "MaterialAttributes",
+        "materialOutput.materialattributes.description" to "Binds a packed MaterialAttributes value to the shader output.",
+        "materialOutput.frontmaterial.key" to "FrontMaterial",
+        "materialOutput.frontmaterial.description" to "Binds a Substrate front material output."
     )
 
     fun declarationDescription(keyword: String): String? =
@@ -116,6 +142,20 @@ internal object DreamShaderDocumentationData {
                     emptyList()
                 }
             }
+    }
+
+    fun materialOutputMemberInfo(token: String): DreamShaderMaterialOutputMemberInfo? {
+        val id = materialOutputsByKey[token.lowercase(Locale.ROOT)] ?: return null
+        val key = readString("materialOutput.$id.key") ?: return null
+        val description = readString("materialOutput.$id.description") ?: return null
+        return DreamShaderMaterialOutputMemberInfo(key = key, description = description)
+    }
+
+    private val materialOutputsByKey: Map<String, String> by lazy {
+        collectIds("materialOutput").mapNotNull { id ->
+            val key = readString("materialOutput.$id.key") ?: return@mapNotNull null
+            key.lowercase(Locale.ROOT) to id
+        }.toMap()
     }
 
     /**

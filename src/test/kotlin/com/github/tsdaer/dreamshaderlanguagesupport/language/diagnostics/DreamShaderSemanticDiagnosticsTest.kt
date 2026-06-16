@@ -185,6 +185,43 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))")
     }
 
+    fun testGeneralTextureInitializerRejectsPathWithoutObjectSegment() {
+        val text = """
+            Shader Main {
+                Properties = {
+                    Texture2D MainTex = <caret>Path(Engine);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("general_texture_path_missing_object_segment.dsm", text)
+        assertHasError("VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))")
+    }
+
+    fun testGeneralTextureInitializerRejectsUnknownPathRoot() {
+        val text = """
+            Shader Main {
+                Properties = {
+                    Texture2D MainTex = <caret>Path(Project, Textures/T_Main);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("general_texture_path_invalid_root.dsm", text)
+        assertHasError("VirtualFunction Options.Asset path root 'Project' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>")
+    }
+
+    fun testGeneralTextureInitializerAcceptsSingleArgumentAbsolutePathCall() {
+        val text = """
+            Shader Main {
+                Properties = {
+                    Texture2D MainTex = Path("/Engine/EngineResources/DefaultTexture");
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("general_texture_path_single_argument_absolute.dsm", text)
+        assertNoError("VirtualFunction Options.Asset must be an asset path (quoted object path or Path(...))")
+        assertNoError("VirtualFunction Options.Asset path root '/Engine' is not allowed. Use Game, Engine, Plugin.<Name>, or Plugins.<Name>")
+    }
+
     fun testVirtualFunctionOptionAssetAcceptsQuotedObjectPath() {
         val text = """
             VirtualFunction BufferWriter {

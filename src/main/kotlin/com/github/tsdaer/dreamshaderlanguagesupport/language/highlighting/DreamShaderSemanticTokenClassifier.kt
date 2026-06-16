@@ -49,7 +49,7 @@ internal object DreamShaderSemanticTokenClassifier {
         val text = element.text
         if (!looksLikeCallableReference(text, element)) return null
         if (isDeclarationHeadIdentifier(element)) return null
-        if (!isInsideDeclarationBody(element)) return null
+        if (!isCallableContext(element)) return null
         return DreamShaderTextAttributes.CALLABLE_REFERENCE
     }
 
@@ -83,6 +83,18 @@ internal object DreamShaderSemanticTokenClassifier {
             }
         }
         return true
+    }
+
+    private fun isCallableContext(element: PsiElement): Boolean {
+        val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return false
+        val bodyRange = declaration.bodyTextRange() ?: return false
+        if (!bodyRange.contains(element.textRange)) return false
+
+        val section = PsiTreeUtil.getParentOfType(element, DreamShaderSection::class.java, false) ?: return true
+        return when (section.sectionName()?.lowercase(Locale.ROOT)) {
+            "settings" -> false
+            else -> true
+        }
     }
 
     // Namespace and callable helpers.

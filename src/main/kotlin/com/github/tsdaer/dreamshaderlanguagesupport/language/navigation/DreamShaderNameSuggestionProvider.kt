@@ -13,7 +13,7 @@ class DreamShaderNameSuggestionProvider : NameSuggestionProvider {
         result: MutableSet<String>
     ): SuggestedNameInfo? {
         val declaration = element as? DreamShaderDeclaration ?: return null
-        val baseName = sanitizeIdentifier(declaration.declarationName().orEmpty())
+        val baseName = sanitizeIdentifier(DreamShaderDeclarationPresentation.displayName(declaration).orEmpty())
             .ifBlank { defaultBaseName(declaration.keywordText()) }
         if (baseName.isBlank()) return null
 

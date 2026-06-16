@@ -35,8 +35,8 @@ class DreamShaderFindUsagesProvider : FindUsagesProvider {
     override fun getDescriptiveName(element: PsiElement): String {
         val declaration = targetDeclaration(element)
         if (declaration != null) {
-            return qualifiedDeclarationName(declaration)
-                ?: declaration.declarationName()
+            return DreamShaderDeclarationPresentation.qualifiedDisplayName(declaration)
+                ?: DreamShaderDeclarationPresentation.displayName(declaration)
                 ?: declaration.text
         }
 
@@ -48,9 +48,11 @@ class DreamShaderFindUsagesProvider : FindUsagesProvider {
         val declaration = targetDeclaration(element) ?: return getDescriptiveName(element)
         val keyword = displayDeclarationKeyword(declaration)
         val name = if (useFullName) {
-            qualifiedDeclarationName(declaration) ?: declaration.declarationName()
+            DreamShaderDeclarationPresentation.qualifiedDisplayName(declaration)
+                ?: DreamShaderDeclarationPresentation.qualifiedSymbolName(declaration)
         } else {
-            declaration.declarationName()
+            DreamShaderDeclarationPresentation.displayName(declaration)
+                ?: DreamShaderDeclarationPresentation.symbolName(declaration)
         }
         return listOfNotNull(keyword, name).joinToString(" ").ifBlank { getDescriptiveName(element) }
     }
@@ -69,21 +71,6 @@ class DreamShaderFindUsagesProvider : FindUsagesProvider {
         if (keyword.isBlank()) return null
         return DreamShaderLanguageRules.displayDeclarationKeyword(keyword)
     }
-
-    private fun qualifiedDeclarationName(declaration: DreamShaderDeclaration): String? {
-        val ownName = declaration.declarationName()?.takeIf { it.isNotBlank() } ?: return null
-        val names = mutableListOf(ownName)
-        var current = PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true)
-        while (current != null) {
-            if (current.keywordText() == "namespace") {
-                current.declarationName()?.takeIf { it.isNotBlank() }?.let { names.add(it) }
-            }
-            current = PsiTreeUtil.getParentOfType(current, DreamShaderDeclaration::class.java, true)
-        }
-        names.reverse()
-        return names.joinToString("::")
-    }
-
     private fun targetDeclaration(element: PsiElement): DreamShaderDeclaration? {
         if (element is DreamShaderDeclaration) return element
         val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false)

@@ -93,6 +93,26 @@ class DreamShaderSemanticTokenClassifierTest : BasePlatformTestCase() {
         }
     }
 
+    fun testClassifierMarksPathCallInPropertiesAsCallableReference() {
+        val text = """
+            Shader Main {
+                Properties = {
+                    Texture2D MainTex = Path(Engine, "/EngineResources/DefaultTexture");
+                }
+            }
+        """.trimIndent()
+        val file = myFixture.configureByText("classifier_path_properties.dsm", text)
+
+        val elements = collectIdentifierAndKeywordElements(file)
+        val classified = elements.mapNotNull { element ->
+            DreamShaderSemanticTokenClassifier.classify(element)?.externalName?.let { key ->
+                element.text to key
+            }
+        }
+
+        assertHas(classified, "Path", "DREAMSHADER_CALLABLE_REFERENCE")
+    }
+
     private fun collectIdentifierAndKeywordElements(file: com.intellij.psi.PsiFile): List<com.intellij.psi.PsiElement> {
         return com.intellij.psi.util.PsiTreeUtil.collectElements(file) { element ->
             val type = element.node?.elementType

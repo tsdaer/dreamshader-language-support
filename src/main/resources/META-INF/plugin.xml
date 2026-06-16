@@ -92,7 +92,10 @@
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionContributor"/>
         <typedHandler
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionTypedHandler"/>
+        <enterHandlerDelegate
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderEnterHandlerDelegate"/>
         <completion.plainTextSymbol
+                language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderPlainTextSymbolCompletionContributor"/>
         <codeInsight.lineMarkerProvider
                 language="DreamShaderLang"
@@ -110,13 +113,15 @@
         <colorProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderColorProvider"/>
         <spellchecker.support
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSpellcheckingStrategy"/>
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSpellcheckingStrategy"/>
         <fileTemplateGroup
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderFileTemplateGroupFactory"/>
         <defaultTemplatePropertiesProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderDefaultTemplatePropertiesProvider"/>
         <liveTemplateContext
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplateContext"/>
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplateContext"
+                contextId="Markdown"/>
         <defaultLiveTemplatesProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplatesProvider"/>
         <codeInsight.template.postfixTemplateProvider
@@ -143,8 +148,7 @@
                 id="DreamShaderBridgeStatus"
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeStatusBarWidgetFactory"/>
         <fileEditorProvider
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeFileEditorProvider"
-                dumbAware="true"/>
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeFileEditorProvider"/>
         <postStartupActivity
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeProjectActivity"/>
         <postStartupActivity

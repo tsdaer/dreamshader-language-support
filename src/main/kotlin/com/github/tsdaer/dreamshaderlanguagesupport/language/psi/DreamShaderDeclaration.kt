@@ -12,6 +12,8 @@ interface DreamShaderDeclaration : PsiElement, PsiNameIdentifierOwner {
 
     fun declarationName(): String?
 
+    fun explicitNameAttributeValue(): String?
+
     fun bodyTextRange(): TextRange?
 
     fun isFunctionLike(): Boolean

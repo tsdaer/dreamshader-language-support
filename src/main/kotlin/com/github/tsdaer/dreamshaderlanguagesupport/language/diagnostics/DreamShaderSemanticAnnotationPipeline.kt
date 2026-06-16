@@ -172,6 +172,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateUnknownDeclarationParameterTypeDiagnostics(declarationContexts, holder)
         annotateUnknownBodyLocalTypeDiagnostics(sourceText, declarationContexts, holder)
         annotateConstTextureDefaultAssetDiagnostics(declarationContexts, holder)
+        annotateGeneralResourcePathDiagnostics(declarationContexts, holder)
         annotateOptionalInputDefaultDiagnostics(declarationContexts, holder)
         annotateUnknownExpressionClassDiagnostics(file, sourceText, topLevelDeclarations, holder)
         annotateSubstrateExpressionDiagnostics(declarationContexts, holder)
@@ -1246,6 +1247,69 @@ internal class DreamShaderSemanticAnnotationPipeline {
                             }
                         }
                         statementStart = (statementEnd + 1).coerceAtMost(body.text.length)
+                    }
+                }
+        }
+    }
+
+    private fun annotateGeneralResourcePathDiagnostics(
+        declarationContexts: List<DeclarationContext>,
+        holder: AnnotationHolder
+    ) {
+        declarationContexts.forEach { context ->
+            context.directSections
+                .filter {
+                    when (context.canonicalSectionName(it)) {
+                        "properties", "inputs", "outputs", "graph", "results" -> true
+                        else -> false
+                    }
+                }
+                .forEach { section ->
+                    val body = context.sectionBody(section) ?: return@forEach
+                    splitTopLevelWithOffsets(body.text, ';').forEach { segment ->
+                        val candidate = parseResourceInitializerCandidate(segment.text) ?: return@forEach
+                        if (!candidate.typeName.isResourceLikeType()) return@forEach
+                        val value = candidate.initializerText ?: return@forEach
+                        if (!looksLikePathInitializer(value)) return@forEach
+
+                        val initializerRange = TextRange(
+                            body.startOffset + segment.startOffset + candidate.initializerStartInSegment,
+                            body.startOffset + segment.startOffset + candidate.initializerEndInSegment
+                        )
+                        val error = validateGeneralResourcePathValue(value)
+                        if (error != null) {
+                            val annotation = holder.newAnnotation(
+                                HighlightSeverity.ERROR,
+                                error
+                            ).range(initializerRange)
+                            val pathRoot = extractPathRoot(value)
+                            val isUnknownRoot = pathRoot != null && !isAllowedVirtualFunctionAssetRoot(pathRoot)
+                            if (isUnknownRoot) {
+                                annotation.withFix(
+                                    createReplaceFileRangeAssetRootWithGameQuickFix(
+                                        valueRange = initializerRange,
+                                        rawValue = value
+                                    )
+                                )
+                            }
+                            if (isPathCallMissingObjectSegment(value)) {
+                                annotation.withFix(
+                                    createCompleteAssetPathObjectSegmentQuickFix(
+                                        replacementRange = initializerRange,
+                                        rawValue = value
+                                    )
+                                )
+                            }
+                            annotation.create()
+                        }
+
+                        val invalidObjectSuffix = validateAssetObjectSegmentSuffix(value)
+                        if (invalidObjectSuffix != null) {
+                            holder.newAnnotation(
+                                HighlightSeverity.WARNING,
+                                invalidObjectSuffix
+                            ).range(initializerRange).create()
+                        }
                     }
                 }
         }
@@ -3085,6 +3149,18 @@ internal class DreamShaderSemanticAnnotationPipeline {
         return null
     }
 
+    private fun validateGeneralResourcePathValue(value: String): String? {
+        if (value.isBlank()) {
+            return DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequiresPath")
+        }
+        val pathRoot = extractPathRoot(value)
+            ?: return DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetRequiresPath")
+        if (!isAllowedVirtualFunctionAssetRoot(pathRoot)) {
+            return DreamShaderBundle.message("diagnostic.virtualFunctionOptionAssetPathRootNotAllowed", pathRoot)
+        }
+        return null
+    }
+
     private fun validateAssetObjectSegmentSuffix(value: String): String? {
         val objectSegment = extractAssetObjectSegment(value) ?: return null
         val invalidSuffix = INVALID_ASSET_OBJECT_SEGMENT_SUFFIXES.firstOrNull { suffix ->
@@ -3124,6 +3200,15 @@ internal class DreamShaderSemanticAnnotationPipeline {
             val inside = trimmed.substringAfter('(').substringBeforeLast(')').trim()
             if (inside.isBlank()) return null
             val args = splitTopLevel(inside, ',').map { it.trim() }
+            if (args.size == 1) {
+                val onlyArg = args.first().removePrefix("\"").removeSuffix("\"").trim()
+                if (onlyArg.startsWith("/")) {
+                    val normalized = onlyArg.removePrefix("/")
+                    if (normalized.isBlank()) return null
+                    return normalized.substringBefore('/').trim().ifBlank { null }
+                }
+                return null
+            }
             if (args.size < 2) return null
             val firstArg = args.firstOrNull().orEmpty()
             if (firstArg.isBlank()) return null
@@ -3147,13 +3232,52 @@ internal class DreamShaderSemanticAnnotationPipeline {
             val inside = trimmed.substringAfter('(').substringBeforeLast(')').trim()
             if (inside.isBlank()) return null
             val args = splitTopLevel(inside, ',').map { it.trim() }
-            if (args.size < 2) return null
-            val objectPath = args[1].removePrefix("\"").removeSuffix("\"").trim().removePrefix("/")
+            val objectPath = when {
+                args.size >= 2 -> args[1].removePrefix("\"").removeSuffix("\"").trim().removePrefix("/")
+                args.size == 1 -> args[0].removePrefix("\"").removeSuffix("\"").trim().removePrefix("/").substringAfter('/', "")
+                else -> return null
+            }
             val objectSegment = objectPath.substringAfterLast('/').trim()
             return objectSegment.ifBlank { null }
         }
         return null
     }
+
+    private fun looksLikePathInitializer(value: String): Boolean {
+        val trimmed = value.trim()
+        if (trimmed.isBlank()) return false
+        if (trimmed.startsWith("\"")) return true
+        return PATH_CALL_PATTERN.matcher(trimmed).matches()
+    }
+
+    private fun String.isResourceLikeType(): Boolean {
+        return lowercase(Locale.ROOT) in RESOURCE_LIKE_TYPES
+    }
+
+    private fun parseResourceInitializerCandidate(statement: String): ResourceInitializerCandidate? {
+        val trimmedStart = statement.indexOfFirst { !it.isWhitespace() }
+        if (trimmedStart < 0) return null
+        val trimmed = statement.trim()
+        val matcher = RESOURCE_INITIALIZER_PATTERN.matcher(trimmed)
+        if (!matcher.find()) return null
+        val typeName = matcher.group(1) ?: return null
+        val initializer = matcher.group(3)?.trim()
+        val initializerStart = matcher.start(3)
+        val initializerEnd = matcher.end(3)
+        return ResourceInitializerCandidate(
+            typeName = typeName,
+            initializerText = initializer,
+            initializerStartInSegment = trimmedStart + initializerStart,
+            initializerEndInSegment = trimmedStart + initializerEnd
+        )
+    }
+
+    private data class ResourceInitializerCandidate(
+        val typeName: String,
+        val initializerText: String?,
+        val initializerStartInSegment: Int,
+        val initializerEndInSegment: Int
+    )
 
     private fun isAllowedVirtualFunctionAssetRoot(root: String): Boolean {
         if (root.equals("game", ignoreCase = true)) return true
@@ -3804,11 +3928,17 @@ internal class DreamShaderSemanticAnnotationPipeline {
         private val CONST_TEXTURE_DECLARATION_PATTERN: Pattern = Pattern.compile(
             "(?is)^const\\s+(TextureCube|Texture2DArray|Texture3D|VolumeTexture)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:=\\s*(.+))?$"
         )
+        private val RESOURCE_INITIALIZER_PATTERN: Pattern = Pattern.compile(
+            "(?is)^(?:const\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*(.+)$"
+        )
         private val CONST_TEXTURE_TYPES_REQUIRING_EXPLICIT_DEFAULT_ASSET = setOf(
             "texturecube",
             "texture2darray",
             "texture3d",
             "volumetexture"
+        )
+        private val RESOURCE_LIKE_TYPES = setOf(
+            "texture2d", "texturecube", "texture2darray", "texture3d", "volumetexture", "samplerstate"
         )
         private val INVALID_ASSET_OBJECT_SEGMENT_SUFFIXES = listOf(
             ".uasset", ".umap",

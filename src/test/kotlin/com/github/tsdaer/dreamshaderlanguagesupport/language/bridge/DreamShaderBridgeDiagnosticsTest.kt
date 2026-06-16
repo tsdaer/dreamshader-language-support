@@ -63,24 +63,17 @@ class DreamShaderBridgeDiagnosticsTest : BasePlatformTestCase() {
         val settings = project.getService(DreamShaderProjectSettings::class.java)
         settings.state.projectRoot = projectBase
 
-        val sourcePath = Paths.get(projectBase, "DShader", "Materials", "Refresh.dsm")
-        var sourceFile = VfsUtil.findFile(sourcePath, false)
-        WriteCommandAction.runWriteCommandAction(project) {
-            val parent = VfsUtil.createDirectories(sourcePath.parent.toString())
-            val file = parent.findOrCreateChildData(this, sourcePath.fileName.toString())
-            VfsUtil.saveText(
-                file,
-                """
-                Shader Refresh {
-                    Graph {
-                        float x = 1.0;
-                    }
+        myFixture.configureByText(
+            "Refresh.dsm",
+            """
+            Shader Refresh {
+                Graph {
+                    float x = 1.0;
                 }
-                """.trimIndent()
-            )
-            sourceFile = file
-        }
-        val createdSourceFile = sourceFile ?: error("source file not created")
+            }
+            """.trimIndent()
+        )
+        val activeFile = myFixture.file.virtualFile ?: error("active source file not created")
 
         val diagnosticsPath = Paths.get(projectBase, "Saved", "DreamShader", "Bridge", "diagnostics.json")
         WriteCommandAction.runWriteCommandAction(project) {
@@ -92,7 +85,7 @@ class DreamShaderBridgeDiagnosticsTest : BasePlatformTestCase() {
                 {
                   "diagnostics": [
                     {
-                      "sourcePath": "${sourcePath.toString().replace("\\", "/")}",
+                      "sourcePath": "${activeFile.path.replace("\\", "/")}",
                       "line": 3,
                       "column": 12,
                       "severity": "warning",
@@ -104,12 +97,14 @@ class DreamShaderBridgeDiagnosticsTest : BasePlatformTestCase() {
             )
         }
 
-        myFixture.configureFromExistingVirtualFile(createdSourceFile)
-        val highlights = myFixture.doHighlighting(HighlightSeverity.WARNING)
-        assertTrue(highlights.any { it.description == "Bridge warning one" })
-
         val repository = project.getService(DreamShaderBridgeDiagnosticsRepository::class.java)
-        val mapped = repository.diagnosticsForFile(createdSourceFile)
+        repository.refresh(activeFile)
+        val highlights = myFixture.doHighlighting(HighlightSeverity.WARNING)
+        assertTrue(
+            "Expected warning 'Bridge warning one', actual: ${highlights.map { it.description }}",
+            highlights.any { it.description == "Bridge warning one" }
+        )
+        val mapped = repository.diagnosticsForFile(activeFile)
         assertEquals(1, mapped.size)
         assertEquals("Bridge warning one", mapped.first().message)
     }

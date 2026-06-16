@@ -118,6 +118,13 @@ object DreamShaderSignatureHelpAnalyzer {
             listOf(signature("UE.CollectionParam(Collection=Path(...), Parameter=\"Value\")", "Collection", "Parameter"))
         )
         put(
+            "path",
+            listOf(
+                signature("Path(Root, ObjectPath)", "Root", "ObjectPath"),
+                signature("Path(\"/Root/ObjectPath\")", "ObjectPath")
+            )
+        )
+        put(
             "ue.staticswitchparameter",
             listOf(signature("UE.StaticSwitchParameter(Name=\"UseDetail\", Default=true, True=Detail, False=Base)", "Name", "Default", "True", "False"))
         )

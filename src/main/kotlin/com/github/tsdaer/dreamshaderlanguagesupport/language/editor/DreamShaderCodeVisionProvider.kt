@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgePathResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
+import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDeclarationPresentation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderPackageIndexLoader
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderPackageStoreService
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
@@ -33,7 +34,7 @@ class DreamShaderCodeVisionProvider : CodeVisionProviderBase() {
 
     override fun getHint(element: PsiElement, file: PsiFile): String {
         val declaration = element as? DreamShaderDeclaration ?: return ""
-        val name = declaration.declarationName() ?: return ""
+        val name = DreamShaderDeclarationPresentation.displayName(declaration) ?: return ""
         val hasBridge = resolveExistingBridgeDirectory(file.project, file.virtualFile) != null
         val packageSources = DreamShaderPackageIndexLoader.resolveIndexSources(file.project).size
         val bridgeLabel = if (hasBridge) {

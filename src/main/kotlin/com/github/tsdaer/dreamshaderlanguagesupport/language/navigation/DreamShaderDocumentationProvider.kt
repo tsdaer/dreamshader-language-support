@@ -78,6 +78,9 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             val catalogDoc = catalogExpressionDocumentation(tokenElement, token)
             if (catalogDoc != null) return catalogDoc
 
+            val materialOutputDoc = materialOutputMemberDocumentation(tokenElement, token)
+            if (materialOutputDoc != null) return materialOutputDoc
+
             val functionCallDoc = functionCallDocumentation(tokenElement, token)
             if (functionCallDoc != null) return functionCallDoc
 
@@ -111,7 +114,7 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         if (!isDeclarationDocumentationAnchor(element, declaration)) return null
 
         val keyword = declaration.keywordText() ?: return null
-        val name = declarationDisplayName(declaration).orEmpty().ifBlank { "<anonymous>" }
+        val name = DreamShaderDeclarationPresentation.displayName(declaration).orEmpty().ifBlank { "<anonymous>" }
         val overrideKey = "declaration.$keyword.description"
         val kind = overrideDoc(element, overrideKey)
             ?: DreamShaderDocumentationData.declarationDescription(keyword)
@@ -204,6 +207,19 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             append(DreamShaderBundle.message("docs.label.usedBy"))
             append(": ")
             append(owners.joinToString(", "))
+        }
+    }
+
+    private fun materialOutputMemberDocumentation(element: PsiElement, token: String): String? {
+        if (!isKnownMaterialOutputMemberElement(element, token)) return null
+        val info = DreamShaderDocumentationData.materialOutputMemberInfo(token) ?: return null
+        return buildString {
+            append("<b>")
+            append(DreamShaderBundle.message("docs.label.type"))
+            append(": ")
+            append(info.key)
+            append("</b><br/>")
+            append(info.description)
         }
     }
 
@@ -328,7 +344,7 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
     }
 
     private fun functionCallDocumentation(element: PsiElement, token: String): String? {
-        if (!isGraphLikeContext(element)) return null
+        if (!isCallableDocumentationContext(element)) return null
         if (!isCallableReference(element)) return null
 
         val signatures = DreamShaderCallSignatureResolver.resolveSignatures(token, element.containingFile)
@@ -384,6 +400,12 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         return name == "graph" || name == "outputs" || name == "inputs" || name == "results"
     }
 
+    private fun isCallableDocumentationContext(element: PsiElement): Boolean {
+        if (isGraphLikeContext(element)) return true
+        val section = PsiTreeUtil.getParentOfType(element, DreamShaderSection::class.java, false) ?: return false
+        return section.sectionName() == "properties"
+    }
+
     private fun isInSettingsOrOptionsSection(element: PsiElement): Boolean {
         val section = PsiTreeUtil.getParentOfType(element, DreamShaderSection::class.java, false) ?: return false
         val sectionName = section.sectionName() ?: return false
@@ -424,15 +446,6 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         return false
     }
 
-    private fun declarationDisplayName(declaration: DreamShaderDeclaration): String? {
-        val rawName = declaration.declarationName()
-        val bodyStart = declaration.bodyTextRange()?.startOffset ?: declaration.text.length
-        val head = declaration.text.substring(0, bodyStart.coerceIn(0, declaration.text.length))
-        val keyValueName = NAME_ATTRIBUTE_REGEX.find(head)?.groupValues?.getOrNull(1)?.trim()
-        if (!keyValueName.isNullOrBlank()) return keyValueName
-        return rawName
-    }
-
     private fun isDeclarationNameIdentifier(element: PsiElement): Boolean {
         val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return false
         return declaration.nameIdentifier == element
@@ -441,12 +454,23 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
     private fun isBuiltInIdentifier(token: String): Boolean {
         if (token.equals("UE", ignoreCase = true)) return true
         if (token.equals("Base", ignoreCase = true)) return true
+        if (token.equals("Path", ignoreCase = true)) return true
         return false
     }
 
     private fun isMemberAccessComponent(element: PsiElement): Boolean {
         val prev = previousNonTriviaTokenText(element) ?: return false
         return prev == "."
+    }
+
+    private fun isKnownMaterialOutputMemberElement(element: PsiElement, token: String): Boolean {
+        if (element.node?.elementType != DreamShaderTokenTypes.IDENTIFIER) return false
+        val prev = previousNonTriviaTokenText(element) ?: return false
+        if (prev != ".") return false
+        var leaf = PsiTreeUtil.prevVisibleLeaf(element) ?: return false
+        leaf = PsiTreeUtil.prevVisibleLeaf(leaf) ?: return false
+        if (!leaf.text.equals("Base", ignoreCase = true)) return false
+        return DreamShaderDocumentationData.materialOutputMemberInfo(token) != null
     }
 
     private fun isNamespaceQualifier(element: PsiElement): Boolean {
@@ -583,6 +607,5 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
     )
 
     companion object {
-        private val NAME_ATTRIBUTE_REGEX = Regex("\\bName\\s*=\\s*\"([^\"]+)\"")
     }
 }

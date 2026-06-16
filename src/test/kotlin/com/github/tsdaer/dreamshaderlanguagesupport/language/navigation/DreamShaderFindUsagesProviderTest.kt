@@ -51,8 +51,28 @@ class DreamShaderFindUsagesProviderTest : BasePlatformTestCase() {
         val nameAttributeValue = file.findElementAt(file.text.indexOf("\"Functions/F_PulseTint\"") + 1)
         assertNotNull("Expected Name attribute string token", nameAttributeValue)
         assertTrue(provider.canFindUsagesFor(nameAttributeValue!!))
-        assertEquals("F_PulseTint", provider.getDescriptiveName(nameAttributeValue))
-        assertEquals("ShaderFunction F_PulseTint", provider.getNodeText(nameAttributeValue, false))
+        assertEquals("Functions/F_PulseTint", provider.getDescriptiveName(nameAttributeValue))
+        assertEquals("ShaderFunction Functions/F_PulseTint", provider.getNodeText(nameAttributeValue, false))
+    }
+
+    fun testShaderNameAttributeUsesFullDisplayNameForFindUsagesText() {
+        val file = myFixture.configureByText(
+            "find_usages_shader_name_attribute_token.dsm",
+            """
+            Shader(Name="DreamMaterials/M_Test2")
+            {
+                Graph = {
+                }
+            }
+            """.trimIndent()
+        )
+
+        val provider = DreamShaderFindUsagesProvider()
+        val nameAttributeValue = file.findElementAt(file.text.indexOf("\"DreamMaterials/M_Test2\"") + 1)
+        assertNotNull("Expected Name attribute string token", nameAttributeValue)
+        assertTrue(provider.canFindUsagesFor(nameAttributeValue!!))
+        assertEquals("DreamMaterials/M_Test2", provider.getDescriptiveName(nameAttributeValue))
+        assertEquals("Shader DreamMaterials/M_Test2", provider.getNodeText(nameAttributeValue, false))
     }
 
     fun testGetNodeTextUsesQualifiedNamespaceNameWhenRequested() {

@@ -69,6 +69,26 @@ class DreamShaderCodeVisionProviderTest : BasePlatformTestCase() {
         }
     }
 
+    fun testCodeVisionHintUsesFullShaderNameAttributeDisplayName() {
+        val file = myFixture.configureByText(
+            "code_vision_name_attribute.dsm",
+            """
+            Shader(Name="DreamMaterials/M_Test2") {
+                Graph = {
+                    float2 uv = UE.TexCoord(0);
+                }
+            }
+            """.trimIndent()
+        )
+        val declaration = PsiTreeUtil.findChildOfType(file, DreamShaderDeclaration::class.java)
+        assertNotNull("Expected declaration PSI", declaration)
+
+        val provider = DreamShaderCodeVisionProvider()
+        val hint = provider.getHint(declaration!!, file)
+
+        assertTrue("Expected full Name attribute path in hint", hint.contains("DreamMaterials/M_Test2"))
+    }
+
     fun testClickPlanRefreshesStoreWhenDeclarationFileIsActiveFile() {
         val file = myFixture.configureByText(
             "code_vision_click_refresh.dsm",
