@@ -19,7 +19,7 @@ description: |
 
   **Editing and navigation**
   - Context-aware completion for sections, types, settings values, catalog-driven `UE.*` / `Substrate.*`, HLSL, and imports
-  - Goto declaration, find usages, references, Copy/Paste Reference, breadcrumbs, Context Info, hover docs, signature help, plain-text symbol completion, and rename suggestions, with `UE.*` / `Substrate.*` served from the shared material-expression catalog
+  - Goto declaration, find usages, references, Rename, Safe Delete, Copy/Paste Reference, breadcrumbs, Context Info, hover docs, signature help, plain-text symbol completion, and rename suggestions, with `UE.*` / `Substrate.*` served from the shared material-expression catalog
   - Inlay parameter hints, Code Vision hints, declaration/import gutter markers, and Bridge diagnostic line markers with source-location navigation
   - IDE include/dependency integration for DreamShader `import "..."` statements
 
@@ -43,7 +43,7 @@ description_zh: |
 
   **编辑与导航**
   - 上下文感知补全：sections、类型、设置值、catalog 驱动的 `UE.*` / `Substrate.*`、HLSL 与 imports
-  - 跳转声明、查找用法、引用、Copy/Paste Reference、面包屑、Context Info、悬浮文档、签名帮助、纯文本符号补全与重命名建议，`UE.*` / `Substrate.*` 由共享的 material-expression catalog 提供
+  - 跳转声明、查找用法、引用、重命名、安全删除、Copy/Paste Reference、面包屑、Context Info、悬浮文档、签名帮助、纯文本符号补全与重命名建议，`UE.*` / `Substrate.*` 由共享的 material-expression catalog 提供
   - 内联参数提示、Code Vision 提示、声明/import gutter 标记，以及可跳转源码位置的 Bridge 诊断行标记
   - 将 DreamShader `import "..."` 接入 IDE include/dependency 机制
 

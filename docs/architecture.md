@@ -59,6 +59,10 @@ Design goal:
   - reuses `DreamShaderImportClosureResolver.resolveDirectImports(...)` to build forward import edges, then augments with reverse importer edges to preserve connected-closure reference search semantics
 - `DreamShaderFindUsagesProvider`
   - Find Usages scanner and display metadata
+- `DreamShaderNamesValidator` / `DreamShaderRenameInputValidator`
+  - declaration-level Rename input validation that follows DreamShader identifier and keyword rules, including `Name="Path/Leaf"` declarations whose path prefix is preserved by PSI rename
+- `DreamShaderRefactoringSupportProvider`
+  - declaration-level Safe Delete availability backed by the shared reference search model
 
 Current boundary:
 - References are lightweight and computed within the import-connected closure (source file + files it imports/importers across recursive chains), then constrained by IDE/user-provided search scope (`GlobalSearchScope` / `LocalSearchScope`), not full workspace/global semantic indexing.

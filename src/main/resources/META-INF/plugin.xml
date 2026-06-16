@@ -55,6 +55,14 @@
         <lang.findUsagesProvider
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderFindUsagesProvider"/>
+        <lang.namesValidator
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderNamesValidator"/>
+        <renameInputValidator
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderRenameInputValidator"/>
+        <lang.refactoringSupport
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderRefactoringSupportProvider"/>
         <lang.documentationProvider
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationProvider"/>

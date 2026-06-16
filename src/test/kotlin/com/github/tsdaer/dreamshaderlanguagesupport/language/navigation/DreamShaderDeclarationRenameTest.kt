@@ -1,4 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
+import com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderNamesValidator
+import com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderRefactoringSupportProvider
+import com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderRenameInputValidator
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.vfs.VfsUtil
@@ -6,9 +9,44 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.refactoring.rename.RenameProcessor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ProcessingContext
 import java.nio.file.Paths
 
 class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
+    fun testRenameInputValidationFollowsDreamShaderIdentifierRules() {
+        val file = myFixture.configureByText(
+            "rename_input_validation.dsh",
+            """
+            Function Util {
+            }
+            """.trimIndent()
+        )
+
+        val declarationOffset = file.text.indexOf("Function Util") + "Function ".length
+        val nameElement = file.findElementAt(declarationOffset)
+        assertNotNull("Expected declaration identifier", nameElement)
+        val declaration = nameElement!!.parent as DreamShaderDeclaration
+        val validator = DreamShaderRenameInputValidator()
+
+        assertTrue(validator.isInputValid("Apply_Tint2", declaration, ProcessingContext()))
+        assertFalse(validator.isInputValid("2ApplyTint", declaration, ProcessingContext()))
+        assertFalse(validator.isInputValid("Apply-Tint", declaration, ProcessingContext()))
+        assertFalse(validator.isInputValid("Shader", declaration, ProcessingContext()))
+        assertFalse(validator.isInputValid("Graph", declaration, ProcessingContext()))
+        assertFalse(validator.isInputValid("float3", declaration, ProcessingContext()))
+    }
+
+    fun testNamesValidatorRecognizesKeywordsAndIdentifiers() {
+        val validator = DreamShaderNamesValidator()
+
+        assertTrue(validator.isIdentifier("F_PulseTint", project))
+        assertTrue(validator.isKeyword("ShaderFunction", project))
+        assertTrue(validator.isKeyword("opt", project))
+        assertTrue(validator.isKeyword("Texture2D", project))
+        assertFalse(validator.isIdentifier("ShaderFunction", project))
+        assertFalse(validator.isIdentifier("Functions/F_PulseTint", project))
+    }
+
     fun testDeclarationSetNameUpdatesNameIdentifier() {
         val file = myFixture.configureByText(
             "rename.dsf",
@@ -342,6 +380,52 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         val declaration = nameElement!!.parent as DreamShaderDeclaration
         assertEquals("F_PulseTint", declaration.declarationName())
         assertEquals("F_PulseTint", declaration.name)
+    }
+
+    fun testRefactoringSupportProviderAllowsSafeDeleteForDeclarationsOnly() {
+        val file = myFixture.configureByText(
+            "safe_delete_available.dsh",
+            """
+            Function Unused {
+            }
+            """.trimIndent()
+        )
+
+        val declarationOffset = file.text.indexOf("Function Unused") + "Function ".length
+        val nameElement = file.findElementAt(declarationOffset)
+        assertNotNull("Expected declaration identifier", nameElement)
+        val declaration = nameElement!!.parent as DreamShaderDeclaration
+        val provider = DreamShaderRefactoringSupportProvider()
+
+        assertTrue(provider.isSafeDeleteAvailable(declaration))
+        assertFalse(provider.isSafeDeleteAvailable(nameElement))
+    }
+
+    fun testSafeDeleteRemovesUnusedDeclarationPsi() {
+        val file = myFixture.configureByText(
+            "safe_delete_unused.dsh",
+            """
+            Function Unused {
+            }
+
+            Function Keep {
+            }
+            """.trimIndent()
+        )
+
+        val declarationOffset = file.text.indexOf("Function Unused") + "Function ".length
+        val nameElement = file.findElementAt(declarationOffset)
+        assertNotNull("Expected declaration identifier", nameElement)
+        val declaration = nameElement!!.parent as DreamShaderDeclaration
+
+        WriteCommandAction.runWriteCommandAction(project) {
+            declaration.delete()
+        }
+        PsiDocumentManager.getInstance(project).commitAllDocuments()
+
+        val updated = file.text
+        assertFalse("Updated text:\n$updated", updated.contains("Function Unused"))
+        assertTrue("Updated text:\n$updated", updated.contains("Function Keep"))
     }
 
     private fun runRenameAndCommit(declaration: DreamShaderDeclaration, newName: String) {

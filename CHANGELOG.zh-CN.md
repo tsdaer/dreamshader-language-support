@@ -14,6 +14,7 @@
 - 新增 DreamShader gutter 标记，覆盖 import、顶层声明与 Bridge 诊断位置。
 - 新增编辑器平台集成：引号处理、`import "..."` 的 include/dependency provider、Copy Reference 限定名、面包屑，以及常量 `float3` / `float4` / `vec3` / `vec4` 颜色预览。
 - 新增更多 IntelliJ 小功能集成：声明 / section 的 Context Info、纯文本符号补全、重命名名称建议，以及 Copy/Paste Reference 的限定名反向解析。
+- 新增 DreamShader 声明级重命名输入校验与安全删除可用性，复用已有的命名空间感知引用搜索，并保留 `Name="Path/Leaf"` 声明重命名时只替换叶子名的行为。
 
 ### 变更
 
