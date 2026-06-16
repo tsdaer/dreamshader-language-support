@@ -1,5 +1,6 @@
 
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask.FailureLevel
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -213,6 +214,15 @@ intellijPlatform {
         .orElse(providers.gradleProperty("jetbrainsPublishTokenFile"))
         .orElse(defaultPublishTokenFilePath)
         .map { path -> Files.readString(Path.of(path.trim())).trim() }
+
+    pluginVerification {
+        failureLevel.set(
+            listOf(
+                FailureLevel.COMPATIBILITY_PROBLEMS,
+                FailureLevel.OVERRIDE_ONLY_API_USAGES
+            )
+        )
+    }
 
     pluginConfiguration {
         id = providers.gradleProperty("pluginGroup").zip(providers.gradleProperty("pluginName")) { group, name ->

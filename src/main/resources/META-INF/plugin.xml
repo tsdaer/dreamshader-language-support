@@ -73,6 +73,8 @@
         <annotator
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticAnnotator"/>
+        <include.provider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderFileIncludeProvider"/>
         <completion.contributor
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionContributor"/>
