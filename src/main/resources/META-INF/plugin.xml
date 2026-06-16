@@ -52,6 +52,10 @@
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderReferencesSearchExecutor"/>
         <gotoDeclarationHandler
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoDeclarationHandler"/>
+        <gotoClassContributor
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoClassContributor"/>
+        <gotoSymbolContributor
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoSymbolContributor"/>
         <lang.findUsagesProvider
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderFindUsagesProvider"/>
