@@ -115,6 +115,13 @@
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderFileTemplateGroupFactory"/>
         <defaultTemplatePropertiesProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderDefaultTemplatePropertiesProvider"/>
+        <liveTemplateContext
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplateContext"/>
+        <defaultLiveTemplatesProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplatesProvider"/>
+        <codeInsight.template.postfixTemplateProvider
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderPostfixTemplateProvider"/>
         <projectConfigurable
                 id="dreamshader.settings"
                 groupId="tools"

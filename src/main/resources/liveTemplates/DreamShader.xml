@@ -1,0 +1,88 @@
+<templateSet group="DreamShader">
+    <template name="shader"
+              value="Shader(Name=&quot;$NAME$&quot;) {&#10;    Properties = {&#10;        float Roughness = $ROUGHNESS$;&#10;    }&#10;&#10;    Outputs = {&#10;        float3 Color;&#10;    }&#10;&#10;    Settings = {&#10;        Domain = Surface;&#10;        ShadingModel = DefaultLit;&#10;        BlendMode = Opaque;&#10;    }&#10;&#10;    Graph = {&#10;        Color = float3(1.0, 1.0, 1.0);&#10;        Base.BaseColor = Color;&#10;        Base.Roughness = Roughness;&#10;    }&#10;}"
+              description="DreamShader material shader"
+              toReformat="true"
+              toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;DreamMaterials/MyMaterial&quot;" alwaysStopAt="true"/>
+        <variable name="ROUGHNESS" expression="" defaultValue="&quot;0.5&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="DREAM_SHADER" value="true"/>
+        </context>
+    </template>
+    <template name="sfun"
+              value="ShaderFunction(Name=&quot;$NAME$&quot;) {&#10;    Inputs = {&#10;        float3 InColor;&#10;        float Strength = $STRENGTH$;&#10;    }&#10;&#10;    Outputs = {&#10;        float3 OutColor;&#10;    }&#10;&#10;    Graph = {&#10;        OutColor = InColor * Strength;&#10;    }&#10;}"
+              description="DreamShader shader function asset"
+              toReformat="true"
+              toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;Functions/MyFunction&quot;" alwaysStopAt="true"/>
+        <variable name="STRENGTH" expression="" defaultValue="&quot;1.0&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="DREAM_SHADER" value="true"/>
+        </context>
+    </template>
+    <template name="slayer"
+              value="Layer(Name=&quot;$NAME$&quot;) {&#10;    Inputs = {&#10;        float3 InColor;&#10;    }&#10;&#10;    Outputs = {&#10;        float3 OutColor;&#10;    }&#10;&#10;    Graph = {&#10;        OutColor = InColor;&#10;    }&#10;}"
+              description="DreamShader layer asset"
+              toReformat="true"
+              toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;Layers/MyLayer&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="DREAM_SHADER" value="true"/>
+        </context>
+    </template>
+    <template name="slblend"
+              value="LayerBlend(Name=&quot;$NAME$&quot;) {&#10;    Inputs = {&#10;        float3 BaseColor;&#10;        float3 LayerColor;&#10;        float Alpha = $ALPHA$;&#10;    }&#10;&#10;    Outputs = {&#10;        float3 OutColor;&#10;    }&#10;&#10;    Graph = {&#10;        OutColor = lerp(BaseColor, LayerColor, Alpha);&#10;    }&#10;}"
+              description="DreamShader layer blend asset"
+              toReformat="true"
+              toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;Layers/MyBlend&quot;" alwaysStopAt="true"/>
+        <variable name="ALPHA" expression="" defaultValue="&quot;1.0&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="DREAM_SHADER" value="true"/>
+        </context>
+    </template>
+    <template name="gfn"
+              value="GraphFunction $NAME$($PARAMS$) {&#10;    $END$&#10;}"
+              description="DreamShader graph function"
+              toReformat="true"
+              toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;MyGraphFunction&quot;" alwaysStopAt="true"/>
+        <variable name="PARAMS" expression="" defaultValue="&quot;in float3 InColor, out float3 OutColor&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="DREAM_SHADER" value="true"/>
+        </context>
+    </template>
+    <template name="iff"
+              value="if ($CONDITION$) {&#10;    $END$&#10;}"
+              description="DreamShader if block"
+              toReformat="true"
+              toShortenFQNames="false">
+        <variable name="CONDITION" expression="" defaultValue="&quot;Value &gt; 0.0&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="DREAM_SHADER" value="true"/>
+        </context>
+    </template>
+    <template name="ifel"
+              value="if ($CONDITION$) {&#10;    $THEN$&#10;} else {&#10;    $END$&#10;}"
+              description="DreamShader if/else block"
+              toReformat="true"
+              toShortenFQNames="false">
+        <variable name="CONDITION" expression="" defaultValue="&quot;Value &gt; 0.0&quot;" alwaysStopAt="true"/>
+        <variable name="THEN" expression="" defaultValue="&quot;Value = 1.0;&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="DREAM_SHADER" value="true"/>
+        </context>
+    </template>
+    <template name="uee"
+              value="UE.Expression(Class=&quot;$CLASS$&quot;, OutputType=$OUTPUT_TYPE$)"
+              description="DreamShader UE.Expression"
+              toReformat="true"
+              toShortenFQNames="false">
+        <variable name="CLASS" expression="" defaultValue="&quot;MaterialExpressionCustom&quot;" alwaysStopAt="true"/>
+        <variable name="OUTPUT_TYPE" expression="" defaultValue="&quot;float3&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="DREAM_SHADER" value="true"/>
+        </context>
+    </template>
+</templateSet>

@@ -34,7 +34,7 @@ Last updated: 2026-06-16
 | 2. Cache import closure resolution | P0 | Done | `resolveDirectImports` and `resolveImportClosure` now use cached values invalidated by PSI modification count and VFS structure changes. |
 | 3. Add conservative Substrate expression diagnostics | P0 | Done | Conservative local `Substrate` checks now cover arithmetic, swizzles, vector constructors, and ternary branch merges. |
 | 4. Wire `UE.*` goto to Unreal source locator | P0 | Done | `UE.<Name>` goto now prefers Unreal header source targets when source scanning is enabled and falls back when disabled or unresolved. |
-| 5. Add Live Templates and Postfix Templates | P1 | Not started | Pending independent editor-experience patch. |
+| 5. Add Live Templates and Postfix Templates | P1 | Done | Added DreamShader live templates and conservative `.if` / `.ifel` postfix templates; broader PSI-sensitive postfix templates can be added later as expression parsing matures. |
 | 6. Add Goto Symbol / Goto Class contributors | P1 | Done | Added `gotoClassContributor` / `gotoSymbolContributor` backed by DreamShader PSI declaration search, covering asset declarations, namespaces, functions, and namespace members. |
 | 7. Integrate spellchecking | P1 | Done | Added `spellchecker.support` for DreamShader comments plus `VirtualFunction` `Description` string contexts, while keeping paths and code-like strings out of spellchecking. |
 | 8. Expand color preview coverage | P1 | Done | Color previews now cover `Color(...)` / `LinearColor(...)`, `0xRRGGBB` / `0xRRGGBBAA`, and conservative 0-255 integer channels. |
@@ -51,6 +51,8 @@ Current verification:
 - `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMinorEditorFeaturesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSignatureHelpAnalyzerTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationProviderTest`
 - `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoContributorsTest`
 - `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSpellcheckingStrategyTest`
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateCommandsTest`
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderPostfixTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateCommandsTest`
 
 ## P0: Performance and Bridge-Failure Prevention
 
