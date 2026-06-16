@@ -109,6 +109,8 @@
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.DreamShaderColorSettingsPage"/>
         <colorProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderColorProvider"/>
+        <spellchecker.support
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSpellcheckingStrategy"/>
         <fileTemplateGroup
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderFileTemplateGroupFactory"/>
         <defaultTemplatePropertiesProvider

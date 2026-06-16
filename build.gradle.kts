@@ -18,6 +18,7 @@ dependencies {
     intellijPlatform {
         // Keep IU for reliable headless test execution.
         intellijIdea("2025.2.6.2")
+        bundledModule("intellij.spellchecker")
         testFramework(TestFrameworkType.Platform)
     }
 }
