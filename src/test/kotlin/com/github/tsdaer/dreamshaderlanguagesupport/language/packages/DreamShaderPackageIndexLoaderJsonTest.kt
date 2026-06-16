@@ -1,8 +1,8 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 /**
  * 回归覆盖旧手写解析器的缺陷，确认迁移到 kotlinx.serialization 后已修复：

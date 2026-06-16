@@ -14,17 +14,32 @@ class DreamShaderBridgeActionsTest : BasePlatformTestCase() {
     data class CapturedNotification(val type: NotificationType, val title: String, val content: String)
 
     private val capturedNotifications = mutableListOf<CapturedNotification>()
+    private val openedDirectories = mutableListOf<String>()
+    private val openedFiles = mutableListOf<String>()
+    private val navigatedLocations = mutableListOf<String>()
 
     override fun setUp() {
         super.setUp()
         DreamShaderBridgeActionTestHooks.notificationSink = { _, type, title, content ->
             capturedNotifications.add(CapturedNotification(type, title, content))
         }
+        DreamShaderBridgeActionTestHooks.directoryOpener = { directory ->
+            openedDirectories.add(directory.path.replace('\\', '/'))
+        }
+        DreamShaderBridgeActionTestHooks.fileOpener = { _, file ->
+            openedFiles.add(file.path.replace('\\', '/'))
+        }
+        DreamShaderBridgeActionTestHooks.locationNavigator = { _, file, line, column ->
+            navigatedLocations.add("${file.path.replace('\\', '/')}:$line:$column")
+        }
     }
 
     override fun tearDown() {
         DreamShaderBridgeActionTestHooks.reset()
         capturedNotifications.clear()
+        openedDirectories.clear()
+        openedFiles.clear()
+        navigatedLocations.clear()
         super.tearDown()
     }
 
@@ -93,6 +108,10 @@ class DreamShaderBridgeActionsTest : BasePlatformTestCase() {
             runCatching { action.actionPerformed(eventFor(action, activeFile)) }
                 .getOrElse { throw AssertionError("Action threw unexpectedly: $id", it) }
         }
+
+        assertEquals(listOf("${projectBase.replace('\\', '/')}/Saved/DreamShader/Bridge"), openedDirectories)
+        assertEquals(listOf(diagnosticsPath.toString().replace('\\', '/')), openedFiles)
+        assertEquals(listOf("${activeFile.path.replace('\\', '/')}:3:13"), navigatedLocations)
     }
 
     fun testBridgeActionCommandSetReturnsExpectedSuccessAndErrorMessages() {

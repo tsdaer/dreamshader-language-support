@@ -1,15 +1,15 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.rules.TemporaryFolder
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.nio.file.Path
 
 class DreamShaderMaterialExpressionScannerTest {
-    @get:Rule
-    val tempFolder = TemporaryFolder()
+    @TempDir
+    lateinit var tempDir: Path
 
     @Test
     fun `scans a direct UMaterialExpression subclass`() {
@@ -106,14 +106,14 @@ class DreamShaderMaterialExpressionScannerTest {
 
     @Test
     fun `scans directory and skips generated folders`() {
-        val sourceDir = tempFolder.newFolder("Source")
+        val sourceDir = tempDir.resolve("Source").toFile().apply { mkdirs() }
         File(sourceDir, "MaterialExpressionSine.h").writeText(
             """
                 UCLASS()
                 class UMaterialExpressionSine : public UMaterialExpression {};
             """.trimIndent()
         )
-        val intermediate = tempFolder.newFolder("Intermediate")
+        val intermediate = tempDir.resolve("Intermediate").toFile().apply { mkdirs() }
         File(intermediate, "MaterialExpression.generated.h").writeText(
             """
                 UCLASS()
@@ -121,7 +121,7 @@ class DreamShaderMaterialExpressionScannerTest {
             """.trimIndent()
         )
 
-        val names = DreamShaderMaterialExpressionScanner.scanDirectory(tempFolder.root).map { it.className }
+        val names = DreamShaderMaterialExpressionScanner.scanDirectory(tempDir.toFile()).map { it.className }
 
         assertTrue(names.contains("UMaterialExpressionSine"))
         assertFalse(names.contains("UMaterialExpressionShouldBeSkipped"))
@@ -153,6 +153,6 @@ class DreamShaderMaterialExpressionScannerTest {
 
     @Test
     fun `returns empty for a missing directory`() {
-        assertTrue(DreamShaderMaterialExpressionScanner.scanDirectory(File(tempFolder.root, "missing")).isEmpty())
+        assertTrue(DreamShaderMaterialExpressionScanner.scanDirectory(tempDir.resolve("missing").toFile()).isEmpty())
     }
 }

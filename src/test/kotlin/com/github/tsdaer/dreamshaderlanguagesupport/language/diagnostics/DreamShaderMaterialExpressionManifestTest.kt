@@ -1,9 +1,9 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMaterialExpressionSource
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMaterialExpressionManifest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class DreamShaderMaterialExpressionManifestTest {
     @Test

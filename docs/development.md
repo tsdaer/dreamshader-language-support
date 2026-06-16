@@ -40,7 +40,7 @@ Test:
 $env:GRADLE_USER_HOME="J:/Gradle"; .\gradlew.bat test --no-configuration-cache
 ```
 
-Gradle tests now run on JUnit Platform. The project keeps temporary JUnit Vintage runtime support so the remaining legacy JUnit 4-style tests continue to run during the migration, while new non-platform tests should use JUnit Jupiter APIs.
+Gradle tests now run on JUnit Platform. Non-platform tests should use JUnit Jupiter APIs, while the remaining `junit:junit` dependency is kept only for current IntelliJ Platform test-framework compatibility.
 
 Run plugin in sandbox:
 ```powershell

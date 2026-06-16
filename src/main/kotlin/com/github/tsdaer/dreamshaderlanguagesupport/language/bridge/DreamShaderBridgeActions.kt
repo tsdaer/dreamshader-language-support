@@ -37,9 +37,21 @@ internal object DreamShaderBridgeActionTestHooks {
         bridgeDirectoryPath: String?
     ) -> DreamShaderBridgeCommandResult)? = null
 
+    @Volatile
+    var directoryOpener: ((directory: File) -> Unit)? = null
+
+    @Volatile
+    var fileOpener: ((project: Project, file: VirtualFile) -> Unit)? = null
+
+    @Volatile
+    var locationNavigator: ((project: Project, file: VirtualFile, line: Int, column: Int) -> Unit)? = null
+
     fun reset() {
         notificationSink = null
         commandExecutor = null
+        directoryOpener = null
+        fileOpener = null
+        locationNavigator = null
     }
 }
 
@@ -91,6 +103,28 @@ private fun executeBridgeCommand(
         activeFilePath = activeFilePath,
         bridgeDirectoryPath = bridgeDirectoryPath
     )
+}
+
+private fun openBridgeDirectory(directory: File) {
+    DreamShaderBridgeActionTestHooks.directoryOpener?.invoke(directory) ?: run {
+        if (Desktop.isDesktopSupported()) {
+            Desktop.getDesktop().open(directory)
+        }
+    }
+}
+
+private fun openBridgeFile(project: Project, file: VirtualFile) {
+    DreamShaderBridgeActionTestHooks.fileOpener?.invoke(project, file)
+        ?: FileEditorManager.getInstance(project).openFile(file, true)
+}
+
+private fun navigateToBridgeLocation(project: Project, file: VirtualFile, line: Int, column: Int) {
+    DreamShaderBridgeActionTestHooks.locationNavigator?.invoke(project, file, line, column) ?: OpenFileDescriptor(
+        project,
+        file,
+        (line - 1).coerceAtLeast(0),
+        (column - 1).coerceAtLeast(0)
+    ).navigate(true)
 }
 
 private fun activeDreamShaderFile(project: Project, event: AnActionEvent): VirtualFile? {
@@ -172,9 +206,7 @@ class DreamShaderOpenBridgeDirectoryAction : DumbAwareAction() {
             return
         }
         runCatching {
-            if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().open(directory)
-            }
+            openBridgeDirectory(directory)
         }.onFailure {
             DreamShaderBridgeNotifier.error(
                 project,
@@ -228,7 +260,7 @@ class DreamShaderOpenBridgeDiagnosticsFileAction : DumbAwareAction() {
             return
         }
 
-        FileEditorManager.getInstance(project).openFile(vf, true)
+        openBridgeFile(project, vf)
         DreamShaderBridgeNotifier.info(
             project,
             title,
@@ -273,8 +305,7 @@ class DreamShaderOpenFirstBridgeDiagnosticLocationAction : DumbAwareAction() {
             return
         }
 
-        OpenFileDescriptor(project, sourceFile, (first.line - 1).coerceAtLeast(0), (first.column - 1).coerceAtLeast(0))
-            .navigate(true)
+        navigateToBridgeLocation(project, sourceFile, first.line, first.column)
         DreamShaderBridgeNotifier.info(
             project,
             title,
