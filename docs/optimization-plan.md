@@ -24,6 +24,30 @@ temporary plan.
 - `P1`: Editing/navigation experience gap.
 - `P2`: Robustness, parser health, or long-tail compatibility.
 
+## Progress
+
+Last updated: 2026-06-16
+
+| Item | Priority | Status | Notes |
+| --- | --- | --- | --- |
+| 1. Cache semantic diagnostic lexical inputs | P0 | In progress | File-level diagnostic inputs are cached: source text, whole-file tokens, and top-level declarations. Some internal body-range lexing still remains for later incremental cleanup. |
+| 2. Cache import closure resolution | P0 | Done | `resolveDirectImports` and `resolveImportClosure` now use cached values invalidated by PSI modification count and VFS structure changes. |
+| 3. Add conservative Substrate expression diagnostics | P0 | Not started | Next P0 Bridge-failure-prevention item. |
+| 4. Wire `UE.*` goto to Unreal source locator | P0 | Done | `UE.<Name>` goto now prefers Unreal header source targets when source scanning is enabled and falls back when disabled or unresolved. |
+| 5. Add Live Templates and Postfix Templates | P1 | Not started | Pending independent editor-experience patch. |
+| 6. Add Goto Symbol / Goto Class contributors | P1 | Not started | Pending independent navigation patch. |
+| 7. Integrate spellchecking | P1 | Not started | Pending independent editor-experience patch. |
+| 8. Expand color preview coverage | P1 | Not started | Pending independent editor-experience patch. |
+| 9. Show `opt` and default values in hover signatures | P1 | Not started | Pending independent documentation/signature rendering patch. |
+| 10. Share declaration context across diagnostic passes | P2 | Not started | Best handled after cache boundaries stabilize. |
+| 11. Let parser emit recoverable error markers | P2 | Not started | Pending parser recovery cleanup. |
+| 12. Validate `Path(...)` object-segment suffixes | P2 | Not started | Pending diagnostics patch. |
+| 13. Add GLSL legacy-alias compatibility diagnostics | P2 | Blocked | Requires upstream confirmation of the alias list. |
+
+Current verification:
+
+- `./gradlew test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticDiagnosticsTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticAnnotatorTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolverTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoDeclarationHandlerTest`
+
 ## P0: Performance and Bridge-Failure Prevention
 
 ### 1. Cache semantic diagnostic lexical inputs

@@ -1,6 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.nio.file.Paths
@@ -86,6 +87,41 @@ class DreamShaderImportClosureResolverTest : BasePlatformTestCase() {
         val names = closure.mapNotNull { it.virtualFile?.name }
         assertEquals(3, names.size)
         assertEquals(setOf("seed_cycle_imports.dsm", "CycleA.dsh", "CycleB.dsh"), names.toSet())
+    }
+
+    fun testResolveDirectImportsCacheInvalidatesAfterImportEdit() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val aPath = Paths.get(projectBase, "Shared", "CachedA.dsh")
+        val bPath = Paths.get(projectBase, "Shared", "CachedB.dsh")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(aPath.parent.toString())
+            VfsUtil.saveText(parent.findOrCreateChildData(this, aPath.fileName.toString()), "Function CachedA { }")
+            VfsUtil.saveText(parent.findOrCreateChildData(this, bPath.fileName.toString()), "Function CachedB { }")
+        }
+
+        val seed = myFixture.configureByText(
+            "seed_cached_imports.dsm",
+            """
+            import "Shared/CachedA.dsh";
+            Shader Main { Graph { } }
+            """.trimIndent()
+        )
+
+        val initialNames = DreamShaderImportClosureResolver.resolveDirectImports(seed)
+            .mapNotNull { it.virtualFile?.name }
+            .toSet()
+        assertEquals(setOf("CachedA.dsh"), initialNames)
+
+        val importOffset = seed.text.indexOf("CachedA")
+        WriteCommandAction.runWriteCommandAction(project) {
+            myFixture.editor.document.replaceString(importOffset, importOffset + "CachedA".length, "CachedB")
+            PsiDocumentManager.getInstance(project).commitDocument(myFixture.editor.document)
+        }
+
+        val updatedNames = DreamShaderImportClosureResolver.resolveDirectImports(seed)
+            .mapNotNull { it.virtualFile?.name }
+            .toSet()
+        assertEquals(setOf("CachedB.dsh"), updatedNames)
     }
 
     fun testIsImportStringLiteralTokenRecognizesOnlyImportStrings() {

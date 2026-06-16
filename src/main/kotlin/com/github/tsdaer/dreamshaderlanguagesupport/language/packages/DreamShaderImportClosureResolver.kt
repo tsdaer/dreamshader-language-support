@@ -2,9 +2,15 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.intellij.openapi.util.Key
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import java.util.ArrayDeque
 
@@ -16,6 +22,36 @@ import java.util.ArrayDeque
  */
 internal object DreamShaderImportClosureResolver {
     fun resolveImportClosure(seedFile: PsiFile): List<PsiFile> {
+        return CachedValuesManager.getManager(seedFile.project).getCachedValue(
+            seedFile,
+            IMPORT_CLOSURE_KEY,
+            {
+                CachedValueProvider.Result.create(
+                    computeImportClosure(seedFile),
+                    PsiModificationTracker.MODIFICATION_COUNT,
+                    VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS
+                )
+            },
+            false
+        )
+    }
+
+    fun resolveDirectImports(sourceFile: PsiFile): List<PsiFile> {
+        return CachedValuesManager.getManager(sourceFile.project).getCachedValue(
+            sourceFile,
+            DIRECT_IMPORTS_KEY,
+            {
+                CachedValueProvider.Result.create(
+                    computeDirectImports(sourceFile),
+                    PsiModificationTracker.MODIFICATION_COUNT,
+                    VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS
+                )
+            },
+            false
+        )
+    }
+
+    private fun computeImportClosure(seedFile: PsiFile): List<PsiFile> {
         val visited = linkedSetOf<String>()
         val ordered = mutableListOf<PsiFile>()
         val queue = ArrayDeque<PsiFile>()
@@ -40,7 +76,7 @@ internal object DreamShaderImportClosureResolver {
         return ordered
     }
 
-    fun resolveDirectImports(sourceFile: PsiFile): List<PsiFile> {
+    private fun computeDirectImports(sourceFile: PsiFile): List<PsiFile> {
         val project = sourceFile.project
         val projectBasePath = project.basePath ?: return emptyList()
         val psiManager = PsiManager.getInstance(project)
@@ -92,4 +128,10 @@ internal object DreamShaderImportClosureResolver {
         }
         return false
     }
+
+    private val DIRECT_IMPORTS_KEY: Key<CachedValue<List<PsiFile>>> =
+        Key.create("dreamshader.import.direct.files")
+
+    private val IMPORT_CLOSURE_KEY: Key<CachedValue<List<PsiFile>>> =
+        Key.create("dreamshader.import.closure.files")
 }

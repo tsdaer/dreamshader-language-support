@@ -22,9 +22,14 @@ import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.*
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import java.nio.file.Files
 import java.nio.file.Path
@@ -60,14 +65,29 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     fun annotateFileDiagnostics(file: DreamShaderPsiFile, holder: AnnotationHolder) {
-        val sourceText = file.text
-        val tokens = lexTokens(sourceText, 0, file.textLength)
-        val topLevelDeclarations = topLevelDeclarations(file)
+        val inputs = cachedFileDiagnosticInputs(file)
+        val sourceText = inputs.sourceText
+        val tokens = inputs.tokens
+        val topLevelDeclarations = inputs.topLevelDeclarations
 
         DreamShaderSyntaxDiagnosticsPass.annotate(sourceText, tokens, holder)
         annotateSectionShapeDiagnostics(file, sourceText, tokens, topLevelDeclarations, holder)
         annotateSemanticDiagnostics(file, sourceText, tokens, topLevelDeclarations, holder)
         DreamShaderBridgeDiagnosticsPass.annotate(file, holder)
+    }
+
+    private fun cachedFileDiagnosticInputs(file: DreamShaderPsiFile): FileDiagnosticInputs {
+        return CachedValuesManager.getManager(file.project).getCachedValue(
+            file,
+            FILE_DIAGNOSTIC_INPUTS_KEY,
+            {
+                CachedValueProvider.Result.create(
+                    computeFileDiagnosticInputs(file),
+                    PsiModificationTracker.MODIFICATION_COUNT
+                )
+            },
+            false
+        )
     }
 
     // Section 形状诊断：文件角色规则与声明级结构规则。
@@ -2969,6 +2989,12 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val startOffset: Int
     )
 
+    private data class FileDiagnosticInputs(
+        val sourceText: String,
+        val tokens: List<DreamShaderLexedToken>,
+        val topLevelDeclarations: List<DreamShaderDeclaration>
+    )
+
     /**
      * Data model for ParsedParameterType.
      */
@@ -3067,6 +3093,39 @@ internal class DreamShaderSemanticAnnotationPipeline {
     )
 
     companion object {
+        private val FILE_DIAGNOSTIC_INPUTS_KEY: Key<CachedValue<FileDiagnosticInputs>> =
+            Key.create("dreamshader.semantic.file.diagnostic.inputs")
+
+        private fun computeFileDiagnosticInputs(file: DreamShaderPsiFile): FileDiagnosticInputs {
+            val sourceText = file.text
+            return FileDiagnosticInputs(
+                sourceText = sourceText,
+                tokens = lexFileTokens(sourceText, 0, file.textLength),
+                topLevelDeclarations = PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java)
+                    .filter { PsiTreeUtil.getParentOfType(it, DreamShaderDeclaration::class.java, true) == null }
+            )
+        }
+
+        private fun lexFileTokens(sourceText: String, startOffset: Int, endOffset: Int): List<DreamShaderLexedToken> {
+            val lexer = DreamShaderLexer()
+            lexer.start(sourceText, startOffset, endOffset, 0)
+            val result = mutableListOf<DreamShaderLexedToken>()
+            var depth = 0
+            while (lexer.tokenType != null) {
+                val type = lexer.tokenType
+                val text = lexer.tokenText
+                val range = TextRange(lexer.tokenStart, lexer.tokenEnd)
+                val depthBefore = depth
+                if (text == "{") depth++
+                if (text == "}") depth = (depth - 1).coerceAtLeast(0)
+                if (type != null) {
+                    result.add(DreamShaderLexedToken(type, text, range, depthBefore))
+                }
+                lexer.advance()
+            }
+            return result
+        }
+
         // 语义校验字典与建议修复的规范候选集。
         private val SETTINGS_KEYS = setOf(
             "materialdomain", "domain", "shadingmodel", "blendmode", "rendertype", "translucencylightingmode",

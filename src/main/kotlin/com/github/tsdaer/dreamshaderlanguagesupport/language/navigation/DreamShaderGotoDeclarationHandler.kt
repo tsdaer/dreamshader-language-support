@@ -81,6 +81,8 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
         val symbolName = element.text
         if (symbolName.isBlank()) return null
 
+        resolveUnrealSourceTarget(element, symbolName)?.let { return arrayOf(it) }
+
         resolveUnqualifiedNamespaceMemberTarget(file, element, symbolName)?.let { return arrayOf(it) }
 
         resolveTopLevelDeclarationBySymbol(file, symbolName)?.let { return arrayOf(it) }
@@ -331,6 +333,16 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
     private fun isMemberAccessComponent(element: PsiElement): Boolean {
         val prev = previousNonTriviaLeaf(element) ?: return false
         return prev.text == "."
+    }
+
+    private fun resolveUnrealSourceTarget(element: PsiElement, symbolName: String): PsiElement? {
+        if (symbolName.isBlank()) return null
+        val previous = previousNonTriviaLeaf(element) ?: return null
+        if (previous.text != ".") return null
+        val qualifier = previousNonTriviaLeaf(previous) ?: return null
+        if (qualifier.node?.elementType != DreamShaderTokenTypes.IDENTIFIER) return null
+        if (!qualifier.text.equals("UE", ignoreCase = true)) return null
+        return DreamShaderUnrealSourceTargetResolver.resolve(element, symbolName)
     }
 
     private fun previousNonTriviaLeaf(element: PsiElement): PsiElement? {

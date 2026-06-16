@@ -1,6 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.util.PsiTreeUtil
@@ -622,5 +623,83 @@ class DreamShaderGotoDeclarationHandlerTest : BasePlatformTestCase() {
         val declaration = targets!!.first() as DreamShaderDeclaration
         assertEquals("IndirectFunc", declaration.declarationName())
         assertEquals("Impl.dsh", declaration.containingFile.name)
+    }
+
+    fun testGotoDeclarationResolvesUeMemberToUnrealSourceWhenScanningEnabled() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val sourceRoot = Paths.get(projectBase, "Engine", "Source", "Runtime", "Engine", "Classes", "Materials")
+        val headerPath = sourceRoot.resolve("MaterialExpressionSine.h")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(sourceRoot.toString())
+            val file = parent.findOrCreateChildData(this, headerPath.fileName.toString())
+            VfsUtil.saveText(
+                file,
+                """
+                UCLASS()
+                class ENGINE_API UMaterialExpressionSine : public UMaterialExpression
+                {
+                };
+                """.trimIndent()
+            )
+        }
+
+        val settings = project.getService(DreamShaderProjectSettings::class.java)
+        settings.state.materialExpressionScanEnabled = true
+        settings.state.unrealEngineSourceRoot = sourceRoot.toString()
+
+        val file = myFixture.configureByText(
+            "ue_source_goto.dsm",
+            """
+            Shader Main {
+                Graph {
+                    float value = UE.Sine(Input=0.5);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("Sine(") + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull(sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertNotNull(targets)
+        assertEquals("MaterialExpressionSine.h", targets!!.first().containingFile.name)
+        assertEquals("UMaterialExpressionSine", targets.first().text)
+    }
+
+    fun testGotoDeclarationDoesNotResolveUeMemberToSourceWhenScanningDisabled() {
+        val projectBase = project.basePath ?: error("project base path is null")
+        val sourceRoot = Paths.get(projectBase, "Engine", "Source", "Runtime", "Engine", "Classes", "Materials")
+        val headerPath = sourceRoot.resolve("MaterialExpressionSine.h")
+        WriteCommandAction.runWriteCommandAction(project) {
+            val parent = VfsUtil.createDirectories(sourceRoot.toString())
+            val file = parent.findOrCreateChildData(this, headerPath.fileName.toString())
+            VfsUtil.saveText(file, "class ENGINE_API UMaterialExpressionSine : public UMaterialExpression {};")
+        }
+
+        val settings = project.getService(DreamShaderProjectSettings::class.java)
+        settings.state.materialExpressionScanEnabled = false
+        settings.state.unrealEngineSourceRoot = sourceRoot.toString()
+
+        val file = myFixture.configureByText(
+            "ue_source_goto_disabled.dsm",
+            """
+            Shader Main {
+                Graph {
+                    float value = UE.Sine(Input=0.5);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val usageOffset = file.text.indexOf("Sine(") + 1
+        val sourceElement = file.findElementAt(usageOffset)
+        assertNotNull(sourceElement)
+
+        val handler = DreamShaderGotoDeclarationHandler()
+        val targets = handler.getGotoDeclarationTargets(sourceElement, usageOffset, myFixture.editor)
+        assertTrue("Expected catalog-only UE member to keep existing no-target fallback", targets.isNullOrEmpty())
     }
 }
