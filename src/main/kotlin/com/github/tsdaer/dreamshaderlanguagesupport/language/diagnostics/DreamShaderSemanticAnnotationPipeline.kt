@@ -171,6 +171,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateConstTextureDefaultAssetDiagnostics(topLevelDeclarations, holder)
         annotateOptionalInputDefaultDiagnostics(topLevelDeclarations, holder)
         annotateUnknownExpressionClassDiagnostics(file, sourceText, topLevelDeclarations, holder)
+        annotateSubstrateExpressionDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphLoopDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphSwitchDiagnostics(sourceText, topLevelDeclarations, holder)
         annotateUnsupportedGraphBreakContinueDiagnostics(sourceText, topLevelDeclarations, holder)
@@ -1783,6 +1784,211 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
+    private fun annotateSubstrateExpressionDiagnostics(
+        sourceText: String,
+        topLevelDeclarations: List<DreamShaderDeclaration>,
+        holder: AnnotationHolder
+    ) {
+        graphConstrainedBodyRanges(topLevelDeclarations).forEach { bodyRange ->
+            val tokens = lexTokens(sourceText, bodyRange.startOffset, bodyRange.endOffset)
+            val substrateSymbols = collectSubstrateLocalSymbols(tokens)
+            if (substrateSymbols.isEmpty()) return@forEach
+
+            annotateSubstrateArithmeticDiagnostics(tokens, substrateSymbols, holder)
+            annotateSubstrateSwizzleDiagnostics(tokens, substrateSymbols, holder)
+            annotateSubstrateVectorConstructorDiagnostics(tokens, substrateSymbols, holder)
+            annotateSubstrateTernaryDiagnostics(tokens, substrateSymbols, holder)
+        }
+    }
+
+    private fun collectSubstrateLocalSymbols(tokens: List<DreamShaderLexedToken>): Set<String> {
+        val result = mutableSetOf<String>()
+        tokens.indices.forEach { index ->
+            val token = tokens[index]
+            if (token.type != DreamShaderTokenTypes.TYPE || !token.text.equals("Substrate", ignoreCase = true)) return@forEach
+            val next = nextSignificantToken(tokens, index) ?: return@forEach
+            if (next.type == DreamShaderTokenTypes.IDENTIFIER) {
+                result.add(next.text)
+            }
+        }
+        return result
+    }
+
+    private fun annotateSubstrateArithmeticDiagnostics(
+        tokens: List<DreamShaderLexedToken>,
+        substrateSymbols: Set<String>,
+        holder: AnnotationHolder
+    ) {
+        tokens.indices.forEach { index ->
+            val token = tokens[index]
+            if (token.type != DreamShaderTokenTypes.OPERATOR || token.text !in SUBSTRATE_ARITHMETIC_OPERATORS) return@forEach
+            val previous = previousSignificantToken(tokens, index)
+            val next = nextSignificantToken(tokens, index)
+            if (!isSubstrateSymbolToken(previous, substrateSymbols) && !isSubstrateSymbolToken(next, substrateSymbols)) return@forEach
+            holder.newAnnotation(
+                HighlightSeverity.ERROR,
+                DreamShaderBundle.message("diagnostic.substrateArithmeticNotSupported")
+            ).range(token.range).create()
+        }
+    }
+
+    private fun annotateSubstrateSwizzleDiagnostics(
+        tokens: List<DreamShaderLexedToken>,
+        substrateSymbols: Set<String>,
+        holder: AnnotationHolder
+    ) {
+        tokens.indices.forEach { index ->
+            val token = tokens[index]
+            if (!isSubstrateSymbolToken(token, substrateSymbols)) return@forEach
+            val dotIndex = nextSignificantTokenIndex(tokens, index) ?: return@forEach
+            val dot = tokens[dotIndex]
+            if (dot.type != DreamShaderTokenTypes.OPERATOR || dot.text != ".") return@forEach
+            val member = nextSignificantToken(tokens, dotIndex) ?: return@forEach
+            if (member.type != DreamShaderTokenTypes.IDENTIFIER || !isSwizzleMember(member.text)) return@forEach
+            holder.newAnnotation(
+                HighlightSeverity.ERROR,
+                DreamShaderBundle.message("diagnostic.substrateSwizzleNotSupported")
+            ).range(member.range).create()
+        }
+    }
+
+    private fun annotateSubstrateVectorConstructorDiagnostics(
+        tokens: List<DreamShaderLexedToken>,
+        substrateSymbols: Set<String>,
+        holder: AnnotationHolder
+    ) {
+        tokens.indices.forEach { index ->
+            val token = tokens[index]
+            if (token.type != DreamShaderTokenTypes.TYPE) return@forEach
+            if (token.text.lowercase(Locale.ROOT) !in SUBSTRATE_VECTOR_CONSTRUCTOR_TYPES) return@forEach
+            val leftParenIndex = nextSignificantTokenIndex(tokens, index) ?: return@forEach
+            if (tokens[leftParenIndex].type != DreamShaderTokenTypes.LPAREN) return@forEach
+            val rightParenIndex = findMatchingParenIndex(tokens, leftParenIndex) ?: return@forEach
+            if (!containsSubstrateSymbol(tokens, leftParenIndex + 1, rightParenIndex, substrateSymbols)) return@forEach
+            holder.newAnnotation(
+                HighlightSeverity.ERROR,
+                DreamShaderBundle.message("diagnostic.substrateVectorConstructorNotSupported")
+            ).range(token.range).create()
+        }
+    }
+
+    private fun annotateSubstrateTernaryDiagnostics(
+        tokens: List<DreamShaderLexedToken>,
+        substrateSymbols: Set<String>,
+        holder: AnnotationHolder
+    ) {
+        tokens.indices.forEach { index ->
+            val token = tokens[index]
+            if (token.text != "?") return@forEach
+            val colonIndex = findTernaryColonIndex(tokens, index) ?: return@forEach
+            val expressionEndIndex = findTernaryExpressionEndIndex(tokens, colonIndex)
+            val hasSubstrateBranch = containsSubstrateSymbol(tokens, index + 1, colonIndex, substrateSymbols) ||
+                containsSubstrateSymbol(tokens, colonIndex + 1, expressionEndIndex + 1, substrateSymbols)
+            if (!hasSubstrateBranch) return@forEach
+            holder.newAnnotation(
+                HighlightSeverity.ERROR,
+                DreamShaderBundle.message("diagnostic.substrateBranchMergeNotSupported")
+            ).range(token.range).create()
+        }
+    }
+
+    private fun isSubstrateSymbolToken(token: DreamShaderLexedToken?, substrateSymbols: Set<String>): Boolean {
+        return token?.type == DreamShaderTokenTypes.IDENTIFIER && token.text in substrateSymbols
+    }
+
+    private fun containsSubstrateSymbol(
+        tokens: List<DreamShaderLexedToken>,
+        startIndex: Int,
+        endIndexExclusive: Int,
+        substrateSymbols: Set<String>
+    ): Boolean {
+        val boundedStart = startIndex.coerceAtLeast(0)
+        val boundedEnd = endIndexExclusive.coerceAtMost(tokens.size)
+        if (boundedStart >= boundedEnd) return false
+        for (i in boundedStart until boundedEnd) {
+            if (isSubstrateSymbolToken(tokens[i], substrateSymbols)) return true
+        }
+        return false
+    }
+
+    private fun isSwizzleMember(text: String): Boolean {
+        if (text.isEmpty() || text.length > 4) return false
+        return text.all { it.lowercaseChar() in SUBSTRATE_SWIZZLE_CHARS }
+    }
+
+    private fun findMatchingParenIndex(tokens: List<DreamShaderLexedToken>, leftParenIndex: Int): Int? {
+        if (leftParenIndex !in tokens.indices || tokens[leftParenIndex].type != DreamShaderTokenTypes.LPAREN) return null
+        var depth = 0
+        for (i in leftParenIndex until tokens.size) {
+            when (tokens[i].type) {
+                DreamShaderTokenTypes.LPAREN -> depth++
+                DreamShaderTokenTypes.RPAREN -> {
+                    depth--
+                    if (depth == 0) return i
+                }
+            }
+        }
+        return null
+    }
+
+    private fun findTernaryColonIndex(tokens: List<DreamShaderLexedToken>, questionIndex: Int): Int? {
+        var parenDepth = 0
+        var bracketDepth = 0
+        var braceDepth = 0
+        var nestedTernaryDepth = 0
+        var i = questionIndex + 1
+        while (i < tokens.size) {
+            val token = tokens[i]
+            when (token.type) {
+                DreamShaderTokenTypes.LPAREN -> parenDepth++
+                DreamShaderTokenTypes.RPAREN -> if (parenDepth > 0) parenDepth-- else return null
+                DreamShaderTokenTypes.LBRACKET -> bracketDepth++
+                DreamShaderTokenTypes.RBRACKET -> if (bracketDepth > 0) bracketDepth-- else return null
+                DreamShaderTokenTypes.LBRACE -> braceDepth++
+                DreamShaderTokenTypes.RBRACE -> if (braceDepth > 0) braceDepth-- else return null
+                DreamShaderTokenTypes.OPERATOR -> {
+                    if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0) {
+                        when (token.text) {
+                            "?" -> nestedTernaryDepth++
+                            ":" -> {
+                                if (nestedTernaryDepth == 0) return i
+                                nestedTernaryDepth--
+                            }
+                            ";" -> return null
+                        }
+                    }
+                }
+            }
+            i++
+        }
+        return null
+    }
+
+    private fun findTernaryExpressionEndIndex(tokens: List<DreamShaderLexedToken>, colonIndex: Int): Int {
+        var parenDepth = 0
+        var bracketDepth = 0
+        var braceDepth = 0
+        var i = colonIndex + 1
+        while (i < tokens.size) {
+            val token = tokens[i]
+            when (token.type) {
+                DreamShaderTokenTypes.LPAREN -> parenDepth++
+                DreamShaderTokenTypes.RPAREN -> if (parenDepth > 0) parenDepth-- else return i - 1
+                DreamShaderTokenTypes.LBRACKET -> bracketDepth++
+                DreamShaderTokenTypes.RBRACKET -> if (bracketDepth > 0) bracketDepth-- else return i - 1
+                DreamShaderTokenTypes.LBRACE -> braceDepth++
+                DreamShaderTokenTypes.RBRACE -> if (braceDepth > 0) braceDepth-- else return i - 1
+                DreamShaderTokenTypes.OPERATOR -> {
+                    if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && token.text in TERNARY_EXPRESSION_TERMINATORS) {
+                        return i - 1
+                    }
+                }
+            }
+            i++
+        }
+        return tokens.lastIndex
+    }
+
     private fun annotateUnsupportedGraphLoopDiagnostics(
         sourceText: String,
         topLevelDeclarations: List<DreamShaderDeclaration>,
@@ -3244,6 +3450,19 @@ internal class DreamShaderSemanticAnnotationPipeline {
             "texture3d",
             "volumetexture"
         )
+        private val SUBSTRATE_ARITHMETIC_OPERATORS = setOf("+", "-", "*", "/")
+        private val SUBSTRATE_SWIZZLE_CHARS = setOf('x', 'y', 'z', 'w', 'r', 'g', 'b', 'a')
+        private val SUBSTRATE_VECTOR_CONSTRUCTOR_TYPES = setOf(
+            "float2", "float3", "float4",
+            "half2", "half3", "half4",
+            "int2", "int3", "int4",
+            "uint2", "uint3", "uint4",
+            "vec2", "vec3", "vec4",
+            "ivec2", "ivec3", "ivec4",
+            "uvec2", "uvec3", "uvec4",
+            "bvec2", "bvec3", "bvec4"
+        )
+        private val TERNARY_EXPRESSION_TERMINATORS = setOf(";", ",")
 
         // 正则模式：调用签名相关诊断。
         private val PARAM_NAME_PATTERN: Pattern = Pattern.compile("([A-Za-z_][A-Za-z0-9_]*)\\s*$")

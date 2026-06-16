@@ -174,7 +174,7 @@ class DreamShaderLexer : LexerBase() {
     }
 
     private fun isOperatorOrPunctuation(c: Char): Boolean {
-        return c == '=' || c == '+' || c == '-' || c == '*' || c == '/' ||
+        return c == '=' || c == '+' || c == '-' || c == '*' || c == '/' || c == '?' ||
             c == '.' || c == ',' || c == ';' || c == ':'
     }
 

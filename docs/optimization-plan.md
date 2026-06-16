@@ -32,7 +32,7 @@ Last updated: 2026-06-16
 | --- | --- | --- | --- |
 | 1. Cache semantic diagnostic lexical inputs | P0 | In progress | File-level diagnostic inputs are cached: source text, whole-file tokens, and top-level declarations. Some internal body-range lexing still remains for later incremental cleanup. |
 | 2. Cache import closure resolution | P0 | Done | `resolveDirectImports` and `resolveImportClosure` now use cached values invalidated by PSI modification count and VFS structure changes. |
-| 3. Add conservative Substrate expression diagnostics | P0 | Not started | Next P0 Bridge-failure-prevention item. |
+| 3. Add conservative Substrate expression diagnostics | P0 | Done | Conservative local `Substrate` checks now cover arithmetic, swizzles, vector constructors, and ternary branch merges. |
 | 4. Wire `UE.*` goto to Unreal source locator | P0 | Done | `UE.<Name>` goto now prefers Unreal header source targets when source scanning is enabled and falls back when disabled or unresolved. |
 | 5. Add Live Templates and Postfix Templates | P1 | Not started | Pending independent editor-experience patch. |
 | 6. Add Goto Symbol / Goto Class contributors | P1 | Not started | Pending independent navigation patch. |
@@ -47,6 +47,7 @@ Last updated: 2026-06-16
 Current verification:
 
 - `./gradlew test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticDiagnosticsTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticAnnotatorTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolverTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoDeclarationHandlerTest`
+- `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderSemanticDiagnosticsTest`
 
 ## P0: Performance and Bridge-Failure Prevention
 

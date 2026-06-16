@@ -1051,6 +1051,78 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertNoError("A Shader cannot bind both Base.FrontMaterial and Base.MaterialAttributes")
     }
 
+    fun testSubstrateLocalDisallowsArithmetic() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Substrate s = UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate");
+                    float x = s + 1.0;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("substrate_arithmetic.dsm", text)
+        assertHasError("Substrate values cannot be used in arithmetic expressions")
+    }
+
+    fun testSubstrateLocalDisallowsSwizzle() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Substrate s = UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate");
+                    float x = s.x;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("substrate_swizzle.dsm", text)
+        assertHasError("Substrate values do not support swizzle access")
+    }
+
+    fun testSubstrateLocalDisallowsVectorConstructorArgument() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Substrate s = UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate");
+                    float3 color = float3(s, 0.0, 1.0);
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("substrate_vector_constructor.dsm", text)
+        assertHasError("Substrate values cannot be used as vector constructor arguments")
+    }
+
+    fun testSubstrateLocalDisallowsTernaryBranchMerge() {
+        val text = """
+            Shader Main {
+                Graph {
+                    Substrate a = UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate");
+                    Substrate b = UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate");
+                    Substrate c = true ? a : b;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("substrate_ternary.dsm", text)
+        assertHasError("Substrate values cannot be merged through ternary branches")
+    }
+
+    fun testNonSubstrateExpressionsDoNotReportSubstrateDiagnostics() {
+        val text = """
+            Shader Main {
+                Graph {
+                    float a = 1.0;
+                    float b = 2.0;
+                    float x = a + b;
+                    float y = float3(a, b, 0.0).x;
+                    float z = true ? a : b;
+                }
+            }
+        """.trimIndent()
+        myFixture.configureByText("non_substrate_expressions.dsm", text)
+        assertNoError("Substrate values cannot be used in arithmetic expressions")
+        assertNoError("Substrate values do not support swizzle access")
+        assertNoError("Substrate values cannot be used as vector constructor arguments")
+        assertNoError("Substrate values cannot be merged through ternary branches")
+    }
+
     fun testMissingOutArgumentInFunctionCall() {
         val text = """
             Function ApplyTint(in vec3 color, in vec3 tint, out vec3 result) {
