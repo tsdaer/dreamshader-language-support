@@ -1,6 +1,8 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.ui.DreamShaderUi
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -8,12 +10,21 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
+import java.awt.Color
+import java.awt.Component
 import java.awt.Dimension
+import java.awt.FlowLayout
+import java.awt.Font
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
@@ -34,13 +45,13 @@ internal class DreamShaderPackageStoreDialog(
     private val githubSearchButton = JButton(DreamShaderBundle.message("package.store.dialog.button.githubSearch"))
     private val listModel = DefaultListModel<DreamShaderPackageIndexEntry>()
     private val packageList = JBList(listModel)
-    private val detailArea = JBTextArea()
     private val installedOnlyCheckBox = JCheckBox(DreamShaderBundle.message("package.store.dialog.installedOnly"))
     private val updatesPossibleOnlyCheckBox = JCheckBox(DreamShaderBundle.message("package.store.dialog.updatesOnly"))
     private val installButton = JButton(DreamShaderBundle.message("package.store.dialog.button.install"))
     private val updateButton = JButton(DreamShaderBundle.message("package.store.dialog.button.update"))
     private val removeButton = JButton(DreamShaderBundle.message("package.store.dialog.button.remove"))
     private val showRepoButton = JButton(DreamShaderBundle.message("package.store.dialog.button.showRepo"))
+    private val detailPanel = JPanel(BorderLayout())
     private var installedByName: Map<String, DreamShaderPackageLockEntry> = emptyMap()
     private var gitAvailableForLifecycle: Boolean = false
     private var operationInProgress: Boolean = false
@@ -61,9 +72,10 @@ internal class DreamShaderPackageStoreDialog(
     }
 
     override fun createCenterPanel(): JPanel {
-        val root = JPanel(BorderLayout(8, 8))
+        val root = JPanel(BorderLayout(JBUI.scale(12), JBUI.scale(12)))
         centerPanel = root
-        root.preferredSize = Dimension(980, 600)
+        root.preferredSize = Dimension(1080, 680)
+        DreamShaderUi.installSurface(root)
 
         queryField.name = QUERY_FIELD_NAME
         packageList.name = PACKAGE_LIST_NAME
@@ -74,8 +86,14 @@ internal class DreamShaderPackageStoreDialog(
         removeButton.name = REMOVE_BUTTON_NAME
         showRepoButton.name = SHOW_REPOSITORY_BUTTON_NAME
 
-        val toolbar = JPanel(BorderLayout(8, 0))
-        val leftToolbar = JPanel(BorderLayout(8, 0))
+        queryField.emptyText.text = DreamShaderBundle.message("package.store.dialog.searchTooltip")
+
+        val toolbar = DreamShaderUi.card(BorderLayout(JBUI.scale(12), 0)).apply {
+            border = JBUI.Borders.empty(12)
+        }
+        val leftToolbar = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
+            isOpaque = false
+        }
         queryField.toolTipText = DreamShaderBundle.message("package.store.dialog.searchTooltip")
         leftToolbar.add(queryField, BorderLayout.CENTER)
 
@@ -83,10 +101,13 @@ internal class DreamShaderPackageStoreDialog(
         searchButton.addActionListener { refreshData() }
         leftToolbar.add(searchButton, BorderLayout.EAST)
         githubSearchButton.name = GITHUB_SEARCH_BUTTON_NAME
+        githubSearchButton.icon = AllIcons.Vcs.Vendors.Github
         githubSearchButton.addActionListener { searchOnGitHub() }
         leftToolbar.add(githubSearchButton, BorderLayout.WEST)
 
-        val rightToolbar = JPanel()
+        val rightToolbar = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(8), 0)).apply {
+            isOpaque = false
+        }
         installedOnlyCheckBox.addActionListener { refreshData() }
         updatesPossibleOnlyCheckBox.toolTipText = DreamShaderBundle.message("package.store.dialog.updatesOnlyTooltip")
         updatesPossibleOnlyCheckBox.addActionListener { refreshData() }
@@ -107,45 +128,39 @@ internal class DreamShaderPackageStoreDialog(
         root.add(toolbar, BorderLayout.NORTH)
 
         packageList.selectionMode = ListSelectionModel.SINGLE_SELECTION
-        packageList.cellRenderer = DefaultListCellRenderer().apply {
-            horizontalAlignment = SwingConstants.LEFT
-        }
-        packageList.setCellRenderer { list, value, index, isSelected, cellHasFocus ->
-            val renderer = DefaultListCellRenderer().getListCellRendererComponent(
-                list,
-                value,
-                index,
-                isSelected,
-                cellHasFocus
-            ) as DefaultListCellRenderer
-            val display = value.displayName?.takeIf { it.isNotBlank() } ?: value.name
-            val installedLock = installedByName[value.name]
-            val installedPrefix = if (installedLock != null) {
-                "${DreamShaderBundle.message("package.store.dialog.list.installedPrefix")} "
-            } else {
-                ""
+        packageList.visibleRowCount = 12
+        packageList.fixedCellHeight = JBUI.scale(92)
+        packageList.border = JBUI.Borders.empty()
+        packageList.cellRenderer = PackageCardRenderer()
+        packageList.emptyText.text = DreamShaderBundle.message("package.store.dialog.noSelection")
+        packageList.background = DreamShaderUi.panelBackground
+        val packageListCard = DreamShaderUi.section(
+            title = DreamShaderBundle.message("packages.store.title"),
+            description = DreamShaderBundle.message("package.store.dialog.searchTooltip"),
+            content = JBScrollPane(packageList).apply {
+                border = JBUI.Borders.empty()
+                viewport.background = DreamShaderUi.panelBackground
             }
-            val version = installedLock?.version ?: value.version?.takeIf { it.isNotBlank() } ?: "-"
-            val tagPreview = if (value.tags.isEmpty()) {
-                ""
-            } else {
-                val preview = value.tags.take(3).joinToString(", ")
-                val suffix = if (value.tags.size > 3) {
-                    ", ${DreamShaderBundle.message("package.store.dialog.list.moreTags", value.tags.size - 3)}"
-                } else {
-                    ""
-                }
-                " | ${DreamShaderBundle.message("package.store.dialog.list.tagsPrefix")}: $preview$suffix"
+        )
+        detailPanel.isOpaque = false
+        val detailCard = DreamShaderUi.section(
+            title = DreamShaderBundle.message("package.store.dialog.repositoryTitle"),
+            description = DreamShaderBundle.message("package.store.dialog.updatesOnlyTooltip"),
+            content = JBScrollPane(detailPanel).apply {
+                border = JBUI.Borders.empty()
+                viewport.isOpaque = false
+                viewport.background = DreamShaderUi.cardBackground
             }
-            renderer.text = DreamShaderBundle.message(
-                "package.store.dialog.list.item",
-                installedPrefix,
-                display,
-                value.name,
-                version,
-                tagPreview
-            )
-            renderer
+        )
+
+        val split = JSplitPane(
+            JSplitPane.HORIZONTAL_SPLIT,
+            packageListCard,
+            detailCard
+        ).apply {
+            resizeWeight = 0.46
+            border = JBUI.Borders.empty()
+            dividerSize = JBUI.scale(10)
         }
         packageList.addListSelectionListener {
             if (!it.valueIsAdjusting) {
@@ -160,28 +175,27 @@ internal class DreamShaderPackageStoreDialog(
                 }
             }
         })
-
-        detailArea.isEditable = false
-        detailArea.lineWrap = true
-        detailArea.wrapStyleWord = true
-
-        val split = JSplitPane(
-            JSplitPane.HORIZONTAL_SPLIT,
-            JBScrollPane(packageList),
-            JBScrollPane(detailArea)
-        )
-        split.resizeWeight = 0.45
         root.add(split, BorderLayout.CENTER)
 
-        val bottomBar = JPanel()
+        val bottomBar = DreamShaderUi.card(BorderLayout()).apply {
+            border = JBUI.Borders.empty(10, 12)
+        }
         installButton.addActionListener { installSelectedPackage() }
         updateButton.addActionListener { updateSelectedPackage() }
         removeButton.addActionListener { removeSelectedPackage() }
         showRepoButton.addActionListener { showSelectedRepository() }
-        bottomBar.add(installButton)
-        bottomBar.add(updateButton)
-        bottomBar.add(removeButton)
-        bottomBar.add(showRepoButton)
+        bottomBar.add(DreamShaderUi.mutedLabel(DreamShaderBundle.message("package.store.dialog.selectPackage")), BorderLayout.WEST)
+        bottomBar.add(
+            DreamShaderUi.horizontal(
+                8,
+                FlowLayout.RIGHT,
+                showRepoButton,
+                removeButton,
+                updateButton,
+                installButton
+            ),
+            BorderLayout.EAST
+        )
         root.add(bottomBar, BorderLayout.SOUTH)
         updateActionButtons()
 
@@ -228,6 +242,7 @@ internal class DreamShaderPackageStoreDialog(
     }
 
     private fun renderDetails(entry: DreamShaderPackageIndexEntry?) {
+        detailPanel.removeAll()
         if (entry == null) {
             val sourceInfo = if (snapshot.sources.isEmpty()) {
                 DreamShaderBundle.message("package.store.dialog.noSources")
@@ -239,7 +254,13 @@ internal class DreamShaderPackageStoreDialog(
             } else {
                 DreamShaderBundle.message("package.store.dialog.gitUnavailable")
             }
-            detailArea.text = "${DreamShaderBundle.message("package.store.dialog.noSelection")}\n\n$gitInfo\n\n$sourceInfo"
+            detailPanel.add(DreamShaderUi.vertical(
+                12,
+                EmptyStatePanel(DreamShaderBundle.message("package.store.dialog.noSelection"), gitInfo),
+                sourceBlock(sourceInfo)
+            ), BorderLayout.NORTH)
+            detailPanel.revalidate()
+            detailPanel.repaint()
             return
         }
 
@@ -251,27 +272,82 @@ internal class DreamShaderPackageStoreDialog(
             DreamShaderBundle.message("package.store.dialog.details.no")
         }
         val versionValue = installed?.version ?: entry.version ?: "-"
-        val displayValue = entry.displayName ?: "-"
         val pathValue = entry.path ?: "-"
         val updatePossibleValue = if (canUpdateEntry(entry)) {
             DreamShaderBundle.message("package.store.dialog.details.yes")
         } else {
             DreamShaderBundle.message("package.store.dialog.details.no")
         }
-        detailArea.text = buildString {
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.name", entry.name))
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.display", displayValue))
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.version", versionValue))
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.installed", installedLine))
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.updatePossible", updatePossibleValue))
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.repository", entry.repository))
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.source", entry.source))
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.path", pathValue))
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.tags", tags))
-            appendLine()
-            appendLine(DreamShaderBundle.message("package.store.dialog.details.description"))
-            appendLine(entry.description ?: "-")
+        val header = JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
+            isOpaque = false
+            val display = entry.displayName?.takeIf { it.isNotBlank() } ?: entry.name
+            add(DreamShaderUi.sectionTitle(display), BorderLayout.CENTER)
+            add(
+                DreamShaderUi.pill(
+                    if (installed != null) DreamShaderBundle.message("package.store.dialog.list.installedPrefix")
+                    else DreamShaderBundle.message("package.store.dialog.details.no"),
+                    if (installed != null) DreamShaderUi.Tone.SUCCESS else DreamShaderUi.Tone.NEUTRAL
+                ),
+                BorderLayout.EAST
+            )
         }
+        val meta = JPanel(GridBagLayout()).apply {
+            isOpaque = false
+        }
+        var row = 0
+        fun addMeta(label: String, value: String) {
+            meta.add(JLabel(label).apply {
+                foreground = DreamShaderUi.mutedForeground
+            }, GridBagConstraints().apply {
+                gridx = 0
+                gridy = row
+                anchor = GridBagConstraints.NORTHWEST
+                insets = JBUI.insets(4, 0, 4, 12)
+            })
+            meta.add(JLabel("<html>${escapeHtml(value)}</html>").apply {
+                foreground = UIUtil.getLabelForeground()
+            }, GridBagConstraints().apply {
+                gridx = 1
+                gridy = row
+                weightx = 1.0
+                fill = GridBagConstraints.HORIZONTAL
+                anchor = GridBagConstraints.NORTHWEST
+                insets = JBUI.insets(4, 0, 4, 0)
+            })
+            row++
+        }
+        addMeta(DreamShaderBundle.message("package.store.dialog.details.name", "").trim(), entry.name)
+        addMeta(DreamShaderBundle.message("package.store.dialog.details.version", "").trim(), versionValue)
+        addMeta(DreamShaderBundle.message("package.store.dialog.details.installed", "").trim(), installedLine)
+        addMeta(DreamShaderBundle.message("package.store.dialog.details.updatePossible", "").trim(), updatePossibleValue)
+        addMeta(DreamShaderBundle.message("package.store.dialog.details.repository", "").trim(), entry.repository)
+        addMeta(DreamShaderBundle.message("package.store.dialog.details.source", "").trim(), entry.source)
+        addMeta(DreamShaderBundle.message("package.store.dialog.details.path", "").trim(), pathValue)
+        addMeta(DreamShaderBundle.message("package.store.dialog.details.tags", "").trim(), tags)
+
+        val description = JBTextArea(entry.description ?: "-").apply {
+            isEditable = false
+            lineWrap = true
+            wrapStyleWord = true
+            isOpaque = false
+            border = JBUI.Borders.empty()
+            foreground = UIUtil.getLabelForeground()
+        }
+        detailPanel.add(
+            DreamShaderUi.vertical(
+                14,
+                header,
+                meta,
+                DreamShaderUi.section(
+                    DreamShaderBundle.message("package.store.dialog.details.description"),
+                    null,
+                    description
+                )
+            ),
+            BorderLayout.NORTH
+        )
+        detailPanel.revalidate()
+        detailPanel.repaint()
     }
 
     private fun installSelectedPackage() {
@@ -392,13 +468,12 @@ internal class DreamShaderPackageStoreDialog(
     }
 
     private fun addSource() {
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("packages.dialog.addSource.input"),
             DreamShaderBundle.message("packages.dialog.addSource.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("packages.dialog.addSource.input"),
+            "https://.../index.json or local index path"
+        ) ?: return
 
         val result = storeService.addIndexSource(input)
         if (result.changed) {
@@ -434,15 +509,6 @@ internal class DreamShaderPackageStoreDialog(
             refreshData()
         } else {
             DreamShaderPackageNotifier.error(project, DreamShaderBundle.message("packages.sources.title"), result.message)
-        }
-    }
-
-    private fun <T> JBList<T>.setCellRenderer(
-        renderer: (list: JList<out T>, value: T, index: Int, isSelected: Boolean, cellHasFocus: Boolean) -> DefaultListCellRenderer
-    ) {
-        cellRenderer = javax.swing.ListCellRenderer { list, value, index, isSelected, cellHasFocus ->
-            @Suppress("UNCHECKED_CAST")
-            renderer(list as JList<out T>, value as T, index, isSelected, cellHasFocus)
         }
     }
 
@@ -664,6 +730,102 @@ internal class DreamShaderPackageStoreDialog(
         EMPTY_QUERY,
         ERROR,
         APPLIED
+    }
+
+    private fun sourceBlock(sourceInfo: String): JComponent {
+        return DreamShaderUi.card(BorderLayout()).apply {
+            add(JBTextArea(sourceInfo).apply {
+                isEditable = false
+                lineWrap = true
+                wrapStyleWord = true
+                isOpaque = false
+                border = JBUI.Borders.empty()
+                foreground = UIUtil.getLabelForeground()
+            }, BorderLayout.CENTER)
+        }
+    }
+
+    private fun escapeHtml(value: String): String {
+        return value
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+    }
+
+    private inner class PackageCardRenderer : ListCellRenderer<DreamShaderPackageIndexEntry> {
+        override fun getListCellRendererComponent(
+            list: JList<out DreamShaderPackageIndexEntry>,
+            value: DreamShaderPackageIndexEntry,
+            index: Int,
+            isSelected: Boolean,
+            cellHasFocus: Boolean
+        ): Component {
+            val installed = installedByName[value.name]
+            val display = value.displayName?.takeIf { it.isNotBlank() } ?: value.name
+            val version = installed?.version ?: value.version?.takeIf { it.isNotBlank() } ?: "-"
+            val tags = if (value.tags.isEmpty()) "" else value.tags.take(3).joinToString("  ")
+            val panel = JPanel(BorderLayout(JBUI.scale(8), JBUI.scale(4))).apply {
+                border = BorderFactory.createCompoundBorder(
+                    JBUI.Borders.empty(4, 2),
+                    DreamShaderUi.RoundedBorder(
+                        if (isSelected) DreamShaderUi.accent else DreamShaderUi.borderColor,
+                        JBUI.scale(12),
+                        JBUI.insets(10, 12)
+                    )
+                )
+                background = if (isSelected) {
+                    JBColor(Color(0xE8, 0xF2, 0xFF), Color(0x22, 0x35, 0x4D))
+                } else {
+                    DreamShaderUi.elevatedBackground
+                }
+                isOpaque = true
+            }
+            val title = JLabel(display).apply {
+                font = font.deriveFont(Font.BOLD)
+                foreground = UIUtil.getLabelForeground()
+            }
+            val name = JLabel(value.name).apply {
+                foreground = DreamShaderUi.mutedForeground
+            }
+            val top = JPanel(BorderLayout()).apply {
+                isOpaque = false
+                add(title, BorderLayout.CENTER)
+                add(DreamShaderUi.pill("v$version", DreamShaderUi.Tone.ACCENT), BorderLayout.EAST)
+            }
+            val summary = JLabel("<html>${escapeHtml(value.description ?: value.repository)}</html>").apply {
+                foreground = DreamShaderUi.mutedForeground
+            }
+            val bottom = JPanel(BorderLayout()).apply {
+                isOpaque = false
+                add(name, BorderLayout.WEST)
+                if (installed != null) {
+                    add(DreamShaderUi.pill(DreamShaderBundle.message("package.store.dialog.list.installedPrefix"), DreamShaderUi.Tone.SUCCESS), BorderLayout.EAST)
+                }
+            }
+            val body = DreamShaderUi.vertical(4, top, summary, bottom)
+            panel.add(body, BorderLayout.CENTER)
+            if (tags.isNotBlank()) {
+                panel.add(JLabel(tags).apply {
+                    foreground = DreamShaderUi.mutedForeground
+                    font = font.deriveFont(font.size2D - 1f)
+                }, BorderLayout.SOUTH)
+            }
+            return panel
+        }
+    }
+
+    private class EmptyStatePanel(
+        title: String,
+        message: String
+    ) : JPanel(BorderLayout(JBUI.scale(8), JBUI.scale(6))) {
+        init {
+            isOpaque = false
+            border = JBUI.Borders.empty(16)
+            add(DreamShaderUi.sectionTitle(title), BorderLayout.NORTH)
+            add(JLabel("<html>${message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")}</html>").apply {
+                foreground = DreamShaderUi.mutedForeground
+            }, BorderLayout.CENTER)
+        }
     }
 
     companion object {

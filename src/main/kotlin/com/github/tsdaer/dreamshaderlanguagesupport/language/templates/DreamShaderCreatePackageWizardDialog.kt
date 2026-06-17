@@ -1,17 +1,16 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.templates
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.ui.DreamShaderUi
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
 import java.awt.Dimension
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
 import javax.swing.JComponent
-import javax.swing.JLabel
 import javax.swing.JPanel
 
 internal class DreamShaderCreatePackageWizardDialog(
@@ -31,48 +30,52 @@ internal class DreamShaderCreatePackageWizardDialog(
     }
 
     override fun createCenterPanel(): JComponent {
-        val root = JPanel(GridBagLayout())
-        root.preferredSize = Dimension(560, 260)
-        var row = 0
-
-        fun addField(labelKey: String, field: JBTextField, tooltipKey: String? = null) {
-            val labelConstraints = GridBagConstraints().apply {
-                gridx = 0
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(4, 4, 4, 8)
-            }
-            root.add(JLabel(DreamShaderBundle.message(labelKey)), labelConstraints)
-
-            val fieldConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                weightx = 1.0
-                fill = GridBagConstraints.HORIZONTAL
-                insets = JBUI.insets(4, 0, 4, 4)
-            }
+        val root = JPanel(BorderLayout(JBUI.scale(12), JBUI.scale(12))).apply {
+            preferredSize = Dimension(680, 480)
+            DreamShaderUi.installSurface(this)
+        }
+        fun fieldRow(labelKey: String, field: JBTextField, tooltipKey: String? = null): JComponent {
             if (tooltipKey != null) {
                 field.toolTipText = DreamShaderBundle.message(tooltipKey)
+                field.emptyText.text = DreamShaderBundle.message(tooltipKey)
             }
-            root.add(field, fieldConstraints)
-            row++
+            return DreamShaderUi.formRow(DreamShaderBundle.message(labelKey), field, tooltipKey?.let(DreamShaderBundle::message))
         }
 
-        addField("templates.wizard.name.label", nameField, "templates.wizard.name.tooltip")
-        addField("templates.wizard.displayName.label", displayNameField, "templates.wizard.displayName.tooltip")
-        addField("templates.wizard.description.label", descriptionField, "templates.wizard.description.tooltip")
-        addField("templates.wizard.namespace.label", namespaceField, "templates.wizard.namespace.tooltip")
-        addField("templates.wizard.author.label", authorField, "templates.wizard.author.tooltip")
-        addField("templates.wizard.repository.label", repositoryField, "templates.wizard.repository.tooltip")
+        val identity = DreamShaderUi.vertical(
+            8,
+            fieldRow("templates.wizard.name.label", nameField, "templates.wizard.name.tooltip"),
+            fieldRow("templates.wizard.displayName.label", displayNameField, "templates.wizard.displayName.tooltip"),
+            fieldRow("templates.wizard.description.label", descriptionField, "templates.wizard.description.tooltip")
+        )
 
-        val checkConstraints = GridBagConstraints().apply {
-            gridx = 1
-            gridy = row
-            anchor = GridBagConstraints.WEST
-            insets = JBUI.insets(4, 0, 4, 4)
-        }
+        val metadata = DreamShaderUi.vertical(
+            8,
+            fieldRow("templates.wizard.namespace.label", namespaceField, "templates.wizard.namespace.tooltip"),
+            fieldRow("templates.wizard.author.label", authorField, "templates.wizard.author.tooltip"),
+            fieldRow("templates.wizard.repository.label", repositoryField, "templates.wizard.repository.tooltip")
+        )
         includeExampleBox.toolTipText = DreamShaderBundle.message("templates.wizard.includeExample.tooltip")
-        root.add(includeExampleBox, checkConstraints)
+        val options = DreamShaderUi.checkRow(includeExampleBox, DreamShaderBundle.message("templates.wizard.includeExample.tooltip"))
+
+        root.add(DreamShaderUi.vertical(
+            12,
+            DreamShaderUi.section(
+                DreamShaderBundle.message("templates.wizard.title"),
+                DreamShaderBundle.message("templates.wizard.name.tooltip"),
+                identity
+            ),
+            DreamShaderUi.section(
+                DreamShaderBundle.message("templates.wizard.namespace.label"),
+                DreamShaderBundle.message("templates.wizard.repository.tooltip"),
+                metadata
+            ),
+            DreamShaderUi.section(
+                DreamShaderBundle.message("templates.wizard.includeExample.label"),
+                DreamShaderBundle.message("templates.wizard.includeExample.tooltip"),
+                options
+            )
+        ), BorderLayout.CENTER)
 
         return root
     }

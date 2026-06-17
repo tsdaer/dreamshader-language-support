@@ -1,5 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.ui.DreamShaderUi
 import com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.showWelcomeDialog
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.ActionUtil
@@ -8,9 +9,11 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.GridLayout
 import javax.swing.*
 
 /**
@@ -40,14 +43,20 @@ private class DreamShaderHubDialog(
     }
 
     override fun createCenterPanel(): JComponent {
-        val root = JPanel(BorderLayout(0, 12))
-        root.preferredSize = Dimension(760, 360)
+        val root = JPanel(BorderLayout(JBUI.scale(12), JBUI.scale(12)))
+        root.preferredSize = Dimension(900, 560)
+        DreamShaderUi.installSurface(root)
 
-        val titleLabel = JLabel(DreamShaderBundle.message("hub.subtitle"), SwingConstants.LEFT)
-        root.add(titleLabel, BorderLayout.NORTH)
+        val hero = DreamShaderUi.card(BorderLayout(JBUI.scale(12), 0)).apply {
+            border = JBUI.Borders.empty(16)
+            add(DreamShaderUi.sectionTitle(DreamShaderBundle.message("hub.title")), BorderLayout.NORTH)
+            add(DreamShaderUi.mutedLabel(DreamShaderBundle.message("hub.subtitle")), BorderLayout.CENTER)
+        }
+        root.add(hero, BorderLayout.NORTH)
 
-        val content = JPanel()
-        content.layout = BoxLayout(content, BoxLayout.Y_AXIS)
+        val content = JPanel(GridLayout(0, 2, JBUI.scale(12), JBUI.scale(12))).apply {
+            isOpaque = false
+        }
 
         content.add(
             createSection(
@@ -142,20 +151,26 @@ private class DreamShaderHubDialog(
             )
         )
 
-        root.add(content, BorderLayout.CENTER)
+        root.add(JScrollPane(content).apply {
+            border = JBUI.Borders.empty()
+            viewport.isOpaque = false
+            viewport.background = DreamShaderUi.panelBackground
+        }, BorderLayout.CENTER)
         return root
     }
 
     override fun createActions() = arrayOf(okAction)
 
     private fun createSection(title: String, buttons: List<JButton>): JPanel {
-        val section = JPanel(BorderLayout(0, 6))
+        val section = DreamShaderUi.card(BorderLayout(JBUI.scale(8), JBUI.scale(10)))
         section.alignmentX = JPanel.LEFT_ALIGNMENT
 
-        val label = JLabel(title)
+        val label = DreamShaderUi.titleLabel(title)
         section.add(label, BorderLayout.NORTH)
 
-        val row = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0))
+        val row = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), JBUI.scale(8))).apply {
+            isOpaque = false
+        }
         buttons.forEach(row::add)
         section.add(row, BorderLayout.CENTER)
 
@@ -163,9 +178,11 @@ private class DreamShaderHubDialog(
     }
 
     private fun button(key: String, onClick: () -> Unit): JButton {
-        val button = JButton(DreamShaderBundle.message(key))
-        button.addActionListener { onClick() }
-        return button
+        return JButton(DreamShaderBundle.message(key)).apply {
+            isFocusPainted = false
+            margin = JBUI.insets(6, 10)
+            addActionListener { onClick() }
+        }
     }
 
     private fun invokeActionById(actionId: String) {

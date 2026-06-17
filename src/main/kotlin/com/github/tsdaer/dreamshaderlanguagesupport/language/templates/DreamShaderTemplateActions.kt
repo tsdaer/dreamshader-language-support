@@ -2,10 +2,10 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.templates
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderPackageNotifier
+import com.github.tsdaer.dreamshaderlanguagesupport.language.ui.DreamShaderUi
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 
 private fun notifyTemplateResult(project: Project, result: DreamShaderTemplateOperationResult) {
     if (result.success) {
@@ -26,13 +26,12 @@ class DreamShaderCreateMaterialTemplateAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("templates.dialog.material.input"),
             DreamShaderBundle.message("templates.dialog.material.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("templates.dialog.material.input"),
+            "DShader/Materials/NewMaterial.dsm"
+        ) ?: return
 
         val result = DreamShaderTemplateService(project).createMaterialTemplate(input)
         notifyTemplateResult(project, result)
@@ -50,13 +49,12 @@ class DreamShaderCreateFunctionTemplateAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("templates.dialog.function.input"),
             DreamShaderBundle.message("templates.dialog.function.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("templates.dialog.function.input"),
+            "DShader/Functions/NewFunction.dsf"
+        ) ?: return
 
         val result = DreamShaderTemplateService(project).createFunctionTemplate(input)
         notifyTemplateResult(project, result)
@@ -74,13 +72,12 @@ class DreamShaderCreateHeaderTemplateAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("templates.dialog.header.input"),
             DreamShaderBundle.message("templates.dialog.header.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("templates.dialog.header.input"),
+            "DShader/Headers/Common.dsh"
+        ) ?: return
 
         val result = DreamShaderTemplateService(project).createHeaderTemplate(input)
         notifyTemplateResult(project, result)
@@ -98,13 +95,12 @@ class DreamShaderCreateTextureSampleTemplateAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("templates.dialog.texture.input"),
             DreamShaderBundle.message("templates.dialog.texture.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("templates.dialog.texture.input"),
+            "DShader/Materials/TextureSample.dsm"
+        ) ?: return
 
         val result = DreamShaderTemplateService(project).createTextureSampleTemplate(input)
         notifyTemplateResult(project, result)
@@ -122,13 +118,12 @@ class DreamShaderCreateNoiseMaterialTemplateAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("templates.dialog.noise.input"),
             DreamShaderBundle.message("templates.dialog.noise.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("templates.dialog.noise.input"),
+            "DShader/Materials/NoiseMaterial.dsm"
+        ) ?: return
 
         val result = DreamShaderTemplateService(project).createNoiseMaterialTemplate(input)
         notifyTemplateResult(project, result)
@@ -146,13 +141,12 @@ class DreamShaderCreatePackageScaffoldAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("templates.dialog.package.input"),
             DreamShaderBundle.message("templates.dialog.package.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("templates.dialog.package.input"),
+            "@scope/my-package"
+        ) ?: return
 
         val result = DreamShaderTemplateService(project).createPackageScaffold(input)
         notifyTemplateResult(project, result)

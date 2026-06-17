@@ -4,6 +4,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderB
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderUnrealSourceLocator
 import com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderDocumentationData
+import com.github.tsdaer.dreamshaderlanguagesupport.language.ui.DreamShaderUi
 import com.intellij.codeInsight.hints.ParameterHintsPassFactory
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.Configurable
@@ -63,172 +64,63 @@ class DreamShaderSettingsConfigurable(
     override fun createComponent(): JComponent {
         if (panel != null) return panel as JPanel
 
-        val root = JPanel(GridBagLayout())
-        var row = 0
-
-        fun addLabelAndField(label: String, field: JBTextField, tooltip: String? = null) {
-            val labelConstraints = GridBagConstraints().apply {
-                gridx = 0
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(4, 4, 2, 8)
-            }
-            root.add(JLabel(label), labelConstraints)
-
-            val fieldConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                weightx = 1.0
-                fill = GridBagConstraints.HORIZONTAL
-                insets = JBUI.insets(4, 0, 2, 4)
-            }
-            field.toolTipText = tooltip
-            root.add(field, fieldConstraints)
-            row++
+        val root = JPanel(BorderLayout()).apply {
+            DreamShaderUi.installSurface(this)
+        }
+        val content = JPanel().apply {
+            isOpaque = false
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
         }
 
-        fun addLabelAndPathField(
-            label: String,
-            field: TextFieldWithBrowseButton,
-            tooltip: String? = null
-        ) {
-            val labelConstraints = GridBagConstraints().apply {
-                gridx = 0
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(4, 4, 2, 8)
-            }
-            root.add(JLabel(label), labelConstraints)
-
-            val fieldConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                weightx = 1.0
-                fill = GridBagConstraints.HORIZONTAL
-                insets = JBUI.insets(4, 0, 2, 4)
-            }
-            field.toolTipText = tooltip
-            root.add(field, fieldConstraints)
-            row++
+        fun sectionContent(): JPanel = JPanel().apply {
+            isOpaque = false
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
         }
 
-        fun addLabelPathFieldAndButton(
-            label: String,
+        fun JPanel.addSectionRow(component: JComponent, gap: Int = 8) {
+            if (componentCount > 0) add(Box.createVerticalStrut(JBUI.scale(gap)))
+            component.alignmentX = Component.LEFT_ALIGNMENT
+            add(component)
+        }
+
+        fun addSection(title: String, description: String? = null, section: JComponent) {
+            val card = DreamShaderUi.section(title, description, section).apply {
+                alignmentX = Component.LEFT_ALIGNMENT
+                maximumSize = Dimension(Int.MAX_VALUE, preferredSize.height.coerceAtLeast(JBUI.scale(96)))
+            }
+            if (content.componentCount > 0) content.add(Box.createVerticalStrut(JBUI.scale(12)))
+            content.add(card)
+        }
+
+        fun pathFieldWithButton(
             field: TextFieldWithBrowseButton,
             button: JButton,
             tooltip: String? = null
-        ) {
-            val labelConstraints = GridBagConstraints().apply {
-                gridx = 0
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(4, 4, 2, 8)
+        ): JPanel {
+            return JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
+                isOpaque = false
+                field.toolTipText = tooltip
+                add(field, BorderLayout.CENTER)
+                add(button, BorderLayout.EAST)
             }
-            root.add(JLabel(label), labelConstraints)
-
-            val rowPanel = JPanel(GridBagLayout())
-            val fieldConstraints = GridBagConstraints().apply {
-                gridx = 0
-                gridy = 0
-                weightx = 1.0
-                fill = GridBagConstraints.HORIZONTAL
-            }
-            field.toolTipText = tooltip
-            rowPanel.add(field, fieldConstraints)
-            val buttonConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = 0
-                insets = JBUI.insetsLeft(6)
-            }
-            rowPanel.add(button, buttonConstraints)
-
-            val panelConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                weightx = 1.0
-                fill = GridBagConstraints.HORIZONTAL
-                insets = JBUI.insets(4, 0, 2, 4)
-            }
-            root.add(rowPanel, panelConstraints)
-            row++
         }
 
-        fun addInlineInfoLabel(name: String): JLabel {
-            val constraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(0, 0, 4, 4)
-                fill = GridBagConstraints.HORIZONTAL
-                weightx = 1.0
-            }
-            val label = JLabel().apply {
+        fun createInfoLabel(name: String): JLabel {
+            return JLabel().apply {
                 this.name = name
                 foreground = UIUtil.getContextHelpForeground()
             }
-            root.add(label, constraints)
-            row++
-            return label
         }
 
-        fun addLabelAndComboBox(label: String, combo: JComboBox<String>, tooltip: String? = null) {
-            val labelConstraints = GridBagConstraints().apply {
-                gridx = 0
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(4, 4, 2, 8)
+        fun createDescriptionLabel(text: String): JLabel {
+            return JLabel(text).apply {
+                name = IMPORT_EXTENSION_PREVIEW_LABEL_NAME
+                foreground = UIUtil.getContextHelpForeground()
             }
-            root.add(JLabel(label), labelConstraints)
-
-            val comboConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                weightx = 1.0
-                fill = GridBagConstraints.HORIZONTAL
-                insets = JBUI.insets(4, 0, 2, 4)
-            }
-            combo.toolTipText = tooltip
-            root.add(combo, comboConstraints)
-            row++
         }
 
-        fun addCheckBox(box: JBCheckBox, tooltip: String? = null) {
-            val constraints = GridBagConstraints().apply {
-                gridx = 0
-                gridy = row
-                gridwidth = 2
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(4, 4, 2, 4)
-            }
-            box.toolTipText = tooltip
-            root.add(box, constraints)
-            row++
-        }
-
-        fun addDescription(text: String) {
-            val constraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(0, 0, 4, 4)
-                fill = GridBagConstraints.HORIZONTAL
-                weightx = 1.0
-            }
-            val label = JLabel(text)
-            label.name = IMPORT_EXTENSION_PREVIEW_LABEL_NAME
-            root.add(label, constraints)
-            importExtensionPreviewLabel = label
-            row++
-        }
-
-        fun addHoverOverridesTable(label: String, tooltip: String? = null) {
-            val labelConstraints = GridBagConstraints().apply {
-                gridx = 0
-                gridy = row
-                anchor = GridBagConstraints.NORTHWEST
-                insets = JBUI.insets(4, 4, 2, 8)
-            }
-            root.add(JLabel(label), labelConstraints)
+        fun createHoverOverridesPanel(tooltip: String? = null): JPanel {
+            val container = sectionContent()
 
             val model = HoverOverrideTableModel(
                 resetLabel = DreamShaderBundle.message("settings.hoverDocsOverrides.resetRowButton")
@@ -251,6 +143,7 @@ class DreamShaderSettingsConfigurable(
             }.apply {
                 name = HOVER_DOCS_TABLE_NAME
                 fillsViewportHeight = true
+                rowHeight = JBUI.scale(30)
                 rowSelectionAllowed = true
                 columnSelectionAllowed = false
                 selectionModel.selectionMode = ListSelectionModel.SINGLE_SELECTION
@@ -294,11 +187,11 @@ class DreamShaderSettingsConfigurable(
                 }
             }
 
-            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_PATH).preferredWidth = 280
-            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_CONTENT).preferredWidth = 120
-            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_CONTENT).maxWidth = 160
-            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_RESET).preferredWidth = 70
-            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_RESET).maxWidth = 90
+            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_PATH).preferredWidth = 340
+            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_CONTENT).preferredWidth = 132
+            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_CONTENT).maxWidth = 168
+            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_RESET).preferredWidth = 76
+            table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_RESET).maxWidth = 96
             table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_CONTENT).cellRenderer = editRenderer
             table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_CONTENT).cellEditor = editEditor
             table.columnModel.getColumn(HoverOverrideTableModel.COLUMN_RESET).cellRenderer = resetRenderer
@@ -313,6 +206,7 @@ class DreamShaderSettingsConfigurable(
                     column: Int
                 ): Component {
                     val component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
+                    border = JBUI.Borders.empty(0, 8)
                     if (!isSelected) {
                         val modelRow = table.convertRowIndexToModel(row)
                         foreground = if (column == HoverOverrideTableModel.COLUMN_PATH && model.isBuiltinRow(modelRow)) {
@@ -326,24 +220,12 @@ class DreamShaderSettingsConfigurable(
             })
 
             val scrollPane = com.intellij.ui.components.JBScrollPane(table).apply {
-                border = JBUI.Borders.empty()
+                border = DreamShaderUi.RoundedBorder(DreamShaderUi.borderColor, JBUI.scale(10), JBUI.insets(1))
                 toolTipText = tooltip
-                preferredSize = JBUI.size(320, 180)
+                preferredSize = JBUI.size(520, 220)
             }
+            container.addSectionRow(scrollPane)
 
-            val tableConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                weightx = 1.0
-                fill = GridBagConstraints.BOTH
-                insets = JBUI.insets(4, 0, 2, 4)
-            }
-            root.add(scrollPane, tableConstraints)
-            row++
-
-            val actions = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-                isOpaque = false
-            }
             val addButton = JButton(DreamShaderBundle.message("settings.hoverDocsOverrides.addRowButton")).apply {
                 name = HOVER_DOCS_ADD_ROW_BUTTON_NAME
                 addActionListener {
@@ -416,50 +298,23 @@ class DreamShaderSettingsConfigurable(
             }
             hoverDocumentationOverridesResetBuiltinsButton = resetBuiltinsButton
 
-            actions.add(addButton)
-            actions.add(removeButton)
-            actions.add(editPathButton)
-            actions.add(insertSampleButton)
-            actions.add(resetBuiltinsButton)
-
-            val actionsConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(0, 0, 2, 4)
-            }
-            root.add(actions, actionsConstraints)
-            row++
+            container.addSectionRow(
+                DreamShaderUi.buttonRow(addButton, removeButton, editPathButton, insertSampleButton, resetBuiltinsButton),
+                gap = 10
+            )
 
             val status = JLabel().apply {
                 name = HOVER_DOCS_STATUS_LABEL_NAME
+                foreground = UIUtil.getContextHelpForeground()
             }
             hoverDocumentationOverridesStatusLabel = status
-            val statusConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(0, 0, 6, 4)
-                fill = GridBagConstraints.HORIZONTAL
-                weightx = 1.0
-            }
-            root.add(status, statusConstraints)
-            row++
+            container.addSectionRow(status, gap = 6)
 
             val syntaxHint = JLabel(DreamShaderBundle.message("settings.hoverDocsOverrides.syntaxHint")).apply {
                 name = HOVER_DOCS_SYNTAX_HINT_LABEL_NAME
                 foreground = UIUtil.getContextHelpForeground()
             }
-            val syntaxHintConstraints = GridBagConstraints().apply {
-                gridx = 1
-                gridy = row
-                anchor = GridBagConstraints.WEST
-                insets = JBUI.insets(0, 0, 6, 4)
-                fill = GridBagConstraints.HORIZONTAL
-                weightx = 1.0
-            }
-            root.add(syntaxHint, syntaxHintConstraints)
-            row++
+            container.addSectionRow(syntaxHint, gap = 4)
 
             model.addTableModelListener {
                 refreshHoverOverridesStatus()
@@ -469,6 +324,7 @@ class DreamShaderSettingsConfigurable(
             table.selectionModel.addListSelectionListener {
                 refreshHoverOverridesButtonsState()
             }
+            return container
         }
 
         projectRootField = TextFieldWithBrowseButton().apply {
@@ -519,91 +375,142 @@ class DreamShaderSettingsConfigurable(
         cleanGeneratedCommandField = JBTextField()
         previewAutoRefreshDelayField = JBTextField()
 
-        addLabelAndPathField(
+        bridgeStatusLabel = createInfoLabel(BRIDGE_STATUS_LABEL_NAME)
+
+        val pathSection = sectionContent()
+        pathSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.projectRoot.label"),
             projectRootField as TextFieldWithBrowseButton,
             DreamShaderBundle.message("settings.projectRoot.tooltip")
-        )
-        bridgeStatusLabel = addInlineInfoLabel(BRIDGE_STATUS_LABEL_NAME)
-        addLabelAndPathField(
+        ))
+        pathSection.addSectionRow(bridgeStatusLabel as JLabel, gap = 2)
+        pathSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.manifestPath.label"),
             manifestPathField as TextFieldWithBrowseButton,
             DreamShaderBundle.message("settings.manifestPath.tooltip")
-        )
-        addLabelPathFieldAndButton(
-            DreamShaderBundle.message("settings.unrealSourceRoot.label"),
-            unrealSourceRootField as TextFieldWithBrowseButton,
-            JButton(DreamShaderBundle.message("settings.unrealSourceRoot.autoDetectButton")).apply {
+        ))
+        val autoDetectButton = JButton(DreamShaderBundle.message("settings.unrealSourceRoot.autoDetectButton")).apply {
                 name = UNREAL_SOURCE_ROOT_AUTO_DETECT_BUTTON_NAME
                 toolTipText = DreamShaderBundle.message("settings.unrealSourceRoot.autoDetect.tooltip")
                 addActionListener { autoDetectUnrealSourceRoot() }
-            },
+        }
+        pathSection.addSectionRow(DreamShaderUi.formRow(
+            DreamShaderBundle.message("settings.unrealSourceRoot.label"),
+            pathFieldWithButton(
+                unrealSourceRootField as TextFieldWithBrowseButton,
+                autoDetectButton,
+                DreamShaderBundle.message("settings.unrealSourceRoot.tooltip")
+            ),
             DreamShaderBundle.message("settings.unrealSourceRoot.tooltip")
-        )
-        addCheckBox(
+        ))
+        pathSection.addSectionRow(DreamShaderUi.checkRow(
             materialExpressionScanEnabledBox as JBCheckBox,
             DreamShaderBundle.message("settings.materialExpressionScanEnabled.tooltip")
-        )
-        addLabelAndPathField(
+        ))
+        pathSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.materialExpressionScanCachePath.label"),
             materialExpressionScanCachePathField as TextFieldWithBrowseButton,
             DreamShaderBundle.message("settings.materialExpressionScanCachePath.tooltip")
+        ))
+        addSection(
+            title = DreamShaderBundle.message("settings.title"),
+            description = DreamShaderBundle.message("settings.projectRoot.tooltip"),
+            section = pathSection
         )
-        addCheckBox(
+
+        val editorSection = sectionContent()
+        editorSection.addSectionRow(DreamShaderUi.checkRow(
             showStatusBarBox as JBCheckBox,
             DreamShaderBundle.message("settings.showStatusBar.tooltip")
-        )
-        addCheckBox(
+        ))
+        editorSection.addSectionRow(DreamShaderUi.checkRow(
             enableCodeLensBox as JBCheckBox,
             DreamShaderBundle.message("settings.enableCodeLens.tooltip")
-        )
-        addCheckBox(
+        ))
+        editorSection.addSectionRow(DreamShaderUi.checkRow(
             enableInlayParameterHintsBox as JBCheckBox,
             DreamShaderBundle.message("settings.enableInlayParameterHints.tooltip")
-        )
-        addLabelAndField(
+        ))
+        editorSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.outArgumentPlaceholderSuffix.label"),
             outArgumentPlaceholderSuffixField as JBTextField,
             DreamShaderBundle.message("settings.outArgumentPlaceholderSuffix.tooltip")
+        ))
+        addSection(
+            title = DreamShaderBundle.message("settings.enableCodeLens.checkbox"),
+            description = DreamShaderBundle.message("settings.enableInlayParameterHints.tooltip"),
+            section = editorSection
         )
-        addLabelAndComboBox(
+
+        val importSection = sectionContent()
+        importSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.preferredImportExtension.label"),
             preferredImportExtensionCombo as JComboBox<String>,
             DreamShaderBundle.message("settings.preferredImportExtension.tooltip")
-        )
-        addCheckBox(
+        ))
+        importSection.addSectionRow(DreamShaderUi.checkRow(
             autoUpdatePreferredImportExtensionBox as JBCheckBox,
             DreamShaderBundle.message("settings.autoUpdatePreferredImportExtension.tooltip")
+        ))
+        val importPreview = createDescriptionLabel("")
+        importExtensionPreviewLabel = importPreview
+        importSection.addSectionRow(importPreview, gap = 2)
+        addSection(
+            title = DreamShaderBundle.message("settings.preferredImportExtension.label"),
+            description = DreamShaderBundle.message("settings.preferredImportExtension.tooltip"),
+            section = importSection
         )
-        addDescription("")
-        addLabelAndField(
+
+        val packageSection = sectionContent()
+        packageSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.packageSearchGitHubToken.label"),
             packageSearchGitHubTokenField as JBTextField,
             DreamShaderBundle.message("settings.packageSearchGitHubToken.tooltip")
+        ))
+        addSection(
+            title = DreamShaderBundle.message("packages.store.title"),
+            description = DreamShaderBundle.message("settings.packageSearchGitHubToken.tooltip"),
+            section = packageSection
         )
-        addHoverOverridesTable(
-            DreamShaderBundle.message("settings.hoverDocsOverrides.label"),
-            DreamShaderBundle.message("settings.hoverDocsOverrides.tooltip")
+
+        addSection(
+            title = DreamShaderBundle.message("settings.hoverDocsOverrides.label"),
+            description = DreamShaderBundle.message("settings.hoverDocsOverrides.tooltip"),
+            section = createHoverOverridesPanel(DreamShaderBundle.message("settings.hoverDocsOverrides.tooltip"))
         )
-        addLabelAndField(
+
+        val bridgeCommandSection = sectionContent()
+        bridgeCommandSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.bridgeRecompileCurrent.label"),
             recompileCurrentCommandField as JBTextField,
             DreamShaderBundle.message("settings.bridgeRecompileCurrent.tooltip")
-        )
-        addLabelAndField(
+        ))
+        bridgeCommandSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.bridgeRecompileAll.label"),
             recompileAllCommandField as JBTextField,
             DreamShaderBundle.message("settings.bridgeRecompileAll.tooltip")
-        )
-        addLabelAndField(
+        ))
+        bridgeCommandSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.bridgeCleanGenerated.label"),
             cleanGeneratedCommandField as JBTextField,
             DreamShaderBundle.message("settings.bridgeCleanGenerated.tooltip")
+        ))
+        addSection(
+            title = DreamShaderBundle.message("settings.bridgeRecompileCurrent.label"),
+            description = DreamShaderBundle.message("settings.bridgeCleanGenerated.tooltip"),
+            section = bridgeCommandSection
         )
-        addLabelAndField(
+
+        val previewSection = sectionContent()
+        previewSection.addSectionRow(DreamShaderUi.formRow(
             DreamShaderBundle.message("settings.previewAutoRefreshDelay.label"),
             previewAutoRefreshDelayField as JBTextField,
             DreamShaderBundle.message("settings.previewAutoRefreshDelay.tooltip")
+        ))
+        addSection(
+            title = DreamShaderBundle.message("preview.title"),
+            description = DreamShaderBundle.message("settings.previewAutoRefreshDelay.tooltip"),
+            section = previewSection
         )
 
         preferredImportExtensionCombo?.addActionListener {
@@ -617,15 +524,12 @@ class DreamShaderSettingsConfigurable(
             refreshBridgeStatusHint()
         })
 
-        val spacer = JPanel()
-        val spacerConstraints = GridBagConstraints().apply {
-            gridx = 0
-            gridy = row
-            gridwidth = 2
-            weighty = 1.0
-            fill = GridBagConstraints.BOTH
-        }
-        root.add(spacer, spacerConstraints)
+        content.add(Box.createVerticalGlue())
+        root.add(com.intellij.ui.components.JBScrollPane(content).apply {
+            border = JBUI.Borders.empty()
+            viewport.isOpaque = false
+            viewport.background = DreamShaderUi.panelBackground
+        }, BorderLayout.CENTER)
 
         panel = root
         reset()

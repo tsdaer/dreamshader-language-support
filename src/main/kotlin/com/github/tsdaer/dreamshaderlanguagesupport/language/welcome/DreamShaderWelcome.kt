@@ -111,25 +111,32 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <style>
             :root {
-              --bg1: #eef4ff;
-              --bg2: #dbe6ff;
-              --panel: #ffffffee;
+              color-scheme: light dark;
+              --bg1: #edf3f8;
+              --bg2: #f8fbfd;
+              --ink: #ffffff;
+              --panel: rgba(255, 255, 255, .86);
               --text: #172030;
               --muted: #4e5b73;
               --line: #d7deef;
-              --accent: #2f6ce5;
+              --accent: #1d6fc7;
+              --accent-2: #20a07c;
               --accent-soft: #e5efff;
+              --shadow: rgba(28, 42, 64, .13);
             }
             @media (prefers-color-scheme: dark) {
               :root {
-                --bg1: #1f2531;
-                --bg2: #141923;
-                --panel: #232938f0;
+                --bg1: #151922;
+                --bg2: #252b35;
+                --ink: #10141b;
+                --panel: rgba(35, 41, 54, .88);
                 --text: #e8edf7;
                 --muted: #b1bdd2;
                 --line: #374054;
                 --accent: #77a6ff;
+                --accent-2: #6ed6b3;
                 --accent-soft: #263450;
+                --shadow: rgba(0, 0, 0, .34);
               }
             }
             html, body {
@@ -137,35 +144,52 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
               padding: 0;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
               color: var(--text);
-              background: linear-gradient(145deg, var(--bg1), var(--bg2));
+              background:
+                radial-gradient(circle at 12% 8%, rgba(29, 111, 199, .20), transparent 30%),
+                radial-gradient(circle at 88% 14%, rgba(32, 160, 124, .16), transparent 28%),
+                linear-gradient(145deg, var(--bg1), var(--bg2));
             }
             .wrap {
-              max-width: 1100px;
+              max-width: 1120px;
               margin: 0 auto;
-              padding: 26px 26px 40px;
+              padding: 30px 28px 44px;
             }
             .hero {
               background: var(--panel);
               border: 1px solid var(--line);
-              border-radius: 16px;
-              padding: 22px 24px;
-              box-shadow: 0 10px 30px rgba(20, 40, 80, 0.08);
+              border-radius: 24px;
+              padding: 28px 30px;
+              box-shadow: 0 20px 60px var(--shadow);
               display: flex;
               justify-content: space-between;
-              gap: 16px;
+              gap: 22px;
               align-items: flex-start;
+              position: relative;
+              overflow: hidden;
+            }
+            .hero:after {
+              content: "";
+              position: absolute;
+              width: 280px;
+              height: 280px;
+              right: -90px;
+              top: -120px;
+              border-radius: 999px;
+              background: linear-gradient(135deg, rgba(29,111,199,.18), rgba(32,160,124,.12));
+              pointer-events: none;
             }
             .title {
-              font-size: 30px;
+              font-size: 34px;
               line-height: 1.2;
               margin: 0 0 8px;
-              font-weight: 780;
-              letter-spacing: 0.2px;
+              font-weight: 800;
+              letter-spacing: -0.4px;
             }
             .subtitle {
               margin: 0;
               color: var(--muted);
-              font-size: 15px;
+              font-size: 16px;
+              max-width: 760px;
             }
             .badge {
               white-space: nowrap;
@@ -178,19 +202,36 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
               border-radius: 999px;
               padding: 7px 12px;
               font-weight: 700;
+              position: relative;
+              z-index: 1;
+            }
+            .quick {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px;
+              margin-top: 18px;
+            }
+            .chip {
+              border: 1px solid var(--line);
+              border-radius: 999px;
+              padding: 6px 10px;
+              color: var(--muted);
+              background: color-mix(in srgb, var(--panel) 78%, var(--ink));
+              font-size: 12px;
+              font-weight: 650;
             }
             .grid {
-              margin-top: 16px;
+              margin-top: 18px;
               display: grid;
               grid-template-columns: 1fr 1fr 1fr;
-              gap: 16px;
+              gap: 18px;
             }
             .card {
               background: var(--panel);
               border: 1px solid var(--line);
-              border-radius: 14px;
-              padding: 16px 18px;
-              box-shadow: 0 4px 18px rgba(24, 42, 72, 0.06);
+              border-radius: 18px;
+              padding: 18px 20px;
+              box-shadow: 0 8px 28px var(--shadow);
             }
             .card h2 {
               margin: 0 0 10px;
@@ -207,12 +248,16 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
             .card li {
               margin: 0 0 8px;
             }
+            .card li::marker {
+              color: var(--accent);
+            }
             .changes {
-              margin-top: 16px;
+              margin-top: 18px;
               background: var(--panel);
               border: 1px solid var(--line);
-              border-radius: 14px;
-              padding: 16px 18px;
+              border-radius: 18px;
+              padding: 18px 20px;
+              box-shadow: 0 8px 28px var(--shadow);
             }
             .changes-head {
               display: flex;
@@ -231,10 +276,10 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
             }
             .note {
               margin-top: 10px;
-              padding: 14px;
+              padding: 16px;
               border: 1px dashed var(--line);
-              border-radius: 10px;
-              background: color-mix(in srgb, var(--panel) 82%, #0000);
+              border-radius: 14px;
+              background: color-mix(in srgb, var(--panel) 78%, var(--ink));
             }
             pre {
               white-space: pre-wrap;
@@ -248,6 +293,7 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
             a {
               color: var(--accent);
               text-decoration: none;
+              font-weight: 650;
             }
             a:hover { text-decoration: underline; }
             @media (max-width: 900px) {
@@ -262,6 +308,13 @@ internal fun buildWhatsNewLikeHtml(decision: DreamShaderWelcomeStateService.Welc
               <div>
                 <h1 class="title">${escapeHtml(titleText)}</h1>
                 <p class="subtitle">${escapeHtml(subtitleText)}</p>
+                <div class="quick">
+                  <span class="chip">.dsm</span>
+                  <span class="chip">.dsf</span>
+                  <span class="chip">.dsh</span>
+                  <span class="chip">Bridge</span>
+                  <span class="chip">Packages</span>
+                </div>
               </div>
               <span class="badge">${escapeHtml(badge)}</span>
             </section>

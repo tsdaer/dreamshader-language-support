@@ -1,12 +1,12 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+import com.github.tsdaer.dreamshaderlanguagesupport.language.ui.DreamShaderUi
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 import java.awt.Desktop
 
 private const val NOTIFICATION_GROUP_ID = "DreamShader Notifications"
@@ -48,13 +48,12 @@ class DreamShaderInstallPackageFromGitHubAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("packages.dialog.install.input"),
             DreamShaderBundle.message("packages.dialog.install.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("packages.dialog.install.input"),
+            "owner/repo or https://github.com/owner/repo"
+        ) ?: return
 
         val result = DreamShaderPackageManager(project).installFromGitHub(input)
         if (result.success) {
@@ -76,13 +75,12 @@ class DreamShaderUpdateInstalledPackageAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("packages.dialog.update.input"),
             DreamShaderBundle.message("packages.dialog.update.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("packages.dialog.update.input"),
+            "@scope/package or package-name"
+        ) ?: return
 
         val result = DreamShaderPackageManager(project).updateInstalledPackage(input)
         if (result.success) {
@@ -104,13 +102,12 @@ class DreamShaderRemoveInstalledPackageAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("packages.dialog.remove.input"),
             DreamShaderBundle.message("packages.dialog.remove.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("packages.dialog.remove.input"),
+            "@scope/package or package-name"
+        ) ?: return
 
         val result = DreamShaderPackageManager(project).removeInstalledPackage(input)
         if (result.success) {
@@ -159,13 +156,12 @@ class DreamShaderAddPackageIndexSourceAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("packages.dialog.addSource.input"),
             DreamShaderBundle.message("packages.dialog.addSource.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("packages.dialog.addSource.input"),
+            "https://.../index.json or local index path"
+        ) ?: return
 
         val result = project.getService(DreamShaderPackageStoreService::class.java).addIndexSource(input)
         if (result.changed) {
@@ -187,13 +183,12 @@ class DreamShaderRemovePackageIndexSourceAction : DumbAwareAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val input = Messages.showInputDialog(
+        val input = DreamShaderUi.showInputDialog(
             project,
-            DreamShaderBundle.message("packages.dialog.removeSource.input"),
             DreamShaderBundle.message("packages.dialog.removeSource.title"),
-            Messages.getQuestionIcon()
-        )?.trim().orEmpty()
-        if (input.isBlank()) return
+            DreamShaderBundle.message("packages.dialog.removeSource.input"),
+            "Source URL or file path"
+        ) ?: return
 
         val result = project.getService(DreamShaderPackageStoreService::class.java).removeIndexSource(input)
         if (result.changed) {
