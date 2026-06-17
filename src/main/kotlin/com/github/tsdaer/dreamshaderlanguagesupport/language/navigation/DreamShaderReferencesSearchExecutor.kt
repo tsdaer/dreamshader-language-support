@@ -4,21 +4,27 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTo
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
-import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.impl.cache.CacheManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.SearchScope
+import com.intellij.psi.search.UsageSearchContext
 import com.intellij.psi.search.searches.ReferencesSearch
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.Processor
-import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.Locale
 
 /**
@@ -186,78 +192,133 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
     private fun resolveImportClosure(sourceFile: PsiFile): List<PsiFile> {
         val seedFile = sourceFile.containingFile
         val seedVf = seedFile.virtualFile ?: return listOf(seedFile)
-        val project = seedFile.project
-        val projectBasePath = project.basePath ?: return listOf(seedFile)
-        val psiManager = PsiManager.getInstance(project)
-        val allFilesByPath = linkedMapOf<String, PsiFile>()
-        collectAllDreamShaderPsiFiles(project, projectBasePath, psiManager).forEach { psiFile ->
-            val key = fileKey(psiFile.virtualFile) ?: return@forEach
-            allFilesByPath.putIfAbsent(key, psiFile)
-        }
-        allFilesByPath.putIfAbsent(fileKey(seedVf) ?: seedVf.path, seedFile)
-
-        val importsByPath = mutableMapOf<String, MutableSet<String>>()
-        val importersByPath = mutableMapOf<String, MutableSet<String>>()
-        for ((fromKey, psiFile) in allFilesByPath) {
-            for (importedPsi in DreamShaderImportClosureResolver.resolveDirectImports(psiFile)) {
-                val importedVf = importedPsi.virtualFile ?: continue
-                val importedKey = fileKey(importedVf) ?: continue
-
-                importsByPath.getOrPut(fromKey) { linkedSetOf() }.add(importedKey)
-                importersByPath.getOrPut(importedKey) { linkedSetOf() }.add(fromKey)
-            }
-        }
-
+        val filesByKey = linkedMapOf<String, PsiFile>()
         val visited = linkedSetOf<String>()
-        val queue = ArrayDeque<String>()
-        queue.add(fileKey(seedVf) ?: seedVf.path)
+        val queue = ArrayDeque<PsiFile>()
+        queue.add(seedFile)
 
         while (queue.isNotEmpty()) {
             val current = queue.removeFirst()
-            if (!visited.add(current)) continue
+            val currentKey = fileKey(current.virtualFile) ?: continue
+            if (!visited.add(currentKey)) continue
+            filesByKey.putIfAbsent(currentKey, current)
 
-            val neighbors = linkedSetOf<String>()
-            importsByPath[current]?.let { neighbors.addAll(it) }
-            importersByPath[current]?.let { neighbors.addAll(it) }
-            for (next in neighbors) {
-                if (!visited.contains(next)) {
-                    queue.addLast(next)
+            val neighbors = linkedMapOf<String, PsiFile>()
+            DreamShaderImportClosureResolver.resolveDirectImports(current).forEach { importedFile ->
+                val key = fileKey(importedFile.virtualFile) ?: return@forEach
+                neighbors.putIfAbsent(key, importedFile)
+            }
+            resolveDirectImporters(current).forEach { importerFile ->
+                val key = fileKey(importerFile.virtualFile) ?: return@forEach
+                neighbors.putIfAbsent(key, importerFile)
+            }
+
+            for ((key, neighbor) in neighbors) {
+                if (!visited.contains(key)) {
+                    queue.addLast(neighbor)
                 }
             }
         }
 
-        return visited.mapNotNull { path -> allFilesByPath[path] }
+        return visited.mapNotNull { key -> filesByKey[key] }
     }
 
-    private fun collectAllDreamShaderPsiFiles(
-        project: com.intellij.openapi.project.Project,
-        projectBasePath: String,
-        psiManager: PsiManager
-    ): List<PsiFile> {
-        val filesByKey = linkedMapOf<String, PsiFile>()
-        DreamShaderPsiUtil.dreamShaderFiles(project, GlobalSearchScope.allScope(project)).forEach { psi ->
-            val vf = psi.virtualFile ?: return@forEach
-            val key = fileKey(vf) ?: return@forEach
-            filesByKey.putIfAbsent(key, psi)
+    private fun resolveDirectImporters(targetFile: PsiFile): List<PsiFile> {
+        return CachedValuesManager.getManager(targetFile.project).getCachedValue(
+            targetFile,
+            DIRECT_IMPORTERS_KEY,
+            {
+                CachedValueProvider.Result.create(
+                    computeDirectImporters(targetFile),
+                    PsiModificationTracker.MODIFICATION_COUNT,
+                    VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS
+                )
+            },
+            false
+        )
+    }
+
+    private fun computeDirectImporters(targetFile: PsiFile): List<PsiFile> {
+        val targetVf = targetFile.virtualFile ?: return emptyList()
+        val targetKey = fileKey(targetVf) ?: return emptyList()
+        val project = targetFile.project
+        val psiManager = PsiManager.getInstance(project)
+        val candidates = linkedMapOf<String, PsiFile>()
+        val scope = GlobalSearchScope.projectScope(project)
+
+        targetVf.parent?.children
+            ?.asSequence()
+            ?.filter { candidateVf -> isImportCandidateFile(candidateVf) && candidateVf != targetVf }
+            ?.mapNotNull { candidateVf -> psiManager.findFile(candidateVf) }
+            ?.filter { candidatePsi -> candidatePsi.language == DreamShaderLanguage }
+            ?.forEach { candidatePsi ->
+                val candidateKey = fileKey(candidatePsi.virtualFile) ?: return@forEach
+                candidates.putIfAbsent(candidateKey, candidatePsi)
+            }
+
+        for (word in importSearchWordsFor(targetVf, project.basePath)) {
+            CacheManager.getInstance(project).processFilesWithWord(
+                Processor { candidatePsi ->
+                    val candidateVf = candidatePsi.virtualFile ?: return@Processor true
+                    if (candidateVf == targetVf) return@Processor true
+                    if (!isImportCandidateFile(candidateVf)) return@Processor true
+
+                    if (candidatePsi.language != DreamShaderLanguage) return@Processor true
+                    val candidateKey = fileKey(candidateVf) ?: return@Processor true
+                    candidates.putIfAbsent(candidateKey, candidatePsi)
+                    true
+                },
+                word,
+                UsageSearchContext.IN_STRINGS,
+                scope,
+                true
+            )
         }
 
-        val fs = LocalFileSystem.getInstance()
-        val rootPath = runCatching { Paths.get(projectBasePath) }.getOrNull() ?: return emptyList()
-        if (!Files.exists(rootPath) || !Files.isDirectory(rootPath)) return filesByKey.values.toList()
+        return candidates.values.filter { candidate ->
+            DreamShaderImportClosureResolver.resolveDirectImports(candidate)
+                .any { importedFile -> fileKey(importedFile.virtualFile) == targetKey }
+        }
+    }
 
-        Files.walk(rootPath).use { paths ->
-            paths.filter { Files.isRegularFile(it) }.forEach { path ->
-                val extension = path.fileName.toString().substringAfterLast('.', "").lowercase()
-                if (extension !in IMPORT_EXTENSIONS) return@forEach
+    private fun importSearchWordsFor(targetVf: VirtualFile, projectBasePath: String?): Set<String> {
+        val words = linkedSetOf<String>()
+        addSearchWords(targetVf.nameWithoutExtension, words)
 
-                val candidateVf = fs.findFileByPath(path.toString().replace('\\', '/')) ?: return@forEach
-                val candidatePsi = psiManager.findFile(candidateVf) ?: return@forEach
-                if (candidatePsi.language != DreamShaderLanguage) return@forEach
-                val key = fileKey(candidateVf) ?: return@forEach
-                filesByKey.putIfAbsent(key, candidatePsi)
+        val normalizedPath = targetVf.path.replace('\\', '/')
+        val projectRelativePath = projectBasePath
+            ?.replace('\\', '/')
+            ?.trimEnd('/')
+            ?.let { base ->
+                normalizedPath.removePrefix("$base/")
+                    .takeIf { it != normalizedPath }
+            }
+
+        val relevantSegments = projectRelativePath
+            ?.split('/')
+            ?.filter { it.isNotBlank() }
+            ?: listOfNotNull(targetVf.parent?.name, targetVf.name)
+        relevantSegments.forEach { segment ->
+            if (!segment.equals(targetVf.extension.orEmpty(), ignoreCase = true)) {
+                addSearchWords(segment.substringBeforeLast('.'), words)
             }
         }
-        return filesByKey.values.toList()
+
+        return words.filter { it.length >= MIN_IMPORT_SEARCH_WORD_LENGTH }.toSet()
+    }
+
+    private fun addSearchWords(text: String, words: MutableSet<String>) {
+        text.split(Regex("[^A-Za-z0-9_]+"))
+            .asSequence()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .forEach(words::add)
+    }
+
+    private fun isImportCandidateFile(file: VirtualFile): Boolean {
+        return file.isValid &&
+            !file.isDirectory &&
+            file.extension?.lowercase(Locale.ROOT) in IMPORT_EXTENSIONS
     }
 
     private fun fileKey(vf: com.intellij.openapi.vfs.VirtualFile?): String? = vf?.url
@@ -268,6 +329,9 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
     )
 
     companion object {
+        private val DIRECT_IMPORTERS_KEY: Key<CachedValue<List<PsiFile>>> =
+            Key.create("dreamshader.import.direct.importers.files")
+        private const val MIN_IMPORT_SEARCH_WORD_LENGTH = 2
         private val IMPORT_EXTENSIONS = setOf("dsm", "dsf", "dsh")
         private val CALLABLE_NAME_ATTRIBUTE_DECLARATIONS = setOf(
             "namespace",
