@@ -93,7 +93,7 @@ Substrate semantics:
 - Supported wrapper namespace members include `Substrate.Unlit`, `Substrate.Slab`, `Substrate.VerticalLayer`, `Substrate.ConvertMaterialAttributes`, `Substrate.TransmittanceToMFP`, `Substrate.MetalnessToDiffuseAlbedoF0`, `Substrate.HazinessToSecondaryRoughness`, and `Substrate.ThinFilm`.
 - `UE.Expression(Class="MaterialExpressionSubstrateSlabBSDF", OutputType="Substrate", ...)` is a supported Substrate escape hatch.
 - `UMaterialExpressionCustom` does not support `OutputType="Substrate"`.
-- `Substrate` values should not participate in arithmetic, vector construction, swizzle, or `if` branch merging. Rider diagnostics for these expression-level type rules are deferred until expression type inference is mature enough to avoid false positives.
+- `Substrate` values should not participate in arithmetic, vector construction, swizzle, or `if` branch merging. Rider now implements conservative diagnostics for these high-signal expression-level cases while avoiding full expression type inference.
 
 ### 5. Import, Path, and Type System
 
@@ -150,6 +150,6 @@ Current boundary and long-term parity notes:
   - `2026-06-16 update`: `opt` inputs in `Inputs` sections and `Function` / `GraphFunction` signatures now warn when no default value is provided, and warn on obviously malformed default values (empty value, unclosed string, or unmatched delimiters).
 - `Implemented`: completion and section-shape diagnostics now share the same declaration section schema (`Results` -> `Outputs` alias rules, allowed/required sections, declaration display names), reducing divergence between suggested structure and reported structure.
 - `Partial`: parser is intentionally permissive for IDE resilience; full strict Graph grammar validation is not the current parser mode.
-- `Deferred`: Substrate expression-level type rules remain out of scope until a later lightweight/full expression type-inference pass can handle arithmetic, swizzle, constructor, and branch-merge cases with low false positives.
+- `Implemented` (conservative): Substrate expression diagnostics cover arithmetic, swizzle, vector constructor arguments, and branch-merge cases that are likely to fail in Bridge generation.
 - `Implemented` (baseline): formatter handles indentation/spacing/braces/section layout; fine-grained parity with all DreamShader authoring conventions may continue to evolve.
 - `Implemented` (baseline): semantic token classification and inlay hints are available and tested; exact upstream VS Code parity is treated as iterative polish, not a release blocker.

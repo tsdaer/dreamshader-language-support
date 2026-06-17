@@ -27,6 +27,7 @@ polish not yet captured by the implemented roadmap inventory.
 Completed:
 - Cached semantic diagnostic lexical inputs: file diagnostics now reuse cached file text, whole-file tokens, declaration contexts, and body-level token slices instead of independently re-lexing unchanged bodies in hot semantic passes.
 - Cached import closure resolution: direct imports and import closures share cached results invalidated by PSI modification count and VFS structure changes.
+- Optimized cross-file reference search so reverse-importer discovery uses cached IntelliJ word-index candidates and same-directory import candidates instead of a full workspace filesystem walk.
 - Added conservative `Substrate` expression diagnostics for arithmetic, swizzles, vector constructors, and ternary branch merges.
 - Wired `UE.*` go-to declaration to the Unreal source locator, preferring Unreal header targets when source scanning resolves a match and preserving catalog fallback behavior.
 - Added DreamShader live templates and conservative postfix templates.
@@ -40,6 +41,7 @@ Completed:
 - Shared declaration context across diagnostic passes by caching sections, section bodies, typed declarations, child declarations, callable signatures, and reusable body tokens.
 - Moved parser-obvious malformed declaration/section diagnostics into recoverable parser error markers and removed duplicate token-level malformed syntax diagnostics.
 - Added targeted `Path(...)` object-segment suffix warnings for Bridge-breaking asset suffixes such as `.uasset`, `.umap`, and common image extensions.
+- Added the shared `DreamShaderUi` design helper layer and migrated Bridge, package store, material preview, settings, template, hub, and welcome panels to the card-based workflow surface.
 
 Remaining blocked item:
 - GLSL legacy-alias compatibility diagnostics are intentionally not implemented yet. The removed/legacy alias list needs upstream confirmation before the plugin can warn safely or offer replacement quick fixes.
@@ -80,6 +82,7 @@ Verification used during the optimization pass:
 | Package commands                               | Done   | install/update/remove/browse/open folder + source add/remove wired                                                                                                                                                                       |
 | Authoring templates / scaffold commands        | Done   | Material/function/header/texture sample/noise material/package scaffold/package wizard commands implemented and covered by tests                                                                                                           |
 | Material Preview                               | Done   | File-bridge preview request writer, result reader, right-side ToolWindow, editor-follow, edit debounce, and Bridge preview file watcher integration                                                                                        |
+| Workflow UI polish                            | Done   | Shared `DreamShaderUi` card/section/pill helpers are used across settings, package store, Bridge diagnostics, material preview, template workflows, Hub, and welcome surfaces                                                               |
 
 ## Detailed TODO
 
@@ -157,7 +160,7 @@ Implemented:
 - Declaration-head completion suggests supported `Name`/`Root` arguments and `Root` values (`Game`, `Plugin.<Name>`, `Plugins.<Name>`).
 - Namespace-qualified callable completion now supports `Tools::` / `A::B::` member suggestions from the current file plus import closure.
 - Local symbol completion is scoped to the current graph/function-like body before the caret, and input/function qualifier completion suggests `in`, `out`, `inout`, `opt`, and `const`.
-- Substrate expression-level diagnostics remain deferred to a later lightweight/full type-inference pass; this pass should separately cover arithmetic, swizzle, constructor, and branch-merge rules.
+- Conservative Substrate expression-level diagnostics now cover arithmetic, swizzle, constructor, and branch-merge rules that are likely to fail during Bridge generation; full expression type inference remains a separate long-term hardening target.
 
 ### Milestone M3: Navigation and Symbols
 

@@ -44,6 +44,8 @@ Used by:
   - `DreamShaderParameterInfoHandler`
 - Inlay parameter hints:
   - `DreamShaderInlayParameterHintsProvider`
+- Code Vision:
+  - `DreamShaderCodeVisionProvider`
 
 Design goal:
 - Keep domain logic in analyzers/suggesters and use IntelliJ handlers as thin
@@ -59,7 +61,8 @@ Design goal:
   - identifier -> top-level declaration target
 - `DreamShaderReferencesSearchExecutor`
   - namespace-aware reference search for declarations across import-connected files
-  - reuses `DreamShaderImportClosureResolver.resolveDirectImports(...)` to build forward import edges, then augments with reverse importer edges to preserve connected-closure reference search semantics
+  - reuses `DreamShaderImportClosureResolver.resolveDirectImports(...)` to build forward import edges, then augments with cached reverse importer edges to preserve connected-closure reference search semantics without walking the full workspace filesystem
+  - reverse importer discovery uses IntelliJ string-word indexes plus same-directory import candidates, then verifies each candidate through direct-import resolution
 - `DreamShaderFindUsagesProvider`
   - Find Usages scanner and display metadata
 - `DreamShaderNamesValidator` / `DreamShaderRenameInputValidator`
@@ -91,6 +94,12 @@ Design goal:
 - `DreamShaderBridgeDiagnosticsRepository`
   - reads/normalizes `diagnostics.json`
   - exposes immutable snapshots
+- `DreamShaderBridgeToolWindowFactory`
+  - renders the Bridge diagnostics tool window.
+- `DreamShaderBridgeActions` / `DreamShaderBridgeCommandExecutor`
+  - refresh/open Bridge diagnostics and run configurable recompile/clean commands.
+- `DreamShaderBridgeFileWatcher`
+  - listens for Bridge output file changes and refreshes diagnostics/preview consumers.
 - `DreamShaderMaterialExpressionManifest`
   - parses legacy `classes` payloads and rich `expressions` payloads into catalog entries.
   - derives missing `ueName`, signature, namespace, and neutral descriptions when manifest data is partial.
@@ -111,7 +120,7 @@ Design goal:
   - auto-detects Unreal source roots from generated `.sln` references or `.uproject` `EngineAssociation`.
   - prefers narrow material-expression source directories under `Engine/Source` when available.
 
-### 7. Package Index Data Layer (M5 Base)
+### 7. Package Tooling and Index Data Layer
 
 - Data models:
   - `DreamShaderPackageIndexEntry`
@@ -129,17 +138,81 @@ Design goal:
   - local `path` fallback policy:
     - if resolvable and exists: use local path
     - otherwise: fallback to repository URL
+- Tooling flows:
+  - package store dialog with search/filter/details/install/update/remove/source management
+  - GitHub package search/install/update/remove actions
+  - package wizard and scaffold actions for authoring starter packages
 
-### 8. Persistent Settings
+### 8. Material Preview
+
+- `DreamShaderMaterialPreviewToolWindowFactory`
+  - creates the right-side Material Preview tool window.
+- `DreamShaderMaterialPreviewPanel`
+  - follows the active `.dsm` editor file, writes preview requests, reads preview results/images, and debounces edit-triggered refreshes.
+  - uses JCEF when available, with a Swing image fallback.
+- `DreamShaderPreviewRequestWriter`
+  - writes portable file-bridge request JSON under `Saved/DreamShader/Bridge/Requests/`.
+- `DreamShaderPreviewResultReader`
+  - reads `preview.json` and resolves relative image paths under the Bridge directory.
+- `DreamShaderPreviewListener`
+  - message-bus topic used by Bridge file watching to refresh preview UI after Bridge output changes.
+
+Current boundary:
+- File transport is implemented. `previewTransport`, `previewWebSocketPort`, and `previewLiveFrameRate` are persisted for parity/future use, but WebSocket/live-stream preview transport is not implemented.
+
+### 9. UI Design System and Workflow Surfaces
+
+- `DreamShaderUi`
+  - shared Swing helper layer for card panels, sections, rounded borders, pills, muted labels, button rows, and input dialogs.
+  - keeps workflow panels visually consistent while still using standard IntelliJ Swing components and theme-aware colors.
+- Main consumers:
+  - Settings configurable
+  - DreamShader Hub action/panel
+  - Bridge diagnostics tool window
+  - Material Preview tool window
+  - Package Store dialog
+  - Template and package wizard dialogs
+  - Welcome page
+
+Design goal:
+- Keep workflow UI composition consistent and readable without duplicating layout, spacing, border, and theme-color rules in each feature package.
+
+### 10. Welcome / What's New Page
+
+- `DreamShaderWelcomeProjectActivity`
+  - opens a localized welcome page on first install or plugin update.
+- `DreamShaderWelcomeStateService`
+  - stores the last shown version and decides whether the page should open.
+- `DreamShaderWelcomeFileEditorProvider`
+  - renders a custom read-only welcome editor.
+- Welcome content is built from the bundled plugin version metadata plus localized changelog resources (`CHANGELOG.md` / `CHANGELOG.zh-CN.md`).
+
+### 11. Persistent Settings
 
 - `DreamShaderProjectSettings` (project-level service)
 - current keys:
   - `projectRoot`
   - `materialExpressionManifestPath`
+  - `unrealEngineSourceRoot`
+  - `materialExpressionScanEnabled`
+  - `materialExpressionScanCachePath`
   - `showStatusBar`
   - `enableCodeLens`
+  - `enableInlayParameterHints`
+  - `outArgumentPlaceholderSuffix`
+  - `preferredImportExtension`
+  - `autoUpdatePreferredImportExtension`
   - `packageStoreIndexUrls`
   - `packageStoreIndexUrl` (legacy)
+  - `packageStoreGitHubToken`
+  - `hoverDocumentationOverrides`
+  - `bridgeRecompileCurrentCommand`
+  - `bridgeRecompileAllCommand`
+  - `bridgeCleanGeneratedShadersCommand`
+  - `previewTransport`
+  - `previewWebSocketPort`
+  - `previewLiveFrameRate`
+  - `previewAutoRefreshDelayMs`
 
 ## High-Level Runtime Flow
 
@@ -148,6 +221,8 @@ Design goal:
 3. Annotator computes diagnostics and overlays Bridge diagnostics.
 4. Navigation/references map identifiers/imports to declarations/files.
 5. Package source settings feed package index loader when store features run.
+6. Workflow panels compose standard IntelliJ controls through `DreamShaderUi` surfaces for consistent settings, package, preview, Bridge, template, hub, and welcome UX.
+7. Welcome state compares the bundled plugin version with the last shown version and opens localized changelog content when needed.
 
 ## Extension Guidelines
 
@@ -156,6 +231,7 @@ Design goal:
 3. Keep UI handlers thin; place business logic in analyzers/loaders.
 4. Preserve fallback chains (PSI -> parsed text -> lexer, explicit setting -> project -> bundled).
 5. Add stable tests for every new rule/loader behavior before wiring UI actions.
+6. Reuse `DreamShaderUi` for new workflow panels instead of introducing one-off Swing spacing, border, and color rules.
 
 ## README Architecture Snapshot
 
@@ -172,9 +248,10 @@ This plugin currently follows a layered architecture:
 
 3. Editor intelligence
 - Completion (`DreamShaderCompletionContributor`) uses PSI-first context analysis with lexer fallback.
-- Signature help and inlay hints consume call-signature parsing utilities (current implementation is parameter inlay hints, not IntelliJ Code Vision lenses).
+- Signature help, parameter info, and inlay hints consume call-signature parsing utilities; Code Vision is implemented separately through `DreamShaderCodeVisionProvider`.
 - Hover docs include built-in declaration docs, catalog-backed `UE.*` / `Substrate.*` docs, local variable info, and adjacent declaration comments.
 - Navigation/references rely on declaration symbol extraction, shared PSI traversal helpers, and identifier matching.
+- Cross-file reference search expands through import-connected files using cached direct imports and cached reverse-importer discovery instead of a full filesystem scan.
 
 4. Diagnostics pipeline
 - `DreamShaderSemanticAnnotator` is the central diagnostic entry and aggregates:
@@ -188,14 +265,24 @@ This plugin currently follows a layered architecture:
 - `DreamShaderBridgeDiagnosticsRepository` loads and normalizes Bridge diagnostics snapshots.
 - `DreamShaderMaterialExpressionCatalog` merges explicit manifests, Bridge manifests, scanned cache data, bundled fallback data, and migration fallback built-ins for shared `UE.*` / `Substrate.*` editor intelligence.
 
-6. Package index data layer (M5 completed)
+6. Package tooling and index data layer
 - `DreamShaderPackageIndexLoader` resolves package index sources (multi-source, legacy single-source, default upstream).
 - Index loader accepts both JSON shapes: array root and `{ "packages": [...] }`.
 - Entry `path` is resolved relative to local index location; unresolved paths degrade to `repository`.
+- Package store and package authoring actions cover browse/search/install/update/remove/source management plus guided package wizard/scaffold flows.
 
-7. Project-level persistent settings
+7. Material Preview
+- `DreamShaderMaterialPreviewPanel` writes Bridge file-transport preview requests for the active `.dsm`, reads `preview.json` / `Preview/*.png`, and refreshes on editor or Bridge-output changes.
+
+8. Project-level persistent settings
 - `DreamShaderProjectSettings` stores project-scoped configuration for Bridge and package tooling.
-- Current keys: `projectRoot`, `materialExpressionManifestPath`, `unrealEngineSourceRoot`, `materialExpressionScanEnabled`, `materialExpressionScanCachePath`, `showStatusBar`, `enableCodeLens`, `outArgumentPlaceholderSuffix`, `preferredImportExtension`, `autoUpdatePreferredImportExtension`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `packageStoreGitHubToken`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`.
+- Current keys: `projectRoot`, `materialExpressionManifestPath`, `unrealEngineSourceRoot`, `materialExpressionScanEnabled`, `materialExpressionScanCachePath`, `showStatusBar`, `enableCodeLens`, `enableInlayParameterHints`, `outArgumentPlaceholderSuffix`, `preferredImportExtension`, `autoUpdatePreferredImportExtension`, `packageStoreIndexUrls`, `packageStoreIndexUrl`, `packageStoreGitHubToken`, `hoverDocumentationOverrides`, `bridgeRecompileCurrentCommand`, `bridgeRecompileAllCommand`, `bridgeCleanGeneratedShadersCommand`, `previewTransport`, `previewWebSocketPort`, `previewLiveFrameRate`, `previewAutoRefreshDelayMs`.
+
+9. Shared workflow UI
+- `DreamShaderUi` provides theme-aware card, section, pill, rounded-border, input-dialog, and surface helpers used by the package store, settings, Bridge, preview, template, hub, and welcome panels.
+
+10. Welcome / What's New
+- First install, update, and manual Hub flows can open the localized welcome editor using bundled plugin version/changelog resources.
 
 Related docs:
 - [`code-map.md`](code-map.md) for source entry points.

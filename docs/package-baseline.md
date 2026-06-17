@@ -87,7 +87,7 @@ Rider package tooling should reach parity with VSCode package workflows:
 - Remove installed package.
 - Open packages folder.
 - Add/remove package store index source.
-- (Optional later) guided package skeleton creator.
+- Guided package creation/scaffold workflows for package metadata and starter examples.
 
 Runtime prerequisite:
 - Install/update operations depend on available `git` in local environment.
@@ -107,5 +107,6 @@ Already implemented in this plugin:
 - Import navigation resolves local files, package files, and package metadata `dreamshader.entry` roots when paths are valid.
 - Package diagnostics distinguish missing package entry files from invalid/unsafe package entry metadata and map them to dedicated messages/quick-fixes.
 - Package install, update, and remove actions update the package install folder and lock file.
-- Package store UI supports search, install, update, remove, open repository, refresh, installed/updates filters, and index source management.
+- Package store UI supports card-style search results/details, install, update, remove, open repository, refresh, installed/updates filters, GitHub search, empty states, and index source management.
 - GitHub package discovery integration (`DreamShaderGitHubPackageSearch`) is available.
+- Package authoring tools include a step-by-step package wizard and a direct package scaffold action.

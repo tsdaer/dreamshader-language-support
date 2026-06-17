@@ -139,7 +139,22 @@ Available actions:
 - Create Material Template
 - Create Function Template
 - Create Header Template
+- Create Texture Sample Template
+- Create Noise Material Template
+- Create Package Step by Step
 - Create Package Scaffold
+
+### Material Preview (Rider)
+
+Location:
+- `Tools` -> `DreamShader` -> `Show Material Preview`
+- Tool window: `DreamShader Material Preview`
+
+Behavior:
+- Follows the active `.dsm` editor file when possible.
+- Writes portable file-bridge preview requests under `Saved/DreamShader/Bridge/Requests/`.
+- Reads `preview.json` and `Preview/*.png` from the resolved Bridge directory.
+- Supports manual refresh, mesh selection (`sphere`, `plane`, `cube`), editor-follow behavior, and debounced refresh after source edits.
 
 ### DreamShader Hub (Rider)
 
@@ -147,27 +162,33 @@ Location:
 - `Tools` -> `DreamShader` -> `Open DreamShader Hub`
 
 `DreamShader Hub` provides a one-stop entry for common plugin workflows:
+- Open the localized DreamShader welcome / What's New page
 - Open DreamShader settings
 - Open Bridge diagnostics panel
+- Show Material Preview
 - Refresh Bridge diagnostics
 - Recompile current/all and clean generated shaders
 - Browse package store and install from GitHub
 - Open packages folder and add package index source
-- Create material/function/header templates and package scaffold
+- Create material/function/header/texture sample/noise material templates and package wizard/scaffold workflows
+
+The Hub and related workflow panels use the shared `DreamShaderUi` card surface for consistent spacing, rounded containers, muted helper text, and theme-aware status labels.
 
 `Browse Package Store` now opens an interactive dialog with:
 - search field (`name` / `displayName` / `description` / `tags`)
-- package list + detail pane
-- package list summary shows install marker, version, and tag preview
+- card-style package list + detail pane
+- package rows show display name, package id, version pill, tag preview, and installed marker
 - refresh/add source/remove source
 - install/update/remove selected package
 - install/update/remove run as cancellable background tasks with progress
 - installed state marker in list and details
+- empty state and source/debug information when no package is selected
 - double-click package to install
 - dynamic action enablement by install state
 - `Installed only` filter
 - `Updates possible only` filter (installed + git available + repository present)
 - auto-select and highlight package after install/update
+- GitHub search action is visually marked with the GitHub icon
 
 ### DreamShader Settings (Rider)
 
@@ -177,6 +198,9 @@ Location:
 Configurable fields:
 - `Project Root`
 - `Material Manifest Path`
+- `Unreal Engine Source Root` plus auto-detect
+- `Scan Unreal material expressions` toggle
+- `Material Expression Scan Cache Path`
 - `Show DreamShader status bar widget`
 - `Enable DreamShader in-editor code lens hints` (controls IntelliJ Code Vision hints)
 - `Enable DreamShader parameter inlay hints` (controls inline parameter-name hints before positional function/node arguments)
@@ -184,6 +208,7 @@ Configurable fields:
 - `Preferred Import Extension` (default extension preference for unsupported import-extension quick-fix ordering: `.dsh` / `.dsf` / `.dsm`)
 - `Auto-update preferred extension from quick-fix` (when enabled, applying unsupported import-extension quick-fix persists chosen extension as new preferred default)
 - `Import extension quick-fix preview` (live preview line showing fallback preferred extension and localized auto-update status)
+- `Package Search GitHub Token` for package search API requests
 - `Hover Docs Overrides` (table-based visual editor for hover text overrides)
   - columns: `Path` and `Content`
   - row actions: `Add Row`, `Remove Row`, `Insert Sample`
@@ -192,6 +217,9 @@ Configurable fields:
 - `Bridge Recompile Current Command`
 - `Bridge Recompile All Command`
 - `Bridge Clean Generated Command`
+- `Preview Auto-refresh Delay (ms)`
+
+The settings page is grouped into scrollable card sections for project paths, editor behavior, import quick-fix behavior, package search, hover docs overrides, Bridge commands, and preview refresh timing.
 
 Bridge command placeholders:
 - `%file%` = current DreamShader file absolute path

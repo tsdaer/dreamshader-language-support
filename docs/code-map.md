@@ -44,6 +44,13 @@ Symbol model:
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModel.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModel.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilder.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/symbols/DreamShaderSymbolModelBuilder.kt)
 
+Navigation and refactoring:
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/navigation/DreamShaderGotoDeclarationHandler.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/navigation/DreamShaderGotoDeclarationHandler.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/navigation/DreamShaderReferencesSearchExecutor.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/navigation/DreamShaderReferencesSearchExecutor.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/navigation/DreamShaderDeclarationSearch.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/navigation/DreamShaderDeclarationSearch.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/refactoring/DreamShaderRenameInputValidator.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/refactoring/DreamShaderRenameInputValidator.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/refactoring/DreamShaderRefactoringSupportProvider.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/refactoring/DreamShaderRefactoringSupportProvider.kt)
+
 Completion and editor features:
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContributor.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCompletionContributor.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokenClassifier.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderSemanticTokenClassifier.kt)
@@ -54,9 +61,25 @@ Completion and editor features:
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCommenter.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderCommenter.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderBraceMatcher.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/editor/DreamShaderBraceMatcher.kt)
 
+Bridge, preview, packages, and workflows:
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeActions.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeActions.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeDiagnosticsRepository.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeDiagnosticsRepository.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/preview/DreamShaderMaterialPreviewPanel.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/preview/DreamShaderMaterialPreviewPanel.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/preview/DreamShaderPreviewRequestWriter.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/preview/DreamShaderPreviewRequestWriter.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageStoreDialog.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageStoreDialog.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/templates/DreamShaderTemplateActions.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/templates/DreamShaderTemplateActions.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/welcome/DreamShaderWelcome.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/welcome/DreamShaderWelcome.kt)
+
 Icons/resources:
 - [`src/main/resources/META-INF/pluginIcon.svg`](../src/main/resources/META-INF/pluginIcon.svg)
 - [`src/main/resources/icons/dreamshaderFile.svg`](../src/main/resources/icons/dreamshaderFile.svg)
+
+Shared UI design system:
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/ui/DreamShaderUi.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/ui/DreamShaderUi.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/settings/DreamShaderSettingsConfigurable.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/settings/DreamShaderSettingsConfigurable.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageStoreDialog.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/packages/DreamShaderPackageStoreDialog.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/preview/DreamShaderMaterialPreviewPanel.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/preview/DreamShaderMaterialPreviewPanel.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeToolWindowFactory.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/bridge/DreamShaderBridgeToolWindowFactory.kt)
 
 Tests:
 - [`src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderLexerSyntaxHighlighterTest.kt`](../src/test/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/highlighting/DreamShaderLexerSyntaxHighlighterTest.kt)

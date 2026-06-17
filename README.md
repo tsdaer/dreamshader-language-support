@@ -32,7 +32,7 @@ description: |
   - Package tooling: package store dialog with search/filter/details/install-state markers, background install-update-remove, add-remove index sources, GitHub install/update/remove, open packages folder, and package-aware import resolution
   - Native File and Code Templates plus template tools for material/function/header, texture sample, noise material, package scaffold, and package wizard workflows
   - Material preview tool window backed by the portable DreamShader Bridge file transport
-  - Unified DreamShader Hub entry for settings, diagnostics, preview, package, and template workflows
+  - Unified DreamShader Hub entry and shared card-based UI surface for settings, diagnostics, preview, package, and template workflows
 description_zh: |
   面向 JetBrains Rider 的完整 DreamShaderLang 支持，覆盖 `.dsm`、`.dsf`、`.dsh` 文件，从语言核心到工具集成。
 
@@ -56,7 +56,7 @@ description_zh: |
   - 包工具：带搜索/筛选/详情/安装状态标记的 package store 对话框、后台安装-更新-移除、增删索引源、GitHub 安装/更新/移除、打开包目录，以及包感知的 import 解析
   - 原生 File and Code Templates，以及材质/函数/头文件、贴图采样、噪声材质、包脚手架与包向导的模板工具
   - 基于 DreamShader Bridge 文件传输的材质预览工具窗口
-  - 统一的 DreamShader Hub 入口，整合设置、诊断、预览、包与模板工作流
+  - 统一的 DreamShader Hub 入口与卡片化共享 UI 表面，整合设置、诊断、预览、包与模板工作流
 <!-- plugin-metadata:end -->
 
 JetBrains Rider plugin for DreamShaderLang (`.dsm`, `.dsf`, `.dsh`).

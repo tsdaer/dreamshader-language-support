@@ -7,11 +7,14 @@
 ### 新增
 
 - 新增声明相邻注释提取：紧邻 DreamShader 声明前的 `//` 与 `/* ... */` 注释现在会随内置声明说明一起显示在悬浮文档中。
+- 新增共享的 `DreamShaderUi` 设计辅助层，为插件工作流面板提供统一的卡片容器、圆角边框、状态胶囊、弱化标签与输入对话框。
 
 ### 变更
 
 - 将 DreamShader Live Templates 注册更新为当前 IntelliJ Platform 推荐的 `defaultLiveTemplates` 扩展点写法，并移除过时的 provider 实现。
 - 集中 DreamShader 文件、声明、直接子声明/section、命名空间路径与声明注释等常用 PSI 遍历辅助逻辑，让导航、引用、结构视图、符号模型、诊断与纯文本符号补全共享同一套 tree-walking 行为。
+- 优化跨文件引用搜索：不再全工作区遍历文件系统，而是通过 IntelliJ 词索引、同目录导入候选与 direct import 校验来缓存反向 importer 发现结果。
+- 将 Bridge、Package Store、材质预览、设置、模板、Hub 与欢迎页等面板统一迁移到共享 DreamShader UI 表面，包含卡片式包列表/详情、更清晰的空状态、GitHub 操作提示与分组设置区块。
 
 ## [0.0.5] - 2026-06-15
 
@@ -126,6 +129,7 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[0.0.6]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.5...0.0.6
 [0.0.5]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...0.0.5
 [0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4
 [0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3

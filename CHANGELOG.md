@@ -7,11 +7,14 @@
 ### Added
 
 - Added declaration-adjacent comment extraction for hover docs, so `//` and `/* ... */` comments immediately before a DreamShader declaration are shown with the built-in declaration documentation.
+- Added a shared `DreamShaderUi` design helper layer for card surfaces, rounded borders, status pills, muted labels, and consistent input dialogs across plugin workflow panels.
 
 ### Changed
 
 - Updated DreamShader live template registration to the current IntelliJ Platform `defaultLiveTemplates` extension-point style and removed the deprecated provider implementation.
 - Centralized common PSI traversal helpers for DreamShader files, declarations, direct child declarations/sections, namespace paths, and declaration comments so navigation, references, structure view, symbol model, diagnostics, and plain-text symbol completion share the same tree-walking behavior.
+- Optimized cross-file reference search by replacing the full workspace filesystem walk with cached reverse-import discovery that uses IntelliJ word indexes, nearby import candidates, and direct-import verification.
+- Refreshed the Bridge, Package Store, Material Preview, Settings, Template, Hub, and Welcome panels onto the shared DreamShader UI surface, including card-style package rows/details, clearer empty states, GitHub action affordances, and grouped settings sections.
 
 ## [0.0.5] - 2026-06-15
 
@@ -118,6 +121,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[0.0.6]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.5...0.0.6
 [0.0.5]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...0.0.5
 [0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4
 [0.0.3]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.2...0.0.3
