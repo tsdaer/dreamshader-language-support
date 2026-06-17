@@ -2,6 +2,17 @@
 
 # dreamshader-language-support Changelog
 
+## [0.0.6] - 2026-06-17
+
+### Added
+
+- Added declaration-adjacent comment extraction for hover docs, so `//` and `/* ... */` comments immediately before a DreamShader declaration are shown with the built-in declaration documentation.
+
+### Changed
+
+- Updated DreamShader live template registration to the current IntelliJ Platform `defaultLiveTemplates` extension-point style and removed the deprecated provider implementation.
+- Centralized common PSI traversal helpers for DreamShader files, declarations, direct child declarations/sections, namespace paths, and declaration comments so navigation, references, structure view, symbol model, diagnostics, and plain-text symbol completion share the same tree-walking behavior.
+
 ## [0.0.5] - 2026-06-15
 
 ### Added
@@ -20,12 +31,9 @@
 - Added spellchecking support for DreamShader comments and `VirtualFunction` `Description` strings while avoiding noisy checks for paths and code-like strings.
 - Added conservative `Substrate` expression diagnostics for arithmetic, swizzles, vector constructor arguments, and ternary branch merges that can fail later in the Bridge stage.
 - Added targeted `Path(...)` object-segment suffix warnings for Bridge-breaking asset suffixes such as `.uasset`, `.umap`, and common image extensions.
-- Added declaration-adjacent comment extraction for hover docs, so `//` and `/* ... */` comments immediately before a DreamShader declaration are shown with the built-in declaration documentation.
 
 ### Changed
 
-- Updated DreamShader live template registration to the current IntelliJ Platform `defaultLiveTemplates` extension-point style and removed the deprecated provider implementation.
-- Centralized common PSI traversal helpers for DreamShader files, declarations, direct child declarations/sections, namespace paths, and declaration comments so navigation, references, structure view, symbol model, diagnostics, and plain-text symbol completion share the same tree-walking behavior.
 - Split parameter inlay hints from the Code Vision setting by adding the `enableInlayParameterHints` project setting; disabling Code Vision no longer hides parameter hints.
 - `ALIGN_SECTION_ASSIGNMENTS` now aligns direct simple assignments inside sections by blank-line and nested-block groups, and Bridge diagnostic gutter markers prefer jumping to the diagnostic source line/column.
 - Cached semantic diagnostic inputs more aggressively: file diagnostics now reuse cached source text, whole-file tokens, declaration contexts, section bodies, typed declarations, callable signatures, and body-level token slices across hot semantic passes.

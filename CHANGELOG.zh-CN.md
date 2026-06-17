@@ -2,6 +2,17 @@
 
 # dreamshader-language-support 更新日志
 
+## [0.0.6] - 2026-06-17
+
+### 新增
+
+- 新增声明相邻注释提取：紧邻 DreamShader 声明前的 `//` 与 `/* ... */` 注释现在会随内置声明说明一起显示在悬浮文档中。
+
+### 变更
+
+- 将 DreamShader Live Templates 注册更新为当前 IntelliJ Platform 推荐的 `defaultLiveTemplates` 扩展点写法，并移除过时的 provider 实现。
+- 集中 DreamShader 文件、声明、直接子声明/section、命名空间路径与声明注释等常用 PSI 遍历辅助逻辑，让导航、引用、结构视图、符号模型、诊断与纯文本符号补全共享同一套 tree-walking 行为。
+
 ## [0.0.5] - 2026-06-15
 
 ### 新增
@@ -20,12 +31,9 @@
 - 新增拼写检查支持：覆盖 DreamShader 注释与 `VirtualFunction` 的 `Description` 字符串，同时避免对路径和代码风格字符串产生噪声。
 - 新增保守的 `Substrate` 表达式诊断，覆盖算术、swizzle、向量构造参数与三元分支合并等可能在 Bridge 阶段失败的场景。
 - 新增 `Path(...)` 对象段后缀警告，可提示 `.uasset`、`.umap` 与常见图片扩展名等会破坏 Bridge 的资源后缀。
-- 新增声明相邻注释提取：紧邻 DreamShader 声明前的 `//` 与 `/* ... */` 注释现在会随内置声明说明一起显示在悬浮文档中。
 
 ### 变更
 
-- 将 DreamShader Live Templates 注册更新为当前 IntelliJ Platform 推荐的 `defaultLiveTemplates` 扩展点写法，并移除过时的 provider 实现。
-- 集中 DreamShader 文件、声明、直接子声明/section、命名空间路径与声明注释等常用 PSI 遍历辅助逻辑，让导航、引用、结构视图、符号模型、诊断与纯文本符号补全共享同一套 tree-walking 行为。
 - 将参数内联提示从 Code Vision 设置中拆分出来，新增 `enableInlayParameterHints` 项目设置；关闭 Code Vision 不再隐藏参数提示。
 - `ALIGN_SECTION_ASSIGNMENTS` 现在会实际对齐 section 内直接简单赋值，并按空行和嵌套 block 分组；Bridge 诊断 gutter marker 会优先跳转到诊断的源码行列。
 - 更积极地缓存语义诊断输入：文件诊断现在会复用源码文本、整文件 token、声明上下文、section body、类型声明、可调用签名与 body 级 token 切片，减少热路径重复分析。
