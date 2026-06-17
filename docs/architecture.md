@@ -16,6 +16,9 @@ Bridge integration, and package tooling without breaking existing behavior.
 - `DreamShaderPsiParser`: permissive parser that always tries to recover and
   produce declaration/section nodes.
 - `DreamShaderParserDefinition`: IntelliJ wiring for lexer/parser/PSI creation.
+- `DreamShaderPsiUtil`: shared PSI traversal helpers for DreamShader files,
+  declaration lists, direct child declarations/sections, namespace paths, and
+  declaration-adjacent comments.
 
 Design goal:
 - Preserve usable PSI under partially invalid code so completion/diagnostics
@@ -63,6 +66,8 @@ Design goal:
   - declaration-level Rename input validation that follows DreamShader identifier and keyword rules, including `Name="Path/Leaf"` declarations whose path prefix is preserved by PSI rename
 - `DreamShaderRefactoringSupportProvider`
   - declaration-level Safe Delete availability backed by the shared reference search model
+- `DreamShaderPsiUtil`
+  - centralizes common PSI tree walking used by navigation, references, structure view, symbol model, diagnostics, and plain-text symbol completion
 
 Current boundary:
 - References are lightweight and computed within the import-connected closure (source file + files it imports/importers across recursive chains), then constrained by IDE/user-provided search scope (`GlobalSearchScope` / `LocalSearchScope`), not full workspace/global semantic indexing.
@@ -168,7 +173,8 @@ This plugin currently follows a layered architecture:
 3. Editor intelligence
 - Completion (`DreamShaderCompletionContributor`) uses PSI-first context analysis with lexer fallback.
 - Signature help and inlay hints consume call-signature parsing utilities (current implementation is parameter inlay hints, not IntelliJ Code Vision lenses).
-- Navigation/references rely on declaration symbol extraction and identifier matching.
+- Hover docs include built-in declaration docs, catalog-backed `UE.*` / `Substrate.*` docs, local variable info, and adjacent declaration comments.
+- Navigation/references rely on declaration symbol extraction, shared PSI traversal helpers, and identifier matching.
 
 4. Diagnostics pipeline
 - `DreamShaderSemanticAnnotator` is the central diagnostic entry and aggregates:

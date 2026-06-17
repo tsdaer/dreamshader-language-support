@@ -30,8 +30,11 @@ Completed:
 - Added conservative `Substrate` expression diagnostics for arithmetic, swizzles, vector constructors, and ternary branch merges.
 - Wired `UE.*` go-to declaration to the Unreal source locator, preferring Unreal header targets when source scanning resolves a match and preserving catalog fallback behavior.
 - Added DreamShader live templates and conservative postfix templates.
+- Updated live template registration to the current IntelliJ Platform `defaultLiveTemplates` extension-point form and removed the deprecated provider implementation.
 - Added Goto Symbol and Goto Class contributors backed by DreamShader declaration search.
+- Centralized DreamShader PSI traversal/documentation helpers in `DreamShaderPsiUtil`, now shared by declaration search, qualified names, goto declaration, references, structure view, plain-text symbol completion, symbol model, and semantic diagnostics.
 - Integrated spellchecking for comments and `VirtualFunction` `Description` strings while avoiding noisy path/code-like string checks.
+- Added declaration-adjacent comment extraction for hover docs.
 - Expanded inline color preview coverage for color constructor aliases, hex colors, and conservative 0-255 channel forms.
 - Rendered `opt` qualifiers and default values in callable hover/signature output.
 - Shared declaration context across diagnostic passes by caching sections, section bodies, typed declarations, child declarations, callable signatures, and reusable body tokens.
@@ -48,6 +51,7 @@ Verification used during the optimization pass:
 - `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoContributorsTest`
 - `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSpellcheckingStrategyTest`
 - `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderPostfixTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateCommandsTest`
+- `./gradlew.bat test`
 
 ## Current Progress
 

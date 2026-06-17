@@ -5,12 +5,12 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLe
 import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderParserDefinition
 import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderPsiParser
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.intellij.lang.ASTNode
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
-import com.intellij.psi.util.PsiTreeUtil
 
 /**
  * Builds a lightweight declaration/section symbol model used by structure and
@@ -21,8 +21,7 @@ import com.intellij.psi.util.PsiTreeUtil
  */
 object DreamShaderSymbolModelBuilder {
     fun build(file: PsiFile): DreamShaderSymbolModel {
-        val declarations = PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java)
-            .filter { PsiTreeUtil.getParentOfType(it, DreamShaderDeclaration::class.java, true) == null }
+        val declarations = DreamShaderPsiUtil.topLevelDeclarations(file)
             .mapNotNull { declaration -> buildDeclarationSymbol(declaration) }
             .toList()
 
@@ -94,18 +93,11 @@ object DreamShaderSymbolModelBuilder {
     }
 
     private fun directChildDeclarations(parentDeclaration: DreamShaderDeclaration): List<DreamShaderDeclaration> {
-        return PsiTreeUtil.findChildrenOfType(parentDeclaration, DreamShaderDeclaration::class.java)
-            .filter { declaration ->
-                declaration != parentDeclaration &&
-                    PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true) == parentDeclaration
-            }
-            .toList()
+        return DreamShaderPsiUtil.directChildDeclarations(parentDeclaration)
     }
 
     private fun directChildSections(declaration: DreamShaderDeclaration): List<DreamShaderSection> {
-        return PsiTreeUtil.findChildrenOfType(declaration, DreamShaderSection::class.java)
-            .filter { section -> PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null }
-            .toList()
+        return DreamShaderPsiUtil.directSectionsOf(declaration)
     }
 
     private fun buildSectionSymbol(section: DreamShaderSection): DreamShaderSymbol? {

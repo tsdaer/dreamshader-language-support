@@ -12,6 +12,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTo
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderPackageRootImportAnalysis
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateService
@@ -2987,26 +2988,15 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
     // 工具函数：PSI/token 遍历与文本范围辅助处理。
     private fun topLevelDeclarations(file: DreamShaderPsiFile): List<DreamShaderDeclaration> {
-        return PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java)
-            .filter { PsiTreeUtil.getParentOfType(it, DreamShaderDeclaration::class.java, true) == null }
+        return DreamShaderPsiUtil.topLevelDeclarations(file)
     }
 
     private fun directSectionsOf(declaration: DreamShaderDeclaration): List<DreamShaderSection> {
-        return PsiTreeUtil.findChildrenOfType(declaration, DreamShaderSection::class.java)
-            .filter { section ->
-                PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null &&
-                    PsiTreeUtil.getParentOfType(section, DreamShaderDeclaration::class.java, true) == declaration
-            }
-            .toList()
+        return DreamShaderPsiUtil.directSectionsOf(declaration)
     }
 
     private fun directChildDeclarations(declaration: DreamShaderDeclaration): List<DreamShaderDeclaration> {
-        return PsiTreeUtil.findChildrenOfType(declaration, DreamShaderDeclaration::class.java)
-            .filter { child ->
-                child != declaration &&
-                    PsiTreeUtil.getParentOfType(child, DreamShaderDeclaration::class.java, true) == declaration
-            }
-            .toList()
+        return DreamShaderPsiUtil.directChildDeclarations(declaration)
     }
 
     private fun topLevelTypedDeclarations(section: DreamShaderSection?): List<String> {
@@ -3538,8 +3528,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
 
         private fun computeFileDiagnosticInputsStatic(file: DreamShaderPsiFile): FileDiagnosticInputs {
             val sourceText = file.text
-            val topLevelDeclarations = PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java)
-                .filter { PsiTreeUtil.getParentOfType(it, DreamShaderDeclaration::class.java, true) == null }
+            val topLevelDeclarations = DreamShaderPsiUtil.topLevelDeclarations(file)
             return FileDiagnosticInputs(
                 sourceText = sourceText,
                 tokens = lexFileTokens(sourceText, 0, file.textLength),
@@ -3628,21 +3617,11 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
 
         private fun directSectionsOfStatic(declaration: DreamShaderDeclaration): List<DreamShaderSection> {
-            return PsiTreeUtil.findChildrenOfType(declaration, DreamShaderSection::class.java)
-                .filter { section ->
-                    PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null &&
-                        PsiTreeUtil.getParentOfType(section, DreamShaderDeclaration::class.java, true) == declaration
-                }
-                .toList()
+            return DreamShaderPsiUtil.directSectionsOf(declaration)
         }
 
         private fun directChildDeclarationsStatic(declaration: DreamShaderDeclaration): List<DreamShaderDeclaration> {
-            return PsiTreeUtil.findChildrenOfType(declaration, DreamShaderDeclaration::class.java)
-                .filter { child ->
-                    child != declaration &&
-                        PsiTreeUtil.getParentOfType(child, DreamShaderDeclaration::class.java, true) == declaration
-                }
-                .toList()
+            return DreamShaderPsiUtil.directChildDeclarations(declaration)
         }
 
         private fun sectionBodyStatic(section: DreamShaderSection): SectionBody? {

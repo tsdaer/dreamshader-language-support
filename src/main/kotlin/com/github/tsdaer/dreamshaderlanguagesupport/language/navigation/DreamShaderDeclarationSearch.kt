@@ -1,13 +1,9 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileType
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
 import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiTreeUtil
 
 internal object DreamShaderDeclarationSearch {
     fun allDeclarations(project: Project, includeNonProjectItems: Boolean): List<DreamShaderDeclaration> {
@@ -16,20 +12,11 @@ internal object DreamShaderDeclarationSearch {
         } else {
             GlobalSearchScope.projectScope(project)
         }
-        val psiManager = PsiManager.getInstance(project)
-
-        return FileTypeIndex.getFiles(DreamShaderFileType.INSTANCE, scope)
-            .asSequence()
-            .mapNotNull(psiManager::findFile)
-            .filter { it.language == DreamShaderLanguage }
-            .flatMap { file ->
-                PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java).asSequence()
-            }
-            .toList()
+        return DreamShaderPsiUtil.allDeclarations(project, scope)
     }
 
     fun parentDeclaration(declaration: DreamShaderDeclaration): DreamShaderDeclaration? {
-        return PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true)
+        return DreamShaderPsiUtil.parentDeclaration(declaration)
     }
 
     fun isNamespaceMember(declaration: DreamShaderDeclaration): Boolean {
@@ -37,22 +24,10 @@ internal object DreamShaderDeclarationSearch {
     }
 
     fun namespacePath(declaration: DreamShaderDeclaration): List<String> {
-        val path = mutableListOf<String>()
-        var current = parentDeclaration(declaration)
-        while (current != null) {
-            if (current.keywordText() == "namespace") {
-                current.declarationName()?.takeIf { it.isNotBlank() }?.let(path::add)
-            }
-            current = parentDeclaration(current)
-        }
-        path.reverse()
-        return path
+        return DreamShaderPsiUtil.enclosingNamespacePath(declaration)
     }
 
     fun qualifiedName(declaration: DreamShaderDeclaration): String {
-        val name = declaration.declarationName().orEmpty().ifBlank { "<anonymous>" }
-        val namespacePath = namespacePath(declaration)
-        if (namespacePath.isEmpty()) return name
-        return namespacePath.joinToString("::", postfix = "::") + name
+        return DreamShaderPsiUtil.qualifiedDeclarationName(declaration) ?: "<anonymous>"
     }
 }

@@ -29,6 +29,7 @@ Parser and PSI infra:
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderElementType.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderElementType.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderPsiFile.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderPsiFile.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderPsiElement.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/core/DreamShaderPsiElement.kt)
+- [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/psi/DreamShaderPsiUtil.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/psi/DreamShaderPsiUtil.kt)
 - [`src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/psi/DreamShaderPsiElementFactory.kt`](../src/main/kotlin/com/github/tsdaer/dreamshaderlanguagesupport/language/psi/DreamShaderPsiElementFactory.kt)
 
 Typed PSI nodes:

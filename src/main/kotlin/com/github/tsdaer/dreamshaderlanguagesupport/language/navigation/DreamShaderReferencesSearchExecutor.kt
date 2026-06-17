@@ -1,9 +1,9 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
-import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileType
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
@@ -11,7 +11,6 @@ import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.SearchScope
@@ -92,7 +91,7 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
     private fun buildDeclarationProfile(declaration: DreamShaderDeclaration): DeclarationProfile {
         val declarationName = declaration.declarationName().orEmpty()
         if (declaration.keywordText() == "namespace") {
-            val namespacePath = enclosingNamespacePath(declaration) + declarationName
+        val namespacePath = DreamShaderPsiUtil.enclosingNamespacePath(declaration) + declarationName
             return DeclarationProfile(
                 namespacePath = namespacePath,
                 isNamespaceDeclaration = true
@@ -100,7 +99,7 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
         }
 
         return DeclarationProfile(
-            namespacePath = enclosingNamespacePath(declaration),
+            namespacePath = DreamShaderPsiUtil.enclosingNamespacePath(declaration),
             isNamespaceDeclaration = false
         )
     }
@@ -125,24 +124,8 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
             return qualifierChainBefore == profile.namespacePath
         }
 
-        val enclosingNamespacePath = enclosingNamespacePath(identifier)
+        val enclosingNamespacePath = DreamShaderPsiUtil.enclosingNamespacePathAt(identifier)
         return enclosingNamespacePath == profile.namespacePath
-    }
-
-    private fun enclosingNamespacePath(element: PsiElement): List<String> {
-        val path = mutableListOf<String>()
-        var current = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false)
-        while (current != null) {
-            if (current.keywordText() == "namespace") {
-                val name = current.declarationName()
-                if (!name.isNullOrBlank()) {
-                    path.add(name)
-                }
-            }
-            current = PsiTreeUtil.getParentOfType(current, DreamShaderDeclaration::class.java, true)
-        }
-        path.reverse()
-        return path
     }
 
     private fun hasDoubleColonAfter(text: String, startOffset: Int): Boolean {
@@ -252,9 +235,8 @@ class DreamShaderReferencesSearchExecutor : com.intellij.util.QueryExecutor<PsiR
         psiManager: PsiManager
     ): List<PsiFile> {
         val filesByKey = linkedMapOf<String, PsiFile>()
-        FileTypeIndex.getFiles(DreamShaderFileType.INSTANCE, GlobalSearchScope.allScope(project)).forEach { vf ->
-            val psi = psiManager.findFile(vf) ?: return@forEach
-            if (psi.language != DreamShaderLanguage) return@forEach
+        DreamShaderPsiUtil.dreamShaderFiles(project, GlobalSearchScope.allScope(project)).forEach { psi ->
+            val vf = psi.virtualFile ?: return@forEach
             val key = fileKey(vf) ?: return@forEach
             filesByKey.putIfAbsent(key, psi)
         }

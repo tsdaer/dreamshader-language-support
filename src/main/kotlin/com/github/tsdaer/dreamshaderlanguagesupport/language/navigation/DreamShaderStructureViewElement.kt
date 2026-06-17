@@ -2,13 +2,13 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderIcons
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.intellij.ide.structureView.StructureViewTreeElement
 import com.intellij.ide.util.treeView.smartTree.TreeElement
 import com.intellij.navigation.ItemPresentation
 import com.intellij.pom.Navigatable
 import com.intellij.psi.PsiElement
-import com.intellij.psi.util.PsiTreeUtil
 import javax.swing.Icon
 
 /**
@@ -55,37 +55,24 @@ class DreamShaderStructureViewElement(
     override fun getChildren(): Array<TreeElement> {
         return when (element) {
             is DreamShaderPsiFile -> {
-                PsiTreeUtil.findChildrenOfType(element, DreamShaderDeclaration::class.java)
-                    .filter { declaration ->
-                        PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true) == null
-                    }
+                DreamShaderPsiUtil.topLevelDeclarations(element)
                     .map { DreamShaderStructureViewElement(it) }
                     .toTypedArray()
             }
             is DreamShaderDeclaration -> {
                 if (element.keywordText() == "namespace") {
-                    val childDeclarations = PsiTreeUtil.findChildrenOfType(element, DreamShaderDeclaration::class.java)
-                        .filter { declaration ->
-                            declaration != element &&
-                                PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true) == element
-                        }
+                    val childDeclarations = DreamShaderPsiUtil.directChildDeclarations(element)
                     if (childDeclarations.isNotEmpty()) {
                         childDeclarations
                             .map { DreamShaderStructureViewElement(it) }
                             .toTypedArray()
                     } else {
-                        PsiTreeUtil.findChildrenOfType(element, DreamShaderSection::class.java)
-                            .filter { section ->
-                                PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null
-                            }
+                        DreamShaderPsiUtil.directSectionsOf(element)
                             .map { DreamShaderStructureViewElement(it) }
                             .toTypedArray()
                     }
                 } else {
-                    PsiTreeUtil.findChildrenOfType(element, DreamShaderSection::class.java)
-                        .filter { section ->
-                            PsiTreeUtil.getParentOfType(section, DreamShaderSection::class.java, true) == null
-                        }
+                    DreamShaderPsiUtil.directSectionsOf(element)
                         .map { DreamShaderStructureViewElement(it) }
                         .toTypedArray()
                 }

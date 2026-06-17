@@ -18,7 +18,7 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
             """.trimIndent()
         )
 
-        val offset = file.text.indexOf("Util")
+        val offset = file.text.indexOf("Function Util") + "Function ".length
         val element = file.findElementAt(offset)
         val doc = provider.generateDoc(element, element)
 
@@ -46,6 +46,29 @@ class DreamShaderDocumentationProviderTest : BasePlatformTestCase() {
         assertNotNull(doc)
         assertTrue(doc!!.contains("Function Util"))
         assertTrue(doc.contains("local function declaration"))
+    }
+
+    fun testDeclarationHoverIncludesPrecedingLineCommentDocumentation() {
+        val file = myFixture.configureByText(
+            "hover_declaration_comment.dsf",
+            """
+            // Utility used by material graph snippets.
+            Function Util {
+                Graph {
+                    float3 v = float3(0.0, 1.0, 0.0);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val offset = file.text.indexOf("Function Util") + "Function ".length
+        val element = file.findElementAt(offset)
+        val doc = provider.generateDoc(element, element)
+
+        assertNotNull(doc)
+        assertTrue(doc!!.contains("Function Util"))
+        assertTrue(doc.contains("local function declaration"))
+        assertTrue(doc.contains("Utility used by material graph snippets."))
     }
 
     fun testShaderNameAttributeUsedAsDeclarationDisplayName() {

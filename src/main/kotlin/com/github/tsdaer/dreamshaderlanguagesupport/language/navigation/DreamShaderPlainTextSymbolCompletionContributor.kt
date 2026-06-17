@@ -1,23 +1,21 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
-import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
-import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
 import com.intellij.codeInsight.completion.PlainTextSymbolCompletionContributor
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.psi.PsiFile
-import com.intellij.psi.util.PsiTreeUtil
 
 class DreamShaderPlainTextSymbolCompletionContributor : PlainTextSymbolCompletionContributor {
     override fun getLookupElements(file: PsiFile, invocationCount: Int, prefix: String): Collection<LookupElement> {
         if (file.language != DreamShaderLanguage) return emptyList()
         val provider = DreamShaderQualifiedNameProvider()
         val result = linkedSetOf<String>()
-        PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java)
+        DreamShaderPsiUtil.declarationsIn(file)
             .forEach { declaration ->
                 provider.getQualifiedName(declaration)?.let(result::add)
-                PsiTreeUtil.findChildrenOfType(declaration, DreamShaderSection::class.java)
+                DreamShaderPsiUtil.directSectionsOf(declaration)
                     .forEach { section -> provider.getQualifiedName(section)?.let(result::add) }
             }
         return result

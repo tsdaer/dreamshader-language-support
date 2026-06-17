@@ -10,6 +10,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderS
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderSection
 import com.intellij.lang.documentation.AbstractDocumentationProvider
 import com.intellij.openapi.editor.Editor
@@ -119,6 +120,7 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         val kind = overrideDoc(element, overrideKey)
             ?: DreamShaderDocumentationData.declarationDescription(keyword)
             ?: DreamShaderBundle.message("docs.declaration.default")
+        val userDoc = DreamShaderPsiUtil.precedingDocumentationComment(declaration)
 
         return buildString {
             append("<b>")
@@ -127,6 +129,10 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             append(name)
             append("</b><br/>")
             append(kind)
+            if (!userDoc.isNullOrBlank()) {
+                append("<br/><br/>")
+                append(escapeHtml(userDoc).replace("\n", "<br/>"))
+            }
         }
     }
 
@@ -592,6 +598,13 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
 
     private fun overrideDoc(element: PsiElement, key: String): String? {
         return DreamShaderHoverOverrideService.resolve(element.project, key)
+    }
+
+    private fun escapeHtml(text: String): String {
+        return text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
     }
 
     private data class LexedToken(

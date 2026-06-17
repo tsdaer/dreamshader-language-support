@@ -121,9 +121,8 @@
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderDefaultTemplatePropertiesProvider"/>
         <liveTemplateContext
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplateContext"
-                contextId="Markdown"/>
-        <defaultLiveTemplatesProvider
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplatesProvider"/>
+                contextId="DREAM_SHADER"/>
+        <defaultLiveTemplates file="/liveTemplates/DreamShader.xml"/>
         <codeInsight.template.postfixTemplateProvider
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderPostfixTemplateProvider"/>

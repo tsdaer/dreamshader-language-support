@@ -4,6 +4,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTo
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -185,7 +186,7 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
 
         val namespaceDeclaration = resolveNamespaceByPath(file, namespacePath)
         if (namespaceDeclaration != null) {
-            return directChildDeclarations(namespaceDeclaration)
+            return DreamShaderPsiUtil.directChildDeclarations(namespaceDeclaration)
                 .firstOrNull { declaration -> declaration.declarationName() == memberName }
         }
 
@@ -197,13 +198,13 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
         element: PsiElement,
         symbolName: String
     ): DreamShaderDeclaration? {
-        val namespacePath = enclosingNamespacePath(element)
+        val namespacePath = DreamShaderPsiUtil.enclosingNamespacePathAt(element)
         if (namespacePath.isEmpty()) return null
 
         for (depth in namespacePath.size downTo 1) {
             val candidatePath = namespacePath.subList(0, depth)
             val namespaceDeclaration = resolveNamespaceByPath(file, candidatePath) ?: continue
-            val member = directChildDeclarations(namespaceDeclaration)
+            val member = DreamShaderPsiUtil.directChildDeclarations(namespaceDeclaration)
                 .firstOrNull { declaration -> declaration.declarationName() == symbolName }
             if (member != null) return member
         }
@@ -230,7 +231,7 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
         if (namespacePath.isEmpty() || memberName.isBlank()) return null
         for (importedFile in resolveImportedDreamShaderFiles(file)) {
             val namespace = resolveNamespaceByPath(importedFile, namespacePath) ?: continue
-            val member = directChildDeclarations(namespace)
+            val member = DreamShaderPsiUtil.directChildDeclarations(namespace)
                 .firstOrNull { declaration -> declaration.declarationName() == memberName }
             if (member != null) return member
         }
@@ -239,7 +240,7 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
 
     private fun resolveTopLevelDeclarationBySymbol(file: PsiElement, symbolName: String): DreamShaderDeclaration? {
         if (symbolName.isBlank()) return null
-        return topLevelDeclarations(file).firstOrNull { declarationMatchesSymbolName(it, symbolName) }
+        return DreamShaderPsiUtil.topLevelDeclarations(file).firstOrNull { declarationMatchesSymbolName(it, symbolName) }
     }
 
     private fun resolveTopLevelDeclarationBySymbolInImportedFiles(
@@ -289,23 +290,6 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
         val sourceFile = file.containingFile ?: return emptyList()
         return DreamShaderImportClosureResolver.resolveImportClosure(sourceFile)
             .drop(1)
-    }
-
-    private fun topLevelDeclarations(file: PsiElement): List<DreamShaderDeclaration> {
-        return PsiTreeUtil.findChildrenOfType(file, DreamShaderDeclaration::class.java)
-            .filter { declaration ->
-                PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true) == null
-            }
-            .toList()
-    }
-
-    private fun directChildDeclarations(parentDeclaration: DreamShaderDeclaration): List<DreamShaderDeclaration> {
-        return PsiTreeUtil.findChildrenOfType(parentDeclaration, DreamShaderDeclaration::class.java)
-            .filter { declaration ->
-                declaration != parentDeclaration &&
-                    PsiTreeUtil.getParentOfType(declaration, DreamShaderDeclaration::class.java, true) == parentDeclaration
-            }
-            .toList()
     }
 
     private fun hasDoubleColonAfter(text: String, startOffset: Int): Boolean {
@@ -377,35 +361,19 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
 
     private fun resolveNamespaceByPath(file: PsiElement, namespacePath: List<String>): DreamShaderDeclaration? {
         if (namespacePath.isEmpty()) return null
-        var current = topLevelDeclarations(file)
+        var current = DreamShaderPsiUtil.topLevelDeclarations(file)
             .firstOrNull { declaration ->
                 declaration.keywordText() == "namespace" && declaration.declarationName() == namespacePath.first()
             } ?: return null
 
         for (i in 1 until namespacePath.size) {
             val segment = namespacePath[i]
-            current = directChildDeclarations(current)
+            current = DreamShaderPsiUtil.directChildDeclarations(current)
                 .firstOrNull { declaration ->
                     declaration.keywordText() == "namespace" && declaration.declarationName() == segment
                 } ?: return null
         }
         return current
-    }
-
-    private fun enclosingNamespacePath(element: PsiElement): List<String> {
-        val path = mutableListOf<String>()
-        var current = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false)
-        while (current != null) {
-            if (current.keywordText() == "namespace") {
-                val namespaceName = current.declarationName()
-                if (!namespaceName.isNullOrBlank()) {
-                    path.add(namespaceName)
-                }
-            }
-            current = PsiTreeUtil.getParentOfType(current, DreamShaderDeclaration::class.java, true)
-        }
-        path.reverse()
-        return path
     }
 
     private fun readQualifierChainBeforeIdentifier(text: String, anchorOffset: Int): List<String> {

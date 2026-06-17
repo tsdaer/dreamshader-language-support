@@ -15,7 +15,7 @@ This repository now uses a role-oriented file layout under `src/main/kotlin/com/
 - `settings/`: project settings, settings configurable, hub entry action
 - `bridge/`: Bridge integration and diagnostics mapping
 - `packages/`: package store/index/install/import tooling
-- `psi/`: typed PSI nodes and factories
+- `psi/`: typed PSI nodes, PSI factories, and shared PSI traversal/documentation utilities
 - `symbols/`: symbol model and builder
 - `templates/`: file/package template actions and services
 
