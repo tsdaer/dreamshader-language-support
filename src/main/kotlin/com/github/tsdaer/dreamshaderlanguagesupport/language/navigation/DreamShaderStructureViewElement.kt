@@ -71,6 +71,12 @@ class DreamShaderStructureViewElement(
                             .map { DreamShaderStructureViewElement(it) }
                             .toTypedArray()
                     }
+                } else if (element.keywordText() == "group" || element.keywordText() == "propgroup") {
+                    val childDeclarations = DreamShaderPsiUtil.directChildDeclarations(element)
+                    val childSections = DreamShaderPsiUtil.directSectionsOf(element)
+                    (childDeclarations + childSections)
+                        .map { DreamShaderStructureViewElement(it) }
+                        .toTypedArray()
                 } else {
                     DreamShaderPsiUtil.directSectionsOf(element)
                         .map { DreamShaderStructureViewElement(it) }

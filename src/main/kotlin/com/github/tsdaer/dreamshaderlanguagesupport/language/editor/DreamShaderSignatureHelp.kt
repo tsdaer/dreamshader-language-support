@@ -457,8 +457,9 @@ object DreamShaderSignatureHelpAnalyzer {
         val signatures = linkedMapOf<String, DreamShaderCallSignature>()
         val matcher = USER_FUNCTION_DECLARATION_HEAD_PATTERN.matcher(sourceText)
         while (matcher.find()) {
-            val functionName = matcher.group(2)?.trim().orEmpty()
+            val functionName = matcher.group(3)?.trim().orEmpty()
             if (functionName.isBlank()) continue
+            val returnType = matcher.group(2)?.trim()
 
             val leftParenOffset = matcher.end() - 1
             val rightParenOffset = findMatchingRightParen(sourceText, leftParenOffset) ?: continue
@@ -472,6 +473,10 @@ object DreamShaderSignatureHelpAnalyzer {
                 append("(")
                 append(parameters.joinToString(", ") { formatDeclaredParameter(it) })
                 append(")")
+                if (!returnType.isNullOrBlank()) {
+                    append(" : ")
+                    append(returnType)
+                }
             }
             signatures[functionName.lowercase(Locale.ROOT)] = signature(presentableText, *parameterNames.toTypedArray())
         }
@@ -781,7 +786,7 @@ object DreamShaderSignatureHelpAnalyzer {
     private fun isIdentifierChar(ch: Char): Boolean = ch == '_' || ch.isLetterOrDigit()
 
     private val USER_FUNCTION_DECLARATION_HEAD_PATTERN: Pattern = Pattern.compile(
-        "(?is)\\b(function|graphfunction|virtualfunction)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\("
+        "(?is)\\b(function|graphfunction|virtualfunction)\\s+(?:([A-Za-z_][A-Za-z0-9_]*)\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\s*\\("
     )
     private val DECLARATION_IDENTIFIER_PATTERN: Pattern = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*")
     private val PARAMETER_QUALIFIERS = setOf("in", "out", "inout", "const", "static", "opt")

@@ -52,6 +52,24 @@ class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), Dr
         return keyword in DreamShaderLanguageKeywords.FUNCTION_LIKE_DECLARATION_KEYWORDS
     }
 
+    override fun returnType(): String? {
+        var child = node.firstChildNode
+        var seenKeyword = false
+        while (child != null) {
+            if (child.elementType == DreamShaderTokenTypes.KEYWORD) {
+                seenKeyword = true
+            } else if (seenKeyword && child.elementType == DreamShaderTokenTypes.TYPE) {
+                return child.text
+            } else if (seenKeyword && (child.elementType == DreamShaderTokenTypes.IDENTIFIER ||
+                    child.elementType == DreamShaderTokenTypes.LPAREN ||
+                    child.elementType == DreamShaderTokenTypes.STRING)) {
+                break
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
     override fun getName(): String? = declarationName()
 
     override fun getNameIdentifier(): PsiElement? {
@@ -63,6 +81,17 @@ class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), Dr
                 seenKeyword = true
             } else if (seenKeyword && child.elementType == DreamShaderTokenTypes.IDENTIFIER) {
                 return child.psi
+            }
+            child = child.treeNext
+        }
+        child = node.firstChildNode
+        seenKeyword = false
+        while (child != null) {
+            if (child.elementType == DreamShaderTokenTypes.KEYWORD) {
+                seenKeyword = true
+            } else if (seenKeyword && child.elementType == DreamShaderTokenTypes.STRING) {
+                val bodyStart = bodyTextRange()?.startOffset ?: textLength
+                if (child.startOffset < bodyStart) return child.psi
             }
             child = child.treeNext
         }

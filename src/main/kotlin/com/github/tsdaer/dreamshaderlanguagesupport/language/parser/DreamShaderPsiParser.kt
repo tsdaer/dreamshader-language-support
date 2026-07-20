@@ -37,11 +37,12 @@ class DreamShaderPsiParser : PsiParser {
     private fun tryParseDeclaration(builder: PsiBuilder): Boolean {
         if (builder.tokenType != DreamShaderTokenTypes.KEYWORD) return false
         val keywordText = builder.tokenText ?: return false
-        if (!DreamShaderLanguageKeywords.DECLARATION_KEYWORDS.contains(keywordText.lowercase())) return false
+        val lowered = keywordText.lowercase()
+        if (!DreamShaderLanguageKeywords.DECLARATION_KEYWORDS.contains(lowered)) return false
 
         val marker = builder.mark()
         builder.advanceLexer() // declaration keyword
-        val recoveryMode = validateDeclarationHeader(builder)
+        val recoveryMode = validateDeclarationHeader(builder, lowered)
 
         var foundBody = false
         while (!builder.eof()) {
@@ -162,7 +163,7 @@ class DreamShaderPsiParser : PsiParser {
         }
     }
 
-    private fun validateDeclarationHeader(builder: PsiBuilder): HeaderRecoveryMode {
+    private fun validateDeclarationHeader(builder: PsiBuilder, keywordText: String): HeaderRecoveryMode {
         skipTrivia(builder)
         val tokenType = builder.tokenType
         return when (tokenType) {
@@ -172,6 +173,14 @@ class DreamShaderPsiParser : PsiParser {
             }
             DreamShaderTokenTypes.IDENTIFIER,
             DreamShaderTokenTypes.LPAREN -> HeaderRecoveryMode.NONE
+            DreamShaderTokenTypes.TYPE -> {
+                if (keywordText in DreamShaderLanguageKeywords.FUNCTION_LIKE_DECLARATION_KEYWORDS) {
+                    HeaderRecoveryMode.NONE
+                } else {
+                    builder.error(DreamShaderBundle.message("diagnostic.malformedDeclarationExpectedNameOrArgs"))
+                    HeaderRecoveryMode.STOP_AT_DECLARATION_BOUNDARY
+                }
+            }
             DreamShaderTokenTypes.LBRACE -> {
                 builder.error(DreamShaderBundle.message("diagnostic.malformedDeclarationExpectedNameOrArgs"))
                 HeaderRecoveryMode.NONE

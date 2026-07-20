@@ -202,6 +202,8 @@ class DreamShaderLexer : LexerBase() {
             "virtualfunction",
             "selfcontained",
             "inline",
+            "group",
+            "propgroup",
             "if",
             "else",
             "for",

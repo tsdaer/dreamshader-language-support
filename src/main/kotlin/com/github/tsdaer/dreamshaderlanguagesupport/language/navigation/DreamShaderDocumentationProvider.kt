@@ -116,6 +116,7 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
 
         val keyword = declaration.keywordText() ?: return null
         val name = DreamShaderDeclarationPresentation.displayName(declaration).orEmpty().ifBlank { "<anonymous>" }
+        val returnType = declaration.returnType()
         val overrideKey = "declaration.$keyword.description"
         val kind = overrideDoc(element, overrideKey)
             ?: DreamShaderDocumentationData.declarationDescription(keyword)
@@ -127,6 +128,10 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
             append(keyword.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() })
             append(' ')
             append(name)
+            if (!returnType.isNullOrBlank()) {
+                append(" : ")
+                append(returnType)
+            }
             append("</b><br/>")
             append(kind)
             if (!userDoc.isNullOrBlank()) {

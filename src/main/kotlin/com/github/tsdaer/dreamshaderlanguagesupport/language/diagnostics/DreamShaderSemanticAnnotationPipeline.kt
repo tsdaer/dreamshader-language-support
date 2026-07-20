@@ -2085,12 +2085,34 @@ internal class DreamShaderSemanticAnnotationPipeline {
     }
 
     private fun annotateUnsupportedGraphReturnDiagnostics(declarationContexts: List<DeclarationContext>, holder: AnnotationHolder) {
-        annotateUnsupportedGraphKeywordDiagnostics(
-            declarationContexts = declarationContexts,
-            holder = holder,
-            keywords = setOf(UNSUPPORTED_GRAPH_RETURN_KEYWORD)
-        ) {
-            DreamShaderBundle.message("diagnostic.graphDisallowsReturnStatement")
+        val tokenLists = mutableListOf<List<DreamShaderLexedToken>>()
+        declarationContexts.forEach { context ->
+            context.directSections
+                .filter { context.canonicalSectionName(it) == "graph" }
+                .forEach { section ->
+                    context.sectionTokens(section)?.takeIf { it.isNotEmpty() }?.let(tokenLists::add)
+                }
+
+            val keyword = context.keyword
+            if (keyword == "function" || keyword == "graphfunction") {
+                if (context.declaration.returnType() == null) {
+                    context.declarationBodyTokens.takeIf { it.isNotEmpty() }?.let(tokenLists::add)
+                }
+            }
+        }
+
+        val normalizedKeyword = UNSUPPORTED_GRAPH_RETURN_KEYWORD.lowercase(Locale.ROOT)
+        val visitedKeywordOffsets = mutableSetOf<Int>()
+        tokenLists.forEach { tokens ->
+            tokens.forEach { token ->
+                if (token.type != DreamShaderTokenTypes.KEYWORD) return@forEach
+                if (token.text.lowercase(Locale.ROOT) != normalizedKeyword) return@forEach
+                if (!visitedKeywordOffsets.add(token.range.startOffset)) return@forEach
+                holder.newAnnotation(
+                    HighlightSeverity.ERROR,
+                    DreamShaderBundle.message("diagnostic.graphDisallowsReturnStatement")
+                ).range(token.range).create()
+            }
         }
     }
 
@@ -3584,7 +3606,10 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 val context = queue.removeFirst()
                 ordered.add(context)
                 context.directChildDeclarations.forEach { child ->
-                    queue.addLast(buildDeclarationContextStatic(child))
+                    val childKeyword = child.keywordText()
+                    if (childKeyword != "group" && childKeyword != "propgroup") {
+                        queue.addLast(buildDeclarationContextStatic(child))
+                    }
                 }
             }
             return ordered
@@ -3593,11 +3618,16 @@ internal class DreamShaderSemanticAnnotationPipeline {
         private fun buildDeclarationContextStatic(declaration: DreamShaderDeclaration): DeclarationContext {
             val keyword = declaration.keywordText()
             val directSections = directSectionsOfStatic(declaration)
-            val sectionBodies = directSections.mapNotNull { section ->
+            val directChildDecls = directChildDeclarationsStatic(declaration)
+            val groupFlattenedSections = directChildDecls
+                .filter { it.keywordText() == "group" || it.keywordText() == "propgroup" }
+                .flatMap { DreamShaderPsiUtil.directSectionsOf(it) }
+            val allDirectSections = directSections + groupFlattenedSections
+            val sectionBodies = allDirectSections.mapNotNull { section ->
                 sectionBodyStatic(section)?.let { body -> section to body }
             }.toMap()
             val fileText = declaration.containingFile.text
-            val sectionTokensBySection = directSections.mapNotNull { section ->
+            val sectionTokensBySection = allDirectSections.mapNotNull { section ->
                 val body = sectionBodies[section] ?: return@mapNotNull null
                 section to lexFileTokens(fileText, body.startOffset, body.startOffset + body.text.length)
             }.toMap()
@@ -3605,21 +3635,21 @@ internal class DreamShaderSemanticAnnotationPipeline {
                 if (keyword == null) {
                     emptyMap()
                 } else {
-                    directSections
+                    allDirectSections
                         .mapNotNull { section ->
                             DreamShaderLanguageRules.canonicalSectionNameForDeclaration(keyword, section.sectionName())
                                 ?.let { name -> name to section }
                         }
                         .groupBy({ it.first }, { it.second })
                 }
-            val typedDeclarationsBySection = directSections.associateWith { section ->
+            val typedDeclarationsBySection = allDirectSections.associateWith { section ->
                 sectionBodies[section]?.text?.let(::extractTopLevelTypedDeclarationsStatic).orEmpty()
             }
             return DeclarationContext(
                 declaration = declaration,
                 keyword = keyword,
-                directSections = directSections,
-                directChildDeclarations = directChildDeclarationsStatic(declaration),
+                directSections = allDirectSections,
+                directChildDeclarations = directChildDecls,
                 sectionBodies = sectionBodies,
                 sectionTokensBySection = sectionTokensBySection,
                 sectionsByCanonicalNameForDeclaration = sectionsByCanonicalNameForDeclaration,

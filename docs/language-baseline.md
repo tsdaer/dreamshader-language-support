@@ -11,9 +11,9 @@ Primary examples reference (upstream):
 - https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/Examples.md
 
 Reference snapshot used for this README alignment:
-- Checked on `2026-05-29`
+- Checked on `2026-07-20`
 - Upstream doc title: `DreamShaderLang 语法参考`
-- Upstream plugin version noted in doc: `1.3.8`
+- Upstream plugin version noted in doc: `1.6.3`
 
 Examples conformance snapshot:
 - Checked on `2026-05-29`
@@ -65,6 +65,10 @@ Canonical sections:
 - `Options`
 - `Graph`
 
+Property grouping scopes:
+- `Group("Name") { ... }` and legacy `PropGroup("Name") { ... }`: visual grouping scopes that wrap nested sections (e.g. `Properties`, `Inputs`). The contents are flattened into the parent declaration scope for diagnostic purposes.
+- Group is a child declaration allowed inside `Shader`, `ShaderFunction`, `ShaderLayer`, `ShaderLayerBlend` bodies.
+
 Expected behavior highlights:
 - `Inputs` supports optional inputs (`opt`) and default-value usage conventions.
 - `Outputs` supports direct initialization and material output binding patterns.
@@ -85,6 +89,7 @@ Graph-level constructs expected by reference:
 Function-level semantics:
 - `Function` supports `in`/`out` style parameters; `out` arguments are explicit at call sites.
 - `GraphFunction` compiles as custom-node style reusable graph helper and can consume `UE.*` sources.
+- Return-value functions: `Function float Luma(...)` and `GraphFunction float Calc(...)` declare a single-output return value via a return-type prefix after the keyword. The `return` statement is valid inside these function bodies, and the function does not require an `out` parameter.
 
 Substrate semantics:
 - `Substrate` is a first-class type for `ShaderFunction`, `.dsf`, and `VirtualFunction` inputs/outputs.
@@ -116,8 +121,9 @@ Type system expectations:
 
 - Graph DSL is intentionally not a fully general-purpose programming language.
 - Graph currently supports `if` / `else`, not full loop/control-flow parity.
-- Rider plugin currently reports diagnostics for unsupported Graph control-flow statements: `for`, `while`, `do`, `switch`, `case`, `default`, `break`, `continue`, `return`.
-- `Function` calls require explicit `out` target passing.
+- Rider plugin currently reports diagnostics for unsupported Graph control-flow statements: `for`, `while`, `do`, `switch`, `case`, `default`, `break`, `continue`.
+- `return` is allowed in return-value `Function` / `GraphFunction` bodies (those with a declared return type), but disallowed in parameter-based function bodies and Graph sections.
+- `Function` calls require explicit `out` target passing when the function uses `out` parameters; return-value functions use direct assignment instead.
 - `Namespace` is for function organization and nested namespace grouping (not arbitrary declaration containers).
 
 ### 7. Rider Plugin Coverage Mapping
@@ -127,6 +133,8 @@ Already implemented in this plugin:
 - Top-level declaration and section tokenization/parsing foundations.
 - File-role declaration constraints baseline (`.dsf` uses top-level declaration whitelist; `.dsm` disallow top-level `ShaderFunction`/`ShaderLayer`/`ShaderLayerBlend`; `.dsh` disallow asset-generating top-level declarations).
 - Declaration section-shape diagnostics baseline with alias/compat behavior (`Results` compatibility for `ShaderFunction`/`VirtualFunction`, declaration-specific allowed/required section checks, duplicate section detection).
+- `Group("Name") { ... }` and `PropGroup("Name") { ... }` property grouping scopes parsed as nested declarations, with section flattening into parent scope for diagnostics. Completion provides both `Group` and legacy `PropGroup` snippets with template placeholders.
+- `Function` / `GraphFunction` return-value syntax (`Function float X(...)`) parsed with return-type token after the keyword. Signature help renders `: <type>` suffix, hover docs show return type, and `return` statements are valid in return-value function bodies.
 - Context-aware completion for declaration-aware sections, declaration-head `Name`/`Root` arguments, `Root` values, scoped local symbols, namespace-qualified callables, input/function qualifiers, types, settings values, catalog-driven `UE.*` / `Substrate.*`, HLSL intrinsics, imports.
 - Navigation/symbols/folding/references/hover/signature help basics, including shared catalog-backed docs/signatures for `UE.*` / `Substrate.*`.
 

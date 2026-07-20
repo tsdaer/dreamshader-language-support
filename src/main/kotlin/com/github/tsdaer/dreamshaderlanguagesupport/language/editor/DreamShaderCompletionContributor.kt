@@ -923,6 +923,32 @@ internal object DreamShaderCompletionSuggester {
                     )
                 )
             }
+            val declKeyword = context.declarationKeyword?.lowercase(Locale.ROOT)
+            val groupAllowed = declKeyword != null && declKeyword !in DreamShaderLanguageKeywords.FUNCTION_LIKE_DECLARATION_KEYWORDS && declKeyword != "namespace"
+            if (groupAllowed) {
+                add(
+                    DreamShaderCompletionItem(
+                        label = "Group",
+                        insertText = "Group(\"Name\")",
+                        detail = "Property grouping scope",
+                        typeText = "declaration",
+                        icon = DreamShaderIcons.DECLARATION,
+                        priority = 44.0,
+                        snippet = "Group(\"${'$'}{1:Name}\") {${'$'}{2}}"
+                    )
+                )
+                add(
+                    DreamShaderCompletionItem(
+                        label = "PropGroup",
+                        insertText = "PropGroup(\"Name\")",
+                        detail = "Property grouping scope (legacy alias)",
+                        typeText = "declaration",
+                        icon = DreamShaderIcons.DECLARATION,
+                        priority = 42.0,
+                        snippet = "PropGroup(\"${'$'}{1:Name}\") {${'$'}{2}}"
+                    )
+                )
+            }
         }
 
         if (context.isTypeCompletionContext) {

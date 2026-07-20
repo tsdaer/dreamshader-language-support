@@ -10,7 +10,7 @@ Build a Rider plugin with feature parity to the VS Code DreamShaderLang extensio
 - diagnostics and tool integration third
 - package tooling and UX polish last
 
-Current parity baseline: VS Code DreamShaderLang extension v1.5.3.
+Current parity baseline: VS Code DreamShaderLang extension v1.5.3. Core syntax features from v1.6.x (Group property scopes, return-value functions) have been implemented. Remaining v1.6+ items for future milestones: graph control-flow as valid syntax (v1.6.1), Allman-style formatting (v1.6.3), and WebSocket preview transport (v1.5.3).
 
 
 ## Completed Version Archives
@@ -55,6 +55,13 @@ Verification used during the optimization pass:
 - `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderPostfixTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateCommandsTest`
 - `./gradlew.bat test`
 
+### 2026-07-20 Upstream Parity Pass (v1.6.0 syntax)
+
+Completed upstream features from the VS Code DreamShaderLang extension v1.6.x:
+
+- `Group("Name") { ... }` property grouping scopes: added `group` and `propgroup` lexer keywords, declaration parsing, string-name resolution in `DreamShaderDeclarationImpl`, completion snippets with template placeholders, structure-view integration with child section/declaration display, and section flattening in diagnostics (Group contents promoted to parent declaration scope).
+- Single-output return-value functions (`Function float X(...)`): `validateDeclarationHeader` now accepts `TYPE` token after `Function`/`GraphFunction` keyword; `returnType()` accessor added to `DreamShaderDeclaration` interface and impl; signature help pattern captures optional return type and renders `: <type>` suffix; hover docs display return type; `return` keyword diagnostics exclude return-value function bodies (where `return` is valid).
+
 ## Current Progress
 
 | Area                                           | Status | Notes                                                                                                                                                                                                                                    |
@@ -83,6 +90,8 @@ Verification used during the optimization pass:
 | Authoring templates / scaffold commands        | Done   | Material/function/header/texture sample/noise material/package scaffold/package wizard commands implemented and covered by tests                                                                                                           |
 | Material Preview                               | Done   | File-bridge preview request writer, result reader, right-side ToolWindow, editor-follow, edit debounce, and Bridge preview file watcher integration                                                                                        |
 | Workflow UI polish                            | Done   | Shared `DreamShaderUi` card/section/pill helpers are used across settings, package store, Bridge diagnostics, material preview, template workflows, Hub, and welcome surfaces                                                               |
+| `Group("Name")` property scopes              | Done   | Lexer + parser + PSI; `propgroup` legacy alias; completion snippets; structure-view children; section flattening in diagnostics                                                                                                              |
+| Return-value functions                       | Done   | `Function float X(...)` syntax parsed; signature help `: <type>` suffix; hover docs return type; `return` allowed in return-value function bodies                                                                                          |
 
 ## Detailed TODO
 

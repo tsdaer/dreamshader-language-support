@@ -14,7 +14,9 @@ internal object DreamShaderLanguageRules {
         "virtualfunction" to "VirtualFunction",
         "function" to "Function",
         "graphfunction" to "GraphFunction",
-        "namespace" to "Namespace"
+        "namespace" to "Namespace",
+        "group" to "Group",
+        "propgroup" to "PropGroup"
     )
 
     val displaySectionNames = mapOf(

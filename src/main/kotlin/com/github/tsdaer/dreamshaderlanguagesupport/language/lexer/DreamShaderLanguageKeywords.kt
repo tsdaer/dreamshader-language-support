@@ -34,7 +34,9 @@ internal object DreamShaderLanguageKeywords {
         "virtualfunction",
         "function",
         "graphfunction",
-        "namespace"
+        "namespace",
+        "group",
+        "propgroup"
     )
 
     val FUNCTION_LIKE_DECLARATION_KEYWORDS = setOf(
