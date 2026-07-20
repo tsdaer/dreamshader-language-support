@@ -65,7 +65,7 @@ Built on IntelliJ Platform SDK with platform module dependency (`com.intellij.mo
 Target reference (VS Code extension):
 https://github.com/TypeDreamMoon/dreamshader-language-support
 
-Parity baseline: VS Code extension v1.5.3.
+Parity baseline: VS Code extension v1.5.3 with v1.6.0 syntax features (Group property scopes, return-value functions). See [roadmap](docs/roadmap.md) for the upstream parity status.
 
 ## Documentation
 

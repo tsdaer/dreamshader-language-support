@@ -2,6 +2,18 @@
 
 # dreamshader-language-support 更新日志
 
+## [Unreleased]
+
+### 新增
+
+- `Group("Name")` / `PropGroup("Name")` 属性分组作用域：支持独立的声明包装嵌套 sections，也支持 `Properties Group("Name") { ... }` section 头部修饰语法（上游主要形式）。包含补全片段、结构视图集成以及诊断中的 section 扁平化。
+- 单返回值函数（`Function float X(...)`）：parser 接受 `Function`/`GraphFunction` 后的 `TYPE` 记号；`returnType()` PSI 访问器；签名帮助显示 `: <type>` 后缀；悬浮文档显示返回类型；`return` 语句在返回值函数体内有效。
+- Bridge SQLite 数据库传输：当存在 `bridge.db`（上游 v1.5.0+）时从数据库读取诊断，不存在时自动降级到 `diagnostics.json`。使用 IntelliJ Platform 捆绑的 `com.intellij.database` 模块访问 SQLite。
+
+### 变更
+
+- 语言基线更新至上游 DreamShader v1.6.3 参考快照。
+
 ## [0.0.6] - 2026-06-17
 
 ### 新增

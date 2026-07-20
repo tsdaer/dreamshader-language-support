@@ -2,6 +2,18 @@
 
 # dreamshader-language-support Changelog
 
+## [Unreleased]
+
+### Added
+
+- `Group("Name")` / `PropGroup("Name")` property grouping scopes: supported as both standalone declarations wrapping nested sections, and as `Properties Group("Name") { ... }` section-header modifiers (primary upstream form). Includes snippet completion, structure-view integration, and section flattening in diagnostics.
+- Single-output return-value functions (`Function float X(...)`): parser accepts `TYPE` token after `Function`/`GraphFunction` keyword; `returnType()` PSI accessor; signature help renders `: <type>` suffix; hover docs display return type; `return` statement is valid in return-value function bodies.
+- Bridge SQLite database transport: reads diagnostics from `bridge.db` when available (upstream v1.5.0+), with transparent fallback to `diagnostics.json`. Uses IntelliJ Platform bundled `com.intellij.database` module for SQLite JDBC access.
+
+### Changed
+
+- Language baseline bumped to upstream DreamShader v1.6.3 reference snapshot.
+
 ## [0.0.6] - 2026-06-17
 
 ### Added

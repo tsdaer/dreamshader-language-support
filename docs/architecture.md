@@ -92,19 +92,17 @@ Design goal:
 - `DreamShaderBridgePathResolver`
   - resolves project root + `Saved/DreamShader/Bridge` path
 - `DreamShaderBridgeDiagnosticsRepository`
-  - reads/normalizes `diagnostics.json`
+  - reads diagnostics from `bridge.db` (SQLite, upstream v1.5.0+ primary transport) with transparent fallback to `diagnostics.json`
   - exposes immutable snapshots
+- `DreamShaderBridgeDatabaseReader`
+  - raw JDBC reader for the SQLite `diagnostics` and `meta` tables; uses IntelliJ Platform bundled `com.intellij.database` module
 - `DreamShaderBridgeToolWindowFactory`
   - renders the Bridge diagnostics tool window.
 - `DreamShaderBridgeActions` / `DreamShaderBridgeCommandExecutor`
   - refresh/open Bridge diagnostics and run configurable recompile/clean commands.
 - `DreamShaderBridgeFileWatcher`
-  - listens for Bridge output file changes and refreshes diagnostics/preview consumers.
+  - listens for Bridge output file changes (`diagnostics.json`, `bridge.db`, `settings.json`, manifests, preview) and refreshes diagnostics/preview consumers.
 - `DreamShaderMaterialExpressionManifest`
-  - parses legacy `classes` payloads and rich `expressions` payloads into catalog entries.
-  - derives missing `ueName`, signature, namespace, and neutral descriptions when manifest data is partial.
-- `DreamShaderMaterialExpressionCatalog`
-  - shared data source for `UE.*` and `Substrate.*` completion, signature help, hover docs, and expression-class diagnostics.
   - supports `namespace + member` lookup and preserves `expressionClassNames()` compatibility for older call sites.
   - material expression data merge order:
     1. explicit settings path
