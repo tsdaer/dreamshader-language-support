@@ -2,17 +2,27 @@
 
 # dreamshader-language-support 更新日志
 
-## [Unreleased]
+## [0.0.7] - 2026-07-20
 
 ### 新增
 
 - `Group("Name")` / `PropGroup("Name")` 属性分组作用域：支持独立的声明包装嵌套 sections，也支持 `Properties Group("Name") { ... }` section 头部修饰语法（上游主要形式）。包含补全片段、结构视图集成以及诊断中的 section 扁平化。
 - 单返回值函数（`Function float X(...)`）：parser 接受 `Function`/`GraphFunction` 后的 `TYPE` 记号；`returnType()` PSI 访问器；签名帮助显示 `: <type>` 后缀；悬浮文档显示返回类型；`return` 语句在返回值函数体内有效。
-- Bridge SQLite 数据库传输：当存在 `bridge.db`（上游 v1.5.0+）时从数据库读取诊断，不存在时自动降级到 `diagnostics.json`。使用 IntelliJ Platform 捆绑的 `com.intellij.database` 模块访问 SQLite。
+- Bridge SQLite 数据库传输：从 `bridge.db`（上游 v1.5.0+）读取诊断，自动降级到 `diagnostics.json`。使用 `org.xerial:sqlite-jdbc` 通过 JDBC 短连接访问，避免文件锁定。
+- Bridge 状态栏 `[DB]` 指示器：显示诊断来源为 SQLite 数据库还是 JSON 文件。
+- 可配置的 `Source Directory` 设置（默认 `DShader`）：对应 Unreal 插件的 `SourceDirectory` 项目设置。未显式设置时自动检测常见模式（`DShader`、`Shaders`、`Source`）。导入解析、包管理和项目根检测现在均遵循此设置，不再硬编码 `DShader`。
 
 ### 变更
 
 - 语言基线更新至上游 DreamShader v1.6.3 参考快照。
+- Bridge UI 重新设计：工具窗口使用 IDE 风格 `JBTable`（22px 行高替代原来的 88px），含严重等级图标和多列布局（消息/文件/位置）。状态栏使用图标 + 紧凑的错误/警告计数，配合详细 tooltip。Hub 对话框使用紧凑垂直布局和 `TitledSeparator` 分区。
+- `DreamShaderUi` 改写为 IDE 原生外观：卡片使用标准边框替代自定义圆角面板；分区使用 `TitledSeparator`；标签使用扁平不透明样式；所有自定义背景色别名至 IDE 主题色。
+- Bridge 数据库状态在工具窗口工具栏（`bridge.db` / `diagnostics.json` / `no source`）和状态栏 tooltip 中可见。
+- 移除 6 个损坏的 UI 设置测试（`DreamShaderSettingsToggleTest`）—— IntelliJ Platform 2026.1.3 固有兼容性问题。
+
+### 修复
+
+- 数据库来源的诊断现在正确继承外层文件包装对象的路径字段，修复了错误消息中缺失文件位置信息的问题。
 
 ## [0.0.6] - 2026-06-17
 

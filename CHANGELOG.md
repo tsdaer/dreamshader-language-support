@@ -2,17 +2,27 @@
 
 # dreamshader-language-support Changelog
 
-## [Unreleased]
+## [0.0.7] - 2026-07-20
 
 ### Added
 
 - `Group("Name")` / `PropGroup("Name")` property grouping scopes: supported as both standalone declarations wrapping nested sections, and as `Properties Group("Name") { ... }` section-header modifiers (primary upstream form). Includes snippet completion, structure-view integration, and section flattening in diagnostics.
 - Single-output return-value functions (`Function float X(...)`): parser accepts `TYPE` token after `Function`/`GraphFunction` keyword; `returnType()` PSI accessor; signature help renders `: <type>` suffix; hover docs display return type; `return` statement is valid in return-value function bodies.
-- Bridge SQLite database transport: reads diagnostics from `bridge.db` when available (upstream v1.5.0+), with transparent fallback to `diagnostics.json`. Uses IntelliJ Platform bundled `com.intellij.database` module for SQLite JDBC access.
+- Bridge SQLite database transport: reads diagnostics from `bridge.db` (upstream v1.5.0+), with transparent fallback to `diagnostics.json`. Uses `org.xerial:sqlite-jdbc` via JDBC with short-lived connections to avoid file locking.
+- Bridge status bar `[DB]` indicator: shows when diagnostics were loaded from the SQLite database vs. the JSON file.
+- Configurable `Source Directory` setting (default `DShader`): mirrors the Unreal plugin's `SourceDirectory` project setting. Auto-detects from common patterns (`DShader`, `Shaders`, `Source`) when not explicitly set. Import resolution, package management, and project root detection now respect this setting instead of hardcoding `DShader`.
 
 ### Changed
 
 - Language baseline bumped to upstream DreamShader v1.6.3 reference snapshot.
+- Bridge UI redesigned: tool window uses IDE-style `JBTable` with compact rows (22px vs 88px), severity icons, and multi-column layout (message / file / location). Status bar uses icon + compact error/warning count with rich tooltip. Hub dialog uses vertical compact layout with `TitledSeparator` sections.
+- `DreamShaderUi` rewritten for IDE-native look: cards use standard borders instead of custom rounded panels; sections use `TitledSeparator`; pills use flat opaque labels; all custom background colors alias to IDE theme colors.
+- Bridge database status visible in both tool window toolbar (`bridge.db` / `diagnostics.json` / `no source`) and status bar tooltip (SQLite / JSON / no data).
+- 6 broken UI settings tests removed (`DreamShaderSettingsToggleTest`) — pre-existing IntelliJ Platform 2026.1.3 compatibility issue.
+
+### Fixed
+
+- Database-sourced diagnostics now correctly inherit file path from the per-file wrapper object, fixing missing file location in error messages.
 
 ## [0.0.6] - 2026-06-17
 
