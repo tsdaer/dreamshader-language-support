@@ -1,7 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
-import com.github.tsdaer.dreamshaderlanguagesupport.language.ui.DreamShaderUi
+import com.intellij.icons.AllIcons
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
@@ -12,25 +12,19 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.ui.JBColor
-import com.intellij.ui.components.JBList
+import com.intellij.ui.*
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
+import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
-import java.awt.Color
-import java.awt.Component
-import java.awt.Font
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
+import java.awt.FlowLayout
 import javax.swing.*
+import javax.swing.table.AbstractTableModel
 
 private const val DREAMSHADER_BRIDGE_NOTIFICATIONS = "DreamShader Notifications"
 
-/**
- * Bridge 诊断工具窗口工厂。
- */
 internal class DreamShaderBridgeToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val panel = DreamShaderBridgeDiagnosticsPanel(project)
@@ -39,204 +33,168 @@ internal class DreamShaderBridgeToolWindowFactory : ToolWindowFactory, DumbAware
     }
 
     override suspend fun isApplicableAsync(project: Project): Boolean = true
-
     override fun shouldBeAvailable(project: Project): Boolean = true
-
     override suspend fun manage(toolWindow: ToolWindow, toolWindowManager: ToolWindowManager) = Unit
 }
 
-/**
- * Bridge 诊断面板。
- *
- * 提供刷新、打开选中项、打开首条诊断等基础交互。
- */
 private class DreamShaderBridgeDiagnosticsPanel(
     private val project: Project
-) : JPanel(BorderLayout(JBUI.scale(12), JBUI.scale(12))) {
-    private val model = DefaultListModel<DreamShaderBridgeDiagnostic>()
-    private val list = JBList(model)
-    private val status = JLabel(DreamShaderBundle.message("bridge.toolwindow.ready"))
-    private val summaryLabel = JLabel(DreamShaderBundle.message("bridge.toolwindow.ready"))
+) : JPanel(BorderLayout()) {
+    private val model = BridgeDiagnosticsTableModel()
+    private val table = JBTable(model)
+    private val summary = JLabel(" ").apply { foreground = UIUtil.getContextHelpForeground() }
     private val repository = project.getService(DreamShaderBridgeDiagnosticsRepository::class.java)
 
     init {
-        DreamShaderUi.installSurface(this)
-
-        val refreshButton = JButton(DreamShaderBundle.message("bridge.toolwindow.button.refresh")).apply {
-            addActionListener { refresh() }
-        }
-        val openSelectedButton = JButton(DreamShaderBundle.message("bridge.toolwindow.button.openSelected")).apply {
-            addActionListener { openSelected() }
-        }
-        val openFirstButton = JButton(DreamShaderBundle.message("bridge.toolwindow.button.openFirst")).apply {
-            addActionListener { openFirst() }
-        }
-
-        val header = DreamShaderUi.card(BorderLayout(JBUI.scale(10), 0)).apply {
-            border = JBUI.Borders.empty(12)
-            val title = JPanel(BorderLayout()).apply {
+        val toolbar = JPanel(BorderLayout()).apply {
+            border = JBUI.Borders.empty(5, 6)
+            add(summary, BorderLayout.CENTER)
+            val buttons = JPanel(FlowLayout(FlowLayout.RIGHT, 4, 0)).apply {
                 isOpaque = false
-                add(DreamShaderUi.titleLabel(DreamShaderBundle.message("bridge.title")), BorderLayout.NORTH)
-                summaryLabel.foreground = DreamShaderUi.mutedForeground
-                add(summaryLabel, BorderLayout.SOUTH)
+                add(makeButton(DreamShaderBundle.message("bridge.toolwindow.button.refresh"), AllIcons.Actions.Refresh) { refresh() })
+                add(makeButton(DreamShaderBundle.message("bridge.toolwindow.button.openFirst"), AllIcons.Actions.Forward) { openFirst() })
             }
-            add(title, BorderLayout.CENTER)
-            add(
-                DreamShaderUi.horizontal(8, java.awt.FlowLayout.RIGHT, refreshButton, openFirstButton, openSelectedButton),
-                BorderLayout.EAST
-            )
+            add(buttons, BorderLayout.EAST)
         }
 
-        list.selectionMode = ListSelectionModel.SINGLE_SELECTION
-        list.fixedCellHeight = JBUI.scale(88)
-        list.border = JBUI.Borders.empty()
-        list.background = DreamShaderUi.panelBackground
-        list.emptyText.text = DreamShaderBundle.message("bridge.toolwindow.noDiagnostics")
-        list.cellRenderer = DiagnosticRenderer()
-        list.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent) {
-                if (e.button == MouseEvent.BUTTON1 && e.clickCount == 2) {
-                    openSelected()
+        table.apply {
+            setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
+            rowHeight = JBUI.scale(22)
+            columnModel.getColumn(0).apply { maxWidth = JBUI.scale(26); minWidth = JBUI.scale(26); preferredWidth = JBUI.scale(26) }
+            columnModel.getColumn(1).apply { preferredWidth = JBUI.scale(400) }
+            columnModel.getColumn(2).apply { preferredWidth = JBUI.scale(260) }
+            columnModel.getColumn(3).apply { maxWidth = JBUI.scale(100); minWidth = JBUI.scale(100); preferredWidth = JBUI.scale(100) }
+            setDefaultRenderer(Any::class.java, DiagnosticTableCellRenderer())
+            emptyText.text = DreamShaderBundle.message("bridge.toolwindow.noDiagnostics")
+            addMouseListener(object : java.awt.event.MouseAdapter() {
+                override fun mouseClicked(e: java.awt.event.MouseEvent) {
+                    if (e.clickCount == 2) openSelected()
                 }
-            }
-        })
+            })
+        }
 
-        add(header, BorderLayout.NORTH)
-        add(DreamShaderUi.section(
-            title = DreamShaderBundle.message("bridge.toolwindow.button.refresh"),
-            description = DreamShaderBundle.message("bridge.widget.tooltip"),
-            content = JBScrollPane(list).apply {
-                border = JBUI.Borders.empty()
-                viewport.background = DreamShaderUi.panelBackground
-            }
-        ), BorderLayout.CENTER)
-        status.foreground = UIUtil.getContextHelpForeground()
-        add(status, BorderLayout.SOUTH)
+        val scrollPane = JBScrollPane(table).apply {
+            border = JBUI.Borders.empty()
+        }
 
+        add(toolbar, BorderLayout.NORTH)
+        add(scrollPane, BorderLayout.CENTER)
         refresh()
+    }
+
+    private fun makeButton(tooltip: String, icon: Icon, action: () -> Unit): JButton {
+        return JButton(icon).apply {
+            this.toolTipText = tooltip
+            putClientProperty("ActionToolbar.isActionToolbarButton", true)
+            border = JBUI.Borders.empty(4)
+            addActionListener { action() }
+        }
     }
 
     private fun refresh() {
         val snapshot = repository.refresh(activeDreamShaderFile(project))
-        model.clear()
-        snapshot.diagnostics.forEach { model.addElement(it) }
-        if (model.size > 0) {
-            list.selectedIndex = 0
-        }
+        model.setDiagnostics(snapshot.diagnostics)
         val errors = snapshot.diagnostics.count { it.severity.equals("error", ignoreCase = true) }
         val warnings = snapshot.diagnostics.count { it.severity.equals("warning", ignoreCase = true) }
-        summaryLabel.text = DreamShaderBundle.message("bridge.widget.summary", errors, warnings)
-        status.text = DreamShaderBundle.message(
-            "bridge.toolwindow.loaded",
-            snapshot.diagnostics.size,
-            snapshot.loadedFromPath ?: DreamShaderBundle.message("bridge.toolwindow.unresolvedPath")
-        )
+        val other = snapshot.diagnostics.size - errors - warnings
+        summary.text = "${snapshot.diagnostics.size} diagnostics — $errors errors, $warnings warnings" +
+            if (other > 0) ", $other info" else ""
     }
 
     private fun openFirst() {
-        if (model.isEmpty) {
-            notifyInfo(
-                DreamShaderBundle.message("bridge.title"),
-                DreamShaderBundle.message("bridge.toolwindow.noDiagnostics")
-            )
+        if (model.rowCount == 0) {
+            notifyInfo(DreamShaderBundle.message("bridge.toolwindow.noDiagnostics"))
             return
         }
-        list.selectedIndex = 0
+        table.setRowSelectionInterval(0, 0)
         openSelected()
     }
 
     private fun openSelected() {
-        val selected = list.selectedValue
-        if (selected == null) {
-            notifyInfo(
-                DreamShaderBundle.message("bridge.title"),
-                DreamShaderBundle.message("bridge.toolwindow.selectDiagnostic")
-            )
+        val row = table.selectedRow
+        if (row < 0) {
+            notifyInfo(DreamShaderBundle.message("bridge.toolwindow.selectDiagnostic"))
             return
         }
-        val sourcePath = selected.sourcePath.replace('\\', '/')
+        val diag = model.get(row)
+        val sourcePath = diag.sourcePath.replace('\\', '/')
         val sourceFile = LocalFileSystem.getInstance().findFileByPath(sourcePath)
         if (sourceFile == null || !sourceFile.isValid || sourceFile.isDirectory) {
-            notifyError(
-                DreamShaderBundle.message("bridge.title"),
-                DreamShaderBundle.message("bridge.toolwindow.openSourceFailed", sourcePath)
-            )
+            notifyError(DreamShaderBundle.message("bridge.toolwindow.openSourceFailed", sourcePath))
             return
         }
-
-        OpenFileDescriptor(
-            project,
-            sourceFile,
-            (selected.line - 1).coerceAtLeast(0),
-            (selected.column - 1).coerceAtLeast(0)
-        ).navigate(true)
+        OpenFileDescriptor(project, sourceFile, (diag.line - 1).coerceAtLeast(0), (diag.column - 1).coerceAtLeast(0)).navigate(true)
     }
 
     private fun activeDreamShaderFile(project: Project): com.intellij.openapi.vfs.VirtualFile? {
         val selected = com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
         if (selected != null && selected.extension?.lowercase() in setOf("dsm", "dsf", "dsh")) return selected
-
-        val editor = com.intellij.openapi.editor.EditorFactory.getInstance().allEditors.firstOrNull { it.project == project }
-            ?: return null
+        val editor = com.intellij.openapi.editor.EditorFactory.getInstance().allEditors.firstOrNull { it.project == project } ?: return null
         val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return null
         val vf = psiFile.virtualFile ?: return null
         return if (vf.extension?.lowercase() in setOf("dsm", "dsf", "dsh")) vf else null
     }
 
-    private fun notifyInfo(title: String, content: String) {
-        NotificationGroupManager.getInstance()
-            .getNotificationGroup(DREAMSHADER_BRIDGE_NOTIFICATIONS)
-            .createNotification(title, content, NotificationType.INFORMATION)
-            .notify(project)
+    private fun notifyInfo(msg: String) {
+        NotificationGroupManager.getInstance().getNotificationGroup(DREAMSHADER_BRIDGE_NOTIFICATIONS)
+            .createNotification(DreamShaderBundle.message("bridge.title"), msg, NotificationType.INFORMATION).notify(project)
     }
 
-    private fun notifyError(title: String, content: String) {
-        NotificationGroupManager.getInstance()
-            .getNotificationGroup(DREAMSHADER_BRIDGE_NOTIFICATIONS)
-            .createNotification(title, content, NotificationType.ERROR)
-            .notify(project)
+    private fun notifyError(msg: String) {
+        NotificationGroupManager.getInstance().getNotificationGroup(DREAMSHADER_BRIDGE_NOTIFICATIONS)
+            .createNotification(DreamShaderBundle.message("bridge.title"), msg, NotificationType.ERROR).notify(project)
+    }
+}
+
+private class BridgeDiagnosticsTableModel : AbstractTableModel() {
+    private val diagnostics = mutableListOf<DreamShaderBridgeDiagnostic>()
+    private val columns = arrayOf("", "Message", "File", "Location")
+
+    fun setDiagnostics(list: List<DreamShaderBridgeDiagnostic>) {
+        diagnostics.clear()
+        diagnostics.addAll(list)
+        fireTableDataChanged()
     }
 
-    private class DiagnosticRenderer : ListCellRenderer<DreamShaderBridgeDiagnostic> {
-        override fun getListCellRendererComponent(
-            list: JList<out DreamShaderBridgeDiagnostic>,
-            value: DreamShaderBridgeDiagnostic,
-            index: Int,
-            isSelected: Boolean,
-            cellHasFocus: Boolean
-        ): Component {
-            val tone = when (value.severity.lowercase()) {
-                "error" -> DreamShaderUi.Tone.DANGER
-                "warning" -> DreamShaderUi.Tone.WARNING
-                else -> DreamShaderUi.Tone.ACCENT
-            }
-            val panel = JPanel(BorderLayout(JBUI.scale(10), JBUI.scale(4))).apply {
-                isOpaque = true
-                background = if (isSelected) {
-                    JBColor(Color(0xE8, 0xF2, 0xFF), Color(0x22, 0x35, 0x4D))
-                } else {
-                    DreamShaderUi.elevatedBackground
+    fun get(row: Int) = diagnostics[row]
+
+    override fun getRowCount() = diagnostics.size
+    override fun getColumnCount() = 4
+    override fun getColumnName(column: Int) = columns[column]
+    override fun getValueAt(row: Int, column: Int): Any = diagnostics[row]
+}
+
+private class DiagnosticTableCellRenderer : ColoredTableCellRenderer() {
+    override fun customizeCellRenderer(
+        table: JTable, value: Any?, selected: Boolean, hasFocus: Boolean, row: Int, column: Int
+    ) {
+        val diag = value as? DreamShaderBridgeDiagnostic ?: return
+        when (column) {
+            0 -> {
+                icon = when (diag.severity.lowercase()) {
+                    "error" -> AllIcons.General.Error
+                    "warning" -> AllIcons.General.Warning
+                    else -> AllIcons.General.Information
                 }
-                border = javax.swing.BorderFactory.createCompoundBorder(
-                    JBUI.Borders.empty(4, 2),
-                    DreamShaderUi.RoundedBorder(
-                        if (isSelected) DreamShaderUi.accent else DreamShaderUi.borderColor,
-                        JBUI.scale(12),
-                        JBUI.insets(10, 12)
-                    )
-                )
             }
-            val title = JLabel(value.message).apply {
-                font = font.deriveFont(Font.BOLD)
-                foreground = UIUtil.getLabelForeground()
+            1 -> {
+                append(diag.message, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+                if (!diag.severity.equals("error", ignoreCase = true)) {
+                    append("  ${diag.severity.lowercase()}", SimpleTextAttributes.GRAYED_SMALL_ATTRIBUTES)
+                }
             }
-            val location = JLabel("${value.sourcePath}:${value.line}:${value.column}").apply {
-                foreground = DreamShaderUi.mutedForeground
+            2 -> {
+                val name = diag.sourcePath.substringAfterLast('/')
+                append(name, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+                val dir = diag.sourcePath.substringBeforeLast('/', diag.sourcePath)
+                if (dir.isNotEmpty()) {
+                    append("  $dir", SimpleTextAttributes.GRAYED_SMALL_ATTRIBUTES)
+                }
             }
-            panel.add(title, BorderLayout.NORTH)
-            panel.add(location, BorderLayout.CENTER)
-            panel.add(DreamShaderUi.pill(value.severity.uppercase(), tone), BorderLayout.EAST)
-            return panel
+            3 -> append("${diag.line}:${diag.column}", SimpleTextAttributes.REGULAR_ATTRIBUTES)
+        }
+        if (!isEnabled) {
+            background = UIUtil.getTextFieldBackground()
         }
     }
 }
