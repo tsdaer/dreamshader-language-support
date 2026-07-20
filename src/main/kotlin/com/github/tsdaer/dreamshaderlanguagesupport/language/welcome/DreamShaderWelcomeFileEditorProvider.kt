@@ -11,19 +11,17 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.ui.jcef.JBCefJSQuery
-import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
+import com.intellij.ui.jcef.JBCefJSQuery
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
+import javax.swing.JLabel
 import javax.swing.JPanel
 
 class DreamShaderWelcomeFileEditorProvider : FileEditorProvider, DumbAware {
-    override fun accept(project: Project, file: VirtualFile): Boolean {
-        return file is DreamShaderWelcomeVirtualFile
-    }
+    override fun accept(project: Project, file: VirtualFile): Boolean = file is DreamShaderWelcomeVirtualFile
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
         val welcomeFile = file as? DreamShaderWelcomeVirtualFile
@@ -32,7 +30,6 @@ class DreamShaderWelcomeFileEditorProvider : FileEditorProvider, DumbAware {
     }
 
     override fun getEditorTypeId(): String = "dreamshader-welcome-editor"
-
     override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }
 
@@ -41,82 +38,54 @@ private class DreamShaderWelcomeFileEditor(
     private val file: DreamShaderWelcomeVirtualFile
 ) : UserDataHolderBase(), FileEditor {
     private val root = JPanel(BorderLayout())
-    private var browser: JBCefBrowser? = null
-    private var openSettingsQuery: JBCefJSQuery? = null
 
     init {
-        if (JBCefApp.isSupported()) {
+        val jcefAvailable = try {
+            Class.forName("com.intellij.ui.jcef.JBCefApp")
+            true
+        } catch (_: Exception) { false }
+
+        if (jcefAvailable) {
+            createJcefContent()
+        } else {
+            root.add(JLabel(com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle.message("welcome.fallback.jcefUnavailable")), BorderLayout.NORTH)
+        }
+    }
+
+    private fun createJcefContent() {
+        try {
             val cef = JBCefBrowser()
-            val cefBase: JBCefBrowserBase = cef
-            val jsQuery = JBCefJSQuery.create(cefBase)
+            val jsQuery = JBCefJSQuery.create(cef as JBCefBrowserBase)
             jsQuery.addHandler {
                 ShowSettingsUtil.getInstance().showSettingsDialog(project, DreamShaderSettingsConfigurable::class.java)
                 null
             }
-            openSettingsQuery = jsQuery
-
             val injectedHtml = file.htmlContent.replace(
                 "</body>",
-                """
-                <script>
-                (function() {
-                  var links = document.querySelectorAll('a[href="dreamshader://open-settings"]');
-                  if (!links || links.length === 0) return;
-                  links.forEach(function(link) {
-                    link.addEventListener('click', function(evt) {
-                      evt.preventDefault();
-                      ${jsQuery.inject("openSettings")}
-                    });
-                  });
-                })();
-                </script>
-                </body>
-                """.trimIndent()
+                """<script>
+                    window.openSettings = function() {
+                        ${jsQuery.inject("open-settings")};
+                    };
+                    </script></body>"""
             )
             cef.loadHTML(injectedHtml)
-            browser = cef
+            jsQuery.addHandler { null }
             root.add(cef.component, BorderLayout.CENTER)
-        } else {
-            root.add(JPanel(BorderLayout()).apply {
-                add(javax.swing.JLabel(com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle.message("welcome.fallback.jcefUnavailable")), BorderLayout.NORTH)
-            }, BorderLayout.CENTER)
+        } catch (_: Exception) {
+            root.add(JLabel(
+                com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle.message("welcome.fallback.jcefUnavailable")
+            ), BorderLayout.NORTH)
         }
     }
 
     override fun getComponent(): JComponent = root
-
-    override fun getPreferredFocusedComponent(): JComponent = root
-
+    override fun getPreferredFocusedComponent(): JComponent? = null
     override fun getName(): String = "DreamShader Welcome"
-
-    override fun getFile(): VirtualFile = file
-
-    override fun setState(state: FileEditorState) {
-        // No mutable editor state.
-    }
-
+    override fun setState(state: FileEditorState) = Unit
     override fun isModified(): Boolean = false
-
-    override fun isValid(): Boolean = file.isValid && !project.isDisposed
-
-    override fun selectNotify() {
-    }
-
-    override fun deselectNotify() {
-    }
-
-    override fun addPropertyChangeListener(listener: PropertyChangeListener) {
-    }
-
-    override fun removePropertyChangeListener(listener: PropertyChangeListener) {
-    }
-
+    override fun isValid(): Boolean = true
+    override fun addPropertyChangeListener(listener: PropertyChangeListener) = Unit
+    override fun removePropertyChangeListener(listener: PropertyChangeListener) = Unit
+    override fun dispose() = Unit
     override fun getCurrentLocation(): FileEditorLocation? = null
-
-    override fun dispose() {
-        openSettingsQuery?.dispose()
-        openSettingsQuery = null
-        browser?.dispose()
-        browser = null
-    }
 }
