@@ -42,17 +42,18 @@ internal object DreamShaderBridgeDatabaseReader {
     private fun parseDiagnosticsFromJson(rawJson: String): List<DreamShaderBridgeDiagnostic> {
         return try {
             val element = jsonParser.parseToJsonElement(rawJson)
+            val filePath = element.jsonObject["path"]?.jsonPrimitive?.contentOrNull ?: ""
             element.jsonObject["diagnostics"]?.jsonArray
-                ?.mapNotNull { parseDiagnostic(it) }
+                ?.mapNotNull { parseDiagnostic(it, filePath) }
                 .orEmpty()
         } catch (_: Exception) { emptyList() }
     }
 
-    private fun parseDiagnostic(element: JsonElement): DreamShaderBridgeDiagnostic? {
+    private fun parseDiagnostic(element: JsonElement, fallbackPath: String): DreamShaderBridgeDiagnostic? {
         val obj = element.jsonObject
         val message = obj["message"]?.jsonPrimitive?.contentOrNull ?: return null
         return DreamShaderBridgeDiagnostic(
-            sourcePath = obj["path"]?.jsonPrimitive?.contentOrNull ?: "",
+            sourcePath = obj["path"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: fallbackPath,
             line = obj["line"]?.jsonPrimitive?.intOrNull ?: 1,
             column = obj["column"]?.jsonPrimitive?.intOrNull ?: 1,
             severity = obj["severity"]?.jsonPrimitive?.contentOrNull ?: "error",

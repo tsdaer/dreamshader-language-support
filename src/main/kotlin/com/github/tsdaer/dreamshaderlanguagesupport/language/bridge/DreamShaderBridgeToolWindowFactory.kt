@@ -97,8 +97,14 @@ private class DreamShaderBridgeDiagnosticsPanel(
         val errors = snapshot.diagnostics.count { it.severity.equals("error", ignoreCase = true) }
         val warnings = snapshot.diagnostics.count { it.severity.equals("warning", ignoreCase = true) }
         val other = snapshot.diagnostics.size - errors - warnings
+        val dbTag = when {
+            snapshot.loadedFromPath == null -> "no source"
+            snapshot.loadedFromPath.endsWith("bridge.db") -> "bridge.db"
+            else -> "diagnostics.json"
+        }
         summary.text = "${snapshot.diagnostics.size} diagnostics — $errors errors, $warnings warnings" +
-            if (other > 0) ", $other info" else ""
+            if (other > 0) ", $other info" else "" +
+            "  |  $dbTag"
     }
 
     private fun openFirst() {
