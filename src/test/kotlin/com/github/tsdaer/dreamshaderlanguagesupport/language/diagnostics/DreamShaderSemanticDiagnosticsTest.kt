@@ -1384,6 +1384,15 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
         assertHasError("Cannot resolve import 'NotFound/Nope.dsh'")
     }
 
+    fun testUnresolvedImportPathWithInvalidWindowsPathCharsDoesNotOfferCreateFileQuickFix() {
+        val text = """import "<caret>dreamshader*-.dsh";"""
+        myFixture.configureByText("unresolved_import_invalid_windows_path_chars.dsm", text)
+        assertHasError("Cannot resolve import 'dreamshader*-.dsh'")
+
+        val actions = myFixture.filterAvailableIntentions("Create missing import file")
+        assertTrue("Did not expect create-file quick fix for invalid path characters", actions.isEmpty())
+    }
+
     fun testUnresolvedImportPathQuickFixCreatesMissingFile() {
         val text = """import "<caret>NotFound/Nope";"""
         myFixture.configureByText("unresolved_import_quickfix.dsm", text)

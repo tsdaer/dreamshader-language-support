@@ -2571,6 +2571,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         if (parts.isEmpty()) return null
         if (parts.any { it == "." || it == ".." }) return null
         if (isScoped && parts.size < 2) return null
+        if (parts.any { !isImportCreationPathSegmentSafe(it) }) return null
         val last = parts.last()
         if (last.contains('.')) {
             val extension = last.substringAfterLast('.', "").lowercase(Locale.ROOT)
@@ -2590,8 +2591,10 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val packageRootCandidate = packageRootAnalysis?.takeIf {
             it.resolvedEntryRelativePath == null
         }?.let { analysis ->
+            val relativePath = "${analysis.packageImportPath}/${analysis.suggestedEntryRelativePath}"
+            if (!isImportCreationRelativePathSafe(relativePath)) return@let null
             ImportCreationPlan(
-                relativePath = "${analysis.packageImportPath}/${analysis.suggestedEntryRelativePath}",
+                relativePath = relativePath,
                 isScopedPackageImport = true
             )
         }
@@ -2609,13 +2612,28 @@ internal class DreamShaderSemanticAnnotationPipeline {
         } else {
             containingPath?.takeIf { it.startsWith(projectRoot) } ?: projectRoot
         }
-        var target = basePath
-        creationPlan.relativePath.split('/').forEach { segment ->
-            if (segment.isBlank()) return@forEach
-            target = target.resolve(segment)
-        }
-        val normalizedTarget = target.normalize().toAbsolutePath()
+        val normalizedTarget = runCatching {
+            var target = basePath
+            creationPlan.relativePath.split('/').forEach { segment ->
+                if (segment.isBlank()) return@forEach
+                target = target.resolve(segment)
+            }
+            target.normalize().toAbsolutePath()
+        }.getOrNull() ?: return null
         return if (normalizedTarget.startsWith(projectRoot)) normalizedTarget else null
+    }
+
+    private fun isImportCreationRelativePathSafe(relativePath: String): Boolean {
+        val parts = relativePath.replace('\\', '/').split('/').filter { it.isNotBlank() }
+        return parts.isNotEmpty() &&
+            parts.none { it == "." || it == ".." } &&
+            parts.all(::isImportCreationPathSegmentSafe)
+    }
+
+    private fun isImportCreationPathSegmentSafe(segment: String): Boolean {
+        if (segment.isBlank()) return false
+        if (segment.any { it.code < 32 }) return false
+        return segment.none { it in WINDOWS_INVALID_PATH_SEGMENT_CHARS }
     }
 
     private fun isAbsolutePath(path: String): Boolean {
@@ -3897,6 +3915,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         private val PATH_CALL_PATTERN: Pattern = Pattern.compile("(?is)Path\\s*\\(.*\\)")
         private val IMPORT_FILE_EXTENSIONS_ORDERED = listOf("dsh", "dsf", "dsm")
         private val IMPORT_FILE_EXTENSIONS = IMPORT_FILE_EXTENSIONS_ORDERED.toSet()
+        private val WINDOWS_INVALID_PATH_SEGMENT_CHARS = setOf('<', '>', ':', '"', '|', '?', '*')
         private val BASE_MEMBER_PATTERN: Pattern = Pattern.compile("\\bBase\\.([A-Za-z_][A-Za-z0-9_]*)")
         private val BASE_BINDING_TARGET_PATTERN: Pattern = Pattern.compile(
             "(?i)\\bBase\\.(FrontMaterial|MaterialAttributes)\\b\\s*="

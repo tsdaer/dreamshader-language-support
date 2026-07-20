@@ -266,6 +266,42 @@ class DreamShaderCompletionSuggesterTest {
     }
 
     @Test
+    fun `suggests scoped package root imports after bare at marker`() {
+        val text = """import "@"""
+        val offset = text.length
+        val importCandidates = listOf(
+            "@typedreammoon/dream-noise",
+            "@typedreammoon/dream-sdf",
+            "Common/Core.dsh"
+        )
+
+        val labels = DreamShaderCompletionSuggester
+            .suggest(text, offset, importCandidates = importCandidates)
+            .map { it.label }
+            .toSet()
+
+        assertTrue(labels.contains("@typedreammoon/dream-noise"))
+        assertTrue(labels.contains("@typedreammoon/dream-sdf"))
+        assertTrue(!labels.contains("Common/Core.dsh"))
+    }
+
+    @Test
+    fun `import completion replaces existing import string prefix`() {
+        val text = """import "@"""
+        val offset = text.length
+        val suggestion = DreamShaderCompletionSuggester
+            .suggest(
+                text,
+                offset,
+                importCandidates = listOf("@typedreammoon/dream-noise")
+            )
+            .single { it.label == "@typedreammoon/dream-noise" }
+
+        assertEquals(text.indexOf('@'), suggestion.replacementStartOffset)
+        assertEquals("@typedreammoon/dream-noise", suggestion.insertText)
+    }
+
+    @Test
     fun `suggests UE expression class values from manifest candidates`() {
         val text = """
             Shader Main {
@@ -592,6 +628,7 @@ class DreamShaderCompletionSuggesterTest {
 
         assertTrue(DreamShaderCompletionAutoPopup.shouldAutoPopup(graphText, graphOffset, '.'))
         assertTrue(DreamShaderCompletionAutoPopup.shouldAutoPopup(importText, importText.length, '"'))
+        assertTrue(DreamShaderCompletionAutoPopup.shouldAutoPopup("""import "@""", """import "@""".length, '@'))
         assertTrue(!DreamShaderCompletionAutoPopup.shouldAutoPopup("// UE.", "// UE.".length, '.'))
     }
 }

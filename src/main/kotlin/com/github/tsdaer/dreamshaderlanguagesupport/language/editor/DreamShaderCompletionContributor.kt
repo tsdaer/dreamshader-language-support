@@ -341,7 +341,8 @@ internal data class DreamShaderCompletionItem(
     val icon: Icon? = null,
     val priority: Double = 0.0,
     val caretOffset: Int? = null,
-    val snippet: String? = null
+    val snippet: String? = null,
+    val replacementStartOffset: Int? = null
 )
 
 /**
@@ -358,6 +359,11 @@ private data class DreamShaderSettingValueContext(
  */
 private data class DreamShaderExpressionClassValueContext(
     val prefix: String
+)
+
+internal data class DreamShaderImportCompletionPrefix(
+    val prefix: String,
+    val startOffset: Int
 )
 
 /**
@@ -722,13 +728,20 @@ internal object DreamShaderCompletionSuggester {
         }
         fun addAll(items: Iterable<DreamShaderCompletionItem>) = items.forEach(::add)
 
-        val importPrefix = importPrefix(text, offset)
+        val importPrefix = importCompletionPrefix(text, offset)
         if (importPrefix != null) {
             importCandidates
-                .filter { it.lowercase(Locale.ROOT).startsWith(importPrefix.lowercase(Locale.ROOT)) }
+                .filter { it.lowercase(Locale.ROOT).startsWith(importPrefix.prefix.lowercase(Locale.ROOT)) }
                 .sorted()
                 .forEach { path ->
-                    add(DreamShaderCompletionItem(label = path, insertText = path, detail = "DreamShader import"))
+                    add(
+                        DreamShaderCompletionItem(
+                            label = path,
+                            insertText = path,
+                            detail = "DreamShader import",
+                            replacementStartOffset = importPrefix.startOffset
+                        )
+                    )
                 }
             return suggestions.values.toList()
         }
@@ -1052,13 +1065,17 @@ internal object DreamShaderCompletionSuggester {
         return text.substring(lineStart, safeOffset)
     }
 
-    private fun importPrefix(text: String, offset: Int): String? {
+    internal fun importCompletionPrefix(text: String, offset: Int): DreamShaderImportCompletionPrefix? {
         val safeOffset = offset.coerceIn(0, text.length)
         val prefix = text.substring(0, safeOffset)
         val lineStart = prefix.lastIndexOfAny(charArrayOf('\n', '\r')).let { if (it < 0) 0 else it + 1 }
         val line = prefix.substring(lineStart)
         val match = Regex("""^\s*import\s+"([^"]*)$""").find(line) ?: return null
-        return match.groupValues[1]
+        val prefixRange = match.groups[1]?.range ?: return null
+        return DreamShaderImportCompletionPrefix(
+            prefix = match.groupValues[1],
+            startOffset = lineStart + prefixRange.first
+        )
     }
 
     private fun extractSettingValueContext(
@@ -1343,13 +1360,17 @@ internal object DreamShaderCompletionSuggester {
  */
 private class DreamShaderInsertTextHandler(
     private val insertText: String,
-    private val caretOffset: Int?
+    private val caretOffset: Int?,
+    private val replacementStartOffset: Int? = null
 ) : InsertHandler<com.intellij.codeInsight.lookup.LookupElement> {
     override fun handleInsert(
         insertionContext: InsertionContext,
         item: com.intellij.codeInsight.lookup.LookupElement
     ) {
-        val start = insertionContext.startOffset
+        val start = replacementStartOffset
+            ?.coerceIn(0, insertionContext.document.textLength)
+            ?.takeIf { it <= insertionContext.tailOffset }
+            ?: insertionContext.startOffset
         val end = insertionContext.tailOffset
         insertionContext.document.replaceString(start, end, insertText)
         val finalCaret = start + (caretOffset ?: insertText.length)
@@ -1601,6 +1622,8 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                 ) {
                     val file = parameters.originalFile
                     if (file.language != DreamShaderLanguage) return
+                    val importPrefix = DreamShaderCompletionSuggester.importCompletionPrefix(file.text, parameters.offset)
+                    val targetResult = importPrefix?.let { result.withPrefixMatcher(it.prefix) } ?: result
 
                     val suggestions = DreamShaderCompletionSuggester.suggest(
                         text = file.text,
@@ -1620,16 +1643,17 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                         val element = when {
                             suggestion.snippet != null ->
                                 builder.withInsertHandler(DreamShaderTemplateInsertHandler(suggestion.snippet))
-                            suggestion.insertText != suggestion.label ->
+                            suggestion.insertText != suggestion.label || suggestion.replacementStartOffset != null ->
                                 builder.withInsertHandler(
                                     DreamShaderInsertTextHandler(
                                         insertText = suggestion.insertText,
-                                        caretOffset = suggestion.caretOffset
+                                        caretOffset = suggestion.caretOffset,
+                                        replacementStartOffset = suggestion.replacementStartOffset
                                     )
                                 )
                             else -> builder
                         }
-                        result.addElement(PrioritizedLookupElement.withPriority(element, suggestion.priority))
+                        targetResult.addElement(PrioritizedLookupElement.withPriority(element, suggestion.priority))
                     }
                 }
             }
@@ -1643,6 +1667,7 @@ internal object DreamShaderCompletionAutoPopup {
         if (charTyped == '"') {
             return isImportStringStart(text, safeOffset) || isSettingValueStringStart(text, safeOffset)
         }
+        if (charTyped == '@' && isImportStringStart(text, safeOffset)) return true
         if (isOffsetInCommentOrString(text, safeOffset)) return false
         val context = DreamShaderCompletionContextAnalyzer.analyze(text, safeOffset)
         if (context.isInCommentOrString) return false
