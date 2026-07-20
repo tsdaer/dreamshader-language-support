@@ -81,7 +81,8 @@ internal class DreamShaderBridgeFileWatcher : ProjectActivity {
             "settings.json",
             "material-expressions.json",
             "substrate-builtins.json",
-            "preview.json"
+            "preview.json",
+            "bridge.db"
         )
     }
 }

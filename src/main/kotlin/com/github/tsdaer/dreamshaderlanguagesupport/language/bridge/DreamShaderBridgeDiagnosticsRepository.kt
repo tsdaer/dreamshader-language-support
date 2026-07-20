@@ -68,6 +68,16 @@ class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
             snapshot = DreamShaderBridgeDiagnosticsSnapshot(emptyList(), null)
             return snapshot
         }
+
+        // Try SQLite database first (upstream v1.5.0+ transport)
+        val dbPath = "$bridgeDirectory/bridge.db"
+        val diagnosticsFromDb = DreamShaderBridgeDatabaseReader.readDiagnostics(dbPath)
+        if (diagnosticsFromDb.isNotEmpty()) {
+            snapshot = DreamShaderBridgeDiagnosticsSnapshot(diagnosticsFromDb, dbPath.replace('\\', '/'))
+            return snapshot
+        }
+
+        // Fall back to JSON file (legacy transport)
         val diagnosticsFilePath = "$bridgeDirectory/diagnostics.json"
         val vf = LocalFileSystem.getInstance().findFileByPath(diagnosticsFilePath)
         if (vf == null || !vf.isValid || vf.isDirectory) {
