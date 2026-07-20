@@ -63,7 +63,9 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         /** Reserved for future live frame streaming parity. */
         var previewLiveFrameRate: Int = 2,
         /** Debounce delay before preview refresh requests are written after edits. */
-        var previewAutoRefreshDelayMs: Int = 1200
+        var previewAutoRefreshDelayMs: Int = 1200,
+        /** DreamShader source directory relative to project root (default "DShader"). Mirrors Unreal plugin's SourceDirectory setting. */
+        var sourceDirectory: String = "DShader"
     )
 
     private var state = State()

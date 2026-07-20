@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.openapi.project.Project
 import kotlinx.serialization.Serializable
 import java.nio.charset.StandardCharsets
@@ -218,7 +219,9 @@ internal class DreamShaderPackageManager(
 
     private fun ensurePackagesRoot(): Path {
         val basePath = project.basePath ?: error("project base path is null")
-        return Path.of(basePath).resolve("DShader").resolve("Packages")
+        val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
+        val sourceDir = settings?.sourceDirectory?.trim().orEmpty().ifBlank { "DShader" }.trimStart('/').trimEnd('/')
+        return Path.of(basePath).resolve(sourceDir).resolve("Packages")
     }
 
     private fun resolveProjectPath(relativeOrAbsolute: String): Path {
@@ -295,7 +298,9 @@ internal class DreamShaderPackageManager(
 
     private fun lockFilePath(): Path {
         val basePath = project.basePath ?: error("project base path is null")
-        return Path.of(basePath).resolve("DShader").resolve("dreamshader.lock.json")
+        val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
+        val sourceDir = settings?.sourceDirectory?.trim().orEmpty().ifBlank { "DShader" }.trimStart('/').trimEnd('/')
+        return Path.of(basePath).resolve(sourceDir).resolve("dreamshader.lock.json")
     }
 
     private fun moveOrCopyDirectory(from: Path, to: Path) {

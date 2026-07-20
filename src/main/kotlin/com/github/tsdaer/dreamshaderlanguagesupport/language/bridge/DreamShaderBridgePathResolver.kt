@@ -21,6 +21,22 @@ import java.io.File
 internal object DreamShaderBridgePathResolver {
     private const val BRIDGE_RELATIVE_PATH = "Saved/DreamShader/Bridge"
 
+    fun resolveSourceDirectory(project: Project, activeFile: VirtualFile?): String {
+        val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
+        val configured = settings?.sourceDirectory?.trim().orEmpty().trimStart('/').trimEnd('/')
+        if (configured.isNotBlank()) {
+            return configured
+        }
+        if (activeFile != null) {
+            val path = normalizePath(activeFile.path)
+            for (pattern in listOf("DShader", "Shaders", "Source")) {
+                val idx = path.indexOf("/$pattern/")
+                if (idx > 0) return pattern
+            }
+        }
+        return "DShader"
+    }
+
     fun resolveProjectRoot(project: Project, activeFile: VirtualFile?): String? {
         val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
         val configuredRoot = settings?.projectRoot?.trim().orEmpty()
@@ -58,9 +74,10 @@ internal object DreamShaderBridgePathResolver {
 
         if (activePath != null) {
             val normalizedActive = normalizePath(activePath)
-            val dshaderIndex = normalizedActive.indexOf("/DShader/")
-            if (dshaderIndex > 0) {
-                return normalizedActive.substring(0, dshaderIndex)
+            val sourceDir = resolveSourceDirectory(project, activeFile)
+            val sourceIndex = normalizedActive.indexOf("/$sourceDir/")
+            if (sourceIndex > 0) {
+                return normalizedActive.substring(0, sourceIndex)
             }
         }
 

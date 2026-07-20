@@ -85,7 +85,14 @@ private class DreamShaderBridgeStatusBarWidget(
         val total = snapshot.diagnostics.size
         val warnings = snapshot.diagnostics.count { it.severity == "warning" || it.severity == "warn" }
         val errors = total - warnings
-        label.text = DreamShaderBundle.message("bridge.widget.summary", errors, warnings)
+        val transportSuffix = if (snapshot.loadedFromPath?.endsWith("bridge.db") == true) {
+            DreamShaderBundle.message("bridge.widget.transport.db")
+        } else if (snapshot.loadedFromPath != null) {
+            DreamShaderBundle.message("bridge.widget.transport.file")
+        } else {
+            ""
+        }
+        label.text = DreamShaderBundle.message("bridge.widget.summary", errors, warnings) + transportSuffix
         statusBar?.updateWidget(ID())
     }
 }

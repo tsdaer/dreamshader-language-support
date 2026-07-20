@@ -1,34 +1,32 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
 
+import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
 
 internal object DreamShaderBridgeDatabaseConnection {
-    private var connected: Connection? = null
-    private var connectedToPath: String? = null
+    private var driverLoaded = false
+
+    private fun ensureDriver() {
+        if (driverLoaded) return
+        try {
+            Class.forName("org.sqlite.JDBC")
+            driverLoaded = true
+        } catch (_: Exception) {
+        }
+    }
 
     fun connect(dbPath: String): Connection? {
         val normalizedPath = dbPath.replace('\\', '/')
-        if (connectedToPath == normalizedPath && connected != null && !connected!!.isClosed) {
-            return connected
-        }
-        disconnect()
+        ensureDriver()
         return try {
-            val conn = DriverManager.getConnection("jdbc:sqlite:$normalizedPath")
-            connected = conn
-            connectedToPath = normalizedPath
-            conn
+            DriverManager.getConnection("jdbc:sqlite:$normalizedPath")
         } catch (_: Exception) {
             null
         }
     }
 
-    fun disconnect() {
-        try {
-            connected?.close()
-        } catch (_: Exception) {
-        }
-        connected = null
-        connectedToPath = null
+    fun disconnect(conn: Connection?) {
+        try { conn?.close() } catch (_: Exception) {}
     }
 }

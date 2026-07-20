@@ -71,10 +71,15 @@ class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
 
         // Try SQLite database first (upstream v1.5.0+ transport)
         val dbPath = "$bridgeDirectory/bridge.db"
-        val diagnosticsFromDb = DreamShaderBridgeDatabaseReader.readDiagnostics(dbPath)
-        if (diagnosticsFromDb.isNotEmpty()) {
-            snapshot = DreamShaderBridgeDiagnosticsSnapshot(diagnosticsFromDb, dbPath.replace('\\', '/'))
-            return snapshot
+        val dbFile = java.io.File(dbPath)
+        if (dbFile.exists()) {
+            val diagnosticsFromDb = DreamShaderBridgeDatabaseReader.readDiagnostics(dbPath)
+            if (diagnosticsFromDb.isNotEmpty()) {
+                snapshot = DreamShaderBridgeDiagnosticsSnapshot(diagnosticsFromDb, dbPath.replace('\\', '/'))
+                return snapshot
+            }
+            // Database exists but diagnostics table is empty — Unreal-side write may have
+            // failed (e.g. relative-path I/O error). Fall through to JSON file.
         }
 
         // Fall back to JSON file (legacy transport)

@@ -17,71 +17,35 @@ internal object DreamShaderBridgeDatabaseReader {
         dbPath: String?,
         sourceFileFilter: String? = null
     ): List<DreamShaderBridgeDiagnostic> {
-        if (dbPath.isNullOrBlank() || !File(dbPath).exists()) {
-            return emptyList()
-        }
+        if (dbPath.isNullOrBlank()) return emptyList()
+        val file = File(dbPath)
+        if (!file.exists()) return emptyList()
 
+        val conn = DreamShaderBridgeDatabaseConnection.connect(dbPath) ?: return emptyList()
         return try {
-            val conn = DreamShaderBridgeDatabaseConnection.connect(dbPath) ?: return emptyList()
-            val sql = if (sourceFileFilter != null) {
-                "SELECT json FROM diagnostics WHERE path = ?"
-            } else {
-                "SELECT json FROM diagnostics"
+            val stmt = conn.createStatement()
+            val rs = stmt.executeQuery("SELECT json FROM diagnostics")
+            val result = mutableListOf<DreamShaderBridgeDiagnostic>()
+            while (rs.next()) {
+                rs.getString("json")?.let { result.addAll(parseDiagnosticsFromJson(it)) }
             }
-
-            val stmt = if (sourceFileFilter != null) {
-                conn.prepareStatement(sql).also { it.setString(1, sourceFileFilter) }
-            } else {
-                conn.createStatement()
-            }
-
-            val resultSet = if (sourceFileFilter != null) {
-                (stmt as java.sql.PreparedStatement).executeQuery()
-            } else {
-                (stmt as java.sql.Statement).executeQuery(sql)
-            }
-
-            val diagnostics = mutableListOf<DreamShaderBridgeDiagnostic>()
-            while (resultSet.next()) {
-                val rawJson = resultSet.getString("json")
-                if (rawJson != null) {
-                    diagnostics.addAll(parseDiagnosticsFromJson(rawJson))
-                }
-            }
-            resultSet.close()
+            rs.close()
             stmt.close()
-            diagnostics
+            result
         } catch (_: Exception) {
             emptyList()
-        }
-    }
-
-    fun readUpdatedAt(dbPath: String?): String? {
-        if (dbPath.isNullOrBlank() || !File(dbPath).exists()) {
-            return null
-        }
-        return try {
-            val conn = DreamShaderBridgeDatabaseConnection.connect(dbPath) ?: return null
-            val stmt = conn.createStatement()
-            val resultSet = stmt.executeQuery("SELECT value FROM meta WHERE key = 'diagnostics.updatedAt'")
-            val value = if (resultSet.next()) resultSet.getString("value") else null
-            resultSet.close()
-            stmt.close()
-            value
-        } catch (_: Exception) {
-            null
+        } finally {
+            DreamShaderBridgeDatabaseConnection.disconnect(conn)
         }
     }
 
     private fun parseDiagnosticsFromJson(rawJson: String): List<DreamShaderBridgeDiagnostic> {
         return try {
             val element = jsonParser.parseToJsonElement(rawJson)
-            val diagnosticsArray = element.jsonObject["diagnostics"]?.jsonArray
-                ?: return emptyList()
-            diagnosticsArray.mapNotNull { parseDiagnostic(it) }
-        } catch (_: Exception) {
-            emptyList()
-        }
+            element.jsonObject["diagnostics"]?.jsonArray
+                ?.mapNotNull { parseDiagnostic(it) }
+                .orEmpty()
+        } catch (_: Exception) { emptyList() }
     }
 
     private fun parseDiagnostic(element: JsonElement): DreamShaderBridgeDiagnostic? {

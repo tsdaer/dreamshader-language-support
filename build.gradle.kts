@@ -11,24 +11,21 @@ plugins {
 }
 
 dependencies {
-    // Explicitly align stdlib with the Kotlin compiler version for 2026.1 Platform tests.
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    implementation("org.xerial:sqlite-jdbc:3.46.1.3")
     testImplementation(platform("org.junit:junit-bom:6.1.0"))
-    // Keep JUnit 4 APIs on the test compile classpath for IntelliJ Platform test compatibility.
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
-        // Keep IU for reliable headless test execution.
         intellijIdea("2026.1.3")
         bundledModule("intellij.spellchecker")
-        bundledModule("com.intellij.database")
         testFramework(TestFrameworkType.Platform)
     }
 }
+
 
 tasks.test {
     useJUnitPlatform()

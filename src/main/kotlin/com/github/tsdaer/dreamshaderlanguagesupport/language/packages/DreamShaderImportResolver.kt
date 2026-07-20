@@ -1,5 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.packages
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
@@ -29,17 +30,21 @@ internal object DreamShaderImportResolver {
     fun resolveImport(file: PsiFile, importPath: String): VirtualFile? {
         val containing = file.virtualFile ?: return null
         val projectBase = file.project.basePath ?: return null
+        val settings = file.project.getService(DreamShaderProjectSettings::class.java)?.state
+        val sourceDir = settings?.sourceDirectory?.trim().orEmpty().ifBlank { "DShader" }.trimStart('/').trimEnd('/')
         return resolveImport(
             projectBasePath = projectBase,
             containingDirectory = containing.parent,
-            importPath = importPath
+            importPath = importPath,
+            sourceDirectory = sourceDir
         )
     }
 
     internal fun resolveImport(
         projectBasePath: String,
         containingDirectory: VirtualFile?,
-        importPath: String
+        importPath: String,
+        sourceDirectory: String = "DShader"
     ): VirtualFile? {
         val normalized = importPath.trim().replace('\\', '/')
         if (normalized.isBlank()) return null
@@ -61,7 +66,7 @@ internal object DreamShaderImportResolver {
         }
 
         val projectBase = normalizePath(projectBasePath)
-        val dshaderRoot = "$projectBase/DShader"
+        val dshaderRoot = "$projectBase/$sourceDirectory"
         val packagesRoot = "$dshaderRoot/Packages"
 
         candidatePaths.forEach { candidate ->
