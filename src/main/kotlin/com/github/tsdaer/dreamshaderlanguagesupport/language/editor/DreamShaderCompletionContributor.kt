@@ -951,6 +951,20 @@ internal object DreamShaderCompletionSuggester {
             }
         }
 
+        if (context.isInDeclarationBody && isAfterSectionKeyword(linePrefix)) {
+            add(
+                DreamShaderCompletionItem(
+                    label = "Group",
+                    insertText = "Group(\"Name\")",
+                    detail = "Section group modifier",
+                    typeText = "modifier",
+                    icon = DreamShaderIcons.SECTION,
+                    priority = 46.0,
+                    snippet = "Group(\"${'$'}{1:Name}\") {${'$'}{2}}"
+                )
+            )
+        }
+
         if (context.isTypeCompletionContext) {
             qualifierCompletionItems(context, linePrefix).forEach(::add)
             TYPE_KEYWORDS.forEach { type ->
@@ -1030,6 +1044,14 @@ internal object DreamShaderCompletionSuggester {
             context.currentSectionName == OUTPUTS_SECTION ||
             context.currentSectionName == INPUTS_SECTION ||
             context.currentSectionName == RESULTS_SECTION
+    }
+
+    private fun isAfterSectionKeyword(linePrefix: String): Boolean {
+        val trimmed = linePrefix.trimEnd()
+        return DreamShaderLanguageKeywords.SECTION_KEYWORDS.any { section ->
+            trimmed.endsWith(section, ignoreCase = true) &&
+                (trimmed.length == section.length || trimmed[trimmed.length - section.length - 1].isWhitespace())
+        }
     }
 
     private fun localSymbolCompletionItems(

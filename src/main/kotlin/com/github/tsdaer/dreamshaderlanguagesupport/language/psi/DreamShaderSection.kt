@@ -9,5 +9,7 @@ import com.intellij.psi.PsiElement
 interface DreamShaderSection : PsiElement {
     fun sectionName(): String?
 
+    fun groupName(): String?
+
     fun bodyTextRange(): TextRange?
 }

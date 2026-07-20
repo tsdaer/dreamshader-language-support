@@ -16,6 +16,28 @@ class DreamShaderSectionImpl(node: ASTNode) : ASTWrapperPsiElement(node), DreamS
         return sectionNode.text.lowercase(Locale.ROOT)
     }
 
+    override fun groupName(): String? {
+        var child = node.firstChildNode
+        var seenGroupKeyword = false
+        while (child != null) {
+            if (child.elementType == DreamShaderTokenTypes.KEYWORD &&
+                child.text.lowercase(Locale.ROOT) in setOf("group", "propgroup")) {
+                seenGroupKeyword = true
+            } else if (seenGroupKeyword && child.elementType == DreamShaderTokenTypes.STRING) {
+                val raw = child.text
+                if (raw.length >= 2 && raw.startsWith("\"") && raw.endsWith("\"")) {
+                    return raw.substring(1, raw.length - 1)
+                }
+                return raw
+            }
+            if (seenGroupKeyword && child.elementType == DreamShaderTokenTypes.LBRACE) {
+                break
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
     override fun bodyTextRange(): TextRange? {
         val leftBrace = node.findChildByType(DreamShaderTokenTypes.LBRACE) ?: return null
         val rightBrace = findMatchingRightBrace(leftBrace) ?: return null

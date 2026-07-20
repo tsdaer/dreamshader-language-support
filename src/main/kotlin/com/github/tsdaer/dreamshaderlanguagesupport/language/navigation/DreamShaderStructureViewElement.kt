@@ -9,6 +9,7 @@ import com.intellij.ide.util.treeView.smartTree.TreeElement
 import com.intellij.navigation.ItemPresentation
 import com.intellij.pom.Navigatable
 import com.intellij.psi.PsiElement
+import java.util.Locale
 import javax.swing.Icon
 
 /**
@@ -28,7 +29,16 @@ class DreamShaderStructureViewElement(
                 val name = element.declarationName().orEmpty().ifBlank { "<anonymous>" }
                 "$keyword $name"
             }
-            is DreamShaderSection -> element.sectionName()
+            is DreamShaderSection -> {
+                val sectionName = element.sectionName()
+                val groupName = element.groupName()
+                if (!groupName.isNullOrBlank() && !sectionName.isNullOrBlank()) {
+                    val display = sectionName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                    "$display Group(\"$groupName\")"
+                } else {
+                    element.sectionName()
+                }
+            }
             else -> element.text
         }
 

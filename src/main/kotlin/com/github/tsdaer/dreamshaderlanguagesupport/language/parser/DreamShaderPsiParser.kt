@@ -202,6 +202,28 @@ class DreamShaderPsiParser : PsiParser {
             }
             tokenType == DreamShaderTokenTypes.LBRACE -> HeaderRecoveryMode.NONE
             tokenType == DreamShaderTokenTypes.OPERATOR && builder.tokenText == ";" -> HeaderRecoveryMode.NONE
+            tokenType == DreamShaderTokenTypes.KEYWORD && builder.tokenText?.lowercase() in setOf("group", "propgroup") -> {
+                builder.advanceLexer() // group keyword
+                skipTrivia(builder)
+                if (builder.tokenType == DreamShaderTokenTypes.LPAREN) {
+                    builder.advanceLexer() // (
+                    skipTrivia(builder)
+                    if (builder.tokenType == DreamShaderTokenTypes.STRING) {
+                        builder.advanceLexer() // "Name"
+                        skipTrivia(builder)
+                    }
+                    if (builder.tokenType == DreamShaderTokenTypes.RPAREN) {
+                        builder.advanceLexer() // )
+                    }
+                }
+                skipTrivia(builder)
+                if (builder.tokenType == DreamShaderTokenTypes.LBRACE) {
+                    HeaderRecoveryMode.NONE
+                } else {
+                    builder.error(DreamShaderBundle.message("diagnostic.malformedSectionExpectedLBrace"))
+                    HeaderRecoveryMode.STOP_AT_DECLARATION_BOUNDARY
+                }
+            }
             tokenType == DreamShaderTokenTypes.OPERATOR && builder.tokenText == "=" -> {
                 builder.advanceLexer()
                 skipTrivia(builder)

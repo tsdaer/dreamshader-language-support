@@ -65,9 +65,11 @@ Canonical sections:
 - `Options`
 - `Graph`
 
-Property grouping scopes:
-- `Group("Name") { ... }` and legacy `PropGroup("Name") { ... }`: visual grouping scopes that wrap nested sections (e.g. `Properties`, `Inputs`). The contents are flattened into the parent declaration scope for diagnostic purposes.
-- Group is a child declaration allowed inside `Shader`, `ShaderFunction`, `ShaderLayer`, `ShaderLayerBlend` bodies.
+Property grouping scopes (two forms):
+- Section modifier: `Properties Group("Name") { ... }` (primary upstream syntax) — applies the group name to every parameter or declaration inside the section. Supported on `Properties`, `Inputs`, and `Outputs` sections.
+- Standalone declaration: `Group("Name") { Properties { ... } }` (compatibility alias) — wraps nested sections in a grouping scope. The contents are flattened into the parent declaration scope for diagnostic purposes.
+- Legacy `PropGroup("Name")` is also accepted as an alias for `Group("Name")`.
+- Group is valid inside `Shader`, `ShaderFunction`, `ShaderLayer`, `ShaderLayerBlend` bodies.
 
 Expected behavior highlights:
 - `Inputs` supports optional inputs (`opt`) and default-value usage conventions.

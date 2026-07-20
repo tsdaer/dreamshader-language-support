@@ -59,7 +59,7 @@ Verification used during the optimization pass:
 
 Completed upstream features from the VS Code DreamShaderLang extension v1.6.x:
 
-- `Group("Name") { ... }` property grouping scopes: added `group` and `propgroup` lexer keywords, declaration parsing, string-name resolution in `DreamShaderDeclarationImpl`, completion snippets with template placeholders, structure-view integration with child section/declaration display, and section flattening in diagnostics (Group contents promoted to parent declaration scope).
+- `Group("Name") { ... }` property grouping scopes: added `group` and `propgroup` lexer keywords, declaration parsing, string-name resolution in `DreamShaderDeclarationImpl`, completion snippets with template placeholders, structure-view integration with child section/declaration display, and section flattening in diagnostics (Group contents promoted to parent declaration scope). Also supports `Properties Group("Name") { ... }` section-header modifier syntax (primary upstream form) with PSI `groupName()` accessor on sections, structure-view display, and completion after section keywords.
 - Single-output return-value functions (`Function float X(...)`): `validateDeclarationHeader` now accepts `TYPE` token after `Function`/`GraphFunction` keyword; `returnType()` accessor added to `DreamShaderDeclaration` interface and impl; signature help pattern captures optional return type and renders `: <type>` suffix; hover docs display return type; `return` keyword diagnostics exclude return-value function bodies (where `return` is valid).
 
 ## Current Progress
