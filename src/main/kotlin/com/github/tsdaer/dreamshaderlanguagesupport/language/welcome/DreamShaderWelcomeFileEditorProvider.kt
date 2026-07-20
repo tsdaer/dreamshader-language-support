@@ -1,5 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.welcome
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderSettingsConfigurable
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
@@ -11,14 +12,16 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.ui.jcef.JBCefBrowser
-import com.intellij.ui.jcef.JBCefBrowserBase
-import com.intellij.ui.jcef.JBCefJSQuery
+import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
+import java.awt.Desktop
+import java.awt.Font
 import java.beans.PropertyChangeListener
-import javax.swing.JComponent
-import javax.swing.JLabel
-import javax.swing.JPanel
+import java.net.URI
+import javax.swing.*
+import javax.swing.event.HyperlinkEvent
 
 class DreamShaderWelcomeFileEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is DreamShaderWelcomeVirtualFile
@@ -40,42 +43,24 @@ private class DreamShaderWelcomeFileEditor(
     private val root = JPanel(BorderLayout())
 
     init {
-        val jcefAvailable = try {
-            Class.forName("com.intellij.ui.jcef.JBCefApp")
-            true
-        } catch (_: Exception) { false }
-
-        if (jcefAvailable) {
-            createJcefContent()
-        } else {
-            root.add(JLabel(com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle.message("welcome.fallback.jcefUnavailable")), BorderLayout.NORTH)
-        }
-    }
-
-    private fun createJcefContent() {
-        try {
-            val cef = JBCefBrowser()
-            val jsQuery = JBCefJSQuery.create(cef as JBCefBrowserBase)
-            jsQuery.addHandler {
-                ShowSettingsUtil.getInstance().showSettingsDialog(project, DreamShaderSettingsConfigurable::class.java)
-                null
+        val pane = JEditorPane("text/html", file.htmlContent).apply {
+            isEditable = false
+            isOpaque = true
+            background = UIUtil.getPanelBackground()
+            border = JBUI.Borders.empty(20, 24)
+            putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true)
+            addHyperlinkListener { e ->
+                if (e.eventType == HyperlinkEvent.EventType.ACTIVATED) {
+                    val url = e.url?.toString() ?: return@addHyperlinkListener
+                    if (url.startsWith("dreamshader://open-settings")) {
+                        ShowSettingsUtil.getInstance().showSettingsDialog(project, DreamShaderSettingsConfigurable::class.java)
+                    } else {
+                        try { Desktop.getDesktop().browse(URI(url)) } catch (_: Exception) {}
+                    }
+                }
             }
-            val injectedHtml = file.htmlContent.replace(
-                "</body>",
-                """<script>
-                    window.openSettings = function() {
-                        ${jsQuery.inject("open-settings")};
-                    };
-                    </script></body>"""
-            )
-            cef.loadHTML(injectedHtml)
-            jsQuery.addHandler { null }
-            root.add(cef.component, BorderLayout.CENTER)
-        } catch (_: Exception) {
-            root.add(JLabel(
-                com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle.message("welcome.fallback.jcefUnavailable")
-            ), BorderLayout.NORTH)
         }
+        root.add(JBScrollPane(pane).apply { border = JBUI.Borders.empty() }, BorderLayout.CENTER)
     }
 
     override fun getComponent(): JComponent = root

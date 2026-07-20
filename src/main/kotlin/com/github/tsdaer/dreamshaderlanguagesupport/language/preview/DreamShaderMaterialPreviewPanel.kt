@@ -15,7 +15,6 @@ import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.util.Alarm
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -37,7 +36,6 @@ internal class DreamShaderMaterialPreviewPanel(
     private val statusLabel = JLabel(DreamShaderBundle.message("preview.panel.ready"))
     private val meshCombo = com.intellij.openapi.ui.ComboBox(arrayOf("sphere", "plane", "cube"))
     private val swingImageLabel = JLabel(DreamShaderBundle.message("preview.panel.waiting"), SwingConstants.CENTER)
-    private var browser: Any? = null
     private var sourceFile: VirtualFile? = null
     private var lastRequestId: String? = null
 
@@ -50,11 +48,6 @@ internal class DreamShaderMaterialPreviewPanel(
         setSourceFile(activeDsmFile(), request = false)
         refresh()
     }
-
-    private fun jcefAvailable(): Boolean = try {
-        Class.forName("com.intellij.ui.jcef.JBCefApp")
-        true
-    } catch (_: Exception) { false }
 
     private fun buildUi() {
         DreamShaderUi.installSurface(this)
@@ -93,18 +86,10 @@ internal class DreamShaderMaterialPreviewPanel(
                 JBUI.Borders.empty(10)
             )
         }
-        if (jcefAvailable()) {
-            val cef = JBCefBrowser()
-            browser = cef
-            stage.add(cef.component, BorderLayout.CENTER)
-        } else {
-            swingImageLabel.verticalTextPosition = SwingConstants.BOTTOM
-            swingImageLabel.horizontalTextPosition = SwingConstants.CENTER
-            swingImageLabel.foreground = UIUtil.getContextHelpForeground()
-            stage.add(JBScrollPane(swingImageLabel).apply {
-                border = JBUI.Borders.empty()
-            }, BorderLayout.CENTER)
-        }
+        swingImageLabel.verticalTextPosition = SwingConstants.BOTTOM
+        swingImageLabel.horizontalTextPosition = SwingConstants.CENTER
+        swingImageLabel.foreground = UIUtil.getContextHelpForeground()
+        stage.add(JBScrollPane(swingImageLabel).apply { border = JBUI.Borders.empty() }, BorderLayout.CENTER)
         add(stage, BorderLayout.CENTER)
 
         val statusBar = JPanel(BorderLayout()).apply {
@@ -242,20 +227,16 @@ internal class DreamShaderMaterialPreviewPanel(
             return
         }
         val cacheBust = System.currentTimeMillis()
-        (browser as? JBCefBrowser)?.loadHTML(buildPreviewHtml(file, cacheBust)) ?: run {
-            swingImageLabel.text = null
-            swingImageLabel.icon = ImageIcon(file.path)
-            swingImageLabel.preferredSize = Dimension(512, 512)
-            swingImageLabel.revalidate()
-            swingImageLabel.repaint()
-        }
+        swingImageLabel.text = null
+        swingImageLabel.icon = ImageIcon(file.path)
+        swingImageLabel.preferredSize = Dimension(512, 512)
+        swingImageLabel.revalidate()
+        swingImageLabel.repaint()
     }
 
     private fun renderMessage(message: String) {
-        (browser as? JBCefBrowser)?.loadHTML(buildMessageHtml(message)) ?: run {
-            swingImageLabel.icon = null
-            swingImageLabel.text = message
-        }
+        swingImageLabel.icon = null
+        swingImageLabel.text = message
     }
 
     private fun activeDsmFile(): VirtualFile? {
@@ -268,8 +249,6 @@ internal class DreamShaderMaterialPreviewPanel(
         if (project.getService(DreamShaderMaterialPreviewPanelService::class.java).panel === this) {
             project.getService(DreamShaderMaterialPreviewPanelService::class.java).panel = null
         }
-        (browser as? JBCefBrowser)?.dispose()
-        browser = null
     }
 
     private fun buildPreviewHtml(file: File, cacheBust: Long): String {
