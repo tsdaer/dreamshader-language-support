@@ -22,6 +22,7 @@ import java.beans.PropertyChangeListener
 import java.net.URI
 import javax.swing.*
 import javax.swing.event.HyperlinkEvent
+import javax.swing.text.html.HTMLEditorKit
 
 class DreamShaderWelcomeFileEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is DreamShaderWelcomeVirtualFile
@@ -43,7 +44,9 @@ private class DreamShaderWelcomeFileEditor(
     private val root = JPanel(BorderLayout())
 
     init {
-        val pane = JEditorPane("text/html", file.htmlContent).apply {
+        val pane = JEditorPane().apply {
+            editorKit = HTMLEditorKit()
+            text = file.htmlContent
             isEditable = false
             isOpaque = true
             background = UIUtil.getPanelBackground()
