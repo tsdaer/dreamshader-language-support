@@ -2,6 +2,17 @@
 
 # dreamshader-language-support Changelog
 
+## [0.0.9] - 2026-07-27
+
+### Changed
+
+- Plugin XML: removed optional `com.intellij.modules.jcef` dependency — no longer needed since welcome page uses `HTMLEditorProvider`.
+- Suppressed remaining unavoidable deprecated API usages inherited from IntelliJ Platform base classes.
+
+### Fixed
+
+- Plugin verifier internal API warning for `PluginManagerCore.getPlugin(PluginId)`.
+
 ## [0.0.8] - 2026-07-27
 
 ### Changed

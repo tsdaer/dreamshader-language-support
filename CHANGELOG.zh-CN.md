@@ -2,6 +2,17 @@
 
 # dreamshader-language-support 更新日志
 
+## [0.0.9] - 2026-07-27
+
+### 变更
+
+- 插件 XML：移除可选的 `com.intellij.modules.jcef` 依赖 — 欢迎页已使用 `HTMLEditorProvider`，不再需要。
+- 抑制继承自 IntelliJ Platform 基类的剩余不可避免的废弃 API 警告。
+
+### 修复
+
+- 插件验证器针对 `PluginManagerCore.getPlugin(PluginId)` 的内部 API 使用警告。
+
 ## [0.0.8] - 2026-07-27
 
 ### 变更
