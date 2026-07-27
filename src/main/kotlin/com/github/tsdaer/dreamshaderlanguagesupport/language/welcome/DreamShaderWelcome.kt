@@ -3,15 +3,12 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.welcome
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderSettingsConfigurable
 import com.intellij.ide.BrowserUtil
-import com.intellij.ide.plugins.IdeaPluginDescriptor
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileEditor.impl.HTMLEditorProvider
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
@@ -23,6 +20,8 @@ private const val PLUGIN_ID = "com.github.tsdaer.dreamshaderlanguagesupport"
 private const val DREAMSHADER_WELCOME_NOTIFICATION_GROUP_ID = "DreamShader Welcome"
 private const val VERSION_PROPERTY = "$PLUGIN_ID.version"
 private const val INITIAL_VERSION = "0.0.0"
+private const val VERSION_RESOURCE = "dreamshader-plugin.properties"
+private const val CHANGELOG_RESOURCE = "CHANGELOG.md"
 
 internal enum class WelcomeReason {
     FIRST_INSTALL,
@@ -39,14 +38,8 @@ internal data class WelcomeDecision(
 internal fun showWelcomeDialog(project: Project, forceManual: Boolean = false) {
     if (project.isDisposed) return
 
-    val plugin = try {
-        @Suppress("UnstableApiUsage")
-        PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID))
-    } catch (_: Exception) {
-        null
-    } ?: return
-
-    val currentVersion = plugin.version
+    val currentVersion = readResourceVersion() ?: return
+    val changeNotes = readResourceChangeNotes(currentVersion)
     val properties = PropertiesComponent.getInstance()
     val lastVersionString = properties.getValue(VERSION_PROPERTY, INITIAL_VERSION)
 
@@ -67,13 +60,13 @@ internal fun showWelcomeDialog(project: Project, forceManual: Boolean = false) {
         if (project.isDisposed) return@invokeLater
 
         if (isCefSupported()) {
-            val success = openWelcomeWebView(project, plugin, decision)
+            val success = openWelcomeWebView(project, changeNotes, decision)
             if (success) {
                 properties.setValue(VERSION_PROPERTY, currentVersion)
                 return@invokeLater
             }
         }
-        showWelcomeNotification(project, plugin, decision)
+        showWelcomeNotification(project, changeNotes, decision)
         properties.setValue(VERSION_PROPERTY, currentVersion)
     }
 }
@@ -90,11 +83,11 @@ internal class DreamShaderWelcomeProjectActivity : ProjectActivity {
 
 private fun openWelcomeWebView(
     project: Project,
-    plugin: IdeaPluginDescriptor,
+    changeNotes: String,
     decision: WelcomeDecision
 ): Boolean {
     return try {
-        val htmlContent = buildWelcomeHtml(decision, plugin)
+        val htmlContent = buildWelcomeHtml(decision, changeNotes)
 
         val title = DreamShaderBundle.message(
             when (decision.reason) {
@@ -125,7 +118,7 @@ private fun openWelcomeWebView(
     }
 }
 
-private fun buildWelcomeHtml(decision: WelcomeDecision, plugin: IdeaPluginDescriptor): String {
+private fun buildWelcomeHtml(decision: WelcomeDecision, changeNotes: String): String {
     val badge = DreamShaderBundle.message(
         when (decision.reason) {
             WelcomeReason.FIRST_INSTALL -> "welcome.badge.firstInstall"
@@ -138,7 +131,6 @@ private fun buildWelcomeHtml(decision: WelcomeDecision, plugin: IdeaPluginDescri
     val features = DreamShaderBundle.message("welcome.section.features.html")
     val howTo = DreamShaderBundle.message("welcome.section.howTo.html")
     val setup = DreamShaderBundle.message("welcome.section.setup.html")
-    val changeNotes = plugin.changeNotes ?: DreamShaderBundle.message("welcome.section.changes.fallback")
     val versionLine = DreamShaderBundle.message(
         "welcome.section.changes.versionLine",
         decision.previousVersion ?: DreamShaderBundle.message("common.unknown"),
@@ -403,7 +395,7 @@ private fun buildWelcomeHtml(decision: WelcomeDecision, plugin: IdeaPluginDescri
 
 private fun showWelcomeNotification(
     project: Project,
-    plugin: IdeaPluginDescriptor,
+    changeNotes: String,
     decision: WelcomeDecision
 ) {
     val title = DreamShaderBundle.message(
@@ -425,7 +417,9 @@ private fun showWelcomeNotification(
         decision.previousVersion ?: DreamShaderBundle.message("common.unknown"),
         decision.currentVersion
     )
-    val changeNotes = plugin.changeNotes ?: DreamShaderBundle.message("welcome.section.changes.fallback")
+    val changeNotesContent = changeNotes
+        .takeIf { it.isNotEmpty() }
+        ?: DreamShaderBundle.message("welcome.section.changes.fallback")
 
     val content = buildString {
         append("<p>").append(escapeHtml(subtitleText)).append("</p>")
@@ -438,7 +432,7 @@ private fun showWelcomeNotification(
         append(setup)
         append("<h3>").append(escapeHtml(changesTitle)).append("</h3>")
         append("<p><i>").append(escapeHtml(versionLine)).append("</i></p>")
-        append(changeNotes)
+        append(changeNotesContent)
     }
 
     val notification = NotificationGroupManager.getInstance()
@@ -513,6 +507,45 @@ internal fun handleWelcomeHyperlink(project: Project, url: String) {
         } catch (_: Exception) {
         }
     }
+}
+
+private fun readResourceVersion(): String? {
+    return try {
+        val props = java.util.Properties()
+        DreamShaderWelcomeProjectActivity::class.java
+            .classLoader
+            .getResourceAsStream(VERSION_RESOURCE)
+            ?.use { props.load(it) }
+        props.getProperty("version")
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun readResourceChangeNotes(currentVersion: String): String {
+    return try {
+        val changelog = DreamShaderWelcomeProjectActivity::class.java
+            .classLoader
+            .getResourceAsStream(CHANGELOG_RESOURCE)
+            ?.bufferedReader()
+            ?.readText()
+            ?: return ""
+        extractChangelogSection(changelog, currentVersion)
+    } catch (_: Exception) {
+        ""
+    }
+}
+
+private fun extractChangelogSection(changelog: String, version: String): String {
+    val lines = changelog.lines()
+    val headingRegex = Regex("""^## \[${Regex.escape(version)}\].*$""")
+    val anySectionRegex = Regex("""^## \[[^]]+\].*$""")
+    val startIndex = lines.indexOfFirst { headingRegex.matches(it.trim()) }
+    if (startIndex < 0) return ""
+    return lines.drop(startIndex + 1)
+        .takeWhile { !anySectionRegex.matches(it.trim()) }
+        .joinToString("\n")
+        .trim()
 }
 
 private fun buildSubtitleText(decision: WelcomeDecision): String {
