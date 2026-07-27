@@ -2,6 +2,12 @@
 
 # dreamshader-language-support Changelog
 
+## [0.0.10] - 2026-07-27
+
+### Fixed
+
+- Plugin verifier internal API warning: replaced `PluginManagerCore.getPlugin()` with resource-based version and changelog reading (`dreamshader-plugin.properties` + `CHANGELOG.md`).
+
 ## [0.0.9] - 2026-07-27
 
 ### Changed

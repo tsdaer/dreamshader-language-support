@@ -2,6 +2,12 @@
 
 # dreamshader-language-support 更新日志
 
+## [0.0.10] - 2026-07-27
+
+### 修复
+
+- 插件验证器内部 API 警告：将 `PluginManagerCore.getPlugin()` 替换为基于资源的版本和变更日志读取（`dreamshader-plugin.properties` + `CHANGELOG.md`）。
+
 ## [0.0.9] - 2026-07-27
 
 ### 变更
