@@ -481,15 +481,7 @@ private fun showWelcomeNotification(
         )
     }
 
-    val projectRef = java.lang.ref.WeakReference(project)
     notification.whenExpired {
-        projectRef.get()?.let { proj ->
-            if (!proj.isDisposed) {
-                if (changeNotes.isNotEmpty()) {
-                    BrowserUtil.browse("https://github.com/tsdaer/dreamshader-language-support/blob/main/CHANGELOG.md")
-                }
-            }
-        }
         ApplicationManager.getApplication().messageBus
             .syncPublisher(DreamShaderUpdateListener.TOPIC)
             .onPostUpdate(true)
