@@ -2,6 +2,25 @@
 
 # dreamshader-language-support 更新日志
 
+## [0.0.8] - 2026-07-27
+
+### 变更
+
+- 欢迎页：将自定义 JCEF 管线（`JCEFHtmlPanel` + 自定义 `FileEditorProvider` + `LightVirtualFile`）替换为标准 `HTMLEditorProvider` API，与 JetBrains 官方 whatsnew 页面方案一致。
+- 欢迎页链接拦截：从原生 CEF 请求处理器切换为基于 `JsQueryHandler` 的 `window.jbCefQuery()` 通信方式。
+- 移除可选的 JCEF 模块依赖及自定义 `config-file` 变通方案 — `HTMLEditorProvider` 内部处理 JCEF 可用性。
+
+### 修复
+
+- 在未加载 JCEF 模块的环境中出现的 `ClassNotFoundException: com.intellij.ui.jcef.JBCefApp` 错误。
+- 因自定义 JCEF 初始化和生命周期管理不稳定导致的欢迎页加载失败。
+
+### 移除
+
+- `DreamShaderWelcomeWebView.kt`、`DreamShaderWelcomeVirtualFile`、`DreamShaderWelcomeWebViewProvider`（由 `HTMLEditorProvider` 替代）。
+- `src/main/resources/includes/jcef.xml`（不再需要）。
+- 冗余的 `forceSelectWelcomeEditor` 基于 Alarm 的编辑器选择重试机制。
+
 ## [0.0.7] - 2026-07-20
 
 ### 新增

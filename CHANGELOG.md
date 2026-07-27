@@ -2,6 +2,25 @@
 
 # dreamshader-language-support Changelog
 
+## [0.0.8] - 2026-07-27
+
+### Changed
+
+- Welcome page: replaced custom JCEF pipeline (`JCEFHtmlPanel` + custom `FileEditorProvider` + `LightVirtualFile`) with standard `HTMLEditorProvider` API, matching the approach used by JetBrains' own whatsnew page.
+- Link interception in welcome page: switched from native CEF request handlers to `JsQueryHandler`-based communication via `window.jbCefQuery()`.
+- Removed optional JCEF module dependency with custom `config-file` workaround — `HTMLEditorProvider` handles JCEF availability internally.
+
+### Fixed
+
+- `ClassNotFoundException: com.intellij.ui.jcef.JBCefApp` in environments where the JCEF module is not loaded.
+- Welcome page loading failures caused by fragile custom JCEF initialization and lifecycle management.
+
+### Removed
+
+- `DreamShaderWelcomeWebView.kt`, `DreamShaderWelcomeVirtualFile`, `DreamShaderWelcomeWebViewProvider` (replaced by `HTMLEditorProvider`).
+- `src/main/resources/includes/jcef.xml` (no longer needed).
+- Redundant `forceSelectWelcomeEditor` alarm-based editor selection workaround.
+
 ## [0.0.7] - 2026-07-20
 
 ### Added
