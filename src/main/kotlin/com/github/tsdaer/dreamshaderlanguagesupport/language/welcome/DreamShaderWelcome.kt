@@ -40,6 +40,7 @@ internal fun showWelcomeDialog(project: Project, forceManual: Boolean = false) {
     if (project.isDisposed) return
 
     val plugin = try {
+        @Suppress("UnstableApiUsage")
         PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID))
     } catch (_: Exception) {
         null
