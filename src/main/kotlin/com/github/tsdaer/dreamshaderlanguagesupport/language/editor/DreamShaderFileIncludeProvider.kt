@@ -23,6 +23,7 @@ class DreamShaderFileIncludeProvider : FileIncludeProvider() {
         return normalizedExtension in setOf("dsm", "dsf", "dsh")
     }
 
+    @Suppress("DEPRECATION")
     override fun acceptFile(file: VirtualFile): Boolean {
         return hasDreamShaderExtension(file.extension)
     }
@@ -38,6 +39,7 @@ class DreamShaderFileIncludeProvider : FileIncludeProvider() {
             .toTypedArray()
     }
 
+    @Suppress("DEPRECATION")
     override fun registerFileTypesUsedForIndexing(fileTypeSink: Consumer<in FileType>) {
         fileTypeSink.consume(DreamShaderFileType.INSTANCE)
     }
