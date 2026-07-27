@@ -5,6 +5,7 @@
     <vendor>tsdaer</vendor>
     <resource-bundle>messages.DreamShaderBundle</resource-bundle>
     <depends>com.intellij.modules.platform</depends>
+    <depends optional="true">com.intellij.modules.jcef</depends>
     <description><![CDATA[
         <p>Comprehensive DreamShaderLang support for JetBrains Rider with <code>.dsm</code>/<code>.dsf</code>/<code>.dsh</code> file types, lexer/parser/PSI and symbol model foundations, syntax highlighting plus semantic classification and color settings, formatter/commenter/brace matching/folding/structure view, context-aware completion (sections/types/settings values/UE.*/HLSL/imports), and goto declaration/find usages/references/hover docs/signature help.</p>
         <p>Includes semantic diagnostics (syntax/section-shape/semantic + Bridge diagnostics mapping), inlay parameter hints and Code Vision hints, configurable DreamShader project settings (project root/manifest path/status bar/code lens/out placeholder suffix/import extension strategy/hover doc overrides/Bridge commands), Bridge tool window and workflow actions (refresh diagnostics/recompile current or all/clean generated shaders/open Bridge paths), package tooling (package store dialog with search/filter/details/install-state markers/background install-update-remove/add-remove index sources/GitHub install/update/remove/open packages folder/package-aware import resolution), template tools (material/function/header and package scaffold), and unified DreamShader Hub entry for settings, diagnostics, package, and template workflows.</p>
@@ -133,6 +134,7 @@
                 bundle="messages.DreamShaderBundle"
                 instance="com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderSettingsConfigurable"/>
         <notificationGroup id="DreamShader Notifications" displayType="BALLOON"/>
+        <notificationGroup id="DreamShader Welcome" displayType="STICKY_BALLOON" isLogByDefault="false"/>
         <toolWindow id="DreamShader Bridge Diagnostics"
                     anchor="bottom"
                     icon="/icons/dreamshaderToolWindow.svg"
@@ -146,8 +148,6 @@
         <statusBarWidgetFactory
                 id="DreamShaderBridgeStatus"
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeStatusBarWidgetFactory"/>
-        <fileEditorProvider
-                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeFileEditorProvider"/>
         <postStartupActivity
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeProjectActivity"/>
         <postStartupActivity
@@ -163,6 +163,8 @@
 
             <action id="DreamShader.Tools.OpenHub"
                     class="com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderOpenHubAction"/>
+            <action id="DreamShader.Tools.OpenWelcome"
+                    class="com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderOpenWelcomeAction"/>
             <action id="DreamShader.Tools.ShowMaterialPreview"
                     class="com.github.tsdaer.dreamshaderlanguagesupport.language.preview.DreamShaderShowMaterialPreviewAction"/>
 
