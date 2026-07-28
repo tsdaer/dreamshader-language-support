@@ -62,11 +62,6 @@ description_zh: |
 JetBrains Rider plugin for DreamShaderLang (`.dsm`, `.dsf`, `.dsh`).
 Built on IntelliJ Platform SDK with platform module dependency (`com.intellij.modules.platform`).
 
-Target reference (VS Code extension):
-https://github.com/TypeDreamMoon/dreamshader-language-support
-
-Parity baseline: VS Code extension v1.5.3 with v1.6.0 syntax features (Group property scopes, return-value functions). See [roadmap](docs/roadmap.md) for the upstream parity status.
-
 ## Documentation
 
 Long-form project knowledge now lives under [`docs/`](docs/README.md):
@@ -81,14 +76,13 @@ Long-form project knowledge now lives under [`docs/`](docs/README.md):
 
 ## Current Goal
 
-Build a Rider plugin with feature parity to the VS Code DreamShaderLang extension, in phases:
+Full-featured DreamShaderLang support for JetBrains Rider:
 
-- language core first
-- editing and navigation second
-- diagnostics and tool integration third
-- package tooling and UX polish last
-
-For detailed milestone status and TODOs, see [`docs/roadmap.md`](docs/roadmap.md).
+- language core with lexer, parser, PSI, and symbol model
+- rich editing and navigation (completion, refactoring, code insight)
+- diagnostics and Bridge tool integration
+- package management and template scaffolding
+- material preview and UX polish
 
 ## Quick Start
 

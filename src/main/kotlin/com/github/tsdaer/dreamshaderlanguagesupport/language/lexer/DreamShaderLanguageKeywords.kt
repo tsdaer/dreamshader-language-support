@@ -13,6 +13,7 @@ internal object DreamShaderLanguageKeywords {
         "VirtualFunction",
         "Function",
         "GraphFunction",
+        "Template",
         "Namespace"
     )
 
@@ -23,7 +24,8 @@ internal object DreamShaderLanguageKeywords {
         "Results",
         "Settings",
         "Options",
-        "Graph"
+        "Graph",
+        "Layout"
     )
 
     val DECLARATION_KEYWORDS = setOf(
@@ -34,6 +36,7 @@ internal object DreamShaderLanguageKeywords {
         "virtualfunction",
         "function",
         "graphfunction",
+        "template",
         "namespace",
         "group",
         "propgroup"
@@ -43,6 +46,7 @@ internal object DreamShaderLanguageKeywords {
         "function",
         "graphfunction",
         "shaderfunction",
-        "virtualfunction"
+        "virtualfunction",
+        "template"
     )
 }

@@ -15,6 +15,7 @@ class DreamShaderApplicationSettings : PersistentStateComponent<DreamShaderAppli
         var packageStoreIndexUrls: MutableList<String> = mutableListOf(),
         var packageStoreIndexUrl: String = "",
         var packageStoreGitHubToken: String = "",
+        var enableGitHubPackageSearch: Boolean = true,
         var bridgeRecompileCurrentCommand: String = "",
         var bridgeRecompileAllCommand: String = "",
         var bridgeCleanGeneratedShadersCommand: String = ""

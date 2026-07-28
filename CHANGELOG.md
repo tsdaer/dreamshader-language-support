@@ -4,6 +4,22 @@
 
 ## [0.0.10] - 2026-07-27
 
+### Added
+
+- `Template` declaration keyword and `Layout` section keyword for upstream DreamShaderLang 1.5.1+ and 1.4.8+ syntax compatibility (lexer, parser, language rules, completion).
+- `enableGitHubPackageSearch` project and application-level setting for toggling GitHub package search.
+- Application-level `DreamShaderApplicationSettings` providing IDE-wide fallback for package index URLs, GitHub token, Bridge commands, and GitHub package search toggle.
+
+### Fixed
+
+- Template service now reads `sourceDirectory` from project settings instead of hardcoding `"DShader"`.
+- Diagnostic per-file cache now invalidates on file change instead of on every project-wide PSI modification.
+- Bridge SQLite driver/connection errors are now logged at WARN level instead of silently swallowed.
+- Hub dialog now closes after any action button click instead of staying open.
+- Build: `pluginSinceBuild` fallback unified to `261` (was `252`).
+- Removed empty unused packages `services/`, `startup/`, `toolWindow/`.
+- Removed upstream VS Code extension reference from README; documentation now stands alone.
+
 ### Fixed
 
 - Plugin verifier internal API warning: replaced `PluginManagerCore.getPlugin()` with resource-based version and changelog reading (`dreamshader-plugin.properties` + `CHANGELOG.md`).

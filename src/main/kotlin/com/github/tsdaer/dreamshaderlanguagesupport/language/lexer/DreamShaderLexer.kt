@@ -202,6 +202,7 @@ class DreamShaderLexer : LexerBase() {
             "virtualfunction",
             "selfcontained",
             "inline",
+            "template",
             "group",
             "propgroup",
             "if",
@@ -233,7 +234,8 @@ class DreamShaderLexer : LexerBase() {
             "results",
             "settings",
             "options",
-            "graph"
+            "graph",
+            "layout"
         )
 
         internal val TYPES = setOf(

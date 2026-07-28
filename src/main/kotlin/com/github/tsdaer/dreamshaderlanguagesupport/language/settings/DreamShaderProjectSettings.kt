@@ -27,6 +27,7 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         var packageStoreIndexUrls: MutableList<String> = mutableListOf(),
         var packageStoreIndexUrl: String = "",
         var packageStoreGitHubToken: String = "",
+        var enableGitHubPackageSearch: Boolean = true,
         var hoverDocumentationOverrides: String = "",
         var bridgeRecompileCurrentCommand: String = "",
         var bridgeRecompileAllCommand: String = "",

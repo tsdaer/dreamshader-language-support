@@ -14,6 +14,7 @@ internal object DreamShaderLanguageRules {
         "virtualfunction" to "VirtualFunction",
         "function" to "Function",
         "graphfunction" to "GraphFunction",
+        "template" to "Template",
         "namespace" to "Namespace",
         "group" to "Group",
         "propgroup" to "PropGroup"
@@ -26,7 +27,8 @@ internal object DreamShaderLanguageRules {
         "results" to "Results",
         "settings" to "Settings",
         "options" to "Options",
-        "graph" to "Graph"
+        "graph" to "Graph",
+        "layout" to "Layout"
     )
 
     val sectionNameAliases = mapOf(
@@ -39,13 +41,14 @@ internal object DreamShaderLanguageRules {
     )
 
     val declarationAllowedSections = mapOf(
-        "shader" to setOf("properties", "outputs", "settings", "graph"),
-        "shaderfunction" to setOf("properties", "inputs", "outputs", "settings", "graph"),
-        "shaderlayer" to setOf("properties", "inputs", "outputs", "settings", "graph"),
-        "shaderlayerblend" to setOf("properties", "inputs", "outputs", "settings", "graph"),
+        "shader" to setOf("properties", "outputs", "settings", "graph", "layout"),
+        "shaderfunction" to setOf("properties", "inputs", "outputs", "settings", "graph", "layout"),
+        "shaderlayer" to setOf("properties", "inputs", "outputs", "settings", "graph", "layout"),
+        "shaderlayerblend" to setOf("properties", "inputs", "outputs", "settings", "graph", "layout"),
         "virtualfunction" to setOf("properties", "inputs", "outputs", "settings", "options"),
         "function" to emptySet(),
-        "graphfunction" to emptySet()
+        "graphfunction" to emptySet(),
+        "template" to setOf("properties", "inputs", "outputs", "settings", "graph", "layout")
     )
 
     val declarationRequiredSections = mapOf(
@@ -59,14 +62,16 @@ internal object DreamShaderLanguageRules {
         "shader",
         "shaderfunction",
         "shaderlayer",
-        "shaderlayerblend"
+        "shaderlayerblend",
+        "template"
     )
 
     val assetDeclarationKeywords = setOf(
         "shader",
         "shaderfunction",
         "shaderlayer",
-        "shaderlayerblend"
+        "shaderlayerblend",
+        "template"
     )
 
     val dsfAllowedTopLevelDeclarations = setOf(
@@ -75,7 +80,8 @@ internal object DreamShaderLanguageRules {
         "shaderlayerblend",
         "virtualfunction",
         "function",
-        "graphfunction"
+        "graphfunction",
+        "template"
     )
 
     val dsmDisallowedTopLevelDeclarations = setOf(
