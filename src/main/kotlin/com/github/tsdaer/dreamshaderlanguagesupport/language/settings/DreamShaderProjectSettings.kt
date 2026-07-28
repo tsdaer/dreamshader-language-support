@@ -1,70 +1,40 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.settings
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.openapi.project.Project
 
 @Service(Service.Level.PROJECT)
 @State(
     name = "DreamShaderProjectSettings",
     storages = [Storage("dreamshader-language-support.xml")]
 )
-/**
- * Persistent per-project settings for DreamShader language support.
- *
- * These values are the single source of truth for runtime feature switches
- * (Bridge integration, CodeLens/status visibility) and package index sources.
- */
 class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSettings.State> {
-    /**
-     * Serialized state stored in `dreamshader-language-support.xml`.
-     */
     data class State(
-        /** Optional explicit project root used by Bridge path resolution. */
         var projectRoot: String = "",
-        /** Optional explicit manifest path for `UE.Expression(Class="...")` completion. */
         var materialExpressionManifestPath: String = "",
-        /** Unreal Engine source root scanned for `UMaterialExpression` headers. */
         var unrealEngineSourceRoot: String = "",
-        /** Whether best-effort source scanning of material expressions is enabled. */
         var materialExpressionScanEnabled: Boolean = false,
-        /** Optional path where scanned material-expression cache JSON is stored. */
         var materialExpressionScanCachePath: String = "",
-        /** UI toggle for future status bar integration. */
         var showStatusBar: Boolean = true,
-        /** UI toggle for future CodeLens integration. */
         var enableCodeLens: Boolean = true,
-        /** UI toggle for DreamShader parameter name inlay hints. */
         var enableInlayParameterHints: Boolean = true,
-        /** Suffix used when generating placeholder variable names for missing out arguments. */
         var outArgumentPlaceholderSuffix: String = "Out",
-        /** Preferred replacement extension for unsupported import-extension quick fixes. */
         var preferredImportExtension: String = "dsh",
-        /** Whether applying import-extension quick-fix should update preferred extension. */
         var autoUpdatePreferredImportExtension: Boolean = false,
-        /** Preferred package index sources (multi-source mode). */
         var packageStoreIndexUrls: MutableList<String> = mutableListOf(),
-        /** Backward-compatible single source setting used when list mode is empty. */
         var packageStoreIndexUrl: String = "",
-        /** Optional GitHub token for package search API requests. */
         var packageStoreGitHubToken: String = "",
-        /** Optional hover doc override entries, one per line: key=value. */
         var hoverDocumentationOverrides: String = "",
-        /** External command template for recompiling current DreamShader asset. */
         var bridgeRecompileCurrentCommand: String = "",
-        /** External command template for recompiling all DreamShader assets. */
         var bridgeRecompileAllCommand: String = "",
-        /** External command template for cleaning generated DreamShader shaders/assets. */
         var bridgeCleanGeneratedShadersCommand: String = "",
-        /** Material preview transport. Rider currently implements the portable file bridge path. */
         var previewTransport: String = "file",
-        /** Reserved for future WebSocket material preview transport parity. */
         var previewWebSocketPort: Int = 17864,
-        /** Reserved for future live frame streaming parity. */
         var previewLiveFrameRate: Int = 2,
-        /** Debounce delay before preview refresh requests are written after edits. */
         var previewAutoRefreshDelayMs: Int = 1200,
-        /** DreamShader source directory relative to project root (default "DShader"). Mirrors Unreal plugin's SourceDirectory setting. */
         var sourceDirectory: String = "DShader"
     )
 
@@ -75,4 +45,37 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
     override fun loadState(state: State) {
         this.state = state
     }
+
+    fun resolvedGitHubToken(): String {
+        return state.packageStoreGitHubToken.takeIf { it.isNotBlank() }
+            ?: appSettings().state.packageStoreGitHubToken
+    }
+
+    fun resolvedPackageStoreIndexUrls(): List<String> {
+        val projectUrls = state.packageStoreIndexUrls.filter { it.isNotBlank() }
+        if (projectUrls.isNotEmpty()) return projectUrls
+        val appUrls = appSettings().state.packageStoreIndexUrls.filter { it.isNotBlank() }
+        if (appUrls.isNotEmpty()) return appUrls
+        val fallback = state.packageStoreIndexUrl.takeIf { it.isNotBlank() }
+            ?: appSettings().state.packageStoreIndexUrl.takeIf { it.isNotBlank() }
+        return fallback?.let { listOf(it) }.orEmpty()
+    }
+
+    fun resolvedBridgeRecompileCurrentCommand(): String {
+        return state.bridgeRecompileCurrentCommand.takeIf { it.isNotBlank() }
+            ?: appSettings().state.bridgeRecompileCurrentCommand
+    }
+
+    fun resolvedBridgeRecompileAllCommand(): String {
+        return state.bridgeRecompileAllCommand.takeIf { it.isNotBlank() }
+            ?: appSettings().state.bridgeRecompileAllCommand
+    }
+
+    fun resolvedBridgeCleanGeneratedShadersCommand(): String {
+        return state.bridgeCleanGeneratedShadersCommand.takeIf { it.isNotBlank() }
+            ?: appSettings().state.bridgeCleanGeneratedShadersCommand
+    }
+
+    private fun appSettings(): DreamShaderApplicationSettings =
+        ApplicationManager.getApplication().getService(DreamShaderApplicationSettings::class.java)
 }

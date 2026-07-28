@@ -45,34 +45,36 @@ private class DreamShaderHubDialog(
                     showWelcomeDialog(project, forceManual = true)
                 },
                 "hub.button.openSettings" to {
+                    close(OK_EXIT_CODE)
                     ShowSettingsUtil.getInstance().showSettingsDialog(project, DreamShaderSettingsConfigurable::class.java)
                 },
                 "hub.button.openBridgePanel" to {
+                    close(OK_EXIT_CODE)
                     ToolWindowManager.getInstance(project)
                         .getToolWindow(DreamShaderBundle.message("toolwindow.dreamshader.bridge.displayName"))?.show()
                 },
-                "hub.button.showMaterialPreview" to { invokeActionById("DreamShader.Tools.ShowMaterialPreview") },
-                "hub.button.refreshBridgeDiagnostics" to { invokeActionById("DreamShader.BridgeTools.RefreshDiagnostics") }
+                "hub.button.showMaterialPreview" to { invokeAndClose("DreamShader.Tools.ShowMaterialPreview") },
+                "hub.button.refreshBridgeDiagnostics" to { invokeAndClose("DreamShader.BridgeTools.RefreshDiagnostics") }
             )),
             buildSection(DreamShaderBundle.message("hub.section.bridge"), listOf(
-                "hub.button.recompileCurrent" to { invokeActionById("DreamShader.BridgeTools.RecompileCurrent") },
-                "hub.button.recompileAll" to { invokeActionById("DreamShader.BridgeTools.RecompileAll") },
-                "hub.button.cleanGenerated" to { invokeActionById("DreamShader.BridgeTools.CleanGeneratedShaders") }
+                "hub.button.recompileCurrent" to { invokeAndClose("DreamShader.BridgeTools.RecompileCurrent") },
+                "hub.button.recompileAll" to { invokeAndClose("DreamShader.BridgeTools.RecompileAll") },
+                "hub.button.cleanGenerated" to { invokeAndClose("DreamShader.BridgeTools.CleanGeneratedShaders") }
             )),
             buildSection(DreamShaderBundle.message("hub.section.packages"), listOf(
-                "hub.button.browsePackageStore" to { invokeActionById("DreamShader.PackageTools.BrowseStore") },
-                "hub.button.installFromGitHub" to { invokeActionById("DreamShader.PackageTools.InstallFromGitHub") },
-                "hub.button.openPackagesFolder" to { invokeActionById("DreamShader.PackageTools.OpenPackagesFolder") },
-                "hub.button.manageIndexSources" to { invokeActionById("DreamShader.PackageTools.AddIndexSource") }
+                "hub.button.browsePackageStore" to { invokeAndClose("DreamShader.PackageTools.BrowseStore") },
+                "hub.button.installFromGitHub" to { invokeAndClose("DreamShader.PackageTools.InstallFromGitHub") },
+                "hub.button.openPackagesFolder" to { invokeAndClose("DreamShader.PackageTools.OpenPackagesFolder") },
+                "hub.button.manageIndexSources" to { invokeAndClose("DreamShader.PackageTools.AddIndexSource") }
             )),
             buildSection(DreamShaderBundle.message("hub.section.templates"), listOf(
-                "hub.button.createMaterialTemplate" to { invokeActionById("DreamShader.TemplateTools.CreateMaterial") },
-                "hub.button.createFunctionTemplate" to { invokeActionById("DreamShader.TemplateTools.CreateFunction") },
-                "hub.button.createHeaderTemplate" to { invokeActionById("DreamShader.TemplateTools.CreateHeader") },
-                "hub.button.createTextureSampleTemplate" to { invokeActionById("DreamShader.TemplateTools.CreateTextureSample") },
-                "hub.button.createNoiseMaterialTemplate" to { invokeActionById("DreamShader.TemplateTools.CreateNoiseMaterial") },
-                "hub.button.createPackageWizard" to { invokeActionById("DreamShader.TemplateTools.CreatePackageWizard") },
-                "hub.button.createPackageScaffold" to { invokeActionById("DreamShader.TemplateTools.CreatePackageScaffold") }
+                "hub.button.createMaterialTemplate" to { invokeAndClose("DreamShader.TemplateTools.CreateMaterial") },
+                "hub.button.createFunctionTemplate" to { invokeAndClose("DreamShader.TemplateTools.CreateFunction") },
+                "hub.button.createHeaderTemplate" to { invokeAndClose("DreamShader.TemplateTools.CreateHeader") },
+                "hub.button.createTextureSampleTemplate" to { invokeAndClose("DreamShader.TemplateTools.CreateTextureSample") },
+                "hub.button.createNoiseMaterialTemplate" to { invokeAndClose("DreamShader.TemplateTools.CreateNoiseMaterial") },
+                "hub.button.createPackageWizard" to { invokeAndClose("DreamShader.TemplateTools.CreatePackageWizard") },
+                "hub.button.createPackageScaffold" to { invokeAndClose("DreamShader.TemplateTools.CreatePackageScaffold") }
             ))), BorderLayout.CENTER)
         return root
     }
@@ -91,6 +93,11 @@ private class DreamShaderHubDialog(
         }
         panel.add(row, BorderLayout.CENTER)
         return panel
+    }
+
+    private fun invokeAndClose(actionId: String) {
+        invokeActionById(actionId)
+        close(OK_EXIT_CODE)
     }
 
     private fun invokeActionById(actionId: String) {

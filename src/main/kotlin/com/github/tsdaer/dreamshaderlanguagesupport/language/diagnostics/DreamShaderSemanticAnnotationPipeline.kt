@@ -30,7 +30,6 @@ import com.intellij.psi.*
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import java.nio.file.Files
 import java.nio.file.Path
@@ -85,7 +84,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
             {
                 CachedValueProvider.Result.create(
                     computeFileDiagnosticInputsStatic(file),
-                    PsiModificationTracker.MODIFICATION_COUNT
+                    file
                 )
             },
             false

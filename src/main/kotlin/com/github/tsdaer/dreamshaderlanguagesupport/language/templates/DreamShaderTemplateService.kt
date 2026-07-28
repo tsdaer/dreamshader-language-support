@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.templates
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.openapi.project.Project
 import kotlinx.serialization.Serializable
 import java.nio.charset.StandardCharsets
@@ -384,7 +385,9 @@ internal class DreamShaderTemplateService(
 
     private fun packageRootForName(name: String): Path {
         val parts = name.split('/').filter { it.isNotBlank() }
-        val root = projectBasePath().resolve("DShader").resolve("Packages")
+        val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
+        val sourceDir = settings?.sourceDirectory?.trim().orEmpty().ifBlank { "DShader" }.trimStart('/').trimEnd('/')
+        val root = projectBasePath().resolve(sourceDir).resolve("Packages")
         var current = root
         parts.forEach { part -> current = current.resolve(part) }
         return current

@@ -340,8 +340,8 @@ class DreamShaderRecompileCurrentAction : DumbAwareAction() {
             )
             return
         }
-        val settings = project.getService(DreamShaderProjectSettings::class.java).state
-        val template = settings.bridgeRecompileCurrentCommand.trim()
+        val settings = project.getService(DreamShaderProjectSettings::class.java)
+        val template = settings.resolvedBridgeRecompileCurrentCommand().trim()
         if (template.isBlank()) {
             DreamShaderBridgeNotifier.error(
                 project,
@@ -377,8 +377,8 @@ class DreamShaderRecompileAllAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val title = DreamShaderBundle.message("bridge.title")
-        val settings = project.getService(DreamShaderProjectSettings::class.java).state
-        val template = settings.bridgeRecompileAllCommand.trim()
+        val settings = project.getService(DreamShaderProjectSettings::class.java)
+        val template = settings.resolvedBridgeRecompileAllCommand().trim()
         if (template.isBlank()) {
             DreamShaderBridgeNotifier.error(
                 project,
@@ -414,8 +414,8 @@ class DreamShaderCleanGeneratedShadersAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val title = DreamShaderBundle.message("bridge.title")
-        val settings = project.getService(DreamShaderProjectSettings::class.java).state
-        val template = settings.bridgeCleanGeneratedShadersCommand.trim()
+        val settings = project.getService(DreamShaderProjectSettings::class.java)
+        val template = settings.resolvedBridgeCleanGeneratedShadersCommand().trim()
         if (template.isBlank()) {
             DreamShaderBridgeNotifier.error(
                 project,

@@ -40,14 +40,11 @@ internal object DreamShaderPackageIndexLoader {
         "https://raw.githubusercontent.com/TypeDreamMoon/dreamshader-package-index/main/packages.json"
 
     fun resolveIndexSources(project: Project): List<String> {
-        val state = project.getService(DreamShaderProjectSettings::class.java)?.state
-        val fromList = state?.packageStoreIndexUrls.orEmpty()
+        val settings = project.getService(DreamShaderProjectSettings::class.java)
+        val fromList = settings?.resolvedPackageStoreIndexUrls().orEmpty()
             .map { it.trim() }
             .filter { it.isNotBlank() }
         if (fromList.isNotEmpty()) return deduplicateSources(fromList)
-
-        val legacy = state?.packageStoreIndexUrl?.trim().orEmpty()
-        if (legacy.isNotBlank()) return listOf(normalizeSource(legacy))
         return listOf(DEFAULT_INDEX_URL)
     }
 

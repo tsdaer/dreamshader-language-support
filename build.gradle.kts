@@ -247,7 +247,7 @@ intellijPlatform {
                 "<pre>${escapePluginHtml(extractCurrentChangelogSection(changelog, version))}</pre>"
             }
         ideaVersion {
-            sinceBuild = providers.gradleProperty("pluginSinceBuild").orElse("252")
+            sinceBuild = providers.gradleProperty("pluginSinceBuild").orElse("261")
             val untilBuildProperty = providers.gradleProperty("pluginUntilBuild")
             if (untilBuildProperty.isPresent) {
                 untilBuild = untilBuildProperty.get()
