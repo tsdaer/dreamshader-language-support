@@ -1,6 +1,6 @@
 # DreamShader Package Baseline
 
-Package-system behavior and Rider parity notes. Keep package import, install, index, and authoring rules here instead of in the README.
+Package-system behavior and implementation notes. Keep package import, install, index, and authoring rules here instead of in the README.
 
 Version-specific package impacts should first be captured in `roadmap.md` or a dedicated feature document, then moved here once they become stable behavior.
 
@@ -78,9 +78,10 @@ Index item baseline fields:
 Default upstream index:
 - `https://raw.githubusercontent.com/TypeDreamMoon/dreamshader-package-index/main/packages.json`
 
-### 5. Package Actions Baseline (Rider parity target)
+### 5. Package Actions
 
-Rider package tooling should reach parity with VSCode package workflows:
+Implementation coverage:
+
 - Install package from GitHub repo input (`owner/repo` or full GitHub URL).
 - Browse package store (search/install/open repository/manage sources).
 - Update installed packages.

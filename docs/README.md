@@ -8,7 +8,7 @@ This directory is the long-form home for project knowledge. The top-level README
 - [Code Map](code-map.md): quick file links for core plugin areas and tests.
 - [Project Structure](project-structure.md): source and test directory layout rules.
 - [DreamShaderLang Baseline](language-baseline.md): upstream language rules and Rider coverage mapping.
-- [Package Baseline](package-baseline.md): package layout, import resolution, store/index behavior, and parity targets.
+- [Package Baseline](package-baseline.md): package layout, import resolution, store/index behavior, and implementation notes.
 - [Roadmap and Progress](roadmap.md): project goal, current progress, detailed TODOs, audit matrices, and changelog policy.
 - [Development Guide](development.md): build/test/run commands, signing/publishing, Rider actions, settings, and troubleshooting.
 

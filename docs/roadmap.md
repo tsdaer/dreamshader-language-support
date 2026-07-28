@@ -4,13 +4,25 @@ Project goals, milestone status, detailed TODOs, and release-process notes. This
 
 ## Goal
 
-Build a Rider plugin with feature parity to the VS Code DreamShaderLang extension, in phases:
-- language core first
-- editing and navigation second
-- diagnostics and tool integration third
-- package tooling and UX polish last
+Full-featured DreamShaderLang support for JetBrains Rider:
+- language core with lexer, parser, PSI, and symbol model
+- rich editing and navigation (completion, refactoring, code insight)
+- diagnostics and Bridge tool integration
+- package management and template scaffolding
+- material preview and UX polish
 
-Current parity baseline: VS Code DreamShaderLang extension v1.5.3. Core syntax features from v1.6.x (Group property scopes, return-value functions) have been implemented. Remaining v1.6+ items for future milestones: graph control-flow as valid syntax (v1.6.1), Allman-style formatting (v1.6.3), and WebSocket preview transport (v1.5.3).
+### 1.0.0 - 2026-07-28
+
+First stable release. Includes:
+- Language core: `.dsm` / `.dsf` / `.dsh` file types, lexer/parser/PSI, syntax highlighting, formatter, commenter, brace matching, folding, structure view
+- Template declaration keyword (v1.5.1) and Layout section keyword (v1.4.8) syntax support
+- Context-aware completion, go-to declaration, references/find usages, hover docs, signature help
+- Semantic diagnostics pipeline (syntax, section-shape, semantic + Bridge mapping)
+- Package management: store dialog, Git-based install/update/remove, multi-source index loading
+- Material preview tool window with Bridge file transport
+- File and live templates (material, function, header, texture sample, noise material, package scaffold)
+- Application-level settings for package indexes, GitHub token, and Bridge commands
+- Unified DreamShader Hub
 
 
 ## Completed Version Archives
@@ -55,11 +67,11 @@ Verification used during the optimization pass:
 - `./gradlew.bat test --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderPostfixTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderLiveTemplatesTest --tests com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateCommandsTest`
 - `./gradlew.bat test`
 
-### 2026-07-20 Upstream Parity Pass (v1.6.0 syntax)
+### 2026-07-20 v1.6.0 Syntax Pass
 
-Completed upstream features from the VS Code DreamShaderLang extension v1.6.x:
+Completed v1.6.x language features:
 
-- `Group("Name") { ... }` property grouping scopes: added `group` and `propgroup` lexer keywords, declaration parsing, string-name resolution in `DreamShaderDeclarationImpl`, completion snippets with template placeholders, structure-view integration with child section/declaration display, and section flattening in diagnostics (Group contents promoted to parent declaration scope). Also supports `Properties Group("Name") { ... }` section-header modifier syntax (primary upstream form) with PSI `groupName()` accessor on sections, structure-view display, and completion after section keywords.
+- `Group("Name") { ... }` property grouping scopes: added `group` and `propgroup` lexer keywords, declaration parsing, string-name resolution in `DreamShaderDeclarationImpl`, completion snippets with template placeholders, structure-view integration with child section/declaration display, and section flattening in diagnostics (Group contents promoted to parent declaration scope). Also supports `Properties Group("Name") { ... }` section-header modifier syntax with PSI `groupName()` accessor on sections, structure-view display, and completion after section keywords.
 - Single-output return-value functions (`Function float X(...)`): `validateDeclarationHeader` now accepts `TYPE` token after `Function`/`GraphFunction` keyword; `returnType()` accessor added to `DreamShaderDeclaration` interface and impl; signature help pattern captures optional return type and renders `: <type>` suffix; hover docs display return type; `return` keyword diagnostics exclude return-value function bodies (where `return` is valid).
 
 ## Current Progress
@@ -151,7 +163,7 @@ Current staged scope:
 - [x] `P1` Import path completion for `.dsh`, `.dsf`, and `.dsm`.
 
 Acceptance criteria:
-- Completion proposals are context-sensitive and match major VS Code behaviors.
+- Completion proposals are context-sensitive and cover sections, types, settings values, `UE.*`, HLSL, and imports.
 - Snippet placeholders expand correctly in Rider.
 
 Implemented:
@@ -855,12 +867,12 @@ import "Scripts/Auto.usf";
 - [x] `P2` Tool window/panel for bridge diagnostics.
 - [x] `P2` Actions: recompile current/all, clean generated shaders, refresh diagnostics, open diagnostic location.
 - [x] `P2` Bridge-manifest-aware `UE.Expression(...)` completion (`materialExpressionManifestPath` + project bridge manifest + bundled fallback manifest).
-- [x] `P2` Settings parity for bridge/tooling (`projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`).
-- [x] `P2` Status bar + CodeLens actions parity for DreamShader workflows (official IntelliJ daemon-bound Code Vision provider + inlay hints toggle parity).
+- [x] `P2` Bridge/tooling settings (`projectRoot`, `materialExpressionManifestPath`, `showStatusBar`, `enableCodeLens`).
+- [x] `P2` Status bar + CodeLens actions for DreamShader workflows (official IntelliJ daemon-bound Code Vision provider + inlay hints toggle).
 - [x] `P2` Package store index support (multiple sources + deprecated single source compatibility).
 - [x] `P2` Actions: install/update/remove/browse/open packages folder.
-- [x] `P3` Add/remove package store index source commands and source-management UX parity.
-- [x] `P3` Authoring/template commands parity (create package/material/function/header/sample files).
+- [x] `P3` Add/remove package store index source commands.
+- [x] `P3` Authoring/template commands (create package/material/function/header/sample files).
 - [x] `P3` Optional GitHub package search integration.
 
 Acceptance criteria:
@@ -1270,16 +1282,16 @@ Acceptance criteria:
 | `P1` completion regression tests                      | `Implemented` | `DreamShaderCompletionContextAnalyzerTest`, `DreamShaderCompletionSuggesterTest`                                                                                                                                                                                             |
 | `P1` navigation/diagnostic tests                      | `Implemented` | `DreamShaderGotoDeclarationHandlerTest`, `DreamShaderFindReferencesTest`, `DreamShaderDeclarationRenameTest`, `DreamShaderFindUsagesProviderTest`, `DreamShaderDocumentationProviderTest`, `DreamShaderSignatureHelpAnalyzerTest`, `DreamShaderImportClosureResolverTest`, `DreamShaderSyntaxDiagnosticsTest`, `DreamShaderSectionShapeDiagnosticsTest`, `DreamShaderSemanticDiagnosticsTest` (including function/graph-function declaration-parameter unknown-type diagnostics, namespace-child declaration-parameter unknown-type diagnostics, graph/function-body local unknown-type diagnostics, namespace-child function-body local unknown-type diagnostics, namespace-child missing-`out`-argument diagnostics and quick-fix coverage, unqualified same-name call namespace-scope precedence for missing-`out` diagnostics, const-texture default-asset path/root validation, unknown-root `Replace Path root with Game` quick-fix for both `Path(...)` and quoted paths, leading-slash quoted-root extraction regression coverage, `Path(rootOnly)` rejection coverage, `Complete Path(...) with object segment` quick-fix coverage, and quick-fix regression coverage) |
 | `P1` package store UI regression tests                | `Implemented` | `DreamShaderPackageStoreDialogUiTest` (`DPKG-UI-001`..`DPKG-UI-007`: action-button state, filter toggles, query search, GitHub search `EMPTY_QUERY`/`APPLIED`/`ERROR`, no-results state, `APPLIED -> ERROR` sequence retention, and in-progress action-disablement)        |
-| `P1` localization parity guard                        | `Implemented` | `DreamShaderBundleLocalizationTest` (base bundle keys must exist in `DreamShaderBundle_zh_CN.properties`)                                                                                                                                                                    |
+| `P1` localization coverage guard                       | `Implemented` | `DreamShaderBundleLocalizationTest` (base bundle keys must exist in `DreamShaderBundle_zh_CN.properties`)                                                                                                                                                                    |
 | `P2` large-file performance smoke tests               | `Implemented` | `DreamShaderLargeFilePerformanceSmokeTest`                                                                                                                                                                                                                                   |
 | `P3` Marketplace metadata/signing/publishing pipeline | `Implemented` | `build.gradle.kts` (`pluginConfiguration`, `signing`, `publishing`, file-based signing env/properties + legacy env fallback), `.github/workflows/build.yml`, `.github/workflows/release.yml` (writes cert/key secrets to temp files and publishes with file-path env)        |
 | `P3` changelog aligned with release tags              | `Implemented` | `CHANGELOG.md` / `CHANGELOG.zh-CN.md` + current-version release note extraction in `.github/workflows/build.yml`                                                                                                                                                              |
 
-### Milestone M7: Material Preview and Authoring Parity (VS Code 1.5.3)
+### Milestone M7: Material Preview and Authoring
 
 - [x] `P1` Add Material Preview action and right-side ToolWindow.
 - [x] `P1` Use the portable file-bridge contract: write `Saved/DreamShader/Bridge/Requests/request-*.json`, read `preview.json`, and render `Bridge/Preview/*.png`.
-- [x] `P1` Add preview auto-refresh delay setting. `previewTransport`, `previewWebSocketPort`, and `previewLiveFrameRate` are stored for parity/future use; WebSocket streaming is intentionally not implemented in this milestone.
+- [x] `P1` Add preview auto-refresh delay setting. `previewTransport`, `previewWebSocketPort`, and `previewLiveFrameRate` are stored for future use; WebSocket streaming is intentionally not implemented in this milestone.
 - [x] `P2` Add Texture Sample and Noise Material authoring templates.
 - [x] `P2` Add Create Package Step by Step wizard that writes package metadata and can omit examples.
 

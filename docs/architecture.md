@@ -156,7 +156,7 @@ Design goal:
   - message-bus topic used by Bridge file watching to refresh preview UI after Bridge output changes.
 
 Current boundary:
-- File transport is implemented. `previewTransport`, `previewWebSocketPort`, and `previewLiveFrameRate` are persisted for parity/future use, but WebSocket/live-stream preview transport is not implemented.
+- File transport is implemented. `previewTransport`, `previewWebSocketPort`, and `previewLiveFrameRate` are persisted for future use, but WebSocket/live-stream preview transport is not implemented.
 
 ### 9. UI Design System and Workflow Surfaces
 

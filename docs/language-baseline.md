@@ -1,48 +1,42 @@
 # DreamShaderLang Baseline
 
-Stable language-reference notes used by this Rider plugin. Refresh this file when upstream DreamShader language behavior changes.
+Stable language-reference notes used by this Rider plugin. Refresh this file when DreamShader language behavior changes.
 
 ## DreamShaderLang Syntax Baseline
 
-Primary language reference (upstream):
+Primary language reference:
 - https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/LanguageReference.md
 
-Primary examples reference (upstream):
+Primary examples reference:
 - https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/Examples.md
 
-Reference snapshot used for this README alignment:
-- Checked on `2026-07-20`
-- Upstream doc title: `DreamShaderLang 语法参考`
-- Upstream plugin version noted in doc: `1.6.3`
+Reference snapshot used for this alignment:
+- Checked on `2026-07-28`
+- DreamShaderLang language version: `1.6.3`
+- Rider plugin version: `1.0.0`
 
 Examples conformance snapshot:
 - Checked on `2026-05-29`
 - Upstream doc title: `DreamShaderLang 示例与模式`
 - Test mapping: `DreamShaderUpstreamExamplesTest.testUpstreamExamplesMarkdownCodeBlocksAreParsable()`
 
-0.0.4 upstream sync snapshot:
-- Checked on `2026-06-11`
-- Upstream `TypeDreamMoon/DreamShader` main: `406cefb960e81ff2c0b9d0138a7a05c656085944`
-- Relevant upstream changes: Substrate material generation (`caa00e8`), `.dsf` layer functions (`c8e65f9`), and `VolumeTexture` (`fef5feb`)
-- Synced docs: `Docs/LanguageReference.md`, `Docs/Examples.md`, `Docs/Packages.md`
-
 This section summarizes the language rules that this Rider plugin should follow.
 
 ### 1. File Roles and Constraints
 
 - `.dsm`: material-oriented source; usually contains `Shader(...)` and may include shared helpers/imports.
-- `.dsf`: function/layer asset source; may contain `ShaderFunction(...)`, `ShaderLayer(...)`, `ShaderLayerBlend(...)`, `Function`, `GraphFunction`, `VirtualFunction`, imports.
+- `.dsf`: function/layer asset source; may contain `ShaderFunction(...)`, `ShaderLayer(...)`, `ShaderLayerBlend(...)`, `Template(...)`, `Function`, `GraphFunction`, `VirtualFunction`, imports.
 - `.dsh`: shared header source; usually shared `Function`/`GraphFunction`/`Namespace`/`VirtualFunction`.
 
 Key constraints to enforce:
-- `.dsf` top-level declarations are restricted to `ShaderFunction(...)`, `ShaderLayer(...)`, `ShaderLayerBlend(...)`, `VirtualFunction(...)`, `Function(...)`, `GraphFunction(...)`.
+- `.dsf` top-level declarations are restricted to `ShaderFunction(...)`, `ShaderLayer(...)`, `ShaderLayerBlend(...)`, `Template(...)`, `VirtualFunction(...)`, `Function(...)`, `GraphFunction(...)`.
 - `.dsm` must not declare top-level `ShaderFunction(...)`, `ShaderLayer(...)`, or `ShaderLayerBlend(...)` (function/layer assets belong in `.dsf`).
-- `.dsh` should not be used for asset-generating declarations such as `Shader(...)`, `ShaderFunction(...)`, `ShaderLayer(...)`, `ShaderLayerBlend(...)`.
+- `.dsh` should not be used for asset-generating declarations such as `Shader(...)`, `ShaderFunction(...)`, `ShaderLayer(...)`, `ShaderLayerBlend(...)`, `Template(...)`.
 
 ### 2. Top-Level Declarations
 
 Expected declaration families:
-- Asset declarations: `Shader`, `ShaderFunction`, `ShaderLayer`, `ShaderLayerBlend`.
+- Asset declarations: `Shader`, `ShaderFunction`, `ShaderLayer`, `ShaderLayerBlend`, `Template`.
 - External asset signature declaration: `VirtualFunction`.
 - Shared code declarations: `Function`, `GraphFunction`, `Namespace`.
 - Import declaration: `import "..."`.
@@ -54,6 +48,7 @@ Important semantics to preserve:
   - `ShaderLayerBlend` must have exactly two inputs, and both must be `MaterialAttributes`.
   - Both declaration kinds must declare exactly one `MaterialAttributes` output.
 - `VirtualFunction` participates in call signatures but does not generate/overwrite assets.
+- `Template` is an asset-level declaration similar to `Shader`, supporting `Properties`, `Inputs`, `Outputs`, `Settings`, `Graph`, and `Layout` sections. It supports function-like return-type syntax: `Template float MyTemp(...)`.
 
 ### 3. Section Model
 
@@ -64,12 +59,13 @@ Canonical sections:
 - `Settings`
 - `Options`
 - `Graph`
+- `Layout` (node positioning metadata with `Node(...)` and `Comment(...)` statements)
 
 Property grouping scopes (two forms):
-- Section modifier: `Properties Group("Name") { ... }` (primary upstream syntax) — applies the group name to every parameter or declaration inside the section. Supported on `Properties`, `Inputs`, and `Outputs` sections.
+- Section modifier: `Properties Group("Name") { ... }` (primary syntax) — applies the group name to every parameter or declaration inside the section. Supported on `Properties`, `Inputs`, and `Outputs` sections.
 - Standalone declaration: `Group("Name") { Properties { ... } }` (compatibility alias) — wraps nested sections in a grouping scope. The contents are flattened into the parent declaration scope for diagnostic purposes.
 - Legacy `PropGroup("Name")` is also accepted as an alias for `Group("Name")`.
-- Group is valid inside `Shader`, `ShaderFunction`, `ShaderLayer`, `ShaderLayerBlend` bodies.
+- Group is valid inside `Shader`, `ShaderFunction`, `ShaderLayer`, `ShaderLayerBlend`, and `Template` bodies.
 
 Expected behavior highlights:
 - `Inputs` supports optional inputs (`opt`) and default-value usage conventions.
@@ -162,4 +158,4 @@ Current boundary and long-term parity notes:
 - `Partial`: parser is intentionally permissive for IDE resilience; full strict Graph grammar validation is not the current parser mode.
 - `Implemented` (conservative): Substrate expression diagnostics cover arithmetic, swizzle, vector constructor arguments, and branch-merge cases that are likely to fail in Bridge generation.
 - `Implemented` (baseline): formatter handles indentation/spacing/braces/section layout; fine-grained parity with all DreamShader authoring conventions may continue to evolve.
-- `Implemented` (baseline): semantic token classification and inlay hints are available and tested; exact upstream VS Code parity is treated as iterative polish, not a release blocker.
+- `Implemented` (baseline): semantic token classification and inlay hints are available and tested.
