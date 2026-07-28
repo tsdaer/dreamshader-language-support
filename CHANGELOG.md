@@ -2,11 +2,11 @@
 
 # dreamshader-language-support Changelog
 
-## [0.0.10] - 2026-07-27
+## [1.0.0] - 2026-07-28
 
 ### Added
 
-- `Template` declaration keyword and `Layout` section keyword for upstream DreamShaderLang 1.5.1+ and 1.4.8+ syntax compatibility (lexer, parser, language rules, completion).
+- `Template` declaration keyword and `Layout` section keyword for DreamShaderLang 1.5.1+ and 1.4.8+ syntax compatibility (lexer, parser, language rules, completion).
 - `enableGitHubPackageSearch` project and application-level setting for toggling GitHub package search.
 - Application-level `DreamShaderApplicationSettings` providing IDE-wide fallback for package index URLs, GitHub token, Bridge commands, and GitHub package search toggle.
 
@@ -17,8 +17,13 @@
 - Bridge SQLite driver/connection errors are now logged at WARN level instead of silently swallowed.
 - Hub dialog now closes after any action button click instead of staying open.
 - Build: `pluginSinceBuild` fallback unified to `261` (was `252`).
-- Removed empty unused packages `services/`, `startup/`, `toolWindow/`.
-- Removed upstream VS Code extension reference from README; documentation now stands alone.
+
+### Removed
+
+- Empty unused packages `services/`, `startup/`, `toolWindow/`.
+- Upstream VS Code extension reference from README; documentation now stands alone.
+
+## [0.0.10] - 2026-07-27
 
 ### Fixed
 
@@ -195,6 +200,11 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[1.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.10...1.0.0
+[0.0.10]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.9...0.0.10
+[0.0.9]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.8...0.0.9
+[0.0.8]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.7...0.0.8
+[0.0.7]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.6...0.0.7
 [0.0.6]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.5...0.0.6
 [0.0.5]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...0.0.5
 [0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4

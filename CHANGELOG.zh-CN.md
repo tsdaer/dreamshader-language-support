@@ -2,6 +2,27 @@
 
 # dreamshader-language-support 更新日志
 
+## [1.0.0] - 2026-07-28
+
+### 新增
+
+- `Template` 声明关键字与 `Layout` section 关键字，兼容 DreamShaderLang 1.5.1+ / 1.4.8+ 语法（词法、语法、语言规则、补全）。
+- `enableGitHubPackageSearch` 项目级与应用级设置，用于开关 GitHub 包搜索。
+- 应用级 `DreamShaderApplicationSettings`，为包索引 URL、GitHub Token、Bridge 命令等提供 IDE 全局回退。
+
+### 修复
+
+- 模板服务现在从项目设置的 `sourceDirectory` 读取路径，不再硬编码 `"DShader"`。
+- 诊断按文件缓存改为在文件变更时失效，不再因全局 PSI 修改而全部失效。
+- Bridge SQLite 驱动/连接错误现以 WARN 级别记录日志，不再静默吞噬。
+- Hub 对话框在点击任意操作按钮后自动关闭。
+- 构建：`pluginSinceBuild` 回退值统一为 `261`（原为 `252`）。
+
+### 移除
+
+- 空占位包 `services/`、`startup/`、`toolWindow/`。
+- README 中的上游 VS Code 扩展参考链接；文档现已独立。
+
 ## [0.0.10] - 2026-07-27
 
 ### 修复
@@ -187,6 +208,11 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[1.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.10...1.0.0
+[0.0.10]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.9...0.0.10
+[0.0.9]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.8...0.0.9
+[0.0.8]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.7...0.0.8
+[0.0.7]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.6...0.0.7
 [0.0.6]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.5...0.0.6
 [0.0.5]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.4...0.0.5
 [0.0.4]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.3...0.0.4
