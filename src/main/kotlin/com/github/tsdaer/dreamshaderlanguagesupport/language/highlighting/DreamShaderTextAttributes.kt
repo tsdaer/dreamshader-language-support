@@ -84,6 +84,48 @@ object DreamShaderTextAttributes {
     )
 
     @JvmField
+    val CONTROL_FLOW: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_CONTROL_FLOW",
+        DefaultLanguageHighlighterColors.KEYWORD
+    )
+
+    @JvmField
+    val QUALIFIER: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_QUALIFIER",
+        DefaultLanguageHighlighterColors.STATIC_METHOD
+    )
+
+    @JvmField
+    val CONSTANT: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_CONSTANT",
+        DefaultLanguageHighlighterColors.CONSTANT
+    )
+
+    @JvmField
+    val IMPORT: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_IMPORT",
+        DefaultLanguageHighlighterColors.METADATA
+    )
+
+    @JvmField
+    val SETTINGS_KEY: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_SETTINGS_KEY",
+        DefaultLanguageHighlighterColors.INSTANCE_FIELD
+    )
+
+    @JvmField
+    val BUILTIN_FUNCTION: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_BUILTIN_FUNCTION",
+        DefaultLanguageHighlighterColors.PREDEFINED_SYMBOL
+    )
+
+    @JvmField
+    val PUNCTUATION: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_PUNCTUATION",
+        DefaultLanguageHighlighterColors.DOT
+    )
+
+    @JvmField
     val BAD_CHARACTER: TextAttributesKey =
         TextAttributesKey.createTextAttributesKey("DREAMSHADER_BAD_CHAR", HighlighterColors.BAD_CHARACTER)
 }

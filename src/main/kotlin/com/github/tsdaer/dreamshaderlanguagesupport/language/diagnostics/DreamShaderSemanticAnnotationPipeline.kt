@@ -57,7 +57,11 @@ internal class DreamShaderSemanticAnnotationPipeline {
             annotateFileDiagnostics(element, holder)
             return
         }
-        val attribute = DreamShaderSemanticTokenClassifier.classify(element) ?: return
+        val attribute = try {
+            DreamShaderSemanticTokenClassifier.classify(element)
+        } catch (e: Exception) {
+            null
+        } ?: return
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
             .range(element)
             .textAttributes(attribute)

@@ -72,10 +72,10 @@ class DreamShaderSettingsToggleTest : DreamShaderSettingsUiTestBase() {
         )
 
         settings.enableCodeLens = true
-        assertTrue("Expected Code Vision enabled when enableCodeLens=true", provider.acceptsFile(file))
+        assertTrue("Expected Code Vision enabled when enableCodeLens=true", provider.isAvailableFor(project))
 
         settings.enableCodeLens = false
-        assertFalse("Expected Code Vision disabled when enableCodeLens=false", provider.acceptsFile(file))
+        assertFalse("Expected Code Vision disabled when enableCodeLens=false", provider.isAvailableFor(project))
     }
 
     fun testHoverOverridesStatusTextReflectsFirstIssue() {

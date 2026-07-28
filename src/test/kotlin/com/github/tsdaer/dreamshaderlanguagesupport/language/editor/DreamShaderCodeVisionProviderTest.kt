@@ -23,9 +23,10 @@ class DreamShaderCodeVisionProviderTest : BasePlatformTestCase() {
         assertNotNull("Expected declaration PSI", declaration)
 
         val provider = DreamShaderCodeVisionProvider()
-        val hint = provider.getHint(declaration!!, file)
+        val hint = provider.testComputeHint(declaration!!, file)
+        assertNotNull("Expected non-null hint", hint)
 
-        assertTrue("Expected declaration name in hint", hint.contains("Main"))
+        assertTrue("Expected declaration name in hint", hint!!.contains("Main"))
         assertTrue("Expected hint to contain localized package summary segment", hint.contains("Pkg:"))
         val bridgeReady = DreamShaderBundle.message("codeVision.label.bridgeReady")
         val bridgeUnavailable = DreamShaderBundle.message("codeVision.label.bridgeUnavailable")
@@ -57,11 +58,12 @@ class DreamShaderCodeVisionProviderTest : BasePlatformTestCase() {
             settings.projectRoot = "Z:/__dreamshader_missing_root_for_test__"
 
             val provider = DreamShaderCodeVisionProvider()
-            val hint = provider.getHint(declaration!!, file)
+            val hint = provider.testComputeHint(declaration!!, file)
+            assertNotNull("Expected non-null hint", hint)
 
             assertTrue(
                 "Expected bridge-unavailable label when bridge directory cannot resolve",
-                hint.contains(DreamShaderBundle.message("codeVision.label.bridgeUnavailable"))
+                hint!!.contains(DreamShaderBundle.message("codeVision.label.bridgeUnavailable"))
             )
             assertTrue("Expected declaration name in hint", hint.contains("Main"))
         } finally {
@@ -84,9 +86,10 @@ class DreamShaderCodeVisionProviderTest : BasePlatformTestCase() {
         assertNotNull("Expected declaration PSI", declaration)
 
         val provider = DreamShaderCodeVisionProvider()
-        val hint = provider.getHint(declaration!!, file)
+        val hint = provider.testComputeHint(declaration!!, file)
+        assertNotNull("Expected non-null hint", hint)
 
-        assertTrue("Expected full Name attribute path in hint", hint.contains("DreamMaterials/M_Test2"))
+        assertTrue("Expected full Name attribute path in hint", hint!!.contains("DreamMaterials/M_Test2"))
     }
 
     fun testClickPlanRefreshesStoreWhenDeclarationFileIsActiveFile() {

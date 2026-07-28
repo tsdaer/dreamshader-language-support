@@ -100,7 +100,7 @@
         <codeInsight.lineMarkerProvider
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderLineMarkerProvider"/>
-        <codeInsight.daemonBoundCodeVisionProvider
+        <codeInsight.codeVisionProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCodeVisionProvider"/>
         <codeInsight.parameterInfo
                 language="DreamShaderLang"

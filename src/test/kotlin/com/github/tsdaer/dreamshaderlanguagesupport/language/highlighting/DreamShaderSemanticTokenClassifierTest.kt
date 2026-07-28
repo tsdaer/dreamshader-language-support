@@ -80,7 +80,7 @@ class DreamShaderSemanticTokenClassifierTest : BasePlatformTestCase() {
             "Main" to "DREAMSHADER_DECLARATION_NAME",
             "BaseColor" to "DREAMSHADER_MATERIAL_OUTPUT_MEMBER",
             "UE" to "DREAMSHADER_BUILTIN_NAMESPACE",
-            "TexCoord" to "DREAMSHADER_CALLABLE_REFERENCE"
+            "TexCoord" to "DREAMSHADER_BUILTIN_FUNCTION"
         )
 
         verifyTokens.forEach { (token, expectedKey) ->

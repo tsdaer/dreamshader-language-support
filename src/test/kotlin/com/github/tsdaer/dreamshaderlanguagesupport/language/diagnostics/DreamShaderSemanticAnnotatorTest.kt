@@ -26,12 +26,12 @@ class DreamShaderSemanticAnnotatorTest : BasePlatformTestCase() {
             highlights.any { it.first == "SurfaceMain" && it.second == "DREAMSHADER_DECLARATION_NAME" }
         )
         assertTrue(
-            "Expected callable reference semantic highlight for UE.TexCoord. Actual: $debug",
-            highlights.any { it.first == "TexCoord" && it.second == "DREAMSHADER_CALLABLE_REFERENCE" }
+            "Expected builtin function semantic highlight for UE.TexCoord. Actual: $debug",
+            highlights.any { it.first == "TexCoord" && it.second == "DREAMSHADER_BUILTIN_FUNCTION" }
         )
         assertTrue(
-            "Expected callable reference semantic highlight for saturate. Actual: $debug",
-            highlights.any { it.first == "saturate" && it.second == "DREAMSHADER_CALLABLE_REFERENCE" }
+            "Expected builtin function semantic highlight for saturate. Actual: $debug",
+            highlights.any { it.first == "saturate" && it.second == "DREAMSHADER_BUILTIN_FUNCTION" }
         )
     }
 

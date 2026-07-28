@@ -17,15 +17,23 @@ internal object DreamShaderSemanticTokenClassifier {
      */
     fun classify(element: PsiElement): TextAttributesKey? {
         if (element.text.isBlank()) return null
-        return when (element.node.elementType) {
-            DreamShaderTokenTypes.KEYWORD -> {
-                if (isDeclarationKeywordElement(element)) DreamShaderTextAttributes.KEYWORD else null
-            }
-
+        val node = element.node ?: return null
+        return when (node.elementType) {
+            DreamShaderTokenTypes.KEYWORD -> classifyKeyword(element)
             DreamShaderTokenTypes.SECTION -> DreamShaderTextAttributes.SECTION
             DreamShaderTokenTypes.IDENTIFIER -> classifyIdentifier(element)
             else -> null
         }
+    }
+
+    private fun classifyKeyword(element: PsiElement): TextAttributesKey? {
+        val text = element.text.lowercase(Locale.ROOT)
+        if (isDeclarationKeywordElement(element)) return DreamShaderTextAttributes.KEYWORD
+        if (text in CONTROL_FLOW_KEYWORDS) return DreamShaderTextAttributes.CONTROL_FLOW
+        if (text in QUALIFIER_KEYWORDS) return DreamShaderTextAttributes.QUALIFIER
+        if (text in CONSTANT_KEYWORDS) return DreamShaderTextAttributes.CONSTANT
+        if (text == "import") return DreamShaderTextAttributes.IMPORT
+        return DreamShaderTextAttributes.KEYWORD
     }
 
     private fun classifyIdentifier(element: PsiElement): TextAttributesKey? {
@@ -34,18 +42,18 @@ internal object DreamShaderSemanticTokenClassifier {
             return DreamShaderTextAttributes.DECLARATION_NAME
         }
 
-        // Namespace-oriented semantic classes.
         if (isUeNamespaceIdentifier(element)) return DreamShaderTextAttributes.BUILTIN_NAMESPACE
         if (isNamespaceQualifier(element)) return DreamShaderTextAttributes.NAMESPACE_QUALIFIER
 
-        // Material-output member classes.
         if (isMaterialOutputMemberIdentifier(element)) return DreamShaderTextAttributes.MATERIAL_OUTPUT_MEMBER
 
-        // Local symbol split: declaration site vs usage site.
+        if (isSettingsKey(element)) return DreamShaderTextAttributes.SETTINGS_KEY
+
+        if (isBuiltinFunctionCall(element)) return DreamShaderTextAttributes.BUILTIN_FUNCTION
+
         if (isLocalSymbolDeclaration(element)) return DreamShaderTextAttributes.LOCAL_SYMBOL_DECLARATION
         if (isLocalSymbolUsage(element)) return DreamShaderTextAttributes.LOCAL_SYMBOL
 
-        // Callable reference fallback.
         val text = element.text
         if (!looksLikeCallableReference(text, element)) return null
         if (isDeclarationHeadIdentifier(element)) return null
@@ -56,7 +64,8 @@ internal object DreamShaderSemanticTokenClassifier {
     // Declaration/body scope helpers.
     private fun isDeclarationKeywordElement(element: PsiElement): Boolean {
         val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false) ?: return false
-        val firstKeyword = declaration.node.getChildren(null).firstOrNull { it.elementType == DreamShaderTokenTypes.KEYWORD }
+        val declNode = declaration.node ?: return false
+        val firstKeyword = declNode.getChildren(null).firstOrNull { it.elementType == DreamShaderTokenTypes.KEYWORD }
         return firstKeyword?.psi == element
     }
 
@@ -124,9 +133,9 @@ internal object DreamShaderSemanticTokenClassifier {
     private fun isMaterialOutputMemberIdentifier(element: PsiElement): Boolean {
         if (!isInsideDeclarationBody(element)) return false
         val prev = previousSignificantElement(element) ?: return false
-        if (prev.node.elementType != DreamShaderTokenTypes.OPERATOR || prev.text != ".") return false
+        if (prev.node?.elementType != DreamShaderTokenTypes.OPERATOR || prev.text != ".") return false
         val base = previousSignificantElement(prev) ?: return false
-        if (base.node.elementType != DreamShaderTokenTypes.IDENTIFIER || !base.text.equals("Base", ignoreCase = true)) {
+        if (base.node?.elementType != DreamShaderTokenTypes.IDENTIFIER || !base.text.equals("Base", ignoreCase = true)) {
             return false
         }
         return element.text.lowercase(Locale.ROOT) in BASE_OUTPUT_MEMBERS
@@ -222,4 +231,64 @@ internal object DreamShaderSemanticTokenClassifier {
         "customizeduvs5", "customizeduvs6", "customizeduvs7", "mooaencodedattribute0", "mooaencodedattribute1",
         "mooaencodedattribute2", "mooaencodedattribute3", "mooaencodedattribute4", "anisotropy", "tangent"
     )
+
+    private val CONTROL_FLOW_KEYWORDS = setOf(
+        "if", "else", "for", "while", "do", "switch", "case", "default", "break", "continue", "return"
+    )
+
+    private val QUALIFIER_KEYWORDS = setOf(
+        "const", "static", "in", "out", "inout", "opt"
+    )
+
+    private val CONSTANT_KEYWORDS = setOf(
+        "true", "false"
+    )
+
+    private val KNOWN_SETTINGS_KEYS = setOf(
+        "domain", "materialdomain", "shadingmodel", "blendmode", "rendertype",
+        "translucencylightingmode", "lightingmode", "twosided", "wireframe",
+        "ditheredlodtransition", "ditheropacitymask", "allownegativeemissivecolor",
+        "castdynamicshadowasmasked", "responsiveaa", "screenspacereflections",
+        "contactshadows", "disabledepthtest", "outputtranslucentvelocity",
+        "tangentspacenormal", "fullyrough", "issky", "thinsurface",
+        "numcustomizeduvs", "refractionmethod", "refractionmode",
+        "asset", "description"
+    )
+
+    private val BUILTIN_FUNCTION_NAMES: Set<String> = setOf(
+        "texcoord", "time", "panner", "worldposition", "objectpositionws",
+        "cameravectorws", "screenposition", "vertexcolor",
+        "transformvector", "transformposition", "expression",
+        "collectionparam", "staticswitchparameter",
+        "abs", "acos", "asin", "atan", "atan2", "ceil", "clamp", "cos", "cross",
+        "ddx", "ddy", "distance", "dot", "exp", "exp2", "floor", "frac", "fmod",
+        "length", "lerp", "log", "log2", "max", "min", "mul", "normalize", "pow",
+        "reflect", "rsqrt", "saturate", "sin", "smoothstep", "sqrt", "step", "tan"
+    )
+
+    private fun isSettingsKey(element: PsiElement): Boolean {
+        if (element.text.isBlank()) return false
+        val section = PsiTreeUtil.getParentOfType(element, DreamShaderSection::class.java, false) ?: return false
+        val sectionName = section.sectionName()?.lowercase(Locale.ROOT) ?: return false
+        if (sectionName != "settings" && sectionName != "options") return false
+        val text = element.text.lowercase(Locale.ROOT)
+        if (text !in KNOWN_SETTINGS_KEYS) return false
+        val next = skipWhitespaceForward(element)
+        return next == "=" || next == ";"
+    }
+
+    private fun isBuiltinFunctionCall(element: PsiElement): Boolean {
+        if (!isInsideDeclarationBody(element)) return false
+        val text = element.text.lowercase(Locale.ROOT)
+        if (text !in BUILTIN_FUNCTION_NAMES) return false
+        if (!looksLikeCallableReference(element.text, element)) return false
+        val prev = previousSignificantElement(element) ?: return true
+        if (prev.node.elementType == DreamShaderTokenTypes.IDENTIFIER) {
+            val prevText = prev.text
+            val prevPrev = previousSignificantElement(prev)
+            val isMemberAccess = prevPrev?.node?.elementType == DreamShaderTokenTypes.OPERATOR && prevPrev.text == "."
+            if (!isMemberAccess) return false
+        }
+        return true
+    }
 }
