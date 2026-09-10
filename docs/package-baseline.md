@@ -7,11 +7,11 @@ Version-specific package impacts should first be captured in `roadmap.md` or a d
 ## DreamShader Package Baseline
 
 Primary package reference (upstream):
-- https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/Packages.md
+- https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/tools/packages.md
 
 Reference snapshot used for this README alignment:
-- Checked on `2026-05-29`
-- Upstream doc title: `DreamShader Package`
+- Checked on `2026-09-01`
+- Upstream doc title: `Packages`
 
 This section summarizes package rules and behaviors the Rider plugin should align with.
 

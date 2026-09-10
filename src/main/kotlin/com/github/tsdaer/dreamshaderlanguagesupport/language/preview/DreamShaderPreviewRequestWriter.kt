@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import kotlin.random.Random
 
 @Serializable
@@ -42,7 +43,17 @@ internal class DreamShaderPreviewRequestWriter {
             Files.createDirectories(dir)
             val suffix = Random.nextInt(100000, 999999)
             val target = dir.resolve("request-${System.currentTimeMillis()}-$suffix.json")
-            Files.writeString(target, DreamShaderJson.encodePretty(dto) + "\n", StandardCharsets.UTF_8)
+            val temporary = Files.createTempFile("dreamshader-request-", ".tmp")
+            try {
+                Files.writeString(temporary, DreamShaderJson.encodePretty(dto) + "\n", StandardCharsets.UTF_8)
+                runCatching {
+                    Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE)
+                }.getOrElse {
+                    Files.move(temporary, target)
+                }
+            } finally {
+                Files.deleteIfExists(temporary)
+            }
             target
         }.getOrNull()
     }

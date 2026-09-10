@@ -2,6 +2,26 @@
 
 # dreamshader-language-support Changelog
 
+## [1.1.0] - 2026-09-01
+
+### Added
+
+- DreamShader 1.8 source-root-aware imports. Project and plugin `DShader` trees are isolated by default; explicit `Project:`, `Plugin.<Name>:` and compatible `Plugins/<Name>:` qualifiers cross roots.
+- Bridge diagnostic metadata support for upstream `code`, `stage`, `detail`, `assetPath`, `source`, shader platform, and quality level fields. Diagnostic codes are displayed in editor annotations.
+- Coverage for plugin-owned imports, explicit cross-root imports, and containment enforcement.
+
+### Changed
+
+- Language and integration baseline updated from DreamShaderLang 1.6.3 to DreamShader 1.8.0/current main as checked on 2026-09-01.
+- Preview request files are written to a temporary file and atomically moved into the Bridge request queue, preventing Unreal from consuming partial JSON.
+
+### Fixed
+
+- Import resolution no longer allows an owned DreamShader source to escape its source/packages root through `..` or an absolute path.
+- Plugin sources no longer accidentally resolve an unqualified import from the project `DShader` tree when a same-named dependency belongs to another root.
+- Imported declarations resolve correctly in IntelliJ temporary/light virtual files, restoring imported hover docs and parameter hints.
+- Texture-sample and noise material generators no longer emit unresolved `Builtin/Texture.dsh` / `Builtin/Noise.dsh` imports; they now generate self-contained DreamShader 1.8 syntax.
+
 ## [1.0.0] - 2026-07-28
 
 ### Added

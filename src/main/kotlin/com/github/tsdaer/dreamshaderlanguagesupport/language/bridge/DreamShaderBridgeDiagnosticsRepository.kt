@@ -27,7 +27,14 @@ private data class BridgeDiagnosticDto(
     val level: String? = null,
     val message: String? = null,
     val text: String? = null,
-    val msg: String? = null
+    val msg: String? = null,
+    val code: String? = null,
+    val stage: String? = null,
+    val detail: String? = null,
+    val assetPath: String? = null,
+    val source: String? = null,
+    val shaderPlatform: String? = null,
+    val qualityLevel: String? = null
 )
 
 /** `{ "files": [ { "path": ..., "diagnostics": [...] } ] }` 中的单个 file 分组。 */
@@ -166,7 +173,14 @@ class DreamShaderBridgeDiagnosticsRepository(private val project: Project) {
             line = if (line < 1) 1 else line,
             column = if (column < 1) 1 else column,
             severity = severity.lowercase(),
-            message = message
+            message = message,
+            code = dto.code,
+            stage = dto.stage,
+            detail = dto.detail,
+            assetPath = dto.assetPath,
+            source = dto.source,
+            shaderPlatform = dto.shaderPlatform,
+            qualityLevel = dto.qualityLevel
         )
     }
 

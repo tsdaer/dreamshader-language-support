@@ -8,7 +8,14 @@ internal data class DreamShaderBridgeDiagnostic(
     val line: Int,
     val column: Int,
     val severity: String,
-    val message: String
+    val message: String,
+    val code: String? = null,
+    val stage: String? = null,
+    val detail: String? = null,
+    val assetPath: String? = null,
+    val source: String? = null,
+    val shaderPlatform: String? = null,
+    val qualityLevel: String? = null
 )
 
 /**

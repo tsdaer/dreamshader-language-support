@@ -2,6 +2,26 @@
 
 # dreamshader-language-support 更新日志
 
+## [1.1.0] - 2026-09-01
+
+### 新增
+
+- 支持 DreamShader 1.8 多 Source Root import：项目与各插件的 `DShader` 默认相互隔离，使用 `Project:`、`Plugin.<Name>:` 及兼容的 `Plugins/<Name>:` 显式跨 Root 导入。
+- 支持上游 Bridge 诊断的 `code`、`stage`、`detail`、`assetPath`、`source`、shader platform 与 quality level 字段，并在编辑器诊断中显示诊断码。
+- 增加插件 Root、显式跨 Root 及路径 containment 回归覆盖。
+
+### 变更
+
+- 语言与集成基线由 DreamShaderLang 1.6.3 更新到 2026-09-01 检查的 DreamShader 1.8.0/当前 main。
+- 材质预览请求先写入临时文件，再原子移动到 Bridge 请求队列，避免 Unreal 读取到未写完的 JSON。
+
+### 修复
+
+- DreamShader Root 内的源文件不再能通过 `..` 或绝对路径逃逸 source/packages Root。
+- 插件源文件的非限定 import 不再错误地解析到项目 `DShader` 中的同名依赖。
+- 修复 IntelliJ 临时/轻量虚拟文件中的 import 声明解析，恢复导入函数的悬浮文档和参数提示。
+- 贴图采样与噪声材质生成器不再输出无法解析的 `Builtin/Texture.dsh` / `Builtin/Noise.dsh` import，改为生成自包含的 DreamShader 1.8 语法。
+
 ## [1.0.0] - 2026-07-28
 
 ### 新增

@@ -87,8 +87,8 @@ class DreamShaderTemplateCommandsTest : BasePlatformTestCase() {
         assertTrue(target.isRegularFile())
 
         val text = target.readText()
-        assertTrue(text.contains("Builtin/Texture.dsh"))
-        assertTrue(text.contains("Texture::Sample2DRGB"))
+        assertTrue(text.contains("TextureSampleParameter2D"))
+        assertTrue(text.contains("AlbedoTexture(Coordinates=UV)"))
         assertTrue(text.contains("Shader("))
         assertNoErrors("M_TextureSample.dsm", text)
     }
@@ -102,8 +102,7 @@ class DreamShaderTemplateCommandsTest : BasePlatformTestCase() {
         assertTrue(target.isRegularFile())
 
         val text = target.readText()
-        assertTrue(text.contains("Builtin/Noise.dsh"))
-        assertTrue(text.contains("Noise::FBM2D"))
+        assertTrue(text.contains("sin(dot(UV"))
         assertTrue(text.contains("Shader("))
         assertNoErrors("M_NoiseMaterial.dsm", text)
     }

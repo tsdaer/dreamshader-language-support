@@ -99,11 +99,9 @@ internal class DreamShaderTemplateService(
         val stem = fileStem(target.name)
         val symbol = toIdentifier(stem, "M_TextureSample")
         val content = """
-            import "Builtin/Texture.dsh";
-
             Shader(Name="Materials/$symbol") {
                 Properties = {
-                    const Texture2D AlbedoTexture = Path(Game, Textures, T_Default);
+                    TextureSampleParameter2D AlbedoTexture = Path(Game, Textures, T_Default);
                     float2 UVScale = float2(1.0, 1.0);
                     float3 Tint = float3(1.0, 1.0, 1.0);
                 }
@@ -119,8 +117,8 @@ internal class DreamShaderTemplateService(
                 }
 
                 Graph = {
-                    float2 UV = TexCoord0 * UVScale;
-                    Color = Texture::Sample2DRGB(AlbedoTexture, UV) * Tint;
+                    float2 UV = UE.TexCoord(Index=0) * UVScale;
+                    Color = AlbedoTexture(Coordinates=UV).rgb * Tint;
                     Base.BaseColor = Color;
                 }
             }
@@ -145,8 +143,6 @@ internal class DreamShaderTemplateService(
         val stem = fileStem(target.name)
         val symbol = toIdentifier(stem, "M_NoiseMaterial")
         val content = """
-            import "Builtin/Noise.dsh";
-
             Shader(Name="Materials/$symbol") {
                 Properties = {
                     float Scale = 8.0;
@@ -166,8 +162,8 @@ internal class DreamShaderTemplateService(
                 }
 
                 Graph = {
-                    float2 UV = TexCoord0 * Scale;
-                    float Mask = saturate(Noise::FBM2D(UV) * Contrast);
+                    float2 UV = UE.TexCoord(Index=0) * Scale;
+                    float Mask = saturate(sin(dot(UV, float2(12.9898, 78.233))) * 0.5 * Contrast + 0.5);
                     Color = lerp(ColorA, ColorB, Mask);
                     Base.BaseColor = Color;
                     Base.Roughness = 0.65;

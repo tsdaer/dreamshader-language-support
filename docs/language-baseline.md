@@ -5,15 +5,15 @@ Stable language-reference notes used by this Rider plugin. Refresh this file whe
 ## DreamShaderLang Syntax Baseline
 
 Primary language reference:
-- https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/LanguageReference.md
+- https://github.com/TypeDreamMoon/DreamShader/tree/main/Docs/language
 
 Primary examples reference:
-- https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/Examples.md
+- https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/examples/index.md
 
 Reference snapshot used for this alignment:
-- Checked on `2026-07-28`
-- DreamShaderLang language version: `1.6.3`
-- Rider plugin version: `1.0.0`
+- Checked on `2026-09-01`
+- DreamShader plugin version: `1.8.0` plus upstream `main` through `8f84830`
+- Rider plugin version: `1.1.0`
 
 Examples conformance snapshot:
 - Checked on `2026-05-29`

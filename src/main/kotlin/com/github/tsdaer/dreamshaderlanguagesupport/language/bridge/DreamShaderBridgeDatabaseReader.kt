@@ -57,7 +57,14 @@ internal object DreamShaderBridgeDatabaseReader {
             line = obj["line"]?.jsonPrimitive?.intOrNull ?: 1,
             column = obj["column"]?.jsonPrimitive?.intOrNull ?: 1,
             severity = obj["severity"]?.jsonPrimitive?.contentOrNull ?: "error",
-            message = message
+            message = message,
+            code = obj["code"]?.jsonPrimitive?.contentOrNull,
+            stage = obj["stage"]?.jsonPrimitive?.contentOrNull,
+            detail = obj["detail"]?.jsonPrimitive?.contentOrNull,
+            assetPath = obj["assetPath"]?.jsonPrimitive?.contentOrNull,
+            source = obj["source"]?.jsonPrimitive?.contentOrNull,
+            shaderPlatform = obj["shaderPlatform"]?.jsonPrimitive?.contentOrNull,
+            qualityLevel = obj["qualityLevel"]?.jsonPrimitive?.contentOrNull
         )
     }
 }
