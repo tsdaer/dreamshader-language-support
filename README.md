@@ -10,7 +10,7 @@
 <!-- plugin-metadata:start -->
 name: Dreamshader Language Extension
 description: |
-  Comprehensive DreamShaderLang support for JetBrains Rider, covering `.dsm`, `.dsf`, and `.dsh` files from language core to tooling, plus the DreamShader 2.0 dialect and its editor-bridge artifacts.
+  Comprehensive DreamShaderLang support for JetBrains Rider, covering `.dsm`, `.dsf`, and `.dsh` files from language core to tooling, plus the DreamShader 2.0 dialect with editor-bridge artifacts, DSH-coded diagnostics, and the `dsc` toolchain.
 
   **Language core**
   - DreamShader 2.0 dialect support: `.dss` compilation units and `.dsi` material instances with dedicated icons, dialect-aware parsing and highlighting, `#pragma` / `uniform` / `export` declarations, and verbatim `/// @custom` bodies; mixed-dialect `.dsh` headers supported
@@ -26,17 +26,21 @@ description: |
 
   **Diagnostics and project integration**
   - Cached semantic diagnostics (syntax, section-shape, semantic) plus Bridge diagnostics mapping, with parser recovery and targeted Bridge-failure-prevention checks
-  - Configurable project settings: project root, manifest path, Unreal Engine source root with auto-detect, material-expression scan toggle and cache path, status bar, code lens, inlay parameter hints, out placeholder suffix, import extension strategy, hover doc overrides, and Bridge commands
+  - DSH diagnostic-code catalog (all 639 upstream codes): Bridge diagnostics show the code meaning in the tooltip, offer an Open DSH documentation intention, and carry preventive checks keyed to upstream codes - `DSH2248` (2.0 syntax in a 1.x file), `DSH3203` (angle-bracket `#include`, with a quick fix), `DSH2249` (asset block in a `.dsh` header) - plus legacy GLSL alias hints with one-click HLSL rewrites (`DSH5277`)
+  - Inspections under Settings → Editor → Inspections → DreamShader (unknown type in Inputs/Outputs/Properties, included in Inspect Code batch scans)
+  - `dsc` toolchain actions (Check / Format / Migrate with a `-Check` preview / Refresh Symbol Index) behind a configurable executable path
+  - Decompiled-output support: `Decompiled/` and `Intermediate/DreamShader/` sources skip platform error highlighting and open in reading mode by default
+  - Configurable project settings: project root, manifest path, Unreal Engine source root with auto-detect, material-expression scan toggle and cache path, status bar, code lens, inlay parameter hints, out placeholder suffix, import extension strategy, hover doc overrides, Bridge commands, and the `dsc` executable path
   - DreamShader 2.0 editor-bridge artifacts: `dreamshader-builtin-catalog.json` drives `UE.*` / `Substrate.*` completion and signature help (with a bundled offline fallback covering all 27 registered builtins), `dreamshader-symbol-index` v1 is consumed read-only, `bridge.db` meta is exposed, the status bar shows editor online/offline from the `status.json` heartbeat, and a **Reveal Node in Unreal Material Editor** action maps a `.dss`/`.dsi` line back to its material node
   - Bridge tool window and workflow actions (refresh diagnostics, recompile current or all, clean generated shaders, open Bridge paths)
 
   **Packages, templates, and hub**
   - Package tooling: package store dialog with search/filter/details/install-state markers, background install-update-remove, add-remove index sources, GitHub install/update/remove, open packages folder, and package-aware import resolution
-  - Native File and Code Templates plus template tools for material/function/header, texture sample, noise material, package scaffold, and package wizard workflows
+  - Native File and Code Templates plus template tools for 2.0 material/function (`.dss`) and instance (`.dsi`), 1.x material/function/header, texture sample, noise material, package scaffold, and package wizard workflows
   - Material preview tool window backed by the portable DreamShader Bridge file transport
   - Unified DreamShader Hub entry and shared card-based UI surface for settings, diagnostics, preview, package, and template workflows
 description_zh: |
-  面向 JetBrains Rider 的完整 DreamShaderLang 支持，覆盖 `.dsm`、`.dsf`、`.dsh` 文件，从语言核心到工具集成，并支持 DreamShader 2.0 方言及其编辑器桥接工件。
+  面向 JetBrains Rider 的完整 DreamShaderLang 支持，覆盖 `.dsm`、`.dsf`、`.dsh` 文件，从语言核心到工具集成，并支持 DreamShader 2.0 方言的编辑器桥接工件、DSH 编码诊断与 `dsc` 工具链。
 
   **语言核心**
   - DreamShader 2.0 方言支持：`.dss` 编译单元与 `.dsi` 材质实例（独立图标）、按方言分流的解析与高亮、`#pragma` / `uniform` / `export` 声明、`/// @custom` 原文函数体，混合方言 `.dsh` 头文件
@@ -52,13 +56,17 @@ description_zh: |
 
   **诊断与项目集成**
   - 带缓存的语义诊断（语法、section-shape、语义）以及 Bridge 诊断映射，包含 parser 恢复与针对 Bridge 失败的预防性检查
-  - 可配置项目设置：项目根、manifest 路径、可自动检测的 Unreal Engine 源码根、material-expression 扫描开关与缓存路径、状态栏、code lens、内联参数提示、out 占位后缀、import 扩展名策略、悬浮文档覆盖与 Bridge 命令
+  - DSH 诊断码目录（覆盖上游全部 639 个码）：Bridge 诊断 tooltip 显示码义并提供「打开 DSH 文档」意图；按上游编号的预防性检查——`DSH2248`（1.x 文件中的 2.0 语法）、`DSH3203`（尖括号 `#include`，附快速修复）、`DSH2249`（`.dsh` 头文件中的资产块）；以及 GLSL 遗留别名提示与一键 HLSL 改写（`DSH5277`）
+  - Inspections 分组（Settings → Editor → Inspections → DreamShader：Inputs/Outputs/Properties 未知类型，纳入 Inspect Code 批量扫描）
+  - `dsc` 工具链动作（检查 / 格式化 / 迁移（先 `-Check` 预演）/ 刷新符号索引），由可配置的 dsc 可执行路径启用
+  - 反编译产物支持：`Decompiled/` 与 `Intermediate/DreamShader/` 源码跳过平台错误高亮，默认进入阅读模式
+  - 可配置项目设置：项目根、manifest 路径、可自动检测的 Unreal Engine 源码根、material-expression 扫描开关与缓存路径、状态栏、code lens、内联参数提示、out 占位后缀、import 扩展名策略、悬浮文档覆盖、Bridge 命令与 `dsc` 可执行路径
   - DreamShader 2.0 编辑器桥接工件：`dreamshader-builtin-catalog.json` 驱动 `UE.*` / `Substrate.*` 补全与签名帮助（内置覆盖全部 27 个注册调用的离线兜底目录），只读消费 `dreamshader-symbol-index` v1，暴露 `bridge.db` meta 表，状态栏按 `status.json` 心跳显示编辑器在线/离线，并提供把 `.dss`/`.dsi` 源行映射回材质节点的「在虚幻材质编辑器中显示节点」动作
   - Bridge 工具窗口与工作流操作（刷新诊断、重编译当前或全部、清理生成的 shader、打开 Bridge 路径）
 
   **包、模板与 Hub**
   - 包工具：带搜索/筛选/详情/安装状态标记的 package store 对话框、后台安装-更新-移除、增删索引源、GitHub 安装/更新/移除、打开包目录，以及包感知的 import 解析
-  - 原生 File and Code Templates，以及材质/函数/头文件、贴图采样、噪声材质、包脚手架与包向导的模板工具
+  - 原生 File and Code Templates，以及 2.0 材质/函数（`.dss`）与实例（`.dsi`）、1.x 材质/函数/头文件、贴图采样、噪声材质、包脚手架与包向导的模板工具
   - 基于 DreamShader Bridge 文件传输的材质预览工具窗口
   - 统一的 DreamShader Hub 入口与卡片化共享 UI 表面，整合设置、诊断、预览、包与模板工作流
 <!-- plugin-metadata:end -->

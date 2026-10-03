@@ -2,6 +2,24 @@
 
 # dreamshader-language-support Changelog
 
+## [1.4.0] - 2026-10-03
+
+### Added
+
+- Diagnostics and tooling for milestone M10 (upstream `2.0.2` @ `b3bbf48`):
+  - **DSH diagnostic-code catalog** (A5): a machine-readable catalog of all 639 upstream `DSHnnnn` codes (`messages/dreamshader-dsh-codes.json`), generated from the upstream `Docs/diagnostics/README.md` table by the re-runnable `scripts/generate_dsh_codes.py` (stable diff; curated Chinese summaries in `scripts/dsh-codes-zh.json`). Bridge diagnostics carrying a DSH code show the code meaning (Chinese when curated) in the tooltip and gain an **Open DSH documentation** Alt+Enter intention that opens the code's page in the upstream docs.
+  - **Preventive checks keyed to upstream codes** (A5): 2.0 syntax (`uniform` / `export` / `extern` / `#pragma` / `#include`) in a `.dsm`/`.dsf` file is reported against `DSH2248`; the `#include <...>` angle-bracket spelling is reported against `DSH3203` with a quote-the-path quick fix; the existing `.dsh` asset-block shape check now cites `DSH2249`. All checks skip comments and string literals and never fire on ambiguous patterns.
+  - **Legacy GLSL alias hints** (B3): in 1.x files, GLSL spellings (`mix` / `fract` / `mod` functions and the `vec3`-family / `mat`-family type aliases from the engine's legacy alias tables) get a weak warning citing `DSH5277` plus a one-click replace with the HLSL name. Files declaring a same-named function, comments, and string literals are skipped; `.dss`/`.dsi` files are left to the engine's own `DSH4250` error.
+  - **`.dss` / `.dsi` file templates** (A4): the upstream `NewMaterial.dss` / `NewFunction.dss` / `NewInstance.dsi` template bodies with the upstream `{FILENAME}` / `{ASSETPATH}` / `{STEM}` / `{PARENT}` placeholders, in both the **Tools → DreamShader → Templates** actions (with a parent-material dialog for instances) and the **New → DreamShader** menu (2.0 section first, 1.x blocks below, matching the upstream New menu). Rendered products parse with zero errors; a file created under `DShader/Materials/` templates to `/Game/Materials/...`.
+  - **`dsc` CLI toolchain integration** (A8): a configurable `dsc` executable path (project and application settings; `.ps1` paths are wrapped in PowerShell automatically) enables **Tools → DreamShader → DreamShader Bridge**: *dsc Check Current File*, *dsc Format Current File*, *dsc Migrate Current File* (runs `migrate -Check` first, then asks for confirmation before writing - upstream moves the 1.x source to `Saved/DreamShader/Migrated/`), and *dsc Refresh Symbol Index*. Without a configured path the actions are disabled with a hint.
+  - **Decompiled-output support** (A9): sources under `Decompiled/` or `Intermediate/DreamShader/` are recognized as derived files - the `problemHighlightFilter` extension suppresses platform error highlighting on them (no false positives, batch Inspect Code skips them, manual editing remains possible), and the `readerModeMatcher` extension opens them in reading mode by default.
+  - **Unknown-type inspection** (D8, first LocalInspectionTool migration): the Inputs/Outputs/Properties unknown-type rule moved from the semantic annotator into `DreamShaderUnknownTypeInspection` under **Settings → Editor → Inspections → DreamShader** - configurable level/switch, included in Inspect Code batch scans, with the same suggestion quick fix. The annotator no longer reports the rule, so nothing is reported twice.
+
+### Changed
+
+- Bridge tool window (B7): the Message column renders the DSH code as a link-styled prefix (with a cell tooltip carrying the code meaning), a toolbar button opens the selected diagnostic's DSH documentation, the active-file probe now recognizes `.dss`/`.dsi` files, and the summary line always appends the diagnostics source tag (a string-concatenation precedence bug dropped it whenever an info-level diagnostic was present).
+- Settings UI gains the `dsc` executable path field (A8).
+
 ## [1.3.0] - 2026-10-03
 
 ### Added
@@ -252,6 +270,8 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[1.4.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.3.0...1.4.0
+[1.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.10...1.0.0

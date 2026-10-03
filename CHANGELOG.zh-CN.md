@@ -2,6 +2,24 @@
 
 # dreamshader-language-support 更新日志
 
+## [1.4.0] - 2026-10-03
+
+### 新增
+
+- 里程碑 M10 的诊断与工具链（上游 `2.0.2` @ `b3bbf48`）：
+  - **DSH 诊断码目录**（A5）：机器可读码表（`messages/dreamshader-dsh-codes.json`），覆盖上游全部 639 个 `DSHnnnn` 码，由可重复执行的 `scripts/generate_dsh_codes.py` 从上游 `Docs/diagnostics/README.md` 表格生成（diff 稳定；精选中文摘要维护在 `scripts/dsh-codes-zh.json`）。携带 DSH 码的 Bridge 诊断在 tooltip 中显示码义（精选码含中文），并通过「Open DSH documentation」Alt+Enter 意图打开上游文档对应页。
+  - **按上游编号的预防性检查**（A5）：`.dsm`/`.dsf` 中的 2.0 语法（`uniform` / `export` / `extern` / `#pragma` / `#include`）按 `DSH2248` 报告；`#include <...>` 尖括号写法按 `DSH3203` 报告并附加引号快速修复；既有 `.dsh` 资产块形状检查引用 `DSH2249`。所有检查跳过注释与字符串，绝不在歧义模式上触发。
+  - **GLSL 遗留别名提示**（B3）：1.x 文件中的 GLSL 拼写（函数别名 `mix` / `fract` / `mod`，类型别名 `vec3` 系 / `mat` 系，取自引擎遗留别名表）给出引用 `DSH5277` 的弱警告，并附一键替换为 HLSL 名的快速修复。文件内声明了同名函数、注释与字符串不触发；`.dss`/`.dsi` 交给引擎自己的 `DSH4250` 错误。
+  - **`.dss` / `.dsi` 文件模板**（A4）：移植上游 `NewMaterial.dss` / `NewFunction.dss` / `NewInstance.dsi` 模板正文与 `{FILENAME}` / `{ASSETPATH}` / `{STEM}` / `{PARENT}` 占位符映射，同时提供 **Tools → DreamShader → Templates** 动作（实例模板带父材质输入对话框）与 **New → DreamShader** 菜单项（2.0 段在前、1.x 块在下，与上游 New 菜单一致）。渲染产物零 error 解析；`DShader/Materials/` 下创建的文件模板为 `/Game/Materials/...`。
+  - **`dsc` CLI 工具链集成**（A8）：可配置的 `dsc` 可执行路径（项目级与应用级设置；`.ps1` 路径自动经 PowerShell 包装）启用 **Tools → DreamShader → DreamShader Bridge** 下的：dsc 检查当前文件、dsc 格式化当前文件、dsc 迁移当前文件（先跑 `migrate -Check` 预演，确认后才写入——上游会把 1.x 源移至 `Saved/DreamShader/Migrated/`）、dsc 刷新符号索引。未配置路径时动作禁用并给出提示。
+  - **反编译产物支持**（A9）：`Decompiled/` 或 `Intermediate/DreamShader/` 下的源码识别为派生文件——`problemHighlightFilter` 扩展抑制平台对它们的错误高亮（无误报、Inspect Code 批量扫描跳过、手动编辑不受限），`readerModeMatcher` 扩展使其默认进入阅读模式。
+  - **未知类型 inspection**（D8，首批 LocalInspectionTool 迁移）：Inputs/Outputs/Properties 未知类型规则从语义 annotator 迁入 `DreamShaderUnknownTypeInspection`（**Settings → Editor → Inspections → DreamShader** 分组）——级别可配置、可开关、纳入 Inspect Code 批量扫描，保留原建议快速修复。annotator 不再报告该规则，不重复。
+
+### 变更
+
+- Bridge 工具窗口（B7）：Message 列以链接色前缀渲染 DSH 码（单元格 tooltip 附码义），新增工具栏按钮打开所选诊断的 DSH 文档，活动文件探测识别 `.dss`/`.dsi`，汇总行始终追加诊断来源标签（修复字符串拼接优先级 bug：存在 info 级诊断时该标签丢失）。
+- 设置页新增 `dsc` 可执行路径字段（A8）。
+
 ## [1.3.0] - 2026-10-03
 
 ### 新增
@@ -260,6 +278,8 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[1.4.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.3.0...1.4.0
+[1.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.10...1.0.0
