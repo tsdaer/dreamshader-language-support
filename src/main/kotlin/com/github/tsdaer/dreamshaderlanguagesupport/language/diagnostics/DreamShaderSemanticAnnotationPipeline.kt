@@ -79,6 +79,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val fileName = file.virtualFile?.name ?: file.name
         DreamShaderDialectPreventionPass.annotate(fileName, sourceText, tokens, holder)
         DreamShaderLegacyAliasHintPass.annotate(fileName, sourceText, tokens, topLevelDeclarations, holder)
+        DreamShader2DiagnosticsPass.annotate(file, sourceText, holder)
         annotateSectionShapeDiagnostics(file, sourceText, tokens, topLevelDeclarations, declarationContexts, holder)
         annotateSemanticDiagnostics(file, sourceText, tokens, topLevelDeclarations, declarationContexts, holder)
         DreamShaderBridgeDiagnosticsPass.annotate(file, holder)

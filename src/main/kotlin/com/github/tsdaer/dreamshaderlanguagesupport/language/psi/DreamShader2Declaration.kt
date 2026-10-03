@@ -31,11 +31,48 @@ interface DreamShader2FunctionDeclaration : DreamShader2NamedDeclaration {
 
     fun isExtern(): Boolean
 
+    /** Return type spelling (`void` for material entries), or null on a malformed header. */
+    fun returnTypeText(): String?
+
+    /** Parameter list of the declaration, or null when the header is malformed. */
+    fun parameterList(): DreamShader2ParameterList?
+
     /** True when the doc block carries `/// @custom` (body captured verbatim). */
     fun hasCustomBody(): Boolean
 }
 
+interface DreamShader2ParameterList : PsiElement {
+    /** Direct PARAMETER children. */
+    fun parameters(): List<DreamShader2Parameter>
+}
+
+interface DreamShader2Parameter : PsiElement {
+    fun parameterName(): String?
+
+    fun typeName(): String?
+}
+
+interface DreamShader2ArgumentList : PsiElement {
+    /** Direct children in call order: [DreamShader2Argument] and [DreamShader2NamedArgument]. */
+    fun arguments(): List<PsiElement>
+}
+
+/** A positional argument. */
+interface DreamShader2Argument : PsiElement
+
+/** `Name = expr` (also `Pin[0] = expr`). */
+interface DreamShader2NamedArgument : PsiElement {
+    fun argumentName(): String?
+}
+
 interface DreamShader2StructDeclaration : DreamShader2NamedDeclaration
+
+/** Struct member: `///` doc block? type name array-dims? `;` */
+interface DreamShader2StructField : PsiElement {
+    fun fieldName(): String?
+
+    fun typeName(): String?
+}
 
 interface DreamShader2IncludeDirective : PsiElement {
     /** The path as written (quotes stripped), or null when absent. */

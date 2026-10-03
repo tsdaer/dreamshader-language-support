@@ -167,6 +167,17 @@
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderUnknownTypeInspection"/>
         <readerModeMatcher
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderDerivedReaderModeMatcher"/>
+        <stubIndex
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2UniformIndex"/>
+        <stubIndex
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2FunctionIndex"/>
+        <stubIndex
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2StructIndex"/>
+        <stubIndex
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2IncludeIndex"/>
+        <stubElementTypeHolder
+                class="com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2StubElementTypes"
+                externalIdPrefix="dreamshader2."/>
     </extensions>
 
     <actions>

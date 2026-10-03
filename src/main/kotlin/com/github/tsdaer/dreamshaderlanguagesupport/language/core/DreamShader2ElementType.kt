@@ -26,7 +26,7 @@ object DreamShader2ElementTypes {
 
     /** `#include "path"` and `import "path";`. */
     @JvmField
-    val INCLUDE_DIRECTIVE: IElementType = DreamShader2ElementType("INCLUDE_DIRECTIVE")
+    val INCLUDE_DIRECTIVE: IElementType = DreamShader2StubElementTypes.INCLUDE_DIRECTIVE
 
     /** A run of `///` doc lines; carried inside the declaration it documents. */
     @JvmField
@@ -34,15 +34,15 @@ object DreamShader2ElementTypes {
 
     /** `uniform <Type> Name (= <init>)? (, Name ...)? ;` with its `///` attribute block. */
     @JvmField
-    val UNIFORM_DECLARATION: IElementType = DreamShader2ElementType("UNIFORM_DECLARATION")
+    val UNIFORM_DECLARATION: IElementType = DreamShader2StubElementTypes.UNIFORM_DECLARATION
 
     /** `static const` / `const` / `static` / bare global with an initializer. */
     @JvmField
-    val GLOBAL_DECLARATION: IElementType = DreamShader2ElementType("GLOBAL_DECLARATION")
+    val GLOBAL_DECLARATION: IElementType = DreamShader2StubElementTypes.GLOBAL_DECLARATION
 
     /** `struct Name { fields };` - fields may carry their own `///` block and array dimensions. */
     @JvmField
-    val STRUCT_DECLARATION: IElementType = DreamShader2ElementType("STRUCT_DECLARATION")
+    val STRUCT_DECLARATION: IElementType = DreamShader2StubElementTypes.STRUCT_DECLARATION
 
     /** Struct member: doc block? type name array-dims? `;` */
     @JvmField
@@ -50,7 +50,7 @@ object DreamShader2ElementTypes {
 
     /** `export` / `extern` / helper function declaration; a `/// @custom` body becomes CUSTOM_BODY. */
     @JvmField
-    val FUNCTION_DECLARATION: IElementType = DreamShader2ElementType("FUNCTION_DECLARATION")
+    val FUNCTION_DECLARATION: IElementType = DreamShader2StubElementTypes.FUNCTION_DECLARATION
 
     /** Verbatim `/// @custom` function body: brace-balanced, opaque to the rest of the grammar. */
     @JvmField
