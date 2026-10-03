@@ -23,6 +23,7 @@ internal data class DreamShaderMaterialExpressionParameter(
 
 internal enum class DreamShaderMaterialExpressionSource {
     CONFIGURED_MANIFEST,
+    BRIDGE_BUILTIN_CATALOG,
     BRIDGE_MANIFEST,
     SCANNED_CACHE,
     BUNDLED_FALLBACK,
@@ -38,6 +39,7 @@ internal data class DreamShaderMaterialExpressionInfo(
     val outputType: String? = null,
     val description: String? = null,
     val snippet: String? = null,
+    val aliases: List<String> = emptyList(),
     val source: DreamShaderMaterialExpressionSource
 ) {
     val qualifiedName: String
@@ -62,6 +64,9 @@ internal object DreamShaderMaterialExpressionManifest {
     )
 
     private const val SUBSTRATE_BUILTINS_FILE_NAME = "substrate-builtins.json"
+
+    /** 2.0 绑定器节点目录，引擎启动后导出（也由 `dsc export-catalog` 写出）。 */
+    private const val BUILTIN_CATALOG_FILE_NAME = "dreamshader-builtin-catalog.json"
 
     // ---- 反序列化 DTO ----
 
@@ -131,6 +136,9 @@ internal object DreamShaderMaterialExpressionManifest {
         }
 
         add(readCatalogEntriesFromConfiguredPath(explicitManifestPath))
+        // 2.0 binder 目录（`dreamshader-builtin-catalog.json`）：引擎反射产物，权威度高于
+        // 1.x 的 `material-expressions.json`，但低于用户显式配置的 manifest。
+        add(readBuiltinCatalogFromBridge(project))
         add(readCatalogEntriesFromBridgeManifest(project))
         add(readSubstrateBuiltinsFromBridge(project))
         add(readCatalogEntriesFromScanCache(project))
@@ -163,8 +171,28 @@ internal object DreamShaderMaterialExpressionManifest {
             .getOrDefault(emptyList())
     }
 
-    private fun readCatalogEntriesFromBridgeManifest(project: Project?): List<DreamShaderMaterialExpressionInfo> {
+    /**
+     * 读取 `Saved/DreamShader/Bridge/dreamshader-builtin-catalog.json`（2.0 绑定器节点目录）。
+     * schema/版本不符时静默降级（返回空，合并链落到下一数据源），见架构红线 6.4.6。
+     */
+    private fun readBuiltinCatalogFromBridge(project: Project?): List<DreamShaderMaterialExpressionInfo> {
         if (project == null) return emptyList()
+        val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
+        val root = settings?.projectRoot?.takeIf { it.isNotBlank() } ?: project.basePath
+        if (root.isNullOrBlank()) return emptyList()
+        val vf = LocalFileSystem.getInstance()
+            .findFileByPath(File(File(root, BRIDGE_RELATIVE_DIR), BUILTIN_CATALOG_FILE_NAME).path)
+            ?: return emptyList()
+        if (!vf.isValid || vf.isDirectory) return emptyList()
+        return runCatching {
+            DreamShaderBuiltinCatalogManifest.parseCatalogEntries(
+                rawJson = String(vf.contentsToByteArray(), StandardCharsets.UTF_8),
+                source = DreamShaderMaterialExpressionSource.BRIDGE_BUILTIN_CATALOG
+            )
+        }.getOrDefault(emptyList())
+    }
+
+    private fun readCatalogEntriesFromBridgeManifest(project: Project?): List<DreamShaderMaterialExpressionInfo> {        if (project == null) return emptyList()
         val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
         val root = settings?.projectRoot?.takeIf { it.isNotBlank() } ?: project.basePath
         if (root.isNullOrBlank()) return emptyList()
@@ -266,14 +294,18 @@ internal object DreamShaderMaterialExpressionManifest {
     }
 
     private fun readCatalogEntriesFromBundledManifest(): List<DreamShaderMaterialExpressionInfo> {
-        val stream = javaClass.getResourceAsStream(BUNDLED_RESOURCE_PATH) ?: return emptyList()
+        // B2：先读内嵌的完整 V2 目录（schema `dreamshader-builtin-catalog`）；旧的 6 条
+        // legacy manifest 保留在合并序列之后 —— `UE.Sine` 等泛型路径调用仍需离线可用。
+        val v2Fallback = DreamShaderBuiltinCatalogManifest.parseBundledFallbackEntries()
+        val stream = javaClass.getResourceAsStream(BUNDLED_RESOURCE_PATH) ?: return v2Fallback
         val text = stream.use { String(it.readBytes(), StandardCharsets.UTF_8) }
-        return runCatching {
+        val legacy = runCatching {
             parseCatalogEntries(
                 rawJson = text,
                 source = DreamShaderMaterialExpressionSource.BUNDLED_FALLBACK
             )
         }.getOrDefault(emptyList())
+        return v2Fallback + legacy
     }
 
     internal fun parseExpressionClassNames(rawJson: String): List<String> {
@@ -375,7 +407,7 @@ internal object DreamShaderMaterialExpressionManifest {
      * 合成具名调用签名：`<ns>.<name>(OutputType="float1", A=Value, B=Value)`。
      * 无参数时退化为 `<ns>.<name>(OutputType="...")` 或纯 `<ns>.<name>()`。
      */
-    private fun synthesizeSignature(
+    internal fun synthesizeSignature(
         namespace: String,
         ueName: String,
         parameters: List<DreamShaderMaterialExpressionParameter>,
@@ -392,7 +424,7 @@ internal object DreamShaderMaterialExpressionManifest {
      * `${N:default}` 制表位：`<ns>.<name>(OutputType="${1:float1}", A=${2:Value})$0`。
      * 无 OutputType 且无参数时返回 null（由调用方退化为静态插入）。
      */
-    private fun synthesizeSnippet(
+    internal fun synthesizeSnippet(
         namespace: String,
         ueName: String,
         parameters: List<DreamShaderMaterialExpressionParameter>,
@@ -489,16 +521,16 @@ internal object DreamShaderMaterialExpressionManifest {
         return candidates.toList()
     }
 
-    private fun deriveUeName(className: String): String {
+    internal fun deriveUeName(className: String): String {
         return className
             .removePrefix("UMaterialExpression")
             .removePrefix("MaterialExpression")
             .ifBlank { className }
     }
 
-    private fun defaultSignature(namespace: String, ueName: String): String = "$namespace.$ueName(...)"
+    internal fun defaultSignature(namespace: String, ueName: String): String = "$namespace.$ueName(...)"
 
-    private fun defaultDescription(namespace: String, ueName: String, className: String): String =
+    internal fun defaultDescription(namespace: String, ueName: String, className: String): String =
         "Material expression '$className' exposed as $namespace.$ueName."
 
     private val IDENTIFIER_PATTERN = Regex("[A-Za-z_][A-Za-z0-9_]*")

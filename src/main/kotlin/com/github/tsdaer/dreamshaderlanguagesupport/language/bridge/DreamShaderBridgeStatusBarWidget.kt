@@ -66,15 +66,33 @@ private class DreamShaderBridgeStatusBarWidget(
         val errors = snapshot.diagnostics.size - warnings
         val isDb = snapshot.loadedFromPath?.endsWith("bridge.db") == true
 
+        // A3.5：status.json 心跳 + owner.lock 语义 → 编辑器在线/离线。
+        val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, activeFile)
+        val liveness = DreamShaderBridgeStatus.resolveLiveness(bridgeDir)
+
         label.icon = when {
             errors > 0 -> AllIcons.General.Error
             warnings > 0 -> AllIcons.General.Warning
+            liveness.alive -> AllIcons.General.InspectionsOK
             else -> AllIcons.General.Information
         }
         label.text = if (errors + warnings > 0) " $errors/$warnings" else ""
         label.toolTipText = buildString {
             append("DreamShader Bridge")
             if (errors + warnings > 0) append(" | $errors errors, $warnings warnings")
+            append(" | ")
+            append(
+                if (liveness.alive) {
+                    val version = liveness.status?.pluginVersion
+                    if (version.isNullOrBlank()) {
+                        DreamShaderBundle.message("bridge.widget.editorOnlinePlain")
+                    } else {
+                        DreamShaderBundle.message("bridge.widget.editorOnline", "v$version")
+                    }
+                } else {
+                    DreamShaderBundle.message("bridge.widget.editorOffline")
+                }
+            )
             append(" | ")
             append(if (isDb) "SQLite" else snapshot.loadedFromPath?.let { "JSON" } ?: "no data")
             append(" | click to refresh")

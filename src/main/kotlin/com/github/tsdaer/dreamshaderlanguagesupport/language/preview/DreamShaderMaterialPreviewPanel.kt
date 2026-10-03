@@ -1,5 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.preview
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgePathResolver
+import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeStatus
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderPackageNotifier
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
@@ -159,6 +161,13 @@ internal class DreamShaderMaterialPreviewPanel(
         }
         if (!force) {
             schedulePreviewRequest()
+            return
+        }
+        // A3.5：status.json 心跳缺席意味着编辑器已关停——请求会被上游直接丢弃，不写。
+        val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, file)
+        if (!DreamShaderBridgeStatus.resolveLiveness(bridgeDir).alive) {
+            statusLabel.text = DreamShaderBundle.message("preview.panel.editorOffline")
+            renderMessage(DreamShaderBundle.message("preview.panel.editorOffline"))
             return
         }
         val requestId = UUID.randomUUID().toString()

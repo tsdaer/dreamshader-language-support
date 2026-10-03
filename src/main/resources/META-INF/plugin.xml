@@ -189,6 +189,11 @@
                         class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderOpenBridgeDiagnosticsFileAction"/>
                 <action id="DreamShader.BridgeTools.OpenFirstDiagnosticLocation"
                         class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderOpenFirstBridgeDiagnosticLocationAction"/>
+
+                <separator/>
+
+                <action id="DreamShader.BridgeTools.RevealNode"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderRevealNodeAction"/>
             </group>
 
             <group id="DreamShader.PackageTools.Group"
