@@ -10,6 +10,7 @@ This directory is the long-form home for project knowledge. The top-level README
 - [DreamShaderLang Baseline](language-baseline.md): upstream language rules and Rider coverage mapping.
 - [Package Baseline](package-baseline.md): package layout, import resolution, store/index behavior, and implementation notes.
 - [Roadmap and Progress](roadmap.md): project goal, current progress, detailed TODOs, audit matrices, and changelog policy.
+- [Agent Development Plan](agent-development-plan.md): executable milestone plan (M8–M12) for upstream DreamShader 2.0.x support, fixes, and intelligence goals; task cards and agent working rules.
 - [Development Guide](development.md): build/test/run commands, signing/publishing, Rider actions, settings, and troubleshooting.
 
 ## Maintenance Rules
