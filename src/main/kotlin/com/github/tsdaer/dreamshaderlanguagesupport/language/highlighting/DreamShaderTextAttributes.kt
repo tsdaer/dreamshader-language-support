@@ -73,6 +73,20 @@ object DreamShaderTextAttributes {
     val COMMENT: TextAttributesKey =
         TextAttributesKey.createTextAttributesKey("DREAMSHADER_COMMENT", DefaultLanguageHighlighterColors.LINE_COMMENT)
 
+    /** `///` doc comment carrying `@key value` directives (2.0 dialect). */
+    @JvmField
+    val DOC_COMMENT: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_DOC_COMMENT",
+        DefaultLanguageHighlighterColors.DOC_COMMENT
+    )
+
+    /** Line-start `#pragma` / `#include` / `#if` directive word (2.0 dialect). */
+    @JvmField
+    val PREPROCESSOR: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_PREPROCESSOR",
+        DefaultLanguageHighlighterColors.METADATA
+    )
+
     @JvmField
     val BRACES: TextAttributesKey =
         TextAttributesKey.createTextAttributesKey("DREAMSHADER_BRACES", DefaultLanguageHighlighterColors.BRACES)

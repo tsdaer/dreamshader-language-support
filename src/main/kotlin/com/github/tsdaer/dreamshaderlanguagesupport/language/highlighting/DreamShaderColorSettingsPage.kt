@@ -21,6 +21,8 @@ private val COLOR_ATTRIBUTES = arrayOf(
     AttributesDescriptor("DreamShader String", DreamShaderTextAttributes.STRING),
     AttributesDescriptor("DreamShader Number", DreamShaderTextAttributes.NUMBER),
     AttributesDescriptor("DreamShader Comment", DreamShaderTextAttributes.COMMENT),
+    AttributesDescriptor("DreamShader Doc Comment (2.0)", DreamShaderTextAttributes.DOC_COMMENT),
+    AttributesDescriptor("DreamShader Preprocessor (2.0)", DreamShaderTextAttributes.PREPROCESSOR),
     AttributesDescriptor("DreamShader Braces", DreamShaderTextAttributes.BRACES),
     AttributesDescriptor("DreamShader Operator", DreamShaderTextAttributes.OPERATOR),
     AttributesDescriptor("DreamShader Bad Character", DreamShaderTextAttributes.BAD_CHARACTER),

@@ -1,7 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.parser
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
-import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
+import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderDispatchingLexer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenSets
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiElementFactory
 import com.intellij.lang.ASTNode
@@ -23,9 +23,9 @@ import com.intellij.psi.tree.TokenSet
  * (completion/navigation/annotator) consume one consistent PSI tree.
  */
 class DreamShaderParserDefinition : ParserDefinition {
-    override fun createLexer(project: Project?): Lexer = DreamShaderLexer()
+    override fun createLexer(project: Project?): Lexer = DreamShaderDispatchingLexer()
 
-    override fun createParser(project: Project?): PsiParser = DreamShaderPsiParser()
+    override fun createParser(project: Project?): PsiParser = DreamShaderDialectAwarePsiParser()
 
     override fun getFileNodeType(): IFileElementType = DreamShaderElementTypes.FILE
 

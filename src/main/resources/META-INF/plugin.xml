@@ -6,7 +6,7 @@
     <resource-bundle>messages.DreamShaderBundle</resource-bundle>
     <depends>com.intellij.modules.platform</depends>
     <description><![CDATA[
-        <p>Comprehensive DreamShaderLang support for JetBrains Rider with <code>.dsm</code>/<code>.dsf</code>/<code>.dsh</code> file types, lexer/parser/PSI and symbol model foundations, syntax highlighting plus semantic classification and color settings, formatter/commenter/brace matching/folding/structure view, context-aware completion (sections/types/settings values/UE.*/HLSL/imports), and goto declaration/find usages/references/hover docs/signature help.</p>
+        <p>Comprehensive DreamShaderLang support for JetBrains Rider with <code>.dsm</code>/<code>.dsf</code>/<code>.dsh</code> file types plus the DreamShader 2.0 dialect (<code>.dss</code> compilation units and <code>.dsi</code> material instances, with dialect-aware parsing and highlighting), lexer/parser/PSI and symbol model foundations, syntax highlighting plus semantic classification and color settings, formatter/commenter/brace matching/folding/structure view, context-aware completion (sections/types/settings values/UE.*/HLSL/imports), and goto declaration/find usages/references/hover docs/signature help.</p>
         <p>Includes semantic diagnostics (syntax/section-shape/semantic + Bridge diagnostics mapping), inlay parameter hints and Code Vision hints, configurable DreamShader project settings (project root/manifest path/status bar/code lens/out placeholder suffix/import extension strategy/hover doc overrides/Bridge commands), Bridge tool window and workflow actions (refresh diagnostics/recompile current or all/clean generated shaders/open Bridge paths), package tooling (package store dialog with search/filter/details/install-state markers/background install-update-remove/add-remove index sources/GitHub install/update/remove/open packages folder/package-aware import resolution), template tools (material/function/header and package scaffold), and unified DreamShader Hub entry for settings, diagnostics, package, and template workflows.</p>
     ]]></description>
 
@@ -16,7 +16,9 @@
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileType"
                 fieldName="INSTANCE"
-                extensions="dsm;dsf;dsh"/>
+                extensions="dsm;dsf;dsh;dss;dsi"/>
+        <iconProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileIconProvider"/>
         <lang.syntaxHighlighterFactory
                 language="DreamShaderLang"
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.DreamShaderSyntaxHighlighterFactory"/>

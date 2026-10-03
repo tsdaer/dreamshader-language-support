@@ -9,6 +9,14 @@ object DreamShaderIcons {
     @JvmField
     val FILE: Icon = IconLoader.getIcon("/icons/dreamshaderFile.svg", DreamShaderIcons::class.java)
 
+    /** 2.0 compilation unit (`.dss`). */
+    @JvmField
+    val FILE_DSS: Icon = IconLoader.getIcon("/icons/dreamshaderFileDss.svg", DreamShaderIcons::class.java)
+
+    /** Material instance source (`.dsi`). */
+    @JvmField
+    val FILE_DSI: Icon = IconLoader.getIcon("/icons/dreamshaderFileDsi.svg", DreamShaderIcons::class.java)
+
     @JvmField
     val DECLARATION: Icon = IconLoader.getIcon("/icons/dreamshaderDeclaration.svg", DreamShaderIcons::class.java)
 

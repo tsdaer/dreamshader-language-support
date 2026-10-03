@@ -11,6 +11,13 @@ object DreamShaderTokenSets {
         DreamShaderTokenTypes.BLOCK_COMMENT
     )
 
+    /** `///` doc comments; comment tokens for the platform, directive carriers for the 2.0 parser. */
+    @JvmField
+    val DOC_COMMENTS: TokenSet = TokenSet.create(DreamShaderTokenTypes.DOC_COMMENT)
+
+    @JvmField
+    val PREPROCESSOR_DIRECTIVES: TokenSet = TokenSet.create(DreamShaderTokenTypes.PREPROCESSOR_DIRECTIVE)
+
     @JvmField
     val STRINGS: TokenSet = TokenSet.create(DreamShaderTokenTypes.STRING)
 
