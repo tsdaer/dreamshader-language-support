@@ -1,0 +1,3847 @@
+{
+  "schema": "DreamShader.DshCodes",
+  "version": 1,
+  "codes": [
+    {
+      "code": "DSH1030",
+      "severity": "error",
+      "message": "{0}({1}): this '#if' is never closed; the file ends with {2} conditional block(s) still open.",
+      "docAnchor": "DSH1xxx.md#dsh1030"
+    },
+    {
+      "code": "DSH1031",
+      "severity": "error",
+      "message": "{0}({1}): '#endif' without a matching '#if'.",
+      "docAnchor": "DSH1xxx.md#dsh1031"
+    },
+    {
+      "code": "DSH1032",
+      "severity": "error",
+      "message": "{0}({1}): '#{2}' without a matching '#if'.",
+      "docAnchor": "DSH1xxx.md#dsh1032"
+    },
+    {
+      "code": "DSH1033",
+      "severity": "error",
+      "message": "{0}({1}): '#{2}' after the '#else' on line {3}, which already closed this chain.",
+      "docAnchor": "DSH1xxx.md#dsh1033"
+    },
+    {
+      "code": "DSH1034",
+      "severity": "error",
+      "message": "{0}({1}): invalid '{2}' condition: {3}",
+      "docAnchor": "DSH1xxx.md#dsh1034"
+    },
+    {
+      "code": "DSH1035",
+      "severity": "error",
+      "message": "{0}({1}): unknown preprocessor directive '#{2}'. {3}",
+      "docAnchor": "DSH1xxx.md#dsh1035"
+    },
+    {
+      "code": "DSH1036",
+      "severity": "error",
+      "message": "{0}({1}): '#{2}' requires a define name.",
+      "docAnchor": "DSH1xxx.md#dsh1036"
+    },
+    {
+      "code": "DSH1037",
+      "severity": "error",
+      "message": "{0}({1}): '#{2}' nesting is deeper than the limit of {3}.",
+      "docAnchor": "DSH1xxx.md#dsh1037"
+    },
+    {
+      "code": "DSH1038",
+      "severity": "error",
+      "message": "{0}({1}): '#{2}' needs a name made of letters, digits and underscores and not starting with a digit; got '{...",
+      "docAnchor": "DSH1xxx.md#dsh1038"
+    },
+    {
+      "code": "DSH1039",
+      "severity": "error",
+      "message": "{0}({1}): '{3}' is a read-only built-in constant, so '#{2}' cannot change it. The 'DS_' prefix is reserved ...",
+      "docAnchor": "DSH1xxx.md#dsh1039"
+    },
+    {
+      "code": "DSH1040",
+      "severity": "error",
+      "message": "{0}({1}): type mismatch in '{2}' condition: {3}",
+      "docAnchor": "DSH1xxx.md#dsh1040"
+    },
+    {
+      "code": "DSH1041",
+      "severity": "error",
+      "message": "{0}({1}): the right operand of '{2}' in this '{3}' condition is zero.",
+      "docAnchor": "DSH1xxx.md#dsh1041"
+    },
+    {
+      "code": "DSH1042",
+      "severity": "error",
+      "message": "{0}({1}): '{2}' is already complete before '{3}'. Nothing may follow a directive but a '//' comment.",
+      "docAnchor": "DSH1xxx.md#dsh1042"
+    },
+    {
+      "code": "DSH1043",
+      "severity": "error",
+      "message": "Asset reference is written as '{0}', which is not a texture class; a texture default requires {1}.",
+      "docAnchor": "DSH1xxx.md#dsh1043"
+    },
+    {
+      "code": "DSH1044",
+      "severity": "error",
+      "message": "Asset reference is written as '{0}', but this property is declared as {1}.",
+      "docAnchor": "DSH1xxx.md#dsh1044"
+    },
+    {
+      "code": "DSH1045",
+      "severity": "error",
+      "message": "Asset reference is written as '%s', but this slot requires a '%s'.",
+      "docAnchor": "DSH1xxx.md#dsh1045"
+    },
+    {
+      "code": "DSH2101",
+      "severity": "error",
+      "message": "Unexpected character '{0}' in source.",
+      "docAnchor": "DSH2xxx.md#dsh2101"
+    },
+    {
+      "code": "DSH2102",
+      "severity": "error",
+      "message": "Unterminated block comment; expected a closing '*/'.",
+      "docAnchor": "DSH2xxx.md#dsh2102"
+    },
+    {
+      "code": "DSH2103",
+      "severity": "error",
+      "message": "Unterminated string literal; expected a closing '\"'.",
+      "docAnchor": "DSH2xxx.md#dsh2103"
+    },
+    {
+      "code": "DSH2104",
+      "severity": "error",
+      "message": "Unknown escape sequence '\\{0}' in a string literal.",
+      "docAnchor": "DSH2xxx.md#dsh2104"
+    },
+    {
+      "code": "DSH2105",
+      "severity": "error",
+      "message": "Malformed number literal '{0}'.",
+      "docAnchor": "DSH2xxx.md#dsh2105"
+    },
+    {
+      "code": "DSH2106",
+      "severity": "error",
+      "message": "A '#' directive must be the first thing on its line.",
+      "docAnchor": "DSH2xxx.md#dsh2106"
+    },
+    {
+      "code": "DSH2150",
+      "severity": "error",
+      "message": "Unexpected end of file while parsing {0}.",
+      "docAnchor": "DSH2xxx.md#dsh2150"
+    },
+    {
+      "code": "DSH2151",
+      "severity": "error",
+      "message": "Expected an expression, found {0}.",
+      "docAnchor": "DSH2xxx.md#dsh2151"
+    },
+    {
+      "code": "DSH2152",
+      "severity": "error",
+      "message": "Expected ')' to close a cast, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2152"
+    },
+    {
+      "code": "DSH2153",
+      "severity": "error",
+      "message": "Expected ']' to close an index, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2153"
+    },
+    {
+      "code": "DSH2154",
+      "severity": "error",
+      "message": "Expected ';' after the 'for' initializer, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2154"
+    },
+    {
+      "code": "DSH2155",
+      "severity": "error",
+      "message": "Expected '}' to close an initializer list, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2155"
+    },
+    {
+      "code": "DSH2157",
+      "severity": "error",
+      "message": "Expected '(' after 'if', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2157"
+    },
+    {
+      "code": "DSH2158",
+      "severity": "error",
+      "message": "A positional argument cannot follow a named argument; give this argument a name too.",
+      "docAnchor": "DSH2xxx.md#dsh2158"
+    },
+    {
+      "code": "DSH2159",
+      "severity": "error",
+      "message": "Expected ':' to complete the conditional operator, found {0}.",
+      "docAnchor": "DSH2xxx.md#dsh2159"
+    },
+    {
+      "code": "DSH2160",
+      "severity": "error",
+      "message": "Unsupported statement: the preprocessor line '#{0}' cannot appear inside a function body; mark the function...",
+      "docAnchor": "DSH2xxx.md#dsh2160"
+    },
+    {
+      "code": "DSH2161",
+      "severity": "error",
+      "message": "Expected a member or swizzle name after '.', found {0}.",
+      "docAnchor": "DSH2xxx.md#dsh2161"
+    },
+    {
+      "code": "DSH2162",
+      "severity": "error",
+      "message": "An initializer list is only allowed as a variable initializer, not as a general expression.",
+      "docAnchor": "DSH2xxx.md#dsh2162"
+    },
+    {
+      "code": "DSH2163",
+      "severity": "error",
+      "message": "Expected a variable name, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2163"
+    },
+    {
+      "code": "DSH2164",
+      "severity": "error",
+      "message": "Expected 'while' after the body of a 'do' statement, found {0}.",
+      "docAnchor": "DSH2xxx.md#dsh2164"
+    },
+    {
+      "code": "DSH2165",
+      "severity": "error",
+      "message": "Expected '{' to open a block, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2165"
+    },
+    {
+      "code": "DSH2200",
+      "severity": "error",
+      "message": "(built at runtime)",
+      "docAnchor": "DSH2xxx.md#dsh2200"
+    },
+    {
+      "code": "DSH2201",
+      "severity": "error",
+      "message": "(built at runtime)",
+      "docAnchor": "DSH2xxx.md#dsh2201"
+    },
+    {
+      "code": "DSH2202",
+      "severity": "error",
+      "message": "Expected no '[ ]' in a 1.x Graph expression, found '{0}', where 1.x silently dropped the index and everythi...",
+      "docAnchor": "DSH2xxx.md#dsh2202"
+    },
+    {
+      "code": "DSH2203",
+      "severity": "error",
+      "message": "Expected a constructor such as 'float3(x)' in a 1.x Graph expression, found the cast '({0})', which 1.x nev...",
+      "docAnchor": "DSH2xxx.md#dsh2203"
+    },
+    {
+      "code": "DSH2204",
+      "severity": "error",
+      "message": "Expected an assignment only as a whole 1.x Graph statement, found one inside an expression; move this code ...",
+      "docAnchor": "DSH2xxx.md#dsh2204"
+    },
+    {
+      "code": "DSH2205",
+      "severity": "error",
+      "message": "Expected '=' in a 1.x Graph assignment, found '{0}', which 1.x read as the declaration of a variable named ...",
+      "docAnchor": "DSH2xxx.md#dsh2205"
+    },
+    {
+      "code": "DSH2206",
+      "severity": "error",
+      "message": "Expected a variable or 'variable.member' on the left of a 1.x Graph assignment, found '{0}'.",
+      "docAnchor": "DSH2xxx.md#dsh2206"
+    },
+    {
+      "code": "DSH2207",
+      "severity": "error",
+      "message": "Expected no '++' or '--' in a 1.x Graph expression, found '{0}'; move this code to a .dss file.",
+      "docAnchor": "DSH2xxx.md#dsh2207"
+    },
+    {
+      "code": "DSH2208",
+      "severity": "error",
+      "message": "Expected a declaration, an assignment, a call or 'if' in a 1.x Graph body, found '{0}', which 1.x did not h...",
+      "docAnchor": "DSH2xxx.md#dsh2208"
+    },
+    {
+      "code": "DSH2209",
+      "severity": "error",
+      "message": "Expected braces around the body of a 1.x Graph 'if', found a single statement.",
+      "docAnchor": "DSH2xxx.md#dsh2209"
+    },
+    {
+      "code": "DSH2210",
+      "severity": "error",
+      "message": "Expected at most one comparison in a 1.x Graph 'if' condition, found '{0}' as well, where 1.x silently drop...",
+      "docAnchor": "DSH2xxx.md#dsh2210"
+    },
+    {
+      "code": "DSH2211",
+      "severity": "error",
+      "message": "Expected a call or an assignment as a 1.x Graph statement, found an expression whose value is never used.",
+      "docAnchor": "DSH2xxx.md#dsh2211"
+    },
+    {
+      "code": "DSH2212",
+      "severity": "error",
+      "message": "Expected no storage keyword on a 1.x Graph variable, found '{0}'; move this code to a .dss file.",
+      "docAnchor": "DSH2xxx.md#dsh2212"
+    },
+    {
+      "code": "DSH2213",
+      "severity": "error",
+      "message": "Expected a single value in a 1.x Graph declaration, found the array declarator '{0}'; move this code to a ....",
+      "docAnchor": "DSH2xxx.md#dsh2213"
+    },
+    {
+      "code": "DSH2214",
+      "severity": "error",
+      "message": "Expected an expression as a 1.x Graph initializer, found an initializer list; use a constructor such as 'fl...",
+      "docAnchor": "DSH2xxx.md#dsh2214"
+    },
+    {
+      "code": "DSH2215",
+      "severity": "error",
+      "message": "Expected an initializer on the 1.x Graph variable '{0}' of type '{1}', found none, and 1.x had no zero valu...",
+      "docAnchor": "DSH2xxx.md#dsh2215"
+    },
+    {
+      "code": "DSH2216",
+      "severity": "error",
+      "message": "Expected a name after '#Region', found none.",
+      "docAnchor": "DSH2xxx.md#dsh2216"
+    },
+    {
+      "code": "DSH2217",
+      "severity": "error",
+      "message": "Expected a '#Region' before this '#EndRegion', found none open.",
+      "docAnchor": "DSH2xxx.md#dsh2217"
+    },
+    {
+      "code": "DSH2218",
+      "severity": "error",
+      "message": "Expected '#EndRegion' to close the region '{0}' before the end of the Graph body, found none.",
+      "docAnchor": "DSH2xxx.md#dsh2218"
+    },
+    {
+      "code": "DSH2219",
+      "severity": "error",
+      "message": "Expected '#Region' or '#EndRegion' as the only '#' line in a 1.x Graph body, found '#{0}'.",
+      "docAnchor": "DSH2xxx.md#dsh2219"
+    },
+    {
+      "code": "DSH2220",
+      "severity": "error",
+      "message": "Expected no bare block in a 1.x Graph body, found one; 1.x has blocks only after 'if' and 'else'.",
+      "docAnchor": "DSH2xxx.md#dsh2220"
+    },
+    {
+      "code": "DSH2222",
+      "severity": "error",
+      "message": "Expected a decimal number in a 1.x Graph expression, found the hexadecimal literal '{0}', which 1.x read as...",
+      "docAnchor": "DSH2xxx.md#dsh2222"
+    },
+    {
+      "code": "DSH2240",
+      "severity": "error",
+      "message": "Expected a top-level Shader, ShaderFunction, ShaderLayer, ShaderLayerBlend, Function, GraphFunction, Namesp...",
+      "docAnchor": "DSH2xxx.md#dsh2240"
+    },
+    {
+      "code": "DSH2241",
+      "severity": "error",
+      "message": "Expected '(' with the block's attributes, such as '(Name = \"M_Example\")', found {0}.",
+      "docAnchor": "DSH2xxx.md#dsh2241"
+    },
+    {
+      "code": "DSH2242",
+      "severity": "error",
+      "message": "Expected a 'Name = \"...\"' attribute on '{0}', found none.",
+      "docAnchor": "DSH2xxx.md#dsh2242"
+    },
+    {
+      "code": "DSH2243",
+      "severity": "error",
+      "message": "Expected an attribute name such as 'Name', found {0}.",
+      "docAnchor": "DSH2xxx.md#dsh2243"
+    },
+    {
+      "code": "DSH2244",
+      "severity": "warning",
+      "message": "The attribute '{0}' is written twice; the later value wins, as it did in 1.x.",
+      "docAnchor": "DSH2xxx.md#dsh2244"
+    },
+    {
+      "code": "DSH2245",
+      "severity": "error",
+      "message": "Expected a Shader section (Properties, Settings, Outputs, Graph or Layout), found '{0}'.",
+      "docAnchor": "DSH2xxx.md#dsh2245"
+    },
+    {
+      "code": "DSH2246",
+      "severity": "error",
+      "message": "Expected 'Graph' as the body section of '{0}', found 'Code', which 1.x accepted only inside a Function.",
+      "docAnchor": "DSH2xxx.md#dsh2246"
+    },
+    {
+      "code": "DSH2247",
+      "severity": "error",
+      "message": "Expected no body in the VirtualFunction '{0}', which declares an existing asset, found the section '{1}'.",
+      "docAnchor": "DSH2xxx.md#dsh2247"
+    },
+    {
+      "code": "DSH2248",
+      "severity": "error",
+      "message": "Expected a 1.x block in a '.{0}' file, found {1}, which is 2.0 syntax; 2.0 declarations belong in a .dss fi...",
+      "docAnchor": "DSH2xxx.md#dsh2248",
+      "summary_zh": "1.x 专属文件中出现了 2.0 语法（uniform / export / #pragma）；2.0 声明应放进 .dss 文件，或可容纳两种方言的 .dsh 头文件。"
+    },
+    {
+      "code": "DSH2249",
+      "severity": "error",
+      "message": "Expected only Function, GraphFunction, Namespace and VirtualFunction blocks in a '.dsh' header, found the a...",
+      "docAnchor": "DSH2xxx.md#dsh2249",
+      "summary_zh": ".dsh 头文件中出现了会生成资产的 1.x 块（Shader / ShaderFunction / 层）；头文件会被多方包含，资产块应移入独立的 .dsm / .dsf。"
+    },
+    {
+      "code": "DSH2250",
+      "severity": "error",
+      "message": "Expected one Shader block in a file, found a second one.",
+      "docAnchor": "DSH2xxx.md#dsh2250"
+    },
+    {
+      "code": "DSH2251",
+      "severity": "warning",
+      "message": "'{0}' is the old spelling of '{1}'; it still reads the same.",
+      "docAnchor": "DSH2xxx.md#dsh2251"
+    },
+    {
+      "code": "DSH2252",
+      "severity": "error",
+      "message": "Expected a double-quoted path after 'import', found {0}.",
+      "docAnchor": "DSH2xxx.md#dsh2252"
+    },
+    {
+      "code": "DSH2253",
+      "severity": "warning",
+      "message": "'{0}' is read as 'import'; write it in lower case.",
+      "docAnchor": "DSH2xxx.md#dsh2253"
+    },
+    {
+      "code": "DSH2254",
+      "severity": "error",
+      "message": "Expected a top-level Shader, ShaderFunction, ShaderLayer, ShaderLayerBlend, Function, GraphFunction, Namesp...",
+      "docAnchor": "DSH2xxx.md#dsh2254"
+    },
+    {
+      "code": "DSH2255",
+      "severity": "error",
+      "message": "Expected a Graph section in the Shader '{0}', found none.",
+      "docAnchor": "DSH2xxx.md#dsh2255"
+    },
+    {
+      "code": "DSH2256",
+      "severity": "warning",
+      "message": "The Shader '{0}' has no Outputs section, so nothing its Graph computes reaches the material.",
+      "docAnchor": "DSH2xxx.md#dsh2256"
+    },
+    {
+      "code": "DSH2257",
+      "severity": "error",
+      "message": "Expected '`{' to open the '{0}' block, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2257"
+    },
+    {
+      "code": "DSH2258",
+      "severity": "warning",
+      "message": "The section '{0}' is written twice; the later one wins, as it did in 1.x.",
+      "docAnchor": "DSH2xxx.md#dsh2258"
+    },
+    {
+      "code": "DSH3200",
+      "severity": "error",
+      "message": "Unexpected {0} at file scope; expected a declaration, '#pragma', '#include' or 'import'.",
+      "docAnchor": "DSH3xxx.md#dsh3200"
+    },
+    {
+      "code": "DSH3201",
+      "severity": "error",
+      "message": "Preprocessor directive '#{0}' reached the parser; only '#pragma' and '#include' belong here, and '#if' / '#...",
+      "docAnchor": "DSH3xxx.md#dsh3201"
+    },
+    {
+      "code": "DSH3202",
+      "severity": "error",
+      "message": "'#pragma' needs a name: material, instance, layout, region or endregion.",
+      "docAnchor": "DSH3xxx.md#dsh3202"
+    },
+    {
+      "code": "DSH3203",
+      "severity": "error",
+      "message": "'#include' needs a quoted path: #include \"/Game/Shared/Common.dsh\".",
+      "docAnchor": "DSH3xxx.md#dsh3203",
+      "summary_zh": "#include 需要使用双引号路径（#include \"/Game/Shared/Common.dsh\"），不接受尖括号写法。"
+    },
+    {
+      "code": "DSH3204",
+      "severity": "error",
+      "message": "Expected a type name, found {0}.",
+      "docAnchor": "DSH3xxx.md#dsh3204"
+    },
+    {
+      "code": "DSH3205",
+      "severity": "error",
+      "message": "Expected a name after 'struct', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3205"
+    },
+    {
+      "code": "DSH3206",
+      "severity": "error",
+      "message": "Expected '`{' or ';' after the parameter list of '{0}', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3206"
+    },
+    {
+      "code": "DSH3207",
+      "severity": "error",
+      "message": "'{0}' is 'extern' and binds to an existing asset, so it cannot have a body; write a prototype ending in ';'.",
+      "docAnchor": "DSH3xxx.md#dsh3207"
+    },
+    {
+      "code": "DSH3208",
+      "severity": "error",
+      "message": "'{0}' has no body. Only an 'extern' prototype may end in ';'; a function you define needs '`{...`}'.",
+      "docAnchor": "DSH3xxx.md#dsh3208"
+    },
+    {
+      "code": "DSH3210",
+      "severity": "error",
+      "message": "A '.dsh' header cannot export '{0}'; only a '.dss' file produces assets.",
+      "docAnchor": "DSH3xxx.md#dsh3210"
+    },
+    {
+      "code": "DSH3211",
+      "severity": "error",
+      "message": "Expected the end of the expression, found {0}.",
+      "docAnchor": "DSH3xxx.md#dsh3211"
+    },
+    {
+      "code": "DSH3213",
+      "severity": "error",
+      "message": "'{0}' cannot be combined with the keywords before it; a declaration is 'uniform', 'static const', 'static',...",
+      "docAnchor": "DSH3xxx.md#dsh3213"
+    },
+    {
+      "code": "DSH3214",
+      "severity": "error",
+      "message": "Parameter '{0}' is 'out' and cannot have a default value; only inputs are optional.",
+      "docAnchor": "DSH3xxx.md#dsh3214"
+    },
+    {
+      "code": "DSH3215",
+      "severity": "error",
+      "message": "Expected ']' to close the array dimension, found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3215"
+    },
+    {
+      "code": "DSH3216",
+      "severity": "error",
+      "message": "Expected ';' after the import path, found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3216"
+    },
+    {
+      "code": "DSH3217",
+      "severity": "error",
+      "message": "Expected '{' after the struct name, found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3217"
+    },
+    {
+      "code": "DSH3218",
+      "severity": "error",
+      "message": "Expected ')' to close the parameter list, found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3218"
+    },
+    {
+      "code": "DSH3220",
+      "severity": "warning",
+      "message": "A '@' in a '///' line must be followed by a directive name; the text is kept as description.",
+      "docAnchor": "DSH3xxx.md#dsh3220"
+    },
+    {
+      "code": "DSH3221",
+      "severity": "warning",
+      "message": "This '///' block is not followed by a field and is ignored.",
+      "docAnchor": "DSH3xxx.md#dsh3221"
+    },
+    {
+      "code": "DSH3222",
+      "severity": "error",
+      "message": "Expected a 2.0 declaration, found the 1.x declaration '{0}'; 1.x declarations belong in a .dsh header or in...",
+      "docAnchor": "DSH3xxx.md#dsh3222"
+    },
+    {
+      "code": "DSH3250",
+      "severity": "error",
+      "message": "Expected a property type and a name, found {0}.",
+      "docAnchor": "DSH3xxx.md#dsh3250"
+    },
+    {
+      "code": "DSH3251",
+      "severity": "error",
+      "message": "Expected a property type after 'const', found {0}.",
+      "docAnchor": "DSH3xxx.md#dsh3251"
+    },
+    {
+      "code": "DSH3252",
+      "severity": "error",
+      "message": "Expected a property type such as 'float', 'float4', 'Texture2D' or 'ScalarParameter', found '{0}'.",
+      "docAnchor": "DSH3xxx.md#dsh3252"
+    },
+    {
+      "code": "DSH3253",
+      "severity": "error",
+      "message": "Expected a property type with a 2.0 spelling, found '{0}{1}', which has none; move this material to a .dss ...",
+      "docAnchor": "DSH3xxx.md#dsh3253"
+    },
+    {
+      "code": "DSH3254",
+      "severity": "error",
+      "message": "Expected a default value after '{0} =', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3254"
+    },
+    {
+      "code": "DSH3255",
+      "severity": "error",
+      "message": "Expected ']' to close the metadata block, found {0}.",
+      "docAnchor": "DSH3xxx.md#dsh3255"
+    },
+    {
+      "code": "DSH3256",
+      "severity": "error",
+      "message": "Expected the metadata key '{0}' once, found it again.",
+      "docAnchor": "DSH3xxx.md#dsh3256"
+    },
+    {
+      "code": "DSH3257",
+      "severity": "error",
+      "message": "Expected 'Slider(min, max)' with two numbers, found '{0}'.",
+      "docAnchor": "DSH3xxx.md#dsh3257"
+    },
+    {
+      "code": "DSH3258",
+      "severity": "error",
+      "message": "Expected 'SortPriority' to be a whole number, found '{0}'.",
+      "docAnchor": "DSH3xxx.md#dsh3258"
+    },
+    {
+      "code": "DSH3259",
+      "severity": "error",
+      "message": "Expected ')' to close the arguments of 'UE.{0}', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3259"
+    },
+    {
+      "code": "DSH3260",
+      "severity": "error",
+      "message": "Expected a name inside 'Group(\"...\")', found an empty string.",
+      "docAnchor": "DSH3xxx.md#dsh3260"
+    },
+    {
+      "code": "DSH3261",
+      "severity": "error",
+      "message": "Expected a setting name such as 'BlendMode', found {0}.",
+      "docAnchor": "DSH3xxx.md#dsh3261"
+    },
+    {
+      "code": "DSH3262",
+      "severity": "warning",
+      "message": "The setting '{0}' is written twice; the later value wins, as it did in 1.x.",
+      "docAnchor": "DSH3xxx.md#dsh3262"
+    },
+    {
+      "code": "DSH3263",
+      "severity": "warning",
+      "message": "'{0}' is not a setting of '{1}'; 1.x ignored it and so does this front end.",
+      "docAnchor": "DSH3xxx.md#dsh3263"
+    },
+    {
+      "code": "DSH3264",
+      "severity": "warning",
+      "message": "'UserExposedCaption' has no 2.0 spelling and is not applied; its value is kept for migration.",
+      "docAnchor": "DSH3xxx.md#dsh3264"
+    },
+    {
+      "code": "DSH3265",
+      "severity": "warning",
+      "message": "Expected 'true' or 'false' for 'ExposeToLibrary', found '{0}'; 1.x ignored the setting and so does this fro...",
+      "docAnchor": "DSH3xxx.md#dsh3265"
+    },
+    {
+      "code": "DSH3266",
+      "severity": "error",
+      "message": "Expected ';' after the output declaration '{0}', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3266"
+    },
+    {
+      "code": "DSH3267",
+      "severity": "error",
+      "message": "Expected 'Pin[<index>] = <source>' for an Expression(...) output target, found {0}.",
+      "docAnchor": "DSH3xxx.md#dsh3267"
+    },
+    {
+      "code": "DSH3268",
+      "severity": "error",
+      "message": "Expected each pin of Expression(Class = \"{0}\") to be bound once, found Pin[{1}] bound again.",
+      "docAnchor": "DSH3xxx.md#dsh3268"
+    },
+    {
+      "code": "DSH3269",
+      "severity": "error",
+      "message": "Expected at least one 'Pin[<index>] = <source>;' in the Expression(...) block, found none.",
+      "docAnchor": "DSH3xxx.md#dsh3269"
+    },
+    {
+      "code": "DSH3270",
+      "severity": "error",
+      "message": "Expected a source after 'Pin[{0}] =', found none.",
+      "docAnchor": "DSH3xxx.md#dsh3270"
+    },
+    {
+      "code": "DSH3271",
+      "severity": "error",
+      "message": "Expected a parameter type and name such as 'float Amount', found {0}.",
+      "docAnchor": "DSH3xxx.md#dsh3271"
+    },
+    {
+      "code": "DSH3272",
+      "severity": "warning",
+      "message": "'opt' on the output '{0}' means nothing; 1.x ignored it and so does this front end.",
+      "docAnchor": "DSH3xxx.md#dsh3272"
+    },
+    {
+      "code": "DSH3273",
+      "severity": "warning",
+      "message": "A default on the output '{0}' means nothing; 1.x ignored it, so it is dropped.",
+      "docAnchor": "DSH3xxx.md#dsh3273"
+    },
+    {
+      "code": "DSH3274",
+      "severity": "error",
+      "message": "Expected 'Node(...)' or 'Comment(...)' in the Layout section, found {0}.",
+      "docAnchor": "DSH3xxx.md#dsh3274"
+    },
+    {
+      "code": "DSH3275",
+      "severity": "error",
+      "message": "Expected the argument '{0}' in '{1}(...)', found none.",
+      "docAnchor": "DSH3xxx.md#dsh3275"
+    },
+    {
+      "code": "DSH3276",
+      "severity": "error",
+      "message": "Expected 'Color' to be a vector literal such as '(0.1, 0.16, 0.22, 0.35)', found '{0}'.",
+      "docAnchor": "DSH3xxx.md#dsh3276"
+    },
+    {
+      "code": "DSH3277",
+      "severity": "warning",
+      "message": "The layer input '{0}' becomes the 'inout material' parameter named after the output '{1}', so the input pin...",
+      "docAnchor": "DSH3xxx.md#dsh3277"
+    },
+    {
+      "code": "DSH3278",
+      "severity": "error",
+      "message": "Expected a MaterialAttributes output on '{0}', found none.",
+      "docAnchor": "DSH3xxx.md#dsh3278"
+    },
+    {
+      "code": "DSH4200",
+      "severity": "error",
+      "message": "'{0}' is not declared; did you mean '{1}'? Names are case-sensitive.",
+      "docAnchor": "DSH4xxx.md#dsh4200"
+    },
+    {
+      "code": "DSH4201",
+      "severity": "error",
+      "message": "'{0}' is not a type; did you mean '{1}'? Type names are case-sensitive.",
+      "docAnchor": "DSH4xxx.md#dsh4201"
+    },
+    {
+      "code": "DSH4202",
+      "severity": "error",
+      "message": "A string has no value in an expression; it is only ever the value of a reflected property, as in 'UE.Expres...",
+      "docAnchor": "DSH4xxx.md#dsh4202"
+    },
+    {
+      "code": "DSH4203",
+      "severity": "error",
+      "message": "'{0}' is a namespace, not a value; write '{0}.SomeNode(...)'.",
+      "docAnchor": "DSH4xxx.md#dsh4203"
+    },
+    {
+      "code": "DSH4204",
+      "severity": "error",
+      "message": "'{0}' is a type, not a value; write '{0}(...)' to construct one.",
+      "docAnchor": "DSH4xxx.md#dsh4204"
+    },
+    {
+      "code": "DSH4205",
+      "severity": "error",
+      "message": "'{0}' has no field called '{1}'.",
+      "docAnchor": "DSH4xxx.md#dsh4205"
+    },
+    {
+      "code": "DSH4206",
+      "severity": "error",
+      "message": "'{0}' on a texture is a call: write 'Tex.{0}(UV)'.",
+      "docAnchor": "DSH4xxx.md#dsh4206"
+    },
+    {
+      "code": "DSH4207",
+      "severity": "error",
+      "message": "A value of type {0} has no member '{1}'.",
+      "docAnchor": "DSH4xxx.md#dsh4207"
+    },
+    {
+      "code": "DSH4208",
+      "severity": "error",
+      "message": "A value of type {0} has no method '{1}'.",
+      "docAnchor": "DSH4xxx.md#dsh4208"
+    },
+    {
+      "code": "DSH4210",
+      "severity": "error",
+      "message": "'{0}' is already declared in this file; one name declares one thing.",
+      "docAnchor": "DSH4xxx.md#dsh4210"
+    },
+    {
+      "code": "DSH4211",
+      "severity": "error",
+      "message": "Including '{0}' from '{1}' closes a cycle; a header may not include itself, directly or through another hea...",
+      "docAnchor": "DSH4xxx.md#dsh4211"
+    },
+    {
+      "code": "DSH4212",
+      "severity": "error",
+      "message": "'{0}' cannot be read: this front end was started without an include resolver, so nothing a header declares ...",
+      "docAnchor": "DSH4xxx.md#dsh4212"
+    },
+    {
+      "code": "DSH4213",
+      "severity": "error",
+      "message": "'{0}' is declared twice in struct '{1}'.",
+      "docAnchor": "DSH4xxx.md#dsh4213"
+    },
+    {
+      "code": "DSH4214",
+      "severity": "error",
+      "message": "'{0}' is declared twice in the parameter list of '{1}'.",
+      "docAnchor": "DSH4xxx.md#dsh4214"
+    },
+    {
+      "code": "DSH4215",
+      "severity": "error",
+      "message": "The '{0}' argument of '{1}' is given twice.",
+      "docAnchor": "DSH4xxx.md#dsh4215"
+    },
+    {
+      "code": "DSH4216",
+      "severity": "error",
+      "message": "'{0}' takes its arguments in order and has no argument called '{1}'.",
+      "docAnchor": "DSH4xxx.md#dsh4216"
+    },
+    {
+      "code": "DSH4217",
+      "severity": "error",
+      "message": "'{0}' is missing its '{1}' argument.",
+      "docAnchor": "DSH4xxx.md#dsh4217"
+    },
+    {
+      "code": "DSH4218",
+      "severity": "error",
+      "message": "'{0}' writes back {1}, and this variable is {2}; an out argument has to match exactly.",
+      "docAnchor": "DSH4xxx.md#dsh4218"
+    },
+    {
+      "code": "DSH4220",
+      "severity": "error",
+      "message": "'{0}' is already declared in this block.",
+      "docAnchor": "DSH4xxx.md#dsh4220"
+    },
+    {
+      "code": "DSH4221",
+      "severity": "error",
+      "message": "{0}() has no components; write the value, as in 'float3(0.0)'.",
+      "docAnchor": "DSH4xxx.md#dsh4221"
+    },
+    {
+      "code": "DSH4222",
+      "severity": "error",
+      "message": "'{0}' has {1} fields and this list has {2}.",
+      "docAnchor": "DSH4xxx.md#dsh4222"
+    },
+    {
+      "code": "DSH4223",
+      "severity": "error",
+      "message": "{0} expects {1}, and this is {2}.",
+      "docAnchor": "DSH4xxx.md#dsh4223"
+    },
+    {
+      "code": "DSH4224",
+      "severity": "error",
+      "message": "'{0}' takes at most {1} arguments.",
+      "docAnchor": "DSH4xxx.md#dsh4224"
+    },
+    {
+      "code": "DSH4225",
+      "severity": "error",
+      "message": "A constructor takes its components in order; named arguments belong on 'UE.' nodes and on function calls.",
+      "docAnchor": "DSH4xxx.md#dsh4225"
+    },
+    {
+      "code": "DSH4226",
+      "severity": "error",
+      "message": "{0} expects {1}, and this is {2}.",
+      "docAnchor": "DSH4xxx.md#dsh4226"
+    },
+    {
+      "code": "DSH4227",
+      "severity": "error",
+      "message": "'{0}' is not an operation this language spells as a call.",
+      "docAnchor": "DSH4xxx.md#dsh4227"
+    },
+    {
+      "code": "DSH4228",
+      "severity": "error",
+      "message": "{0} expects {1}, and this is {2}.",
+      "docAnchor": "DSH4xxx.md#dsh4228"
+    },
+    {
+      "code": "DSH4229",
+      "severity": "error",
+      "message": "A 'uniform' is an input and a 'static const' is a constant; neither can be assigned to. Copy it into a loca...",
+      "docAnchor": "DSH4xxx.md#dsh4229"
+    },
+    {
+      "code": "DSH4230",
+      "severity": "error",
+      "message": "'.{0}' is not a swizzle; a swizzle is one to four of 'xyzw' or 'rgba'.",
+      "docAnchor": "DSH4xxx.md#dsh4230"
+    },
+    {
+      "code": "DSH4231",
+      "severity": "error",
+      "message": "'{0}.{1}' is an output node, not a value: write it as a statement on a line of its own.",
+      "docAnchor": "DSH4xxx.md#dsh4231"
+    },
+    {
+      "code": "DSH4233",
+      "severity": "error",
+      "message": "A component index must be a compile-time constant; write a swizzle such as '.z', or select with 'lerp'.",
+      "docAnchor": "DSH4xxx.md#dsh4233"
+    },
+    {
+      "code": "DSH4234",
+      "severity": "error",
+      "message": "A value of type {0} cannot be indexed.",
+      "docAnchor": "DSH4xxx.md#dsh4234"
+    },
+    {
+      "code": "DSH4235",
+      "severity": "error",
+      "message": "'++' and '--' write back into what they read, so they need a variable.",
+      "docAnchor": "DSH4xxx.md#dsh4235"
+    },
+    {
+      "code": "DSH4236",
+      "severity": "error",
+      "message": "An 'in' parameter is a function input pin and cannot be written to; declare it 'out' or 'inout', or copy it...",
+      "docAnchor": "DSH4xxx.md#dsh4236"
+    },
+    {
+      "code": "DSH4237",
+      "severity": "error",
+      "message": "An initializer list only has a meaning against a declared type; it cannot stand on its own.",
+      "docAnchor": "DSH4xxx.md#dsh4237"
+    },
+    {
+      "code": "DSH4238",
+      "severity": "error",
+      "message": "'{0}' returns nothing, so its call has no value; its results come back through its out parameters.",
+      "docAnchor": "DSH4xxx.md#dsh4238"
+    },
+    {
+      "code": "DSH4239",
+      "severity": "error",
+      "message": "'{0}' is an out parameter of '{1}', so its argument has to be a variable.",
+      "docAnchor": "DSH4xxx.md#dsh4239"
+    },
+    {
+      "code": "DSH4240",
+      "severity": "error",
+      "message": "'#pragma endregion' closes a box that was never opened.",
+      "docAnchor": "DSH4xxx.md#dsh4240"
+    },
+    {
+      "code": "DSH4241",
+      "severity": "error",
+      "message": "A multi-dimensional array has no graph form; declare one dimension, or move the code into a '/// @custom' f...",
+      "docAnchor": "DSH4xxx.md#dsh4241"
+    },
+    {
+      "code": "DSH4242",
+      "severity": "error",
+      "message": "An array index must be a compile-time constant: the graph has no arrays, so every element is read at compil...",
+      "docAnchor": "DSH4xxx.md#dsh4242"
+    },
+    {
+      "code": "DSH4243",
+      "severity": "error",
+      "message": "Both sides of this '/' are integers, and the material graph has no integer division; write 'float(a) / b' f...",
+      "docAnchor": "DSH4xxx.md#dsh4243"
+    },
+    {
+      "code": "DSH4244",
+      "severity": "error",
+      "message": "A matrix row cannot be read: the graph has no matrices. Move the code into a '/// @custom' function, where ...",
+      "docAnchor": "DSH4xxx.md#dsh4244"
+    },
+    {
+      "code": "DSH4245",
+      "severity": "error",
+      "message": "An unsized array needs an initializer list to take its length from.",
+      "docAnchor": "DSH4xxx.md#dsh4245"
+    },
+    {
+      "code": "DSH4246",
+      "severity": "error",
+      "message": "The material graph has no hyperbolic node, so '{0}' cannot be lowered; write it in a '/// @custom' body, wh...",
+      "docAnchor": "DSH4xxx.md#dsh4246"
+    },
+    {
+      "code": "DSH4250",
+      "severity": "error",
+      "message": "'{0}' is the GLSL spelling; this language is HLSL, so write '{1}'.",
+      "docAnchor": "DSH4xxx.md#dsh4250"
+    },
+    {
+      "code": "DSH4251",
+      "severity": "warning",
+      "message": "'{0}' hides the file-scope declaration of the same name for the rest of this function.",
+      "docAnchor": "DSH4xxx.md#dsh4251"
+    },
+    {
+      "code": "DSH4260",
+      "severity": "error",
+      "message": "{0} expects {1}, and this is {2}.",
+      "docAnchor": "DSH4xxx.md#dsh4260"
+    },
+    {
+      "code": "DSH4261",
+      "severity": "error",
+      "message": "'{0}' returns {1}, so this 'return' needs a value.",
+      "docAnchor": "DSH4xxx.md#dsh4261"
+    },
+    {
+      "code": "DSH4262",
+      "severity": "error",
+      "message": "'{0}' returns nothing, so this 'return' cannot carry a value; extra results are written to 'out' parameters.",
+      "docAnchor": "DSH4xxx.md#dsh4262"
+    },
+    {
+      "code": "DSH4263",
+      "severity": "error",
+      "message": "'discard' belongs in a material entry or a layer; a material function has no pixel of its own to drop. Writ...",
+      "docAnchor": "DSH4xxx.md#dsh4263"
+    },
+    {
+      "code": "DSH4264",
+      "severity": "error",
+      "message": "'break' leaves a loop, and this one is not inside a 'for', 'while' or 'do'.",
+      "docAnchor": "DSH4xxx.md#dsh4264"
+    },
+    {
+      "code": "DSH4300",
+      "severity": "error",
+      "message": "Node {0} reads {1} from node %{2}, which does not exist; the graph has {3} nodes.",
+      "docAnchor": "DSH4xxx.md#dsh4300"
+    },
+    {
+      "code": "DSH4301",
+      "severity": "error",
+      "message": "Node {0} reads {1} from node {2}, which is a statement and produces no value.",
+      "docAnchor": "DSH4xxx.md#dsh4301"
+    },
+    {
+      "code": "DSH4302",
+      "severity": "error",
+      "message": "Node {0} has {1} operand(s); this op takes exactly {2}.",
+      "docAnchor": "DSH4xxx.md#dsh4302"
+    },
+    {
+      "code": "DSH4303",
+      "severity": "error",
+      "message": "Node {0} has nothing connected to {1}; every operand of this op must carry a value.",
+      "docAnchor": "DSH4xxx.md#dsh4303"
+    },
+    {
+      "code": "DSH4304",
+      "severity": "error",
+      "message": "Node {0} carries {1} positional operand(s); this op takes {2}.",
+      "docAnchor": "DSH4xxx.md#dsh4304"
+    },
+    {
+      "code": "DSH4305",
+      "severity": "error",
+      "message": "Node {0} has a named input with no pin name.",
+      "docAnchor": "DSH4xxx.md#dsh4305"
+    },
+    {
+      "code": "DSH4306",
+      "severity": "error",
+      "message": "Node {0} does arithmetic on operand {1}, which is a {2}; the graph carries only float1 to float4, so a matr...",
+      "docAnchor": "DSH4xxx.md#dsh4306"
+    },
+    {
+      "code": "DSH4307",
+      "severity": "error",
+      "message": "Node {0} is a statement and must have no outputs, but it declares {1}.",
+      "docAnchor": "DSH4xxx.md#dsh4307"
+    },
+    {
+      "code": "DSH4308",
+      "severity": "error",
+      "message": "Node {0} has {1} output name(s) for {2} output(s); the two lists are either parallel or the names are omitted.",
+      "docAnchor": "DSH4xxx.md#dsh4308"
+    },
+    {
+      "code": "DSH4309",
+      "severity": "error",
+      "message": "Node {0} is a reflected node with catalog index {1}, which is not an entry of the builtin catalog.",
+      "docAnchor": "DSH4xxx.md#dsh4309"
+    },
+    {
+      "code": "DSH4310",
+      "severity": "error",
+      "message": "Node {0} connects pin '{1}', which '{2}' does not have.",
+      "docAnchor": "DSH4xxx.md#dsh4310"
+    },
+    {
+      "code": "DSH4311",
+      "severity": "error",
+      "message": "Node {0} sets property '{1}', which '{2}' does not have.",
+      "docAnchor": "DSH4xxx.md#dsh4311"
+    },
+    {
+      "code": "DSH4312",
+      "severity": "error",
+      "message": "Node {0} names class '{1}' but its catalog entry is '{2}'; the two must agree.",
+      "docAnchor": "DSH4xxx.md#dsh4312"
+    },
+    {
+      "code": "DSH4313",
+      "severity": "error",
+      "message": "Material product {0} has {1} MaterialSink node(s); a material has exactly one.",
+      "docAnchor": "DSH4xxx.md#dsh4313"
+    },
+    {
+      "code": "DSH4314",
+      "severity": "error",
+      "message": "Product {0} lists node %{1} in its {2}, and that node does not exist.",
+      "docAnchor": "DSH4xxx.md#dsh4314"
+    },
+    {
+      "code": "DSH4315",
+      "severity": "error",
+      "message": "Product {0} is a {1} and produces nothing; a material function needs at least one FunctionOutput.",
+      "docAnchor": "DSH4xxx.md#dsh4315"
+    },
+    {
+      "code": "DSH4316",
+      "severity": "error",
+      "message": "Product {0} cannot be ordered: these nodes feed themselves, directly or through others -- {1}.",
+      "docAnchor": "DSH4xxx.md#dsh4316"
+    },
+    {
+      "code": "DSH4317",
+      "severity": "error",
+      "message": "Node {0} needs a string Mask property holding the component letters.",
+      "docAnchor": "DSH4xxx.md#dsh4317"
+    },
+    {
+      "code": "DSH4318",
+      "severity": "error",
+      "message": "Node {0} masks '{1}' out of a {2}, which has only {3} component(s).",
+      "docAnchor": "DSH4xxx.md#dsh4318"
+    },
+    {
+      "code": "DSH4319",
+      "severity": "error",
+      "message": "Node {0} switches on a {1}; a StaticSwitch condition is a single static bool.",
+      "docAnchor": "DSH4xxx.md#dsh4319"
+    },
+    {
+      "code": "DSH4320",
+      "severity": "error",
+      "message": "Node {0} sits in region {1}, which does not exist; the graph has {2} region(s).",
+      "docAnchor": "DSH4xxx.md#dsh4320"
+    },
+    {
+      "code": "DSH4321",
+      "severity": "error",
+      "message": "Product {0} has dedupe keys on {1} of its {2} nodes; the key is either computed for the whole graph or for ...",
+      "docAnchor": "DSH4xxx.md#dsh4321"
+    },
+    {
+      "code": "DSH4322",
+      "severity": "error",
+      "message": "Nodes %{0} and %{1} of product {2} have the same dedupe key, so the dedupe pass should have merged them int...",
+      "docAnchor": "DSH4xxx.md#dsh4322"
+    },
+    {
+      "code": "DSH4323",
+      "severity": "error",
+      "message": "Node {0} needs property '{1}' and does not have it.",
+      "docAnchor": "DSH4xxx.md#dsh4323"
+    },
+    {
+      "code": "DSH4324",
+      "severity": "error",
+      "message": "Node {0} carries a property with no name.",
+      "docAnchor": "DSH4xxx.md#dsh4324"
+    },
+    {
+      "code": "DSH4325",
+      "severity": "error",
+      "message": "Node {0} writes attribute '{1}', which is not in the engine's material attribute table.",
+      "docAnchor": "DSH4xxx.md#dsh4325"
+    },
+    {
+      "code": "DSH4326",
+      "severity": "error",
+      "message": "Product {0} has no name; the asset name comes from the exported function or from '/// @name'.",
+      "docAnchor": "DSH4xxx.md#dsh4326"
+    },
+    {
+      "code": "DSH4327",
+      "severity": "error",
+      "message": "Node {0} calls local product {1}, which this module does not have; it has {2}.",
+      "docAnchor": "DSH4xxx.md#dsh4327"
+    },
+    {
+      "code": "DSH4328",
+      "severity": "warning",
+      "message": "Layout hint {0} of product {1} has kind '{2}'; a hint is spelled exactly 'Node' or 'Comment', so this one p...",
+      "docAnchor": "DSH4xxx.md#dsh4328"
+    },
+    {
+      "code": "DSH4329",
+      "severity": "error",
+      "message": "Product {0} is a material instance, which assigns its parent's parameters and has no graph, and it carries ...",
+      "docAnchor": "DSH4xxx.md#dsh4329"
+    },
+    {
+      "code": "DSH4330",
+      "severity": "error",
+      "message": "Material instance product {0} needs the material it is an instance of, and its parent reference is empty.",
+      "docAnchor": "DSH4xxx.md#dsh4330"
+    },
+    {
+      "code": "DSH4331",
+      "severity": "error",
+      "message": "Override '{0}' of product {1} is a {2} override holding a {3} value, and a {2} override holds {4}.",
+      "docAnchor": "DSH4xxx.md#dsh4331"
+    },
+    {
+      "code": "DSH4332",
+      "severity": "error",
+      "message": "Product {0} overrides '{1}' twice, and an instance sets each parameter once.",
+      "docAnchor": "DSH4xxx.md#dsh4332"
+    },
+    {
+      "code": "DSH4333",
+      "severity": "error",
+      "message": "Override '{0}' of product {1} names a parameter, and the parent schema the product carries has no such para...",
+      "docAnchor": "DSH4xxx.md#dsh4333"
+    },
+    {
+      "code": "DSH4334",
+      "severity": "error",
+      "message": "This module holds a material instance and {0} other product(s), and a material instance is the only product...",
+      "docAnchor": "DSH4xxx.md#dsh4334"
+    },
+    {
+      "code": "DSH4335",
+      "severity": "error",
+      "message": "Material instance product {0} carries backend {1}, and an instance is a plain material instance with the de...",
+      "docAnchor": "DSH4xxx.md#dsh4335"
+    },
+    {
+      "code": "DSH4350",
+      "severity": "error",
+      "message": "The IR builder cannot read '{0}' here: the binder typed what it is read from as a material, but that did no...",
+      "docAnchor": "DSH4xxx.md#dsh4350"
+    },
+    {
+      "code": "DSH4352",
+      "severity": "error",
+      "message": "This module was bound without a builtin catalog, so no 'UE.*' call and no material attribute can be named; ...",
+      "docAnchor": "DSH4xxx.md#dsh4352"
+    },
+    {
+      "code": "DSH4360",
+      "severity": "error",
+      "message": "This loop runs a number of times the compiler cannot fix at {0} or fewer, and a material graph has no loops...",
+      "docAnchor": "DSH4xxx.md#dsh4360"
+    },
+    {
+      "code": "DSH4361",
+      "severity": "error",
+      "message": "This expression is {0} and the material graph has no matrices; compute it inside the custom body instead.",
+      "docAnchor": "DSH4xxx.md#dsh4361"
+    },
+    {
+      "code": "DSH4362",
+      "severity": "error",
+      "message": "'discard' has no material-graph form; set the material's OpacityMask to zero instead, or move the branch in...",
+      "docAnchor": "DSH4xxx.md#dsh4362"
+    },
+    {
+      "code": "DSH4363",
+      "severity": "error",
+      "message": "'{0}' inside an 'if' cannot be unrolled, because both arms of the 'if' become nodes and only one of them ma...",
+      "docAnchor": "DSH4xxx.md#dsh4363"
+    },
+    {
+      "code": "DSH4364",
+      "severity": "error",
+      "message": "A parameter of type {0} cannot be a material function input; the graph has no pin that carries one.",
+      "docAnchor": "DSH4xxx.md#dsh4364"
+    },
+    {
+      "code": "DSH4365",
+      "severity": "error",
+      "message": "A struct has no graph form; pass one of its fields, or move the whole thing into a '/// @custom' function.",
+      "docAnchor": "DSH4xxx.md#dsh4365"
+    },
+    {
+      "code": "DSH4366",
+      "severity": "error",
+      "message": "'{0}' is a constant texture, which is a TextureObject node, and this engine has no such material expression...",
+      "docAnchor": "DSH4xxx.md#dsh4366"
+    },
+    {
+      "code": "DSH4370",
+      "severity": "error",
+      "message": "'{0}' is read before anything wrote it; a material attribute has no value until this function assigns one.",
+      "docAnchor": "DSH4xxx.md#dsh4370"
+    },
+    {
+      "code": "DSH4371",
+      "severity": "error",
+      "message": "A 'material' value reached a pin that carries {0}; only a MaterialAttributes pin accepts one.",
+      "docAnchor": "DSH4xxx.md#dsh4371"
+    },
+    {
+      "code": "DSH4372",
+      "severity": "error",
+      "message": "'{0}' is assigned in only one arm of this 'if' and has no value before it; assign it in both arms, or give ...",
+      "docAnchor": "DSH4xxx.md#dsh4372"
+    },
+    {
+      "code": "DSH4373",
+      "severity": "error",
+      "message": "'{0}' is a property of {1} and needs a literal; this argument is computed at run time.",
+      "docAnchor": "DSH4xxx.md#dsh4373"
+    },
+    {
+      "code": "DSH4374",
+      "severity": "error",
+      "message": "This builds a {0}-component value, but a material graph carries at most four components.",
+      "docAnchor": "DSH4xxx.md#dsh4374"
+    },
+    {
+      "code": "DSH4375",
+      "severity": "error",
+      "message": "The two sides of this branch end with a different whole material, and DreamShader chooses between attribute...",
+      "docAnchor": "DSH4xxx.md#dsh4375"
+    },
+    {
+      "code": "DSH4376",
+      "severity": "error",
+      "message": "'{0}' is read here, but nothing gives it a value on any path that reaches this line; assign it first, or gi...",
+      "docAnchor": "DSH4xxx.md#dsh4376"
+    },
+    {
+      "code": "DSH4377",
+      "severity": "error",
+      "message": "'{0}' writes into the material held in an attribute, and an attribute takes one whole value, not a write to...",
+      "docAnchor": "DSH4xxx.md#dsh4377"
+    },
+    {
+      "code": "DSH4378",
+      "severity": "error",
+      "message": "A branch chooses between two {0} values or between two numbers, and this one has one of each.",
+      "docAnchor": "DSH4xxx.md#dsh4378"
+    },
+    {
+      "code": "DSH4379",
+      "severity": "error",
+      "message": "A branch can only choose between numbers, bools and static Substrate values, and these are {0} objects, whi...",
+      "docAnchor": "DSH4xxx.md#dsh4379"
+    },
+    {
+      "code": "DSH4380",
+      "severity": "warning",
+      "message": "This branch becomes a 'Substrate.Select', which parameter-blends its two inputs; they are a '{0}' and a '{1...",
+      "docAnchor": "DSH4xxx.md#dsh4380"
+    },
+    {
+      "code": "DSH4381",
+      "severity": "error",
+      "message": "'{0}' is converted by the node 'Substrate.{1}', and this engine has no such node; give the pins it feeds di...",
+      "docAnchor": "DSH4xxx.md#dsh4381"
+    },
+    {
+      "code": "DSH4382",
+      "severity": "error",
+      "message": "This material drives FrontMaterial and says 'Substrate = Native', and Substrate is off in this project; the...",
+      "docAnchor": "DSH4xxx.md#dsh4382"
+    },
+    {
+      "code": "DSH4383",
+      "severity": "error",
+      "message": "'{0}' is not the Substrate value being built any more when a loop comes round to '{0}.{1}': an earlier trip...",
+      "docAnchor": "DSH4xxx.md#dsh4383"
+    },
+    {
+      "code": "DSH4390",
+      "severity": "info",
+      "message": "'{0}' is declared but nothing reads it, so it is not in the generated material.",
+      "docAnchor": "DSH4xxx.md#dsh4390"
+    },
+    {
+      "code": "DSH5200",
+      "severity": "error",
+      "message": "A material has no '{0}' pin; did you mean '{1}'? Attribute names are case-sensitive.",
+      "docAnchor": "DSH5xxx.md#dsh5200"
+    },
+    {
+      "code": "DSH5201",
+      "severity": "error",
+      "message": "This Custom node declares no output called '{0}'; its outputs are '{1}'. An output is declared by 'Addition...",
+      "docAnchor": "DSH5xxx.md#dsh5201"
+    },
+    {
+      "code": "DSH5202",
+      "severity": "warning",
+      "message": "The builtin catalog is empty, so no 'UE.' expression and no material attribute can be resolved; export it w...",
+      "docAnchor": "DSH5xxx.md#dsh5202"
+    },
+    {
+      "code": "DSH5210",
+      "severity": "error",
+      "message": "'{0}.{1}' is not a node; did you mean '{0}.{2}'? Node names are case-sensitive.",
+      "docAnchor": "DSH5xxx.md#dsh5210"
+    },
+    {
+      "code": "DSH5211",
+      "severity": "error",
+      "message": "'{0}.{1}' is a node and has to be called: write '{0}.{1}(...)'.",
+      "docAnchor": "DSH5xxx.md#dsh5211"
+    },
+    {
+      "code": "DSH5212",
+      "severity": "error",
+      "message": "'{0}' is not a material expression class this engine has.",
+      "docAnchor": "DSH5xxx.md#dsh5212"
+    },
+    {
+      "code": "DSH5213",
+      "severity": "error",
+      "message": "'{0}.{1}' has no pin or property called '{2}'.",
+      "docAnchor": "DSH5xxx.md#dsh5213"
+    },
+    {
+      "code": "DSH5214",
+      "severity": "error",
+      "message": "{0} expects {1}, and this is {2}.",
+      "docAnchor": "DSH5xxx.md#dsh5214"
+    },
+    {
+      "code": "DSH5215",
+      "severity": "error",
+      "message": "'{0}' is not a value of '{1}' on '{2}'.",
+      "docAnchor": "DSH5xxx.md#dsh5215"
+    },
+    {
+      "code": "DSH5216",
+      "severity": "error",
+      "message": "'Substrate.' already names the node, so it takes no 'Class' argument.",
+      "docAnchor": "DSH5xxx.md#dsh5216"
+    },
+    {
+      "code": "DSH5217",
+      "severity": "error",
+      "message": "'Class' takes the expression class as a quoted string.",
+      "docAnchor": "DSH5xxx.md#dsh5217"
+    },
+    {
+      "code": "DSH5218",
+      "severity": "error",
+      "message": "'UE.Expression' reaches a node this language has no name for, so it needs 'Class = \"MaterialExpressionName\"'.",
+      "docAnchor": "DSH5xxx.md#dsh5218"
+    },
+    {
+      "code": "DSH5219",
+      "severity": "warning",
+      "message": "'{0}.{1}' leaves its required '{2}' pin unconnected; unless the node reads a default for it, the engine rep...",
+      "docAnchor": "DSH5xxx.md#dsh5219"
+    },
+    {
+      "code": "DSH5220",
+      "severity": "error",
+      "message": "'{0}.{1}' takes named arguments: write 'Pin = value'.",
+      "docAnchor": "DSH5xxx.md#dsh5220"
+    },
+    {
+      "code": "DSH5221",
+      "severity": "error",
+      "message": "'{0}.{1}' takes {2} arguments in order; name the rest.",
+      "docAnchor": "DSH5xxx.md#dsh5221"
+    },
+    {
+      "code": "DSH5223",
+      "severity": "error",
+      "message": "'{0}' is abstract and cannot be made into a node.",
+      "docAnchor": "DSH5xxx.md#dsh5223"
+    },
+    {
+      "code": "DSH5224",
+      "severity": "error",
+      "message": "'{0}' is an enumerated property; write one of its values, as in 'SamplerType = Normal'.",
+      "docAnchor": "DSH5xxx.md#dsh5224"
+    },
+    {
+      "code": "DSH5230",
+      "severity": "error",
+      "message": "The first argument of a texture sample is the texture, and this is {0}.",
+      "docAnchor": "DSH5xxx.md#dsh5230"
+    },
+    {
+      "code": "DSH5231",
+      "severity": "error",
+      "message": "The second argument of 'Texture2DSample' is the sampler, and this is {0}.",
+      "docAnchor": "DSH5xxx.md#dsh5231"
+    },
+    {
+      "code": "DSH5250",
+      "severity": "error",
+      "message": "Expected 'OutputIndex' to be a whole number of zero or more, found '{0}'.",
+      "docAnchor": "DSH5xxx.md#dsh5250"
+    },
+    {
+      "code": "DSH5251",
+      "severity": "error",
+      "message": "Expected 'Output' to name an output with a quoted name or an identifier, found '{0}'.",
+      "docAnchor": "DSH5xxx.md#dsh5251"
+    },
+    {
+      "code": "DSH5252",
+      "severity": "error",
+      "message": "Expected either 'Output' or 'OutputIndex' on this call, found both.",
+      "docAnchor": "DSH5xxx.md#dsh5252"
+    },
+    {
+      "code": "DSH5253",
+      "severity": "error",
+      "message": "Expected an output selector only on a call that has outputs, found one on the constructor '{0}'.",
+      "docAnchor": "DSH5xxx.md#dsh5253"
+    },
+    {
+      "code": "DSH5254",
+      "severity": "warning",
+      "message": "'{0}' takes no positional argument here; 1.x ignored it, so it is dropped.",
+      "docAnchor": "DSH5xxx.md#dsh5254"
+    },
+    {
+      "code": "DSH5255",
+      "severity": "error",
+      "message": "Expected 'UE.SceneTexture' to take exactly one argument, 'Id = ...', found {0} argument(s).",
+      "docAnchor": "DSH5xxx.md#dsh5255"
+    },
+    {
+      "code": "DSH5256",
+      "severity": "error",
+      "message": "Expected 'SampleTexture2D' to take exactly two positional arguments, a texture and coordinates, found {0} a...",
+      "docAnchor": "DSH5xxx.md#dsh5256"
+    },
+    {
+      "code": "DSH5257",
+      "severity": "error",
+      "message": "Expected 'UE.StaticSwitchParameter' to name its parameter with 'Name = \"...\"', found no name.",
+      "docAnchor": "DSH5xxx.md#dsh5257"
+    },
+    {
+      "code": "DSH5258",
+      "severity": "error",
+      "message": "Expected the static switch '{0}' to be called with a 'True = ...' and a 'False = ...' input, found at most ...",
+      "docAnchor": "DSH5xxx.md#dsh5258"
+    },
+    {
+      "code": "DSH5259",
+      "severity": "error",
+      "message": "Expected every argument of the parameter call '{0}' to name an input pin, found a positional argument.",
+      "docAnchor": "DSH5xxx.md#dsh5259"
+    },
+    {
+      "code": "DSH5260",
+      "severity": "error",
+      "message": "Expected a name after '::', found {0}.",
+      "docAnchor": "DSH5xxx.md#dsh5260"
+    },
+    {
+      "code": "DSH5261",
+      "severity": "error",
+      "message": "Expected 'OutputType' of a Custom expression to be float1 to float4 or MaterialAttributes, found '{0}'.",
+      "docAnchor": "DSH5xxx.md#dsh5261"
+    },
+    {
+      "code": "DSH5263",
+      "severity": "error",
+      "message": "Expected 'Default' of 'UE.StaticSwitchParameter' to be true or false, found '{0}'.",
+      "docAnchor": "DSH5xxx.md#dsh5263"
+    },
+    {
+      "code": "DSH5264",
+      "severity": "error",
+      "message": "Expected 'SortPriority' of 'UE.StaticSwitchParameter' to be a whole number, found '{0}'.",
+      "docAnchor": "DSH5xxx.md#dsh5264"
+    },
+    {
+      "code": "DSH5265",
+      "severity": "error",
+      "message": "Expected the parameter call '{0}' to take only its inputs, found an output selector.",
+      "docAnchor": "DSH5xxx.md#dsh5265"
+    },
+    {
+      "code": "DSH5275",
+      "severity": "warning",
+      "message": "'{0}' matches '{1}' only in case; a 1.x source is read ignoring case, so this is '{1}', and a '.dss' needs ...",
+      "docAnchor": "DSH5xxx.md#dsh5275"
+    },
+    {
+      "code": "DSH5276",
+      "severity": "warning",
+      "message": "'{0}' matches the engine name '{1}' only in case; 1.x matched engine names ignoring case, so this is '{1}',...",
+      "docAnchor": "DSH5xxx.md#dsh5276"
+    },
+    {
+      "code": "DSH5277",
+      "severity": "warning",
+      "message": "'{0}' is the GLSL spelling of '{1}'; a 1.x source may use it and it is read as '{1}', and a '.dss' writes '...",
+      "docAnchor": "DSH5xxx.md#dsh5277",
+      "summary_zh": "GLSL 拼写（mix / fract / mod / vec3 等）：1.x 源码可继续使用并按 HLSL 名读取，.dss 则必须写出 HLSL 名。"
+    },
+    {
+      "code": "DSH5278",
+      "severity": "warning",
+      "message": "'{0}' is not spelled like a value of '{1}', and 1.x matched enumerators loosely, so this is '{2}'; a '.dss'...",
+      "docAnchor": "DSH5xxx.md#dsh5278"
+    },
+    {
+      "code": "DSH5279",
+      "severity": "warning",
+      "message": "'{0}.{1}' leaves its required '{2}' pin unconnected, which 1.x allowed and the engine reports when the mate...",
+      "docAnchor": "DSH5xxx.md#dsh5279"
+    },
+    {
+      "code": "DSH5280",
+      "severity": "error",
+      "message": "'{0}' has no output to select, and this call selects '{1}'.",
+      "docAnchor": "DSH5xxx.md#dsh5280"
+    },
+    {
+      "code": "DSH5281",
+      "severity": "error",
+      "message": "An output is selected by a whole number the compiler knows, and this index is computed.",
+      "docAnchor": "DSH5xxx.md#dsh5281"
+    },
+    {
+      "code": "DSH5282",
+      "severity": "error",
+      "message": "This Custom node declares {0} output(s), counted from 0, and this selects output {1}.",
+      "docAnchor": "DSH5xxx.md#dsh5282"
+    },
+    {
+      "code": "DSH5283",
+      "severity": "info",
+      "message": "'{0}' is not declared, and as in 1.x it is declared here as a local of type {1} receiving '{2}' of '{3}'.",
+      "docAnchor": "DSH5xxx.md#dsh5283"
+    },
+    {
+      "code": "DSH5284",
+      "severity": "error",
+      "message": "'{0}' becomes an input of the custom node, which carries a number or a texture, and this argument is {1}.",
+      "docAnchor": "DSH5xxx.md#dsh5284"
+    },
+    {
+      "code": "DSH5285",
+      "severity": "error",
+      "message": "'{0}.{1}' has {2} input pin(s), counted from 0, and this argument connects pin {3}.",
+      "docAnchor": "DSH5xxx.md#dsh5285"
+    },
+    {
+      "code": "DSH5286",
+      "severity": "error",
+      "message": "'Pin[{0}] = ...' connects a node's input pin by its engine index, and only a 'UE.' or 'Substrate.' node cal...",
+      "docAnchor": "DSH5xxx.md#dsh5286"
+    },
+    {
+      "code": "DSH5287",
+      "severity": "info",
+      "message": "'{0}' has more than one output and is read as its first, '{1}', which is what 1.x did; a '.dss' names the o...",
+      "docAnchor": "DSH5xxx.md#dsh5287"
+    },
+    {
+      "code": "DSH5288",
+      "severity": "warning",
+      "message": "'{0}.{1}' has no 'DefaultValue', so the default written for this parameter is dropped, as 1.x dropped it.",
+      "docAnchor": "DSH5xxx.md#dsh5288"
+    },
+    {
+      "code": "DSH5289",
+      "severity": "info",
+      "message": "{0} expects {1}, and this is {2}: its leading components are taken, which is what 1.x did; a '.dss' writes ...",
+      "docAnchor": "DSH5xxx.md#dsh5289"
+    },
+    {
+      "code": "DSH5290",
+      "severity": "info",
+      "message": "The asset of this block and a function this file can call are both named '{0}', which 1.x kept apart; the b...",
+      "docAnchor": "DSH5xxx.md#dsh5290"
+    },
+    {
+      "code": "DSH5291",
+      "severity": "info",
+      "message": "'{0}.{1}' lists no pin called '{2}'; it is connected by that name once the node exists, because a node may ...",
+      "docAnchor": "DSH5xxx.md#dsh5291"
+    },
+    {
+      "code": "DSH5292",
+      "severity": "info",
+      "message": "'{0}' is not declared, and as in 1.x this assignment declares it, as a local of type {1}.",
+      "docAnchor": "DSH5xxx.md#dsh5292"
+    },
+    {
+      "code": "DSH5293",
+      "severity": "error",
+      "message": "A Substrate value has no compound assignment; write 'S = S + T' (Substrate.Add) or 'S = S * w' (Substrate.W...",
+      "docAnchor": "DSH5xxx.md#dsh5293"
+    },
+    {
+      "code": "DSH5294",
+      "severity": "error",
+      "message": "'Substrate.{0}' is a node Unreal Engine has from {1} on; this engine does not have it.",
+      "docAnchor": "DSH5xxx.md#dsh5294"
+    },
+    {
+      "code": "DSH5295",
+      "severity": "error",
+      "message": "'{0}.{1}': '{2}' and '{3}' parameterize the same pins; give one of them.",
+      "docAnchor": "DSH5xxx.md#dsh5295"
+    },
+    {
+      "code": "DSH5296",
+      "severity": "error",
+      "message": "'{0}.Thickness' is how deep 'Transmittance' is measured, and '{0}' was given no 'Transmittance' before this...",
+      "docAnchor": "DSH5xxx.md#dsh5296"
+    },
+    {
+      "code": "DSH5297",
+      "severity": "error",
+      "message": "'{0}' has been assigned a whole Substrate value since it was declared, and that value has no members; build...",
+      "docAnchor": "DSH5xxx.md#dsh5297"
+    },
+    {
+      "code": "DSH5298",
+      "severity": "error",
+      "message": "A member of the Substrate value '{0}' cannot be written inside an 'if': that would be one node in two versi...",
+      "docAnchor": "DSH5xxx.md#dsh5298"
+    },
+    {
+      "code": "DSH5299",
+      "severity": "error",
+      "message": "'{0}' builds a '{1}.{2}', which has no pin called '{3}'.",
+      "docAnchor": "DSH5xxx.md#dsh5299"
+    },
+    {
+      "code": "DSH6200",
+      "severity": "error",
+      "message": "'{0}' is a second material entry; '{1}' above it is already the entry, and one file makes one material.",
+      "docAnchor": "DSH6xxx.md#dsh6200"
+    },
+    {
+      "code": "DSH6201",
+      "severity": "error",
+      "message": "'{0}' is exported from a file whose entry is '{1}'; a file makes a material or it makes functions, not both...",
+      "docAnchor": "DSH6xxx.md#dsh6201"
+    },
+    {
+      "code": "DSH6202",
+      "severity": "error",
+      "message": "'extern {0}' has nothing to bind to; add '/// @asset /Game/.../MF_Name' above it.",
+      "docAnchor": "DSH6xxx.md#dsh6202"
+    },
+    {
+      "code": "DSH6203",
+      "severity": "error",
+      "message": "'@layer' makes '{0}' a material layer asset, so it has to be 'export'.",
+      "docAnchor": "DSH6xxx.md#dsh6203"
+    },
+    {
+      "code": "DSH6204",
+      "severity": "error",
+      "message": "A '@layer' function is written 'export void {0}(inout material m)'.",
+      "docAnchor": "DSH6xxx.md#dsh6204"
+    },
+    {
+      "code": "DSH6205",
+      "severity": "error",
+      "message": "A '@layerblend' function is written 'export void {0}(material Base, material Top, ..., inout material Resul...",
+      "docAnchor": "DSH6xxx.md#dsh6205"
+    },
+    {
+      "code": "DSH6206",
+      "severity": "error",
+      "message": "'{0}' is a builtin operation and cannot be redeclared; rename the function.",
+      "docAnchor": "DSH6xxx.md#dsh6206"
+    },
+    {
+      "code": "DSH6208",
+      "severity": "error",
+      "message": "'{0}' is a {1} asset, not a function this file may call.",
+      "docAnchor": "DSH6xxx.md#dsh6208"
+    },
+    {
+      "code": "DSH6209",
+      "severity": "error",
+      "message": "'{0}' has no body; a prototype has to be 'extern' and carry '/// @asset'.",
+      "docAnchor": "DSH6xxx.md#dsh6209"
+    },
+    {
+      "code": "DSH6210",
+      "severity": "error",
+      "message": "'{0}' is '@custom', so '{1}' becomes an input pin of a Custom node, and a Custom node cannot take a materia...",
+      "docAnchor": "DSH6xxx.md#dsh6210"
+    },
+    {
+      "code": "DSH6211",
+      "severity": "error",
+      "message": "'{0}' is an 'out' parameter of '{1}' but the body never assigns it, so a caller would read a value nothing ...",
+      "docAnchor": "DSH6xxx.md#dsh6211"
+    },
+    {
+      "code": "DSH6220",
+      "severity": "error",
+      "message": "'{0}' calls itself, and an inlined function has no stack to recurse on; rewrite it as a loop with a constan...",
+      "docAnchor": "DSH6xxx.md#dsh6220"
+    },
+    {
+      "code": "DSH6221",
+      "severity": "error",
+      "message": "Inlining '{0}' would go {1} calls deep, past the limit of {2}; flatten the call chain or move part of it in...",
+      "docAnchor": "DSH6xxx.md#dsh6221"
+    },
+    {
+      "code": "DSH6222",
+      "severity": "error",
+      "message": "'{0}' is an '{1}' parameter of {2}, so the argument has to be something that can be assigned to; this expre...",
+      "docAnchor": "DSH6xxx.md#dsh6222"
+    },
+    {
+      "code": "DSH6223",
+      "severity": "error",
+      "message": "'{0}' is this file's material entry and is called by the engine, not by the shader.",
+      "docAnchor": "DSH6xxx.md#dsh6223"
+    },
+    {
+      "code": "DSH6250",
+      "severity": "error",
+      "message": "'{0}' has no verbatim HLSL body, so it cannot become a custom node; only a '/// @custom' function can.",
+      "docAnchor": "DSH6xxx.md#dsh6250"
+    },
+    {
+      "code": "DSH6251",
+      "severity": "error",
+      "message": "'{0}' declares '{1}' as 'inout', which a custom node cannot carry; split it into an 'in' parameter and an '...",
+      "docAnchor": "DSH6xxx.md#dsh6251"
+    },
+    {
+      "code": "DSH6252",
+      "severity": "error",
+      "message": "'{0}' takes the material '{1}' as an input; a custom node cannot accept material attributes on a pin, so re...",
+      "docAnchor": "DSH6xxx.md#dsh6252"
+    },
+    {
+      "code": "DSH6253",
+      "severity": "error",
+      "message": "'{0}' uses Substrate on '{1}'; a custom node has no Substrate pins, so build that part of the material out ...",
+      "docAnchor": "DSH6xxx.md#dsh6253"
+    },
+    {
+      "code": "DSH6254",
+      "severity": "error",
+      "message": "'{0}' returns a texture through '{1}'; a custom node output carries float1..4 or material attributes, never...",
+      "docAnchor": "DSH6xxx.md#dsh6254"
+    },
+    {
+      "code": "DSH6255",
+      "severity": "error",
+      "message": "'{0}' declares '{1}' twice in the HLSL it generates; a texture parameter also claims '{1}Sampler', which th...",
+      "docAnchor": "DSH6xxx.md#dsh6255"
+    },
+    {
+      "code": "DSH6256",
+      "severity": "error",
+      "message": "'{0}' returns void but its body uses 'return;'; a custom node always returns its first output, so give the ...",
+      "docAnchor": "DSH6xxx.md#dsh6256"
+    },
+    {
+      "code": "DSH6257",
+      "severity": "warning",
+      "message": "'{0}' declares a return type but its body never returns a value; the node's first output will be 0.",
+      "docAnchor": "DSH6xxx.md#dsh6257"
+    },
+    {
+      "code": "DSH6258",
+      "severity": "error",
+      "message": "'{0}' has an '#include' with an empty path; write the virtual shader path the header lives at, for example ...",
+      "docAnchor": "DSH6xxx.md#dsh6258"
+    },
+    {
+      "code": "DSH6259",
+      "severity": "warning",
+      "message": "'{0}' differs from the function '{1}' only in case; HLSL is case-sensitive, so this call is left for the sh...",
+      "docAnchor": "DSH6xxx.md#dsh6259"
+    },
+    {
+      "code": "DSH6260",
+      "severity": "error",
+      "message": "The '@custom' functions {0} call each other in a cycle; HLSL has no recursion, so their bodies cannot be em...",
+      "docAnchor": "DSH6xxx.md#dsh6260"
+    },
+    {
+      "code": "DSH6261",
+      "severity": "error",
+      "message": "'{0}' is not a '@custom' function and cannot be called from the HLSL body of '{1}'; a custom node sees no g...",
+      "docAnchor": "DSH6xxx.md#dsh6261"
+    },
+    {
+      "code": "DSH6262",
+      "severity": "error",
+      "message": "'{0}' takes {1} argument(s) but this call passes {2}; a call that carries a texture cannot be matched up by...",
+      "docAnchor": "DSH6xxx.md#dsh6262"
+    },
+    {
+      "code": "DSH6263",
+      "severity": "error",
+      "message": "The texture argument for '{0}' of '{1}' has to be a plain texture name, because the sampler that goes with ...",
+      "docAnchor": "DSH6xxx.md#dsh6263"
+    },
+    {
+      "code": "DSH6264",
+      "severity": "warning",
+      "message": "'{0}' is 'selfcontained', so the '@custom' function '{1}' it calls is not embedded in its node; the call is...",
+      "docAnchor": "DSH6xxx.md#dsh6264"
+    },
+    {
+      "code": "DSH6300",
+      "severity": "error",
+      "message": "Expected a function name after '{0}', found '('.",
+      "docAnchor": "DSH6xxx.md#dsh6300"
+    },
+    {
+      "code": "DSH6301",
+      "severity": "error",
+      "message": "Expected '[in\\|out] Type Name' in the parameter list of '{0}', found '{1}'.",
+      "docAnchor": "DSH6xxx.md#dsh6301"
+    },
+    {
+      "code": "DSH6302",
+      "severity": "error",
+      "message": "Expected 'in' or 'out' before the parameter '{0}' of '{1}', found '{2}'; a 1.x function has no 'inout'.",
+      "docAnchor": "DSH6xxx.md#dsh6302"
+    },
+    {
+      "code": "DSH6303",
+      "severity": "error",
+      "message": "Expected a parameter name other than '__return', which 1.x reserved, in '{0}'.",
+      "docAnchor": "DSH6xxx.md#dsh6303"
+    },
+    {
+      "code": "DSH6304",
+      "severity": "error",
+      "message": "Expected either a return type or 'out' parameters on '{0}', found both.",
+      "docAnchor": "DSH6xxx.md#dsh6304"
+    },
+    {
+      "code": "DSH6305",
+      "severity": "error",
+      "message": "Expected '{0}' to return a value or to have at least one 'out' parameter, found neither.",
+      "docAnchor": "DSH6xxx.md#dsh6305"
+    },
+    {
+      "code": "DSH6306",
+      "severity": "warning",
+      "message": "'Inline' is the old spelling of 'SelfContained'; the function becomes '@custom selfcontained'.",
+      "docAnchor": "DSH6xxx.md#dsh6306"
+    },
+    {
+      "code": "DSH6307",
+      "severity": "error",
+      "message": "Expected a return type or a name after 'GraphFunction', found the modifier '{0}', which only a Function takes.",
+      "docAnchor": "DSH6xxx.md#dsh6307"
+    },
+    {
+      "code": "DSH6308",
+      "severity": "error",
+      "message": "Expected a value after 'return' in '{0}', which returns '{1}', found a bare 'return;'.",
+      "docAnchor": "DSH6xxx.md#dsh6308"
+    },
+    {
+      "code": "DSH6309",
+      "severity": "error",
+      "message": "Expected a 'Name = \"...\"' attribute with a name on 'Namespace', found none.",
+      "docAnchor": "DSH6xxx.md#dsh6309"
+    },
+    {
+      "code": "DSH6310",
+      "severity": "error",
+      "message": "Expected only Function and GraphFunction blocks inside the namespace '{0}', found {1}.",
+      "docAnchor": "DSH6xxx.md#dsh6310"
+    },
+    {
+      "code": "DSH6311",
+      "severity": "error",
+      "message": "Expected a 'Name = \"...\"' attribute with a name on 'VirtualFunction', found none.",
+      "docAnchor": "DSH6xxx.md#dsh6311"
+    },
+    {
+      "code": "DSH6312",
+      "severity": "error",
+      "message": "Expected an 'Asset = Path(...)' option on the VirtualFunction '{0}', found none.",
+      "docAnchor": "DSH6xxx.md#dsh6312"
+    },
+    {
+      "code": "DSH6313",
+      "severity": "error",
+      "message": "Expected at least one output on the VirtualFunction '{0}', found none.",
+      "docAnchor": "DSH6xxx.md#dsh6313"
+    },
+    {
+      "code": "DSH6314",
+      "severity": "error",
+      "message": "Expected a ')' to close the 'UE.' call in the body of '{0}', found the end of the body.",
+      "docAnchor": "DSH6xxx.md#dsh6314"
+    },
+    {
+      "code": "DSH6316",
+      "severity": "warning",
+      "message": "A 'Substrate.' call in the body of '{0}' is not lifted into a node, because no custom node input carries a ...",
+      "docAnchor": "DSH6xxx.md#dsh6316"
+    },
+    {
+      "code": "DSH6319",
+      "severity": "error",
+      "message": "Expected '(' to open the parameter list of '{0}', found {1}.",
+      "docAnchor": "DSH6xxx.md#dsh6319"
+    },
+    {
+      "code": "DSH6325",
+      "severity": "error",
+      "message": "'{0}' lifts a 'UE.' call out of its body that reads '{1}', which 1.x took from the caller's scope and 2.0 d...",
+      "docAnchor": "DSH6xxx.md#dsh6325"
+    },
+    {
+      "code": "DSH6326",
+      "severity": "error",
+      "message": "'{0}' lifts a 'UE.' call out of its body that reads '{1}', which is neither a parameter of '{0}' nor declar...",
+      "docAnchor": "DSH6xxx.md#dsh6326"
+    },
+    {
+      "code": "DSH6327",
+      "severity": "error",
+      "message": "'{0}' takes the 'UE.' calls lifted out of its body as inputs of its own custom node, so the HLSL body of '{...",
+      "docAnchor": "DSH6xxx.md#dsh6327"
+    },
+    {
+      "code": "DSH6328",
+      "severity": "error",
+      "message": "'{0}' lifts the call behind its input '{1}' out of a place its body does not have, so its custom node's cod...",
+      "docAnchor": "DSH6xxx.md#dsh6328"
+    },
+    {
+      "code": "DSH6329",
+      "severity": "error",
+      "message": "'{0}' carries 'UE.' calls lifted out of its body, and only a '@custom' function with a verbatim body lifts ...",
+      "docAnchor": "DSH6xxx.md#dsh6329"
+    },
+    {
+      "code": "DSH6330",
+      "severity": "error",
+      "message": "'{0}' reaches itself through the 'UE.' calls lifted out of its body, and each call makes a new custom node,...",
+      "docAnchor": "DSH6xxx.md#dsh6330"
+    },
+    {
+      "code": "DSH7111",
+      "severity": "error",
+      "message": "Invalid boolean value '%s' for %s.",
+      "docAnchor": "DSH7xxx.md#dsh7111"
+    },
+    {
+      "code": "DSH7112",
+      "severity": "error",
+      "message": "Setting path segment cannot be empty.",
+      "docAnchor": "DSH7xxx.md#dsh7112"
+    },
+    {
+      "code": "DSH7113",
+      "severity": "error",
+      "message": "Invalid array setting segment '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7113"
+    },
+    {
+      "code": "DSH7114",
+      "severity": "error",
+      "message": "Invalid array index '%s' in setting segment '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7114"
+    },
+    {
+      "code": "DSH7115",
+      "severity": "error",
+      "message": "Invalid array setting segment '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7115"
+    },
+    {
+      "code": "DSH7116",
+      "severity": "error",
+      "message": "Invalid material setting target.",
+      "docAnchor": "DSH7xxx.md#dsh7116"
+    },
+    {
+      "code": "DSH7117",
+      "severity": "error",
+      "message": "Invalid material setting path '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7117"
+    },
+    {
+      "code": "DSH7118",
+      "severity": "error",
+      "message": "Unsupported material setting '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7118"
+    },
+    {
+      "code": "DSH7119",
+      "severity": "error",
+      "message": "Setting '%s' is not an indexed array property.",
+      "docAnchor": "DSH7xxx.md#dsh7119"
+    },
+    {
+      "code": "DSH7120",
+      "severity": "error",
+      "message": "Array index %d is out of range for setting '%s' (max %d).",
+      "docAnchor": "DSH7xxx.md#dsh7120"
+    },
+    {
+      "code": "DSH7121",
+      "severity": "error",
+      "message": "Setting '%s' requires an explicit [index].",
+      "docAnchor": "DSH7xxx.md#dsh7121"
+    },
+    {
+      "code": "DSH7122",
+      "severity": "error",
+      "message": "Setting path '%s' cannot continue through '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7122"
+    },
+    {
+      "code": "DSH7123",
+      "severity": "error",
+      "message": "Invalid material setting path '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7123"
+    },
+    {
+      "code": "DSH7124",
+      "severity": "error",
+      "message": "Failed to create a transient material for Settings validation.",
+      "docAnchor": "DSH7xxx.md#dsh7124"
+    },
+    {
+      "code": "DSH7125",
+      "severity": "error",
+      "message": "Invalid value '%s' for setting '%s'. %s",
+      "docAnchor": "DSH7xxx.md#dsh7125"
+    },
+    {
+      "code": "DSH7126",
+      "severity": "error",
+      "message": "Invalid value '%s' for setting '%s'. %s",
+      "docAnchor": "DSH7xxx.md#dsh7126"
+    },
+    {
+      "code": "DSH7127",
+      "severity": "error",
+      "message": "Unsupported BlendMode/RenderType '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7127"
+    },
+    {
+      "code": "DSH7128",
+      "severity": "error",
+      "message": "ShadingModel=\"Substrate\" requires Unreal Engine 5.4 or newer.",
+      "docAnchor": "DSH7xxx.md#dsh7128"
+    },
+    {
+      "code": "DSH7129",
+      "severity": "error",
+      "message": "Unsupported ShadingModel '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7129"
+    },
+    {
+      "code": "DSH7130",
+      "severity": "error",
+      "message": "Unsupported MaterialDomain '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7130"
+    },
+    {
+      "code": "DSH7131",
+      "severity": "error",
+      "message": "Invalid reflected property target.",
+      "docAnchor": "DSH7xxx.md#dsh7131"
+    },
+    {
+      "code": "DSH7132",
+      "severity": "error",
+      "message": "'%s' is not a valid boolean value for '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7132"
+    },
+    {
+      "code": "DSH7133",
+      "severity": "error",
+      "message": "'%s' is not a valid integer value for '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7133"
+    },
+    {
+      "code": "DSH7134",
+      "severity": "error",
+      "message": "'%s' is not a valid unsigned integer value for '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7134"
+    },
+    {
+      "code": "DSH7135",
+      "severity": "error",
+      "message": "'%s' is not a valid numeric value for '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7135"
+    },
+    {
+      "code": "DSH7136",
+      "severity": "error",
+      "message": "'%s' is not a valid numeric value for '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7136"
+    },
+    {
+      "code": "DSH7137",
+      "severity": "error",
+      "message": "Object property '%s' expects Path(...) or an absolute Unreal object path.",
+      "docAnchor": "DSH7xxx.md#dsh7137"
+    },
+    {
+      "code": "DSH7138",
+      "severity": "error",
+      "message": "Failed to load asset '%s' for '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7138"
+    },
+    {
+      "code": "DSH7139",
+      "severity": "error",
+      "message": "Asset '%s' is not compatible with '%s'. Expected '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7139"
+    },
+    {
+      "code": "DSH7140",
+      "severity": "error",
+      "message": "'%s' is not a valid enum value for '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7140"
+    },
+    {
+      "code": "DSH7141",
+      "severity": "error",
+      "message": "'%s' is not a valid enum value for '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7141"
+    },
+    {
+      "code": "DSH7142",
+      "severity": "error",
+      "message": "'%s' is not a valid byte value for '%s'.",
+      "docAnchor": "DSH7xxx.md#dsh7142"
+    },
+    {
+      "code": "DSH7143",
+      "severity": "error",
+      "message": "Property '%s' on '%s' is not a supported literal type yet.",
+      "docAnchor": "DSH7xxx.md#dsh7143"
+    },
+    {
+      "code": "DSH7144",
+      "severity": "error",
+      "message": "Invalid reflected property target.",
+      "docAnchor": "DSH7xxx.md#dsh7144"
+    },
+    {
+      "code": "DSH7200",
+      "severity": "error",
+      "message": "'{0}' is set twice by '#pragma material'; it was already set on line {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7200"
+    },
+    {
+      "code": "DSH7201",
+      "severity": "error",
+      "message": "'Backend' has no value; write 'Backend = Graph' or 'Backend = ThinCustom'. An empty value meant Graph in 1....",
+      "docAnchor": "DSH7xxx.md#dsh7201"
+    },
+    {
+      "code": "DSH7202",
+      "severity": "error",
+      "message": "'Backend = {0}' is not a backend; the backends are 'Graph' and 'ThinCustom'.",
+      "docAnchor": "DSH7xxx.md#dsh7202"
+    },
+    {
+      "code": "DSH7203",
+      "severity": "warning",
+      "message": "'#pragma material' configures a material, and this file has no 'export void Name(inout material m)' entry t...",
+      "docAnchor": "DSH7xxx.md#dsh7203"
+    },
+    {
+      "code": "DSH7204",
+      "severity": "warning",
+      "message": "'Backend = Instance' is the old spelling of 'Backend = ThinCustom'; write the new one.",
+      "docAnchor": "DSH7xxx.md#dsh7204"
+    },
+    {
+      "code": "DSH7205",
+      "severity": "error",
+      "message": "'#pragma material' takes 'Key = Value' pairs; '{0}' has no key.",
+      "docAnchor": "DSH7xxx.md#dsh7205"
+    },
+    {
+      "code": "DSH7210",
+      "severity": "error",
+      "message": "'{0}' is a compile-time constant, and this initializer is not one; a constant is built from literals and ot...",
+      "docAnchor": "DSH7xxx.md#dsh7210"
+    },
+    {
+      "code": "DSH7211",
+      "severity": "error",
+      "message": "'{0}' is a file-scope variable with no storage class; write 'uniform' for a material parameter or 'static c...",
+      "docAnchor": "DSH7xxx.md#dsh7211"
+    },
+    {
+      "code": "DSH7212",
+      "severity": "error",
+      "message": "A file-scope variable of type {0} has no node; a 'uniform' or 'static const' must be numeric, bool, a textu...",
+      "docAnchor": "DSH7xxx.md#dsh7212"
+    },
+    {
+      "code": "DSH7213",
+      "severity": "error",
+      "message": "A texture uniform has no HLSL initializer; write its default asset as '/// @default /Game/...'.",
+      "docAnchor": "DSH7xxx.md#dsh7213"
+    },
+    {
+      "code": "DSH7214",
+      "severity": "error",
+      "message": "'{0}' is a compile-time constant and must be initialised where it is declared.",
+      "docAnchor": "DSH7xxx.md#dsh7214"
+    },
+    {
+      "code": "DSH7215",
+      "severity": "error",
+      "message": "'@layer' and '@layerblend' make two different assets; a function is one or the other.",
+      "docAnchor": "DSH7xxx.md#dsh7215"
+    },
+    {
+      "code": "DSH7216",
+      "severity": "error",
+      "message": "A 'uniform' array has no parameter node; declare one uniform per element, or make it 'static const'.",
+      "docAnchor": "DSH7xxx.md#dsh7216"
+    },
+    {
+      "code": "DSH7220",
+      "severity": "error",
+      "message": "'@slider' takes two numbers, a minimum and a maximum; '{0}' is not that.",
+      "docAnchor": "DSH7xxx.md#dsh7220"
+    },
+    {
+      "code": "DSH7221",
+      "severity": "error",
+      "message": "'@sort' takes one whole number; '{0}' is not that.",
+      "docAnchor": "DSH7xxx.md#dsh7221"
+    },
+    {
+      "code": "DSH7222",
+      "severity": "error",
+      "message": "'@sampler' needs a sampler type after it, such as 'Color', 'Normal' or 'LinearColor'.",
+      "docAnchor": "DSH7xxx.md#dsh7222"
+    },
+    {
+      "code": "DSH7223",
+      "severity": "error",
+      "message": "'@static' asks for a static switch and is only meaningful on a 'uniform bool'.",
+      "docAnchor": "DSH7xxx.md#dsh7223"
+    },
+    {
+      "code": "DSH7224",
+      "severity": "warning",
+      "message": "'@{0}' means nothing here; it belongs on {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7224"
+    },
+    {
+      "code": "DSH7225",
+      "severity": "warning",
+      "message": "'@static {0}' does not name a parameter of '{1}'.",
+      "docAnchor": "DSH7xxx.md#dsh7225"
+    },
+    {
+      "code": "DSH7226",
+      "severity": "warning",
+      "message": "'@custom {0}' is not a modifier this language knows; the only one is 'selfcontained'.",
+      "docAnchor": "DSH7xxx.md#dsh7226"
+    },
+    {
+      "code": "DSH7227",
+      "severity": "error",
+      "message": "'@{0}' needs a value after it.",
+      "docAnchor": "DSH7xxx.md#dsh7227"
+    },
+    {
+      "code": "DSH7228",
+      "severity": "warning",
+      "message": "'@custom' on '{0}' did not make its body opaque; the directive has to sit in the '///' block directly above...",
+      "docAnchor": "DSH7xxx.md#dsh7228"
+    },
+    {
+      "code": "DSH7229",
+      "severity": "warning",
+      "message": "'@{0}' is written twice in this block; the last one wins.",
+      "docAnchor": "DSH7xxx.md#dsh7229"
+    },
+    {
+      "code": "DSH7230",
+      "severity": "warning",
+      "message": "'#pragma layout' expects a whole number for '{0}'; '{1}' was ignored.",
+      "docAnchor": "DSH7xxx.md#dsh7230"
+    },
+    {
+      "code": "DSH7231",
+      "severity": "error",
+      "message": "'@static {0}' makes a parameter a static bool pin, which only a 'bool' input can be, and '{0}' is {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7231"
+    },
+    {
+      "code": "DSH7232",
+      "severity": "error",
+      "message": "'Substrate = {0}' is not a Substrate mode; the modes are 'Legacy', 'Bridge' and 'Native'.",
+      "docAnchor": "DSH7xxx.md#dsh7232"
+    },
+    {
+      "code": "DSH7250",
+      "severity": "error",
+      "message": "A '.dsi' needs one '#pragma instance(Parent = \"...\")' naming the material it is an instance of, and this fi...",
+      "docAnchor": "DSH7xxx.md#dsh7250"
+    },
+    {
+      "code": "DSH7251",
+      "severity": "error",
+      "message": "'#pragma instance' is written a second time, and one '.dsi' is one material instance; the line {0} already ...",
+      "docAnchor": "DSH7xxx.md#dsh7251"
+    },
+    {
+      "code": "DSH7252",
+      "severity": "error",
+      "message": "'Parent' in '#pragma instance' names the material this is an instance of, and it is empty.",
+      "docAnchor": "DSH7xxx.md#dsh7252"
+    },
+    {
+      "code": "DSH7253",
+      "severity": "error",
+      "message": "'{0}' is set twice by '#pragma instance'; it was already set on line {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7253"
+    },
+    {
+      "code": "DSH7254",
+      "severity": "error",
+      "message": "A '.dsi' is configured by '#pragma instance', and '#pragma material' configures a material; write these key...",
+      "docAnchor": "DSH7xxx.md#dsh7254"
+    },
+    {
+      "code": "DSH7255",
+      "severity": "error",
+      "message": "'#pragma instance' declares a material instance and belongs in a '.dsi' file of its own, and this line is i...",
+      "docAnchor": "DSH7xxx.md#dsh7255"
+    },
+    {
+      "code": "DSH7256",
+      "severity": "error",
+      "message": "'{0}' overrides a {1} parameter and needs the value it is set to, as 'uniform {2} {0} = ...;', and it has n...",
+      "docAnchor": "DSH7xxx.md#dsh7256"
+    },
+    {
+      "code": "DSH7257",
+      "severity": "error",
+      "message": "'{0}' overrides a {1} parameter, which takes an asset rather than an HLSL value; write '/// @default /Game/...",
+      "docAnchor": "DSH7xxx.md#dsh7257"
+    },
+    {
+      "code": "DSH7258",
+      "severity": "error",
+      "message": "'{0}' is not a parameter of the parent '{1}'.",
+      "docAnchor": "DSH7xxx.md#dsh7258"
+    },
+    {
+      "code": "DSH7259",
+      "severity": "error",
+      "message": "'{0}' is a {1} parameter of type '{2}' in the parent, and this override declares '{3}'.",
+      "docAnchor": "DSH7xxx.md#dsh7259"
+    },
+    {
+      "code": "DSH7260",
+      "severity": "error",
+      "message": "'/// @static' on an instance override means a static switch ('uniform bool') or a static component mask ('u...",
+      "docAnchor": "DSH7xxx.md#dsh7260"
+    },
+    {
+      "code": "DSH7261",
+      "severity": "error",
+      "message": "'{0}' is overridden a second time, and one instance sets a parameter once; the override on line {1} already...",
+      "docAnchor": "DSH7xxx.md#dsh7261"
+    },
+    {
+      "code": "DSH7262",
+      "severity": "warning",
+      "message": "'@{0}' has no effect above '#pragma instance', where only '@name' is read; remove it.",
+      "docAnchor": "DSH7xxx.md#dsh7262"
+    },
+    {
+      "code": "DSH7263",
+      "severity": "info",
+      "message": "The parameters of the parent are not available here, so the names and types of these overrides are checked ...",
+      "docAnchor": "DSH7xxx.md#dsh7263"
+    },
+    {
+      "code": "DSH7264",
+      "severity": "error",
+      "message": "'{0}' matches the parent parameter '{1}' only in case, and DreamShader names are case-sensitive; write '{1}'.",
+      "docAnchor": "DSH7xxx.md#dsh7264"
+    },
+    {
+      "code": "DSH7265",
+      "severity": "error",
+      "message": "'{0}' is set to a value the compiler can fold, a literal or an expression over literals, and this initializ...",
+      "docAnchor": "DSH7xxx.md#dsh7265"
+    },
+    {
+      "code": "DSH7266",
+      "severity": "error",
+      "message": "'@page' takes one whole number of zero or more, and '{0}' is not that.",
+      "docAnchor": "DSH7xxx.md#dsh7266"
+    },
+    {
+      "code": "DSH7267",
+      "severity": "warning",
+      "message": "'#pragma {0}' boxes or places graph nodes, and a '.dsi' has no graph; the line was ignored.",
+      "docAnchor": "DSH7xxx.md#dsh7267"
+    },
+    {
+      "code": "DSH7268",
+      "severity": "error",
+      "message": "'{0}' exists in the parent only as a layer or blend parameter, and a '.dsi' overrides global parameters only.",
+      "docAnchor": "DSH7xxx.md#dsh7268"
+    },
+    {
+      "code": "DSH7269",
+      "severity": "error",
+      "message": "'{0}' is an array, and an instance override assigns one parameter; override each element's parameter on its...",
+      "docAnchor": "DSH7xxx.md#dsh7269"
+    },
+    {
+      "code": "DSH7270",
+      "severity": "error",
+      "message": "'#pragma instance' takes 'Key = Value' pairs, and '{0}' has no key.",
+      "docAnchor": "DSH7xxx.md#dsh7270"
+    },
+    {
+      "code": "DSH8088",
+      "severity": "error",
+      "message": "%s contains an invalid folder segment.",
+      "docAnchor": "DSH8xxx.md#dsh8088"
+    },
+    {
+      "code": "DSH8089",
+      "severity": "error",
+      "message": "DreamShader Root '%s' references project plugin '%s', but no enabled plugin with that name was found.",
+      "docAnchor": "DSH8xxx.md#dsh8089"
+    },
+    {
+      "code": "DSH8090",
+      "severity": "error",
+      "message": "DreamShader Root '%s' must reference a project plugin under '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8090"
+    },
+    {
+      "code": "DSH8091",
+      "severity": "error",
+      "message": "DreamShader Root '%s' references project plugin '%s', but the plugin is not enabled.",
+      "docAnchor": "DSH8xxx.md#dsh8091"
+    },
+    {
+      "code": "DSH8092",
+      "severity": "error",
+      "message": "DreamShader Root '%s' references project plugin '%s', but the plugin cannot contain content.",
+      "docAnchor": "DSH8xxx.md#dsh8092"
+    },
+    {
+      "code": "DSH8093",
+      "severity": "error",
+      "message": "DreamShader Root '%s' references project plugin '%s', but its Content directory does not exist: '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8093"
+    },
+    {
+      "code": "DSH8094",
+      "severity": "error",
+      "message": "DreamShader Root '%s' references project plugin '%s', but the plugin content is not mounted.",
+      "docAnchor": "DSH8xxx.md#dsh8094"
+    },
+    {
+      "code": "DSH8095",
+      "severity": "error",
+      "message": "DreamShader Root '%s' has an invalid plugin name.",
+      "docAnchor": "DSH8xxx.md#dsh8095"
+    },
+    {
+      "code": "DSH8096",
+      "severity": "error",
+      "message": "DreamShader Root '%s' has an invalid plugin name.",
+      "docAnchor": "DSH8xxx.md#dsh8096"
+    },
+    {
+      "code": "DSH8097",
+      "severity": "error",
+      "message": "DreamShader Root '%s' has an invalid package root.",
+      "docAnchor": "DSH8xxx.md#dsh8097"
+    },
+    {
+      "code": "DSH8098",
+      "severity": "error",
+      "message": "DreamShader asset name must resolve to a non-empty asset path.",
+      "docAnchor": "DSH8xxx.md#dsh8098"
+    },
+    {
+      "code": "DSH8099",
+      "severity": "error",
+      "message": "DreamShader asset name must resolve to a non-empty asset path.",
+      "docAnchor": "DSH8xxx.md#dsh8099"
+    },
+    {
+      "code": "DSH8100",
+      "severity": "error",
+      "message": "DreamShader asset name '%s' produced an invalid asset name.",
+      "docAnchor": "DSH8xxx.md#dsh8100"
+    },
+    {
+      "code": "DSH8101",
+      "severity": "error",
+      "message": "Asset '%s' is open in an asset editor, so it was NOT rebuilt. An open editor works on its own copy of the a...",
+      "docAnchor": "DSH8xxx.md#dsh8101"
+    },
+    {
+      "code": "DSH8102",
+      "severity": "error",
+      "message": "Asset '%s' already exists and is not a Material.",
+      "docAnchor": "DSH8xxx.md#dsh8102"
+    },
+    {
+      "code": "DSH8103",
+      "severity": "error",
+      "message": "Asset '%s' already exists and was not generated by DreamShader. Rename your shader or move/delete the exist...",
+      "docAnchor": "DSH8xxx.md#dsh8103"
+    },
+    {
+      "code": "DSH8104",
+      "severity": "error",
+      "message": "Failed to create package '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8104"
+    },
+    {
+      "code": "DSH8105",
+      "severity": "error",
+      "message": "Failed to create material '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8105"
+    },
+    {
+      "code": "DSH8106",
+      "severity": "error",
+      "message": "Asset '%s' already exists and is not a DreamShader instance material. Delete it (or remove Backend=\"Instanc...",
+      "docAnchor": "DSH8xxx.md#dsh8106"
+    },
+    {
+      "code": "DSH8107",
+      "severity": "error",
+      "message": "Asset '%s' already exists and was not generated by DreamShader. Rename your shader or move/delete the exist...",
+      "docAnchor": "DSH8xxx.md#dsh8107"
+    },
+    {
+      "code": "DSH8108",
+      "severity": "error",
+      "message": "Failed to create package '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8108"
+    },
+    {
+      "code": "DSH8109",
+      "severity": "error",
+      "message": "Failed to create instance material '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8109"
+    },
+    {
+      "code": "DSH8110",
+      "severity": "error",
+      "message": "Asset '%s' already exists as '%s', but %s generation requires '%s'. Delete or move the existing asset and r...",
+      "docAnchor": "DSH8xxx.md#dsh8110"
+    },
+    {
+      "code": "DSH8111",
+      "severity": "error",
+      "message": "Asset '%s' already exists and is not a MaterialFunction asset.",
+      "docAnchor": "DSH8xxx.md#dsh8111"
+    },
+    {
+      "code": "DSH8112",
+      "severity": "error",
+      "message": "Asset '%s' already exists and was not generated by DreamShader. Rename your function or move/delete the exi...",
+      "docAnchor": "DSH8xxx.md#dsh8112"
+    },
+    {
+      "code": "DSH8113",
+      "severity": "error",
+      "message": "Failed to create package '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8113"
+    },
+    {
+      "code": "DSH8114",
+      "severity": "error",
+      "message": "Failed to create material function '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8114"
+    },
+    {
+      "code": "DSH8115",
+      "severity": "error",
+      "message": "Asset '%s' was edited by hand since DreamShader generated it from '%s', so it was NOT rebuilt (rebuilding w...",
+      "docAnchor": "DSH8xxx.md#dsh8115"
+    },
+    {
+      "code": "DSH8116",
+      "severity": "error",
+      "message": "Generated DreamShader asset '%s' could not be saved.",
+      "docAnchor": "DSH8xxx.md#dsh8116"
+    },
+    {
+      "code": "DSH8117",
+      "severity": "error",
+      "message": "Generated DreamShader asset packages could not be saved.%s",
+      "docAnchor": "DSH8xxx.md#dsh8117"
+    },
+    {
+      "code": "DSH8118",
+      "severity": "error",
+      "message": "Asset Path root '%s' references plugin '%s', but no enabled plugin with that name was found.",
+      "docAnchor": "DSH8xxx.md#dsh8118"
+    },
+    {
+      "code": "DSH8119",
+      "severity": "error",
+      "message": "Asset Path root '%s' references plugin '%s', but the plugin is not enabled.",
+      "docAnchor": "DSH8xxx.md#dsh8119"
+    },
+    {
+      "code": "DSH8120",
+      "severity": "error",
+      "message": "Asset Path root '%s' references plugin '%s', but the plugin cannot contain content.",
+      "docAnchor": "DSH8xxx.md#dsh8120"
+    },
+    {
+      "code": "DSH8121",
+      "severity": "error",
+      "message": "Asset Path root '%s' references plugin '%s', but its Content directory does not exist: '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8121"
+    },
+    {
+      "code": "DSH8122",
+      "severity": "error",
+      "message": "Asset Path root '%s' references plugin '%s', but the plugin content is not mounted.",
+      "docAnchor": "DSH8xxx.md#dsh8122"
+    },
+    {
+      "code": "DSH8123",
+      "severity": "error",
+      "message": "Relative asset Path(...) references require a root such as Game, Engine, or Plugin.PluginName.",
+      "docAnchor": "DSH8xxx.md#dsh8123"
+    },
+    {
+      "code": "DSH8124",
+      "severity": "error",
+      "message": "Asset Path root '%s' has an invalid plugin name.",
+      "docAnchor": "DSH8xxx.md#dsh8124"
+    },
+    {
+      "code": "DSH8125",
+      "severity": "error",
+      "message": "Asset Path root '%s' has an invalid plugin name.",
+      "docAnchor": "DSH8xxx.md#dsh8125"
+    },
+    {
+      "code": "DSH8126",
+      "severity": "error",
+      "message": "Unsupported asset Path root '%s'. Use Game, Engine, or Plugin.PluginName.",
+      "docAnchor": "DSH8xxx.md#dsh8126"
+    },
+    {
+      "code": "DSH8127",
+      "severity": "error",
+      "message": "Asset reference cannot be empty.",
+      "docAnchor": "DSH8xxx.md#dsh8127"
+    },
+    {
+      "code": "DSH8128",
+      "severity": "error",
+      "message": "Asset Path(...) reference is missing a closing ')'.",
+      "docAnchor": "DSH8xxx.md#dsh8128"
+    },
+    {
+      "code": "DSH8129",
+      "severity": "error",
+      "message": "Asset Path(...) contains an unterminated string literal.",
+      "docAnchor": "DSH8xxx.md#dsh8129"
+    },
+    {
+      "code": "DSH8130",
+      "severity": "error",
+      "message": "Asset Path(...) expects either 1 argument (/Game/... path) or 2 arguments (Game\\|Engine\\|Plugin.PluginName, a...",
+      "docAnchor": "DSH8xxx.md#dsh8130"
+    },
+    {
+      "code": "DSH8131",
+      "severity": "error",
+      "message": "Asset reference requires a non-empty path.",
+      "docAnchor": "DSH8xxx.md#dsh8131"
+    },
+    {
+      "code": "DSH8132",
+      "severity": "error",
+      "message": "Invalid asset path '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8132"
+    },
+    {
+      "code": "DSH8149",
+      "severity": "error",
+      "message": "DSH8149: '{0}' uses conditional compilation, and '{1}' holds only the branch that was taken -- adopting it ...",
+      "docAnchor": "DSH8xxx.md#dsh8149"
+    },
+    {
+      "code": "DSH8155",
+      "severity": "warning",
+      "message": "rebuilding '%s' from '%s' dropped %d parameter override(s) the rebuilt material no longer declares: %s.",
+      "docAnchor": "DSH8xxx.md#dsh8155"
+    },
+    {
+      "code": "DSH8200",
+      "severity": "error",
+      "message": "'{0}' does not resolve to a valid asset path. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8200"
+    },
+    {
+      "code": "DSH8201",
+      "severity": "error",
+      "message": "The material for '{0}' could not be created or reused. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8201"
+    },
+    {
+      "code": "DSH8202",
+      "severity": "error",
+      "message": "The material function for '{0}' could not be created or reused. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8202"
+    },
+    {
+      "code": "DSH8203",
+      "severity": "error",
+      "message": "The ThinCustom instance for '{0}' could not be created or reused. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8203"
+    },
+    {
+      "code": "DSH8204",
+      "severity": "error",
+      "message": "The emitter needs the builtin catalog the front end was bound against, but the emit context carries none.",
+      "docAnchor": "DSH8xxx.md#dsh8204"
+    },
+    {
+      "code": "DSH8205",
+      "severity": "error",
+      "message": "Product index {0} does not exist in this module, which has {1}.",
+      "docAnchor": "DSH8xxx.md#dsh8205"
+    },
+    {
+      "code": "DSH8206",
+      "severity": "error",
+      "message": "'{0}' is open in an asset editor, so it was not rebuilt. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8206"
+    },
+    {
+      "code": "DSH8207",
+      "severity": "error",
+      "message": "'{0}' no longer holds what DreamShader generated into it, so it was not rebuilt. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8207"
+    },
+    {
+      "code": "DSH8208",
+      "severity": "warning",
+      "message": "'{0}' could not be snapshotted before rebuilding it, so a failed rebuild will not be rolled back.",
+      "docAnchor": "DSH8xxx.md#dsh8208"
+    },
+    {
+      "code": "DSH8209",
+      "severity": "info",
+      "message": "'{0}' was left alone: another editor owns writing this project's generated assets to disk.",
+      "docAnchor": "DSH8xxx.md#dsh8209"
+    },
+    {
+      "code": "DSH8210",
+      "severity": "warning",
+      "message": "'{0}' has no property named '{1}', so that value was not written.",
+      "docAnchor": "DSH8xxx.md#dsh8210"
+    },
+    {
+      "code": "DSH8211",
+      "severity": "error",
+      "message": "'{0}' is not a material expression class this engine has.",
+      "docAnchor": "DSH8xxx.md#dsh8211"
+    },
+    {
+      "code": "DSH8212",
+      "severity": "error",
+      "message": "MakeMaterialAttributes has no pin for the attribute '{0}'.",
+      "docAnchor": "DSH8xxx.md#dsh8212"
+    },
+    {
+      "code": "DSH8213",
+      "severity": "error",
+      "message": "'{0}' has no property named '{1}'.",
+      "docAnchor": "DSH8xxx.md#dsh8213"
+    },
+    {
+      "code": "DSH8214",
+      "severity": "error",
+      "message": "Failed to create a FunctionInput node.",
+      "docAnchor": "DSH8xxx.md#dsh8214"
+    },
+    {
+      "code": "DSH8215",
+      "severity": "error",
+      "message": "A material setting on '{0}' was refused. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8215"
+    },
+    {
+      "code": "DSH8216",
+      "severity": "error",
+      "message": "BreakMaterialAttributes does not publish the attribute '{0}', so it cannot be read from a material that cam...",
+      "docAnchor": "DSH8xxx.md#dsh8216"
+    },
+    {
+      "code": "DSH8217",
+      "severity": "error",
+      "message": "This material has no input for the attribute '{0}'; check the material domain and shading model the file as...",
+      "docAnchor": "DSH8xxx.md#dsh8217"
+    },
+    {
+      "code": "DSH8218",
+      "severity": "error",
+      "message": "The default texture for parameter '{0}' could not be loaded from '{1}'.",
+      "docAnchor": "DSH8xxx.md#dsh8218"
+    },
+    {
+      "code": "DSH8219",
+      "severity": "error",
+      "message": "This function call names no material function asset.",
+      "docAnchor": "DSH8xxx.md#dsh8219"
+    },
+    {
+      "code": "DSH8220",
+      "severity": "error",
+      "message": "'{0}' has no input named '{1}'.",
+      "docAnchor": "DSH8xxx.md#dsh8220"
+    },
+    {
+      "code": "DSH8221",
+      "severity": "error",
+      "message": "'{0}' has no output named '{1}'.",
+      "docAnchor": "DSH8xxx.md#dsh8221"
+    },
+    {
+      "code": "DSH8222",
+      "severity": "error",
+      "message": "This call targets product {0} of the same file, but that product has not been emitted yet; the pipeline mus...",
+      "docAnchor": "DSH8xxx.md#dsh8222"
+    },
+    {
+      "code": "DSH8223",
+      "severity": "error",
+      "message": "The emitter has no rule for the IR operation '{0}'.",
+      "docAnchor": "DSH8xxx.md#dsh8223"
+    },
+    {
+      "code": "DSH8224",
+      "severity": "error",
+      "message": "A SetMaterialAttributes node has no MaterialAttributes input; there is nothing for it to modify.",
+      "docAnchor": "DSH8xxx.md#dsh8224"
+    },
+    {
+      "code": "DSH8225",
+      "severity": "error",
+      "message": "This node reads node {0}, which has not been emitted; the graph's topological order is inconsistent.",
+      "docAnchor": "DSH8xxx.md#dsh8225"
+    },
+    {
+      "code": "DSH8226",
+      "severity": "error",
+      "message": "A Swizzle node carries no Mask property.",
+      "docAnchor": "DSH8xxx.md#dsh8226"
+    },
+    {
+      "code": "DSH8227",
+      "severity": "error",
+      "message": "'{0}' is not a Custom node output type; expected Float1 through Float4 or MaterialAttributes.",
+      "docAnchor": "DSH8xxx.md#dsh8227"
+    },
+    {
+      "code": "DSH8228",
+      "severity": "error",
+      "message": "'{0}' is not a material function input type; write one of Scalar, Vector2, Vector3, Vector4, Texture2D, Tex...",
+      "docAnchor": "DSH8xxx.md#dsh8228"
+    },
+    {
+      "code": "DSH8229",
+      "severity": "error",
+      "message": "'{0}' was built but could not be saved. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8229"
+    },
+    {
+      "code": "DSH8230",
+      "severity": "error",
+      "message": "Cannot create a ThinCustom base material without an instance.",
+      "docAnchor": "DSH8xxx.md#dsh8230"
+    },
+    {
+      "code": "DSH8232",
+      "severity": "error",
+      "message": "'{0}' has a product kind the emitter does not know how to materialize.",
+      "docAnchor": "DSH8xxx.md#dsh8232"
+    },
+    {
+      "code": "DSH8233",
+      "severity": "error",
+      "message": "This graph carries a MaterialSink, which only a material product has; a material function drives FunctionOu...",
+      "docAnchor": "DSH8xxx.md#dsh8233"
+    },
+    {
+      "code": "DSH8234",
+      "severity": "error",
+      "message": "Function output '{0}' has {1} operands; it needs exactly the one value it returns.",
+      "docAnchor": "DSH8xxx.md#dsh8234"
+    },
+    {
+      "code": "DSH8235",
+      "severity": "error",
+      "message": "'{0}' is not a sampler type; write one of the EMaterialSamplerType names, such as Color, Normal or LinearCo...",
+      "docAnchor": "DSH8xxx.md#dsh8235"
+    },
+    {
+      "code": "DSH8237",
+      "severity": "info",
+      "message": "'{0}' was left alone: its source hash is unchanged since it was last built.",
+      "docAnchor": "DSH8xxx.md#dsh8237"
+    },
+    {
+      "code": "DSH8240",
+      "severity": "error",
+      "message": "The material instance for '{0}' could not be created or reused. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8240"
+    },
+    {
+      "code": "DSH8241",
+      "severity": "error",
+      "message": "Asset '%s' already exists as a '%s'; a .dsi builds a plain MaterialInstanceConstant. Rename the instance fi...",
+      "docAnchor": "DSH8xxx.md#dsh8241"
+    },
+    {
+      "code": "DSH8242",
+      "severity": "error",
+      "message": "Asset '%s' already exists and was not generated by DreamShader. Rename the instance file or move/delete the...",
+      "docAnchor": "DSH8xxx.md#dsh8242"
+    },
+    {
+      "code": "DSH8243",
+      "severity": "error",
+      "message": "The parent '{0}' of '{1}' does not load; compile the source that builds it, or correct the Parent key.",
+      "docAnchor": "DSH8xxx.md#dsh8243"
+    },
+    {
+      "code": "DSH8244",
+      "severity": "info",
+      "message": "'{0}' was memory-only, so it was saved to disk first: '{1}' parents to it.",
+      "docAnchor": "DSH8xxx.md#dsh8244"
+    },
+    {
+      "code": "DSH8245",
+      "severity": "error",
+      "message": "'{0}' cannot parent to '{1}': that parent already descends from this instance.",
+      "docAnchor": "DSH8xxx.md#dsh8245"
+    },
+    {
+      "code": "DSH8246",
+      "severity": "error",
+      "message": "The parent asset '{0}' has no parameter {1} of the kind this instance overrides; the asset is older than it...",
+      "docAnchor": "DSH8xxx.md#dsh8246"
+    },
+    {
+      "code": "DSH8247",
+      "severity": "error",
+      "message": "The engine dropped '{0}' as the parent of '{1}' while applying the static overrides; that parent does not a...",
+      "docAnchor": "DSH8xxx.md#dsh8247"
+    },
+    {
+      "code": "DSH8248",
+      "severity": "error",
+      "message": "The parent '{0}' exists only in memory and no DreamShader source builds it, so '{1}' cannot be saved agains...",
+      "docAnchor": "DSH8xxx.md#dsh8248"
+    },
+    {
+      "code": "DSH8249",
+      "severity": "error",
+      "message": "'{0}' is not an instance key; a key is a material property an instance can override, such as BlendMode, Two...",
+      "docAnchor": "DSH8xxx.md#dsh8249"
+    },
+    {
+      "code": "DSH8250",
+      "severity": "error",
+      "message": "'{0}' is not a valid value for the instance key '{1}'. {2}",
+      "docAnchor": "DSH8xxx.md#dsh8250"
+    },
+    {
+      "code": "DSH8251",
+      "severity": "error",
+      "message": "'{0}' cannot be set from an instance file: {1}",
+      "docAnchor": "DSH8xxx.md#dsh8251"
+    },
+    {
+      "code": "DSH8252",
+      "severity": "error",
+      "message": "The override of '{0}' could not be applied: {1}",
+      "docAnchor": "DSH8xxx.md#dsh8252"
+    },
+    {
+      "code": "DSH8253",
+      "severity": "error",
+      "message": "Failed to create package '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8253"
+    },
+    {
+      "code": "DSH8254",
+      "severity": "error",
+      "message": "The material parameter collection '{0}' has no parameter called '{1}'.",
+      "docAnchor": "DSH8xxx.md#dsh8254"
+    },
+    {
+      "code": "DSH8260",
+      "severity": "error",
+      "message": "The parent '{0}' comes from '{1}', which does not compile, so the parameters this instance overrides cannot...",
+      "docAnchor": "DSH8xxx.md#dsh8260"
+    },
+    {
+      "code": "DSH8261",
+      "severity": "error",
+      "message": "No material or instance named '{0}' is built by a source under '{1}'; write the parent's asset path, or che...",
+      "docAnchor": "DSH8xxx.md#dsh8261"
+    },
+    {
+      "code": "DSH8262",
+      "severity": "error",
+      "message": "'{0}' names more than one product under '{1}' ({2}); write the parent's asset path instead.",
+      "docAnchor": "DSH8xxx.md#dsh8262"
+    },
+    {
+      "code": "DSH8263",
+      "severity": "error",
+      "message": "'{0}' is its own ancestor: following Parent from it comes back to it ({1}).",
+      "docAnchor": "DSH8xxx.md#dsh8263"
+    },
+    {
+      "code": "DSH8264",
+      "severity": "info",
+      "message": "'{0}' was missing or older than its source, so '{1}' was compiled first.",
+      "docAnchor": "DSH8xxx.md#dsh8264"
+    },
+    {
+      "code": "DSH8265",
+      "severity": "error",
+      "message": "The Parent chain above '{0}' is more than {1} instances deep; a chain that long is almost always a mistake ...",
+      "docAnchor": "DSH8xxx.md#dsh8265"
+    },
+    {
+      "code": "DSH8270",
+      "severity": "error",
+      "message": "The function reference '{0}' does not resolve to an asset path. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8270"
+    },
+    {
+      "code": "DSH8271",
+      "severity": "error",
+      "message": "The default texture reference '{0}' of parameter '{1}' does not resolve to an asset path. {2}",
+      "docAnchor": "DSH8xxx.md#dsh8271"
+    },
+    {
+      "code": "DSH8290",
+      "severity": "error",
+      "message": "'{0}' could not be read.",
+      "docAnchor": "DSH8xxx.md#dsh8290"
+    },
+    {
+      "code": "DSH8291",
+      "severity": "error",
+      "message": "'{0}' failed conditional compilation: {1}: {2}",
+      "docAnchor": "DSH8xxx.md#dsh8291"
+    },
+    {
+      "code": "DSH8292",
+      "severity": "error",
+      "message": "'{0}', included from '{1}', could not be resolved: {2}.",
+      "docAnchor": "DSH8xxx.md#dsh8292"
+    },
+    {
+      "code": "DSH8293",
+      "severity": "error",
+      "message": "'{0}', included from '{1}', resolved but could not be read.",
+      "docAnchor": "DSH8xxx.md#dsh8293"
+    },
+    {
+      "code": "DSH8294",
+      "severity": "error",
+      "message": "'{0}', included from '{1}', could not be parsed; its own errors are above.",
+      "docAnchor": "DSH8xxx.md#dsh8294"
+    },
+    {
+      "code": "DSH8295",
+      "severity": "error",
+      "message": "'{0}' is not a DreamShader header; an include names a '.dsh' (or a '.dss'), not a '{1}' file.",
+      "docAnchor": "DSH8xxx.md#dsh8295"
+    },
+    {
+      "code": "DSH8296",
+      "severity": "error",
+      "message": "'{0}' is not a source the compiler builds on its own; it builds '.dss', '.dsi', '.dsm' and '.dsf' files, an...",
+      "docAnchor": "DSH8xxx.md#dsh8296"
+    },
+    {
+      "code": "DSH8297",
+      "severity": "error",
+      "message": "The builtin expression catalog came back empty, so nothing that names a 'UE.*' node can be bound. Reflectio...",
+      "docAnchor": "DSH8xxx.md#dsh8297"
+    },
+    {
+      "code": "DSH8298",
+      "severity": "error",
+      "message": "Building '{0}' was cancelled; the asset is as it was before this compile.",
+      "docAnchor": "DSH8xxx.md#dsh8298"
+    },
+    {
+      "code": "DSH8299",
+      "severity": "error",
+      "message": "The exported functions {0} call one another in a cycle, so there is no order in which they can be built; an...",
+      "docAnchor": "DSH8xxx.md#dsh8299"
+    },
+    {
+      "code": "DSH9001",
+      "severity": "error",
+      "message": "DSH9001: '{0}' uses conditional compilation, and VirtualFunction sync rewrites a source in place at byte of...",
+      "docAnchor": "DSH9xxx.md#dsh9001"
+    },
+    {
+      "code": "DSH9011",
+      "severity": "warning",
+      "message": "Compiling shaders for '%s' took %.0f seconds. A stall of this length is almost always a Custom node whose l...",
+      "docAnchor": "DSH9xxx.md#dsh9011"
+    },
+    {
+      "code": "DSH9012",
+      "severity": "warning",
+      "message": "'%s' loops on the input '%s' and samples with '%s', which takes its mip level from screen-space derivatives...",
+      "docAnchor": "DSH9xxx.md#dsh9012"
+    },
+    {
+      "code": "DSH9020",
+      "severity": "error",
+      "message": "Could not back up '%s' to '%s'; its asset references were left pointing at the old path.",
+      "docAnchor": "DSH9xxx.md#dsh9020"
+    },
+    {
+      "code": "DSH9021",
+      "severity": "error",
+      "message": "Could not write '%s' after renaming an asset it references; the file as it was is in '%s'.",
+      "docAnchor": "DSH9xxx.md#dsh9021"
+    },
+    {
+      "code": "DSH9022",
+      "severity": "error",
+      "message": "The IR dump could not be written: {0}.",
+      "docAnchor": "DSH9xxx.md#dsh9022"
+    },
+    {
+      "code": "DSH9023",
+      "severity": "error",
+      "message": "The symbol index could not be written: {0}.",
+      "docAnchor": "DSH9xxx.md#dsh9023"
+    },
+    {
+      "code": "DSH9024",
+      "severity": "error",
+      "message": "The builtin catalog manifest could not be written: {0}.",
+      "docAnchor": "DSH9xxx.md#dsh9024"
+    },
+    {
+      "code": "DSH9025",
+      "severity": "error",
+      "message": "The builtin catalog came back empty, so '{0}' describes no expression at all. Reflection found no UMaterial...",
+      "docAnchor": "DSH9xxx.md#dsh9025"
+    },
+    {
+      "code": "DSH9026",
+      "severity": "error",
+      "message": "'{0}' is not a shader platform this engine knows. Write SM6, SM5, ES3_1, or a shader format name such as PC...",
+      "docAnchor": "DSH9xxx.md#dsh9026"
+    },
+    {
+      "code": "DSH9027",
+      "severity": "error",
+      "message": "'{0}' is not a material quality level. Write Low, Medium, High or Epic.",
+      "docAnchor": "DSH9xxx.md#dsh9027"
+    },
+    {
+      "code": "DSH9028",
+      "severity": "error",
+      "message": "Shader compilation for '{0}' did not finish within {1} seconds per material. A compile that never finishes ...",
+      "docAnchor": "DSH9xxx.md#dsh9028"
+    },
+    {
+      "code": "DSH9029",
+      "severity": "error",
+      "message": "[{0} / {1}] {2}",
+      "docAnchor": "DSH9xxx.md#dsh9029"
+    },
+    {
+      "code": "DSH9030",
+      "severity": "error",
+      "message": "DreamShader failed to create graph dump directory '%s'.",
+      "docAnchor": "DSH9xxx.md#dsh9030"
+    },
+    {
+      "code": "DSH9031",
+      "severity": "error",
+      "message": "DreamShader failed to write graph dump '%s'.",
+      "docAnchor": "DSH9xxx.md#dsh9031"
+    },
+    {
+      "code": "DSH9032",
+      "severity": "error",
+      "message": "DreamShader could not work out which assets '%s' builds, so there is no graph to dump.",
+      "docAnchor": "DSH9xxx.md#dsh9032"
+    },
+    {
+      "code": "DSH9033",
+      "severity": "error",
+      "message": "DreamShader could not resolve generated asset '%s' from '%s' after generation.",
+      "docAnchor": "DSH9xxx.md#dsh9033"
+    },
+    {
+      "code": "DSH9034",
+      "severity": "error",
+      "message": "DreamShader cannot dump '%s': %s is not a Material, MaterialFunction or material instance.",
+      "docAnchor": "DSH9xxx.md#dsh9034"
+    },
+    {
+      "code": "DSH9035",
+      "severity": "error",
+      "message": "'{0}' is not a compilable DreamShader source (.dss, .dsi, .dsm or .dsf), so '{1}' has nothing to do with it...",
+      "docAnchor": "DSH9xxx.md#dsh9035"
+    },
+    {
+      "code": "DSH9036",
+      "severity": "error",
+      "message": "The diagnostics JSON could not be written: {0}.",
+      "docAnchor": "DSH9xxx.md#dsh9036"
+    },
+    {
+      "code": "DSH9037",
+      "severity": "info",
+      "message": "'{0}' produced no material, so there are no shaders to compile; a function library is checked by the materi...",
+      "docAnchor": "DSH9xxx.md#dsh9037"
+    },
+    {
+      "code": "DSH9038",
+      "severity": "warning",
+      "message": "Shader errors cannot be read in this configuration: '-nullrhi' switches the rendering shader maps off, and ...",
+      "docAnchor": "DSH9xxx.md#dsh9038"
+    },
+    {
+      "code": "DSH9039",
+      "severity": "error",
+      "message": "%s: DSH9039: the DreamShader 2.0 pipeline failed without raising a diagnostic.",
+      "docAnchor": "DSH9xxx.md#dsh9039"
+    },
+    {
+      "code": "DSH9040",
+      "severity": "error",
+      "message": "The layout dump could not be written: {0}.",
+      "docAnchor": "DSH9xxx.md#dsh9040"
+    },
+    {
+      "code": "DSH9041",
+      "severity": "error",
+      "message": "'{0}' is not a layout style; -Style takes Blocks, SourceBands, Layered or All.",
+      "docAnchor": "DSH9xxx.md#dsh9041"
+    },
+    {
+      "code": "DSH9042",
+      "severity": "info",
+      "message": "'{0}' has 1.x declarations, and what the printer writes for those is 2.0 text; rewriting 1.x as 2.0 is 'dsc...",
+      "docAnchor": "DSH9xxx.md#dsh9042"
+    },
+    {
+      "code": "DSH9043",
+      "severity": "info",
+      "message": "'{0}' uses the preprocessor outside a custom body; 'fmt' reads the file as it is on disk and would have to ...",
+      "docAnchor": "DSH9xxx.md#dsh9043"
+    },
+    {
+      "code": "DSH9044",
+      "severity": "error",
+      "message": "The formatted text of '{0}' failed its own check -- {1} -- so nothing was written. This is a fault of the f...",
+      "docAnchor": "DSH9xxx.md#dsh9044"
+    },
+    {
+      "code": "DSH9045",
+      "severity": "error",
+      "message": "'{0}' could not be read, so it was not formatted.",
+      "docAnchor": "DSH9xxx.md#dsh9045"
+    },
+    {
+      "code": "DSH9046",
+      "severity": "error",
+      "message": "'{0}' is not in the formatter's layout; 'dsc fmt' would rewrite it.",
+      "docAnchor": "DSH9xxx.md#dsh9046"
+    },
+    {
+      "code": "DSH9047",
+      "severity": "error",
+      "message": "The list of generated assets could not be written: {0}.",
+      "docAnchor": "DSH9xxx.md#dsh9047"
+    },
+    {
+      "code": "DSH9048",
+      "severity": "error",
+      "message": "'-As={0}' is no list format; the four are Packages, Files, GitIgnore and Json.",
+      "docAnchor": "DSH9xxx.md#dsh9048"
+    },
+    {
+      "code": "DSH9049",
+      "severity": "warning",
+      "message": "{0} generated asset(s) lie outside the project directory -- an engine plugin's content -- and have no proje...",
+      "docAnchor": "DSH9xxx.md#dsh9049"
+    },
+    {
+      "code": "DSH9050",
+      "severity": "error",
+      "message": "reveal-node needs a non-empty 'file' and a 'line' of 1 or more; got file '{File}' and line {Line}.",
+      "docAnchor": "DSH9xxx.md#dsh9050",
+      "summary_zh": "reveal-node 请求失败（navigate 阶段）。"
+    },
+    {
+      "code": "DSH9051",
+      "severity": "error",
+      "message": "No asset loaded in this editor was generated from '{File}', so there is no graph to reveal a node in; compi...",
+      "docAnchor": "DSH9xxx.md#dsh9051"
+    },
+    {
+      "code": "DSH9052",
+      "severity": "error",
+      "message": "The {Count} asset(s) generated from '{File}' carry no DreamShader.SourceSpans metadata, so no node on them ...",
+      "docAnchor": "DSH9xxx.md#dsh9052"
+    },
+    {
+      "code": "DSH9053",
+      "severity": "error",
+      "message": "The DreamShader.SourceSpans metadata of '{Asset}' is not a JSON object, so no node on it can be mapped back...",
+      "docAnchor": "DSH9xxx.md#dsh9053"
+    },
+    {
+      "code": "DSH9054",
+      "severity": "error",
+      "message": "No node generated from '{File}' has a source span on line {Line}; the line produced no graph node (a declar...",
+      "docAnchor": "DSH9xxx.md#dsh9054"
+    },
+    {
+      "code": "DSH9055",
+      "severity": "error",
+      "message": "The material editor would not open for '{Asset}', so the node could not be revealed.",
+      "docAnchor": "DSH9xxx.md#dsh9055"
+    },
+    {
+      "code": "DSH9056",
+      "severity": "error",
+      "message": "'{Asset}' opened in an editor that is not the material editor, which has no node graph to select in; only a...",
+      "docAnchor": "DSH9xxx.md#dsh9056"
+    },
+    {
+      "code": "DSH9057",
+      "severity": "error",
+      "message": "The expression {Guid} recorded for line {Line} is not in '{Asset}' any more, so the node could not be selec...",
+      "docAnchor": "DSH9xxx.md#dsh9057"
+    },
+    {
+      "code": "DSH9058",
+      "severity": "error",
+      "message": "The source file '{File}' this node was generated from is not on disk any more, so it could not be opened; r...",
+      "docAnchor": "DSH9xxx.md#dsh9058"
+    },
+    {
+      "code": "DSH9059",
+      "severity": "warning",
+      "message": "The DreamShader.SourceSpans entry '{Key}' of '{Asset}' is not an expression GUID and was skipped; that node...",
+      "docAnchor": "DSH9xxx.md#dsh9059"
+    },
+    {
+      "code": "DSH9060",
+      "severity": "error",
+      "message": "'{0}' is neither a material nor a material function, so it has no graph to read. A material instance decomp...",
+      "docAnchor": "DSH9xxx.md#dsh9060"
+    },
+    {
+      "code": "DSH9061",
+      "severity": "info",
+      "message": "{0} expression(s) of '{1}' feed no output and are not part of the source; a build would prune them all the ...",
+      "docAnchor": "DSH9xxx.md#dsh9061"
+    },
+    {
+      "code": "DSH9062",
+      "severity": "warning",
+      "message": "The reroute {0} feeds itself; the pin that reads it is treated as unconnected.",
+      "docAnchor": "DSH9xxx.md#dsh9062"
+    },
+    {
+      "code": "DSH9063",
+      "severity": "warning",
+      "message": "The named reroute {0} has no declaration; the pin that reads it is treated as unconnected.",
+      "docAnchor": "DSH9xxx.md#dsh9063"
+    },
+    {
+      "code": "DSH9064",
+      "severity": "warning",
+      "message": "{0} calls a material function that is missing; a zero stands in for every value read from it.",
+      "docAnchor": "DSH9xxx.md#dsh9064",
+      "summary_zh": "反编译产物提示：此文件由 DreamShader 反编译器生成，重编译后会被覆盖。"
+    },
+    {
+      "code": "DSH9065",
+      "severity": "warning",
+      "message": "{0} is of a class the builtin catalog does not list (abstract, deprecated, or from a module loaded after th...",
+      "docAnchor": "DSH9xxx.md#dsh9065"
+    },
+    {
+      "code": "DSH9066",
+      "severity": "warning",
+      "message": "The input '{0}' of '{1}' is a dynamic bool pin, which the language has no parameter for; it is written as '...",
+      "docAnchor": "DSH9xxx.md#dsh9066"
+    },
+    {
+      "code": "DSH9067",
+      "severity": "warning",
+      "message": "{0} carries {1} additional define(s), which a '/// @custom' function cannot declare; the rebuilt node has n...",
+      "docAnchor": "DSH9xxx.md#dsh9067"
+    },
+    {
+      "code": "DSH9068",
+      "severity": "warning",
+      "message": "{0} changes '{1}', which a '///' directive cannot carry; the rebuilt parameter has the default.",
+      "docAnchor": "DSH9xxx.md#dsh9068"
+    },
+    {
+      "code": "DSH9069",
+      "severity": "info",
+      "message": "{0} has nothing wired to Value, so it is its {1} branch and nothing else; the rebuilt graph has no switch t...",
+      "docAnchor": "DSH9xxx.md#dsh9069"
+    },
+    {
+      "code": "DSH9070",
+      "severity": "warning",
+      "message": "{0} has {1} wired input(s) the class does not declare as named pins, so a call cannot connect them; the reb...",
+      "docAnchor": "DSH9xxx.md#dsh9070"
+    },
+    {
+      "code": "DSH9071",
+      "severity": "warning",
+      "message": "The input '{0}' of '{1}' has its Preview pin wired. Source says that as a default that is an expression ('f...",
+      "docAnchor": "DSH9xxx.md#dsh9071"
+    },
+    {
+      "code": "DSH9072",
+      "severity": "warning",
+      "message": "{0} is read through its output {1}, which is no material attribute the catalog knows; a zero stands in for ...",
+      "docAnchor": "DSH9xxx.md#dsh9072"
+    },
+    {
+      "code": "DSH9073",
+      "severity": "info",
+      "message": "{0} is a StaticSwitchParameter, which the language writes as a '/// @static' uniform and a static branch; t...",
+      "docAnchor": "DSH9xxx.md#dsh9073"
+    },
+    {
+      "code": "DSH9074",
+      "severity": "info",
+      "message": "'{0}' reads its attributes as one set, so the {1} individual pin(s) that are also wired are ignored, by the...",
+      "docAnchor": "DSH9xxx.md#dsh9074"
+    },
+    {
+      "code": "DSH9075",
+      "severity": "info",
+      "message": "The uniform '{0}' is written as '{1}': the name is already taken in this file.",
+      "docAnchor": "DSH9xxx.md#dsh9075"
+    },
+    {
+      "code": "DSH9076",
+      "severity": "warning",
+      "message": "A region of '{0}' is titled '{1}', which does not fit on a '#pragma region' line; it is written as '{2}'.",
+      "docAnchor": "DSH9xxx.md#dsh9076"
+    },
+    {
+      "code": "DSH9077",
+      "severity": "info",
+      "message": "{0} node position(s) of '{1}' belong to values the source writes inline, and a position is kept by variable...",
+      "docAnchor": "DSH9xxx.md#dsh9077"
+    },
+    {
+      "code": "DSH9078",
+      "severity": "error",
+      "message": "The output '{0}' of '{1}' did not become a parameter; nothing is written to it.",
+      "docAnchor": "DSH9xxx.md#dsh9078"
+    },
+    {
+      "code": "DSH9079",
+      "severity": "info",
+      "message": "{0} is an If whose branches no comparison selects between; it is written as 'UE.If(...)'.",
+      "docAnchor": "DSH9xxx.md#dsh9079"
+    },
+    {
+      "code": "DSH9080",
+      "severity": "warning",
+      "message": "The parameter '{0}' appears more than once and its nodes do not agree on its default, group or kind; the un...",
+      "docAnchor": "DSH9xxx.md#dsh9080"
+    },
+    {
+      "code": "DSH9081",
+      "severity": "warning",
+      "message": "'{0}' is called and its interface was not available, so its 'extern' prototype is written from the calls al...",
+      "docAnchor": "DSH9xxx.md#dsh9081"
+    },
+    {
+      "code": "DSH9082",
+      "severity": "warning",
+      "message": "The code of the custom node '{0}' carries DreamShader's markers and does not read as what the compiler writ...",
+      "docAnchor": "DSH9xxx.md#dsh9082"
+    },
+    {
+      "code": "DSH9083",
+      "severity": "warning",
+      "message": "'{0}' is a {1}, and its pins are not the ones the language writes that kind with; it is written as a plain ...",
+      "docAnchor": "DSH9xxx.md#dsh9083"
+    },
+    {
+      "code": "DSH9084",
+      "severity": "warning",
+      "message": "The output '{0}' of '{1}' is not connected to anything; nothing is written to it.",
+      "docAnchor": "DSH9xxx.md#dsh9084"
+    },
+    {
+      "code": "DSH9085",
+      "severity": "error",
+      "message": "'{0}' ends in '.{1}', which is read as {2} source, and the decompile was asked for {3} text; name the file ...",
+      "docAnchor": "DSH9xxx.md#dsh9085"
+    },
+    {
+      "code": "DSH9086",
+      "severity": "error",
+      "message": "The decompile was asked for 2.0 text and was handed the 1.x decompiler, which writes '.dsm' and '.dsf' only...",
+      "docAnchor": "DSH9xxx.md#dsh9086"
+    },
+    {
+      "code": "DSH9087",
+      "severity": "error",
+      "message": "'{0}' does not resolve to the assets it builds, so there is nothing to decompile for it.",
+      "docAnchor": "DSH9xxx.md#dsh9087"
+    },
+    {
+      "code": "DSH9088",
+      "severity": "error",
+      "message": "The graph of '{0}' did not read into a valid module; the errors above say where. This is a defect of the de...",
+      "docAnchor": "DSH9xxx.md#dsh9088"
+    },
+    {
+      "code": "DSH9089",
+      "severity": "warning",
+      "message": "The decompiled text does not parse back: {0}: {1}. It is written as it is; this is a defect of the decompiler.",
+      "docAnchor": "DSH9xxx.md#dsh9089"
+    },
+    {
+      "code": "DSH9090",
+      "severity": "error",
+      "message": "'{0}' fails conditional compilation ({1}: {2}), and a source with '#if' lines is not migrated in any case.",
+      "docAnchor": "DSH9xxx.md#dsh9090"
+    },
+    {
+      "code": "DSH9091",
+      "severity": "error",
+      "message": "'{0}' names a source root in front of the path, which '#include' cannot; write the path from the root's own...",
+      "docAnchor": "DSH9xxx.md#dsh9091"
+    },
+    {
+      "code": "DSH9092",
+      "severity": "error",
+      "message": "{0} comment(s) of '{1}' would not be in the migrated file ({2}), so nothing was written; this is a fault of...",
+      "docAnchor": "DSH9xxx.md#dsh9092"
+    },
+    {
+      "code": "DSH9093",
+      "severity": "error",
+      "message": "'{0}' has no 1.x declaration left; there is nothing to migrate.",
+      "docAnchor": "DSH9xxx.md#dsh9093"
+    },
+    {
+      "code": "DSH9094",
+      "severity": "warning",
+      "message": "'{0}' keeps its '/// @root', the 1.x spelling of where its asset goes, because the place the new file would...",
+      "docAnchor": "DSH9xxx.md#dsh9094"
+    },
+    {
+      "code": "DSH9095",
+      "severity": "error",
+      "message": "'{0}' is not a 1.x source; migrate takes '.dsm', '.dsf' and '.dsh' files.",
+      "docAnchor": "DSH9xxx.md#dsh9095"
+    },
+    {
+      "code": "DSH9097",
+      "severity": "error",
+      "message": "The migrated text of '{0}' does not build as 2.0 source ({1}), so nothing was written; the text is in '{2}'.",
+      "docAnchor": "DSH9xxx.md#dsh9097"
+    },
+    {
+      "code": "DSH9098",
+      "severity": "warning",
+      "message": "The migrated text of '{0}' does not build the graph the 1.x file builds: {1}",
+      "docAnchor": "DSH9xxx.md#dsh9098"
+    },
+    {
+      "code": "DSH9099",
+      "severity": "error",
+      "message": "'{0}' already exists and is not written over; move it away, or migrate into another folder with -Out.",
+      "docAnchor": "DSH9xxx.md#dsh9099"
+    },
+    {
+      "code": "DSH9100",
+      "severity": "error",
+      "message": "'{0}' has no parent material, and a '.dsi' is nothing but overrides of one.",
+      "docAnchor": "DSH9xxx.md#dsh9100"
+    },
+    {
+      "code": "DSH9101",
+      "severity": "warning",
+      "message": "'{0}' overrides {1} parameter(s) of its material layers or blends, which a '.dsi' cannot address; they are ...",
+      "docAnchor": "DSH9xxx.md#dsh9101"
+    },
+    {
+      "code": "DSH9102",
+      "severity": "info",
+      "message": "The parameter '{0}' is not a name a variable can have; it is written under another with '/// @name {0}'.",
+      "docAnchor": "DSH9xxx.md#dsh9102"
+    },
+    {
+      "code": "DSH9103",
+      "severity": "error",
+      "message": "DSH9103: The Parent of '{0}' no longer resolves, so the overrides of '{1}' cannot be written back into it: {2}",
+      "docAnchor": "DSH9xxx.md#dsh9103"
+    },
+    {
+      "code": "DSH9104",
+      "severity": "warning",
+      "message": "'{0}' overrides '{1}', which '#pragma instance' has no key for; the rebuilt instance has the parent's.",
+      "docAnchor": "DSH9xxx.md#dsh9104"
+    },
+    {
+      "code": "DSH9105",
+      "severity": "warning",
+      "message": "'{0}' is a curve atlas row, and '{1}' picks its curve; a '.dsi' can state the row's number and nothing else...",
+      "docAnchor": "DSH9xxx.md#dsh9105"
+    },
+    {
+      "code": "DSH9106",
+      "severity": "warning",
+      "message": "'{0}' is declared 'bool' by the parent's source and '{1}' sets it to {2}; the override is written as a 'flo...",
+      "docAnchor": "DSH9xxx.md#dsh9106"
+    },
+    {
+      "code": "DSH9107",
+      "severity": "error",
+      "message": "Expected '{0}' to be declared alone to rewrite its value, found it in a declaration shared with other names...",
+      "docAnchor": "DSH9xxx.md#dsh9107"
+    },
+    {
+      "code": "DSH9108",
+      "severity": "error",
+      "message": "Expected every change to this file to touch its own stretch of text, found an edit at line {0} that overlap...",
+      "docAnchor": "DSH9xxx.md#dsh9108"
+    },
+    {
+      "code": "DSH9109",
+      "severity": "error",
+      "message": "Expected a '#pragma instance(...)' line in this .dsi file, found none; the file was left unchanged.",
+      "docAnchor": "DSH9xxx.md#dsh9109"
+    }
+  ],
+  "source": "DreamShader 2.0.2 @b3bbf48 (Docs/diagnostics/README.md)"
+}

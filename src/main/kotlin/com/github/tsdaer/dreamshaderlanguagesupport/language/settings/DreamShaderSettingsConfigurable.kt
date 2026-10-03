@@ -54,6 +54,7 @@ class DreamShaderSettingsConfigurable(
     private var hoverDocumentationOverridesEditPathButton: JButton? = null
     private var hoverDocumentationOverridesResetBuiltinsButton: JButton? = null
     private var recompileCurrentCommandField: JBTextField? = null
+    private var dscExecutablePathField: JBTextField? = null
     private var recompileAllCommandField: JBTextField? = null
     private var cleanGeneratedCommandField: JBTextField? = null
     private var previewAutoRefreshDelayField: JBTextField? = null
@@ -373,6 +374,7 @@ class DreamShaderSettingsConfigurable(
         recompileCurrentCommandField = JBTextField()
         recompileAllCommandField = JBTextField()
         cleanGeneratedCommandField = JBTextField()
+        dscExecutablePathField = JBTextField()
         previewAutoRefreshDelayField = JBTextField()
 
         bridgeStatusLabel = createInfoLabel(BRIDGE_STATUS_LABEL_NAME)
@@ -495,6 +497,11 @@ class DreamShaderSettingsConfigurable(
             cleanGeneratedCommandField as JBTextField,
             DreamShaderBundle.message("settings.bridgeCleanGenerated.tooltip")
         ))
+        bridgeCommandSection.addSectionRow(DreamShaderUi.formRow(
+            DreamShaderBundle.message("settings.dscExecutablePath.label"),
+            dscExecutablePathField as JBTextField,
+            DreamShaderBundle.message("settings.dscExecutablePath.tooltip")
+        ))
         addSection(
             title = DreamShaderBundle.message("settings.bridgeRecompileCurrent.label"),
             description = DreamShaderBundle.message("settings.bridgeCleanGenerated.tooltip"),
@@ -553,6 +560,7 @@ class DreamShaderSettingsConfigurable(
             packageSearchGitHubTokenField?.text.orEmpty() != state.packageStoreGitHubToken ||
             buildHoverOverridesRawFromTable() != state.hoverDocumentationOverrides.trim() ||
             recompileCurrentCommandField?.text.orEmpty() != state.bridgeRecompileCurrentCommand ||
+            dscExecutablePathField?.text.orEmpty().trim() != state.dscExecutablePath ||
             recompileAllCommandField?.text.orEmpty() != state.bridgeRecompileAllCommand ||
             cleanGeneratedCommandField?.text.orEmpty() != state.bridgeCleanGeneratedShadersCommand ||
             normalizePreviewDelay(previewAutoRefreshDelayField?.text.orEmpty()) != state.previewAutoRefreshDelayMs.coerceIn(250, 10000)
@@ -579,6 +587,7 @@ class DreamShaderSettingsConfigurable(
         state.packageStoreGitHubToken = packageSearchGitHubTokenField?.text.orEmpty().trim()
         state.hoverDocumentationOverrides = buildHoverOverridesRawFromTable()
         state.bridgeRecompileCurrentCommand = recompileCurrentCommandField?.text.orEmpty().trim()
+        state.dscExecutablePath = dscExecutablePathField?.text.orEmpty().trim()
         state.bridgeRecompileAllCommand = recompileAllCommandField?.text.orEmpty().trim()
         state.bridgeCleanGeneratedShadersCommand = cleanGeneratedCommandField?.text.orEmpty().trim()
         state.previewTransport = "file"
@@ -605,6 +614,7 @@ class DreamShaderSettingsConfigurable(
         packageSearchGitHubTokenField?.text = state.packageStoreGitHubToken
         loadHoverOverridesFromRaw(state.hoverDocumentationOverrides)
         recompileCurrentCommandField?.text = state.bridgeRecompileCurrentCommand
+        dscExecutablePathField?.text = state.dscExecutablePath
         recompileAllCommandField?.text = state.bridgeRecompileAllCommand
         cleanGeneratedCommandField?.text = state.bridgeCleanGeneratedShadersCommand
         previewAutoRefreshDelayField?.text = state.previewAutoRefreshDelayMs.coerceIn(250, 10000).toString()
@@ -637,6 +647,7 @@ class DreamShaderSettingsConfigurable(
         hoverDocumentationOverridesEditPathButton = null
         hoverDocumentationOverridesResetBuiltinsButton = null
         recompileCurrentCommandField = null
+        dscExecutablePathField = null
         recompileAllCommandField = null
         cleanGeneratedCommandField = null
         previewAutoRefreshDelayField = null

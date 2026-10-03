@@ -1,0 +1,6 @@
+// ${DREAMSHADER_FILE_NAME} -- a DreamShader material instance. Compiles to ${DREAMSHADER_ASSET_PATH}.
+// Parent is the material this instance overrides: an asset path, or the name of a product under the same source root.
+#pragma instance(Parent = "${DREAMSHADER_INSTANCE_PARENT}")
+
+// Override a parameter of the parent with a uniform of the parent's type, for example:
+// uniform float Roughness = 0.5;

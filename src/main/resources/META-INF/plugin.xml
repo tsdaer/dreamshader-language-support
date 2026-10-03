@@ -153,6 +153,20 @@
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.welcome.DreamShaderWelcomeProjectActivity"/>
         <postStartupActivity
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeFileWatcher"/>
+        <com.intellij.problemHighlightFilter
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderProblemHighlightFilter"/>
+        <localInspection
+                id="DreamShaderUnknownType"
+                groupPath="DreamShader"
+                groupBundle="messages.DreamShaderBundle"
+                groupKey="inspection.group.name"
+                bundle="messages.DreamShaderBundle"
+                key="inspection.unknownType.name"
+                enabledByDefault="true"
+                level="ERROR"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderUnknownTypeInspection"/>
+        <readerModeMatcher
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderDerivedReaderModeMatcher"/>
     </extensions>
 
     <actions>
@@ -192,6 +206,17 @@
 
                 <separator/>
 
+                <action id="DreamShader.BridgeTools.DscCheck"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderDscCheckAction"/>
+                <action id="DreamShader.BridgeTools.DscFormat"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderDscFormatAction"/>
+                <action id="DreamShader.BridgeTools.DscMigrate"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderDscMigrateAction"/>
+                <action id="DreamShader.BridgeTools.DscIndex"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderDscIndexAction"/>
+
+                <separator/>
+
                 <action id="DreamShader.BridgeTools.RevealNode"
                         class="com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderRevealNodeAction"/>
             </group>
@@ -226,6 +251,15 @@
                    text="DreamShader Templates"
                    description="DreamShader template and scaffold actions"
                    popup="true">
+                <action id="DreamShader.TemplateTools.CreateMaterial2"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateMaterial2TemplateAction"/>
+                <action id="DreamShader.TemplateTools.CreateFunction2"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateFunction2TemplateAction"/>
+                <action id="DreamShader.TemplateTools.CreateInstance"
+                        class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateInstanceTemplateAction"/>
+
+                <separator/>
+
                 <action id="DreamShader.TemplateTools.CreateMaterial"
                         class="com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderCreateMaterialTemplateAction"/>
                 <action id="DreamShader.TemplateTools.CreateFunction"

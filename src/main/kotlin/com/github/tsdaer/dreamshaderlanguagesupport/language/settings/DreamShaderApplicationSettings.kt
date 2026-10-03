@@ -18,7 +18,8 @@ class DreamShaderApplicationSettings : PersistentStateComponent<DreamShaderAppli
         var enableGitHubPackageSearch: Boolean = true,
         var bridgeRecompileCurrentCommand: String = "",
         var bridgeRecompileAllCommand: String = "",
-        var bridgeCleanGeneratedShadersCommand: String = ""
+        var bridgeCleanGeneratedShadersCommand: String = "",
+        var dscExecutablePath: String = ""
     )
 
     private var state = State()

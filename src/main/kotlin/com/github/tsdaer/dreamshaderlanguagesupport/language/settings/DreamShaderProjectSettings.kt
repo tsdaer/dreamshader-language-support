@@ -32,6 +32,7 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
         var bridgeRecompileCurrentCommand: String = "",
         var bridgeRecompileAllCommand: String = "",
         var bridgeCleanGeneratedShadersCommand: String = "",
+        var dscExecutablePath: String = "",
         var previewTransport: String = "file",
         var previewWebSocketPort: Int = 17864,
         var previewLiveFrameRate: Int = 2,
@@ -75,6 +76,11 @@ class DreamShaderProjectSettings : PersistentStateComponent<DreamShaderProjectSe
     fun resolvedBridgeCleanGeneratedShadersCommand(): String {
         return state.bridgeCleanGeneratedShadersCommand.takeIf { it.isNotBlank() }
             ?: appSettings().state.bridgeCleanGeneratedShadersCommand
+    }
+
+    fun resolvedDscExecutablePath(): String {
+        return state.dscExecutablePath.takeIf { it.isNotBlank() }
+            ?: appSettings().state.dscExecutablePath
     }
 
     private fun appSettings(): DreamShaderApplicationSettings =

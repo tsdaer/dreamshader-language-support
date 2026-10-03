@@ -1,0 +1,9 @@
+{
+  "_comment": "Hand-curated Chinese summaries for dreamshader-dsh-codes.json. The generator merges these by code; codes missing here get no summary_zh. Only codes the plugin itself references (preventive checks, alias hints, common bridge diagnostics) need an entry.",
+  "DSH2248": "1.x 专属文件中出现了 2.0 语法（uniform / export / #pragma）；2.0 声明应放进 .dss 文件，或可容纳两种方言的 .dsh 头文件。",
+  "DSH2249": ".dsh 头文件中出现了会生成资产的 1.x 块（Shader / ShaderFunction / 层）；头文件会被多方包含，资产块应移入独立的 .dsm / .dsf。",
+  "DSH3203": "#include 需要使用双引号路径（#include \"/Game/Shared/Common.dsh\"），不接受尖括号写法。",
+  "DSH5277": "GLSL 拼写（mix / fract / mod / vec3 等）：1.x 源码可继续使用并按 HLSL 名读取，.dss 则必须写出 HLSL 名。",
+  "DSH9050": "reveal-node 请求失败（navigate 阶段）。",
+  "DSH9064": "反编译产物提示：此文件由 DreamShader 反编译器生成，重编译后会被覆盖。"
+}

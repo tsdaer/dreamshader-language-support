@@ -38,15 +38,8 @@ internal class DreamShaderBridgeFileWatcher : ProjectActivity {
         })
     }
 
-    private fun isBridgeFileEvent(event: VFileEvent): Boolean {
-        val path = event.path.replace('\\', '/')
-        if (!path.contains("/$BRIDGE_RELATIVE_DIR/")) return false
-        val fileName = path.substringAfterLast('/')
-        if (path.contains("/$BRIDGE_RELATIVE_DIR/Preview/") && fileName.endsWith(".png", ignoreCase = true)) {
-            return true
-        }
-        return fileName in BRIDGE_FILE_NAMES
-    }
+    private fun isBridgeFileEvent(event: VFileEvent): Boolean =
+        DreamShaderBridgeEventFilter.isBridgeFileEvent(event.path)
 
     private fun refreshBridge(project: Project) {
         if (project.isDisposed) return
@@ -74,15 +67,6 @@ internal class DreamShaderBridgeFileWatcher : ProjectActivity {
 
     private companion object {
         const val DEBOUNCE_MS = 250
-        const val BRIDGE_RELATIVE_DIR = "Saved/DreamShader/Bridge"
         const val RESTART_REASON = "DreamShader bridge file changed"
-        val BRIDGE_FILE_NAMES = setOf(
-            "diagnostics.json",
-            "settings.json",
-            "material-expressions.json",
-            "substrate-builtins.json",
-            "preview.json",
-            "bridge.db"
-        )
     }
 }

@@ -76,6 +76,9 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val declarationContexts = inputs.declarationContexts
 
         DreamShaderSyntaxDiagnosticsPass.annotate(sourceText, tokens, holder)
+        val fileName = file.virtualFile?.name ?: file.name
+        DreamShaderDialectPreventionPass.annotate(fileName, sourceText, tokens, holder)
+        DreamShaderLegacyAliasHintPass.annotate(fileName, sourceText, tokens, topLevelDeclarations, holder)
         annotateSectionShapeDiagnostics(file, sourceText, tokens, topLevelDeclarations, declarationContexts, holder)
         annotateSemanticDiagnostics(file, sourceText, tokens, topLevelDeclarations, declarationContexts, holder)
         DreamShaderBridgeDiagnosticsPass.annotate(file, holder)
@@ -172,7 +175,8 @@ internal class DreamShaderSemanticAnnotationPipeline {
         annotateSettingsDiagnostics(topLevelDeclarations, declarationContexts, holder)
         annotateBaseOutputMemberDiagnostics(declarationContexts, holder)
         annotateSubstrateBindingExclusivityDiagnostics(declarationContexts, holder)
-        annotateUnknownTypeDiagnostics(declarationContexts, holder)
+        // D8：section 输入/输出/属性体的未知类型规则已迁移到 DreamShaderUnknownTypeInspection，
+        // 由 inspection 作为唯一出口（问题数据经 collectUnknownTypeProblems 供给）。
         annotateUnknownDeclarationParameterTypeDiagnostics(declarationContexts, holder)
         annotateUnknownBodyLocalTypeDiagnostics(sourceText, declarationContexts, holder)
         annotateConstTextureDefaultAssetDiagnostics(declarationContexts, holder)
@@ -1047,11 +1051,16 @@ internal class DreamShaderSemanticAnnotationPipeline {
         }
     }
 
-    private fun annotateUnknownTypeDiagnostics(
-        declarationContexts: List<DeclarationContext>,
-        holder: AnnotationHolder
-    ) {
-        declarationContexts.forEach { context ->
+    /**
+     * D8：section 输入/输出/属性体未知类型规则的共享收集器。
+     *
+     * 规则已从 annotator 迁出到 `DreamShaderUnknownTypeInspection`（LocalInspectionTool），
+     * 这里只产出纯数据问题，供 inspection 渲染；沿用 cachedFileDiagnosticInputs 缓存。
+     */
+    internal fun collectUnknownTypeProblems(file: DreamShaderPsiFile): List<DreamShaderUnknownTypeProblem> {
+        val inputs = cachedFileDiagnosticInputs(file)
+        val problems = mutableListOf<DreamShaderUnknownTypeProblem>()
+        inputs.declarationContexts.forEach { context ->
             context.directSections
                 .filter {
                     val sectionName = context.canonicalSectionName(it)
@@ -1071,25 +1080,11 @@ internal class DreamShaderSemanticAnnotationPipeline {
                         } else {
                             DreamShaderBundle.message("diagnostic.unknownType", type)
                         }
-                        val annotation = holder.newAnnotation(
-                            HighlightSeverity.ERROR,
-                            message
-                        ).range(range)
-                        if (suggestion != null) {
-                            annotation.withFix(
-                                createReplaceSectionRangeQuickFix(
-                                    section = section,
-                                    targetRange = range,
-                                    replacement = suggestion,
-                                    text = DreamShaderBundle.message("quickfix.typeReplaceWithSuggestion", suggestion),
-                                    family = DreamShaderBundle.message("quickfix.family.semantic")
-                                )
-                            )
-                        }
-                        annotation.create()
+                        problems.add(DreamShaderUnknownTypeProblem(range, type, message, suggestion))
                     }
                 }
         }
+        return problems
     }
 
     private fun annotateUnknownDeclarationParameterTypeDiagnostics(

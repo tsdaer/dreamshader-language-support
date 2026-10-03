@@ -3,6 +3,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.templates
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileType
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderIcons
+import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.intellij.ide.actions.CreateFileFromTemplateAction
 import com.intellij.ide.actions.CreateFileFromTemplateDialog
 import com.intellij.ide.fileTemplates.DefaultTemplatePropertiesProvider
@@ -15,6 +16,9 @@ import com.intellij.psi.PsiDirectory
 import java.util.Properties
 
 internal object DreamShaderTemplateNames {
+    const val MATERIAL2 = "DreamShader 2.0 Material.dss"
+    const val FUNCTION2 = "DreamShader 2.0 Function.dss"
+    const val INSTANCE = "DreamShader Instance.dsi"
     const val MATERIAL = "DreamShader Material.dsm"
     const val FUNCTION = "DreamShader Function.dsf"
     const val HEADER = "DreamShader Header.dsh"
@@ -28,6 +32,9 @@ class DreamShaderFileTemplateGroupFactory : FileTemplateGroupDescriptorFactory {
             DreamShaderBundle.message("templates.fileGroup.name"),
             DreamShaderIcons.FILE
         ).apply {
+            addTemplate(FileTemplateDescriptor(DreamShaderTemplateNames.MATERIAL2, DreamShaderIcons.SHADER))
+            addTemplate(FileTemplateDescriptor(DreamShaderTemplateNames.FUNCTION2, DreamShaderIcons.FUNCTION))
+            addTemplate(FileTemplateDescriptor(DreamShaderTemplateNames.INSTANCE, DreamShaderIcons.FILE))
             addTemplate(FileTemplateDescriptor(DreamShaderTemplateNames.MATERIAL, DreamShaderIcons.SHADER))
             addTemplate(FileTemplateDescriptor(DreamShaderTemplateNames.FUNCTION, DreamShaderIcons.FUNCTION))
             addTemplate(FileTemplateDescriptor(DreamShaderTemplateNames.HEADER, DreamShaderIcons.FILE))
@@ -44,6 +51,30 @@ class DreamShaderDefaultTemplatePropertiesProvider : DefaultTemplatePropertiesPr
         props.setProperty("DREAMSHADER_SYMBOL_NAME", symbol)
         props.setProperty("DREAMSHADER_ASSET_NAME", "DreamMaterials/$symbol")
         props.setProperty("DREAMSHADER_NAMESPACE_NAME", symbol.ifBlank { "Shared" })
+        props.setProperty("DREAMSHADER_FILE_NAME", rawName)
+        props.setProperty("DREAMSHADER_ASSET_PATH", assetPath(directory, symbol))
+        props.setProperty("DREAMSHADER_INSTANCE_PARENT", "M_ParentMaterial")
+    }
+
+    /** Upstream convention: a file under `<root>/Materials/` compiles to `/Game/Materials/<name>`. */
+    private fun assetPath(directory: PsiDirectory, symbol: String): String {
+        val project = directory.project
+        val basePath = project.basePath ?: return "/Game/$symbol"
+        val settings = project.getService(DreamShaderProjectSettings::class.java)?.state
+        val sourceRoot = runCatching {
+            java.nio.file.Path.of(basePath).toAbsolutePath().normalize()
+                .resolve(settings?.sourceDirectory?.trim().orEmpty().ifBlank { "DShader" })
+        }.getOrNull() ?: return "/Game/$symbol"
+        val directoryPath = runCatching {
+            java.nio.file.Path.of(directory.virtualFile.path).toAbsolutePath().normalize()
+        }.getOrNull() ?: return "/Game/$symbol"
+        val relative = runCatching { sourceRoot.relativize(directoryPath) }.getOrNull()
+            ?.toString()?.replace('\\', '/')
+        return if (relative.isNullOrBlank() || relative.startsWith("..")) {
+            "/Game/$symbol"
+        } else {
+            "/Game/$relative/$symbol"
+        }
     }
 
     private fun toIdentifier(input: String, fallback: String): String {
@@ -76,6 +107,22 @@ class DreamShaderCreateFileFromTemplateAction : CreateFileFromTemplateAction(
     ) {
         builder
             .setTitle(DreamShaderBundle.message("action.DreamShader.NewFile.text"))
+            // Upstream New-menu convention: the 2.0 section first, the 1.x block templates below.
+            .addKind(
+                DreamShaderBundle.message("templates.kind.material2"),
+                DreamShaderIcons.SHADER,
+                DreamShaderTemplateNames.MATERIAL2
+            )
+            .addKind(
+                DreamShaderBundle.message("templates.kind.function2"),
+                DreamShaderIcons.FUNCTION,
+                DreamShaderTemplateNames.FUNCTION2
+            )
+            .addKind(
+                DreamShaderBundle.message("templates.kind.instance"),
+                DreamShaderIcons.FILE,
+                DreamShaderTemplateNames.INSTANCE
+            )
             .addKind(
                 DreamShaderBundle.message("templates.kind.material"),
                 DreamShaderIcons.SHADER,

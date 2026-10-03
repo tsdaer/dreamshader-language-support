@@ -25,6 +25,8 @@ import javax.swing.table.AbstractTableModel
 
 private const val DREAMSHADER_BRIDGE_NOTIFICATIONS = "DreamShader Notifications"
 
+private val DREAMSHADER_EXTENSIONS: Set<String> = setOf("dsm", "dsf", "dsh", "dss", "dsi")
+
 internal class DreamShaderBridgeToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val panel = DreamShaderBridgeDiagnosticsPanel(project)
@@ -53,6 +55,7 @@ private class DreamShaderBridgeDiagnosticsPanel(
                 isOpaque = false
                 add(makeButton(DreamShaderBundle.message("bridge.toolwindow.button.refresh"), AllIcons.Actions.Refresh) { refresh() })
                 add(makeButton(DreamShaderBundle.message("bridge.toolwindow.button.openFirst"), AllIcons.Actions.Forward) { openFirst() })
+                add(makeButton(DreamShaderBundle.message("bridge.toolwindow.button.openDshDoc"), AllIcons.Actions.Help) { openSelectedDshDocumentation() })
             }
             add(buttons, BorderLayout.EAST)
         }
@@ -102,9 +105,9 @@ private class DreamShaderBridgeDiagnosticsPanel(
             snapshot.loadedFromPath.endsWith("bridge.db") -> "bridge.db"
             else -> "diagnostics.json"
         }
-        summary.text = "${snapshot.diagnostics.size} diagnostics — $errors errors, $warnings warnings" +
-            if (other > 0) ", $other info" else "" +
-            "  |  $dbTag"
+        val summaryText = "${snapshot.diagnostics.size} diagnostics — $errors errors, $warnings warnings"
+        val otherTag = if (other > 0) ", $other info" else ""
+        summary.text = summaryText + otherTag + "  |  " + dbTag
     }
 
     private fun openFirst() {
@@ -134,11 +137,31 @@ private class DreamShaderBridgeDiagnosticsPanel(
 
     private fun activeDreamShaderFile(project: Project): com.intellij.openapi.vfs.VirtualFile? {
         val selected = com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
-        if (selected != null && selected.extension?.lowercase() in setOf("dsm", "dsf", "dsh")) return selected
+        if (selected != null && selected.extension?.lowercase() in DREAMSHADER_EXTENSIONS) return selected
         val editor = com.intellij.openapi.editor.EditorFactory.getInstance().allEditors.firstOrNull { it.project == project } ?: return null
         val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return null
         val vf = psiFile.virtualFile ?: return null
-        return if (vf.extension?.lowercase() in setOf("dsm", "dsf", "dsh")) vf else null
+        return if (vf.extension?.lowercase() in DREAMSHADER_EXTENSIONS) vf else null
+    }
+
+    /** 选中诊断携带 DSH 码时打开其上游文档页（A5/B7）。 */
+    private fun openSelectedDshDocumentation() {
+        val row = table.selectedRow
+        if (row < 0) {
+            notifyInfo(DreamShaderBundle.message("bridge.toolwindow.selectDiagnostic"))
+            return
+        }
+        val diag = model.get(row)
+        val code = diag.code?.takeIf { it.isNotBlank() }
+            ?: com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDshCodeCatalog.firstCodeIn(diag.message)
+        val entry = com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDshCodeCatalog.lookup(code)
+        if (entry == null) {
+            notifyInfo(DreamShaderBundle.message("bridge.toolwindow.noDshCode"))
+            return
+        }
+        com.intellij.ide.BrowserUtil.browse(
+            com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDshCodeCatalog.documentationUrl(entry)
+        )
     }
 
     private fun notifyInfo(msg: String) {
@@ -175,6 +198,9 @@ private class DiagnosticTableCellRenderer : ColoredTableCellRenderer() {
         table: JTable, value: Any?, selected: Boolean, hasFocus: Boolean, row: Int, column: Int
     ) {
         val diag = value as? DreamShaderBridgeDiagnostic ?: return
+        val code = diag.code?.takeIf { it.isNotBlank() }
+            ?: com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDshCodeCatalog.firstCodeIn(diag.message)
+        val entry = com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDshCodeCatalog.lookup(code)
         when (column) {
             0 -> {
                 icon = when (diag.severity.lowercase()) {
@@ -184,9 +210,19 @@ private class DiagnosticTableCellRenderer : ColoredTableCellRenderer() {
                 }
             }
             1 -> {
-                append(diag.message, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+                if (code != null) {
+                    append("$code  ", SimpleTextAttributes.LINK_ATTRIBUTES)
+                }
+                append(stripInlineCode(diag.message, code), SimpleTextAttributes.REGULAR_ATTRIBUTES)
                 if (!diag.severity.equals("error", ignoreCase = true)) {
                     append("  ${diag.severity.lowercase()}", SimpleTextAttributes.GRAYED_SMALL_ATTRIBUTES)
+                }
+                toolTipText = buildString {
+                    append(diag.message)
+                    if (entry != null) {
+                        append("\n\n").append(entry.code).append(" (").append(entry.severity).append(")")
+                        entry.summaryZh?.let { append("\n").append(it) }
+                    }
                 }
             }
             2 -> {
@@ -202,5 +238,18 @@ private class DiagnosticTableCellRenderer : ColoredTableCellRenderer() {
         if (!isEnabled) {
             background = UIUtil.getTextFieldBackground()
         }
+    }
+
+    /** 消息开头的 `DSHxxxx:`/`[DSHxxxx]` 前缀已用码色单独渲染时去掉，避免重复。 */
+    private fun stripInlineCode(message: String, code: String?): String {
+        if (code == null) return message
+        val bracketed = "[$code]"
+        if (message.startsWith(bracketed)) {
+            return message.removePrefix(bracketed).trimStart(':', ' ')
+        }
+        if (message.startsWith(code)) {
+            return message.removePrefix(code).trimStart(':', ' ')
+        }
+        return message
     }
 }

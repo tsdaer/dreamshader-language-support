@@ -235,6 +235,150 @@ internal class DreamShaderTemplateService(
         return writeFile(target, content, DreamShaderBundle.message("templates.success.headerCreated", target.invariantSeparatorsPathString))
     }
 
+    /**
+     * 2.0 templates: the upstream `Resources/Templates` bodies with the
+     * `{FILENAME}` / `{ASSETPATH}` / `{STEM}` / `{PARENT}` placeholders filled in.
+     */
+
+    fun createMaterial2Template(targetPathInput: String): DreamShaderTemplateOperationResult {
+        val target = resolveTargetFile(targetPathInput, "dss")
+            ?: return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.invalidTargetPath")
+            )
+        if (target.exists()) {
+            return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.targetExists", target.invariantSeparatorsPathString)
+            )
+        }
+
+        val content = renderUpstreamTemplate(
+            target,
+            """
+            // {FILENAME} -- a DreamShader material. Compiles to {ASSETPATH}.
+            #pragma material(Domain = Surface, ShadingModel = DefaultLit)
+
+            /// @group Surface   @desc The colour of the surface
+            uniform float3 BaseColor = float3(0.8, 0.8, 0.8);
+
+            /// @group Surface
+            uniform float Roughness = 0.5;
+
+            // The export is the material: its name is the asset's, and `m` is what the material's pins read.
+            export void {STEM}(inout material m)
+            {
+                m.BaseColor = BaseColor;
+                m.Roughness = Roughness;
+            }
+            """.trimIndent()
+        )
+
+        return writeFile(target, content, DreamShaderBundle.message("templates.success.material2Created", target.invariantSeparatorsPathString))
+    }
+
+    fun createFunction2Template(targetPathInput: String): DreamShaderTemplateOperationResult {
+        val target = resolveTargetFile(targetPathInput, "dss")
+            ?: return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.invalidTargetPath")
+            )
+        if (target.exists()) {
+            return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.targetExists", target.invariantSeparatorsPathString)
+            )
+        }
+
+        val content = renderUpstreamTemplate(
+            target,
+            """
+            // {FILENAME} -- a DreamShader material function. Compiles to {ASSETPATH}.
+            // Every `export` of the file is an asset of its own; a function without `export` is a helper and is inlined.
+
+            /// @desc Scales a colour.
+            /// @param InColor  The colour to scale.
+            /// @param Strength How much of it to keep. A default makes the input optional.
+            export float3 {STEM}(float3 InColor, float Strength = 1.0)
+            {
+                return InColor * Strength;
+            }
+            """.trimIndent()
+        )
+
+        return writeFile(target, content, DreamShaderBundle.message("templates.success.function2Created", target.invariantSeparatorsPathString))
+    }
+
+    fun createInstanceTemplate(targetPathInput: String, parentInput: String): DreamShaderTemplateOperationResult {
+        val parent = normalizeInstanceParent(parentInput)
+            ?: return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.parentRequired")
+            )
+        val target = resolveTargetFile(targetPathInput, "dsi")
+            ?: return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.invalidTargetPath")
+            )
+        if (target.exists()) {
+            return DreamShaderTemplateOperationResult(
+                false,
+                DreamShaderBundle.message("templates.error.targetExists", target.invariantSeparatorsPathString)
+            )
+        }
+
+        val content = renderUpstreamTemplate(
+            target,
+            """
+            // {FILENAME} -- a DreamShader material instance. Compiles to {ASSETPATH}.
+            // Parent is the material this instance overrides: an asset path, or the name of a product under the same source root.
+            #pragma instance(Parent = "{PARENT}")
+
+            // Override a parameter of the parent with a uniform of the parent's type, for example:
+            // uniform float Roughness = 0.5;
+            """.trimIndent()
+        ).replace("{PARENT}", parent)
+
+        return writeFile(target, content, DreamShaderBundle.message("templates.success.instanceCreated", target.invariantSeparatorsPathString))
+    }
+
+    internal fun normalizeInstanceParent(raw: String): String? {
+        val trimmed = raw.trim().replace('\\', '/')
+        if (trimmed.isBlank()) return null
+        if (trimmed.startsWith("/")) return trimmed.trimEnd('/')
+        val identifier = toIdentifier(trimmed, "")
+        return identifier.ifBlank { null }
+    }
+
+    internal fun assetPathFor(target: Path, stem: String): String {
+        val sourceRoot = projectBasePath()
+            .resolve(sourceDirectorySetting())
+            .toAbsolutePath()
+            .normalize()
+        val absolute = target.toAbsolutePath().normalize()
+        val relative = runCatching { sourceRoot.relativize(absolute.parent).invariantSeparatorsPathString }.getOrNull()
+        return if (relative.isNullOrBlank() || relative.startsWith("..")) {
+            "/Game/$stem"
+        } else {
+            "/Game/$relative/$stem"
+        }
+    }
+
+    private fun renderUpstreamTemplate(target: Path, body: String): String {
+        val fileName = target.fileName.toString()
+        val stem = toIdentifier(fileStem(fileName), "NewAsset")
+        return body
+            .replace("{FILENAME}", fileName)
+            .replace("{ASSETPATH}", assetPathFor(target, stem))
+            .replace("{STEM}", stem)
+    }
+
+    private fun sourceDirectorySetting(): String {
+        val configured = project.getService(DreamShaderProjectSettings::class.java)?.state
+            ?.sourceDirectory?.trim().orEmpty()
+        return configured.ifBlank { "DShader" }
+    }
+
     fun createPackageScaffold(packageNameInput: String): DreamShaderTemplateOperationResult {
         return createPackageScaffold(DreamShaderPackageScaffoldRequest(name = packageNameInput))
     }

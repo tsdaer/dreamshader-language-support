@@ -16,6 +16,73 @@ private fun notifyTemplateResult(project: Project, result: DreamShaderTemplateOp
 }
 
 /**
+ * 2.0 actions (`.dss` / `.dsi`), mirroring the upstream Content Browser's New menu,
+ * where the 2.0 section comes before the 1.x block templates.
+ */
+class DreamShaderCreateMaterial2TemplateAction : DumbAwareAction() {
+    init {
+        templatePresentation.text = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateMaterial2.text")
+        templatePresentation.description = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateMaterial2.description")
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.project ?: return
+        val input = DreamShaderUi.showInputDialog(
+            project,
+            DreamShaderBundle.message("templates.dialog.material2.title"),
+            DreamShaderBundle.message("templates.dialog.material2.input"),
+            "DShader/Materials/M_NewMaterial.dss"
+        ) ?: return
+
+        val result = DreamShaderTemplateService(project).createMaterial2Template(input)
+        notifyTemplateResult(project, result)
+    }
+}
+
+/**
+ * Action implementation for DreamShaderCreateFunction2TemplateAction.
+ */
+class DreamShaderCreateFunction2TemplateAction : DumbAwareAction() {
+    init {
+        templatePresentation.text = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateFunction2.text")
+        templatePresentation.description = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateFunction2.description")
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.project ?: return
+        val input = DreamShaderUi.showInputDialog(
+            project,
+            DreamShaderBundle.message("templates.dialog.function2.title"),
+            DreamShaderBundle.message("templates.dialog.function2.input"),
+            "DShader/Functions/MF_NewFunction.dss"
+        ) ?: return
+
+        val result = DreamShaderTemplateService(project).createFunction2Template(input)
+        notifyTemplateResult(project, result)
+    }
+}
+
+/**
+ * Action implementation for DreamShaderCreateInstanceTemplateAction.
+ */
+class DreamShaderCreateInstanceTemplateAction : DumbAwareAction() {
+    init {
+        templatePresentation.text = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateInstance.text")
+        templatePresentation.description = DreamShaderBundle.message("action.DreamShader.TemplateTools.CreateInstance.description")
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.project ?: return
+        val dialog = DreamShaderCreateInstanceDialog(project)
+        if (!dialog.showAndGet()) return
+
+        val request = dialog.toRequest()
+        val result = DreamShaderTemplateService(project).createInstanceTemplate(request.targetPath, request.parent)
+        notifyTemplateResult(project, result)
+    }
+}
+
+/**
  * Action implementation for DreamShaderCreateMaterialTemplateAction.
  */
 class DreamShaderCreateMaterialTemplateAction : DumbAwareAction() {

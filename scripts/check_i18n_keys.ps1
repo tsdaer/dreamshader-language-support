@@ -12,7 +12,7 @@ function Get-PropertyKeys {
         throw "Properties file not found: $Path"
     }
     $keys = New-Object System.Collections.Generic.HashSet[string]
-    Get-Content -LiteralPath $Path | ForEach-Object {
+    Get-Content -LiteralPath $Path -Encoding UTF8 | ForEach-Object {
         $line = $_.Trim()
         if ($line.Length -eq 0) { return }
         if ($line.StartsWith("#") -or $line.StartsWith("!")) { return }
