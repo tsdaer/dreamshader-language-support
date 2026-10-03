@@ -104,6 +104,7 @@ Completed v1.6.x language features:
 | Workflow UI polish                            | Done   | Shared `DreamShaderUi` card/section/pill helpers are used across settings, package store, Bridge diagnostics, material preview, template workflows, Hub, and welcome surfaces                                                               |
 | `Group("Name")` property scopes              | Done   | Lexer + parser + PSI; `propgroup` legacy alias; completion snippets; structure-view children; section flattening in diagnostics                                                                                                              |
 | Return-value functions                       | Done   | `Function float X(...)` syntax parsed; signature help `: <type>` suffix; hover docs return type; `return` allowed in return-value function bodies                                                                                          |
+| DreamShader 2.0 dialect (M8, plugin 1.2.0)   | Done   | `.dss`/`.dsi` file types with dedicated icons, `DreamShaderDialect` model (`V1`/`V2`/`HEADER_MIXED`) with content-marker routing, 2.0 lexer (punctuation/doc-comment/directive tokens, multi-char operators, case-sensitive keywords), permissive 2.0 parser (declarations/statements/expressions, verbatim `/// @custom` capture, mixed-`.dsh` legacy capture), 2.0 highlighting. Upstream corpus (72 files), language-v2 doc examples and templates parse zero-error; 1.x pipeline frozen and regression-green. See `language-v2-baseline.md` |
 
 ## Detailed TODO
 

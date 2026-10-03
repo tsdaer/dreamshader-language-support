@@ -2,6 +2,10 @@
 
 Stable language-reference notes used by this Rider plugin. Refresh this file when DreamShader language behavior changes.
 
+## Dual Baseline (since 1.2.0)
+
+This file covers the **1.x legacy dialect** (`.dsm` / `.dsf` / `.dsh`). Upstream DreamShader 2.0 added a second front end (`2.0.0`, 2026-09-21; this plugin aligns against `2.0.2` @ `b3bbf48`) whose `.dss` / `.dsi` syntax and the 2.0 coverage map live in **`language-v2-baseline.md`**. Both dialects are active: files route by extension plus content markers, and the 1.x pipeline below is frozen - behavior changes to it require a zero-fixture-diff proof first.
+
 ## DreamShaderLang Syntax Baseline
 
 Primary language reference:
@@ -14,6 +18,7 @@ Reference snapshot used for this alignment:
 - Checked on `2026-09-01`
 - DreamShader plugin version: `1.8.0` plus upstream `main` through `8f84830`
 - Rider plugin version: `1.1.0`
+- Re-checked on `2026-10-03` against upstream `2.0.2` (`b3bbf48`): the 1.x grammar documented below is unchanged and remains a supported front end
 
 Examples conformance snapshot:
 - Checked on `2026-05-29`
