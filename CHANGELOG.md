@@ -2,6 +2,21 @@
 
 # dreamshader-language-support Changelog
 
+## [1.5.0] - 2026-10-03
+
+### Added
+
+- Milestone M11 semantics (upstream `2.0.2` @ `b3bbf48`):
+  - **Cross-file symbol model** (C1): the 2.0 declarations - `uniform`, globals, `export`/`extern` functions (workspace-visible linkage only), `struct`, and include edges - are PSI stubs served through four platform stub indexes (registered via a `stubElementTypeHolder` interface). `DreamShader2WorkspaceSymbols` merges the Bridge `dreamshader-symbol-index` v1 artifact (authoritative) with the offline stub-index fallback per name: a Bridge entry shadows a same-name stub entry, and missing or schema-incompatible Bridge data degrades silently to stub-only. Include closures resolve through the shared import-path semantics for downstream consumers. A 500-file project indexes and queries within budget.
+  - **Conservative type inference for the 2.0 dialect** (C2): a value-type model over the 2.0 PSI - numeric scalars/vectors/matrices, texture kinds, `SamplerState`, `material`, `Substrate`, `void`, and user structs. Covers constructor/cast spellings, HLSL component-wise promotion (scalar + vector stays a vector, `float` widens `half`, differing shapes stay Unknown), swizzle narrowing (`float4.rgb` -> `float3`), material-attribute typing (`FrontMaterial` -> `Substrate`), texture `Sample` -> `float4`, catalog-driven `UE.*` return types (offline fallback included), `Substrate.*` -> `Substrate`, operand-typed `lerp`/`saturate`/`clamp`/`abs`, and include-closure structs/functions. Everything uninferred is Unknown and never produces a diagnostic.
+  - **Substrate sugar checks keyed to upstream codes** (A6): operators outside the sugar report `DSH5293` (`-`, `/`, Substrate x Substrate, unary `-`, compound assignment, and a `lerp` mixing a Substrate value with a number); conflicting `Substrate.Slab` arguments report `DSH5295` (all eleven pin-conflict pairs, call and builder forms); `Haziness` without `Roughness` and `Thickness` without `Transmittance` report `DSH5296` in the call form; builder values report `DSH5297` for member writes after the first use or a whole assignment (a `Substrate.Slab()` rebind resets the builder) and `DSH5298` for member writes under an `if` the declaration is outside of (loop bodies stay out of the engine's DSH4383 territory). A positional argument after a named one reports `DSH2158`. The checks read parse-tree facts or confidently inferred types and never need Bridge data.
+  - **`.dsi` override checks against the parent's parameter schema** (A6): when the Bridge symbol index carries a valid `instance.schema`, overrides are checked for unknown names (`DSH7258`), case-only matches (`DSH7264`), and type mismatches (`DSH7259`, including the static-switch-needs-`@static` rule and the float3-keeps-the-parent-alpha rule); a name that exists on the parent only as a layer or blend parameter reports `DSH7268` (resolved against the parent source's own symbol index, sibling-first). A missing or invalid schema means zero diagnostics - silent degradation, never a false positive.
+  - **Assignment type-mismatch hints** (C2 consumer): a weak warning when an assignment's inferred value category differs from the target's declared category (numeric vs material/Substrate/texture/sampler/struct). Warning-level only - the engine check stays the authority - and bool/numeric coercions stay exempt.
+
+### Changed
+
+- Language baseline: `docs/language-v2-baseline.md` extended with the M11 semantics map (stub indexes, workspace merge, type model, A6 checks).
+
 ## [1.4.0] - 2026-10-03
 
 ### Added
@@ -270,6 +285,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[1.5.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.1.0...1.2.0

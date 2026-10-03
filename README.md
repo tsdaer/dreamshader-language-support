@@ -27,6 +27,7 @@ description: |
   **Diagnostics and project integration**
   - Cached semantic diagnostics (syntax, section-shape, semantic) plus Bridge diagnostics mapping, with parser recovery and targeted Bridge-failure-prevention checks
   - DSH diagnostic-code catalog (all 639 upstream codes): Bridge diagnostics show the code meaning in the tooltip, offer an Open DSH documentation intention, and carry preventive checks keyed to upstream codes - `DSH2248` (2.0 syntax in a 1.x file), `DSH3203` (angle-bracket `#include`, with a quick fix), `DSH2249` (asset block in a `.dsh` header) - plus legacy GLSL alias hints with one-click HLSL rewrites (`DSH5277`)
+  - DreamShader 2.0 semantic intelligence: a cross-file symbol model (stub-indexed `uniform` / exported functions / `struct` / include edges, merged with the Bridge symbol index - Bridge authoritative, stub fallback), conservative type inference over the 2.0 PSI, and upstream-keyed checks - `DSH2158` (positional after named argument), `DSH5293`/`DSH5295`/`DSH5296`/`DSH5297`/`DSH5298` (Substrate sugar operators, Slab parameter families, builder values), and `.dsi` overrides against the parent parameter schema (`DSH7258`/`DSH7264`/`DSH7259`/`DSH7268`, silent without Bridge data), plus weak-warning assignment type mismatches
   - Inspections under Settings → Editor → Inspections → DreamShader (unknown type in Inputs/Outputs/Properties, included in Inspect Code batch scans)
   - `dsc` toolchain actions (Check / Format / Migrate with a `-Check` preview / Refresh Symbol Index) behind a configurable executable path
   - Decompiled-output support: `Decompiled/` and `Intermediate/DreamShader/` sources skip platform error highlighting and open in reading mode by default
@@ -57,6 +58,7 @@ description_zh: |
   **诊断与项目集成**
   - 带缓存的语义诊断（语法、section-shape、语义）以及 Bridge 诊断映射，包含 parser 恢复与针对 Bridge 失败的预防性检查
   - DSH 诊断码目录（覆盖上游全部 639 个码）：Bridge 诊断 tooltip 显示码义并提供「打开 DSH 文档」意图；按上游编号的预防性检查——`DSH2248`（1.x 文件中的 2.0 语法）、`DSH3203`（尖括号 `#include`，附快速修复）、`DSH2249`（`.dsh` 头文件中的资产块）；以及 GLSL 遗留别名提示与一键 HLSL 改写（`DSH5277`）
+  - DreamShader 2.0 语义智能：跨文件符号模型（stub 索引化的 `uniform` / 导出函数 / `struct` / include 边，与 Bridge 符号索引按名合并——Bridge 权威、stub 兜底）、覆盖 2.0 PSI 的保守类型推断，以及按上游编号的检查——`DSH2158`（位置实参跟在命名实参后）、`DSH5293`/`DSH5295`/`DSH5296`/`DSH5297`/`DSH5298`（Substrate 糖操作符、Slab 参数族、builder 值），`.dsi` 覆盖对照父参数 schema（`DSH7258`/`DSH7264`/`DSH7259`/`DSH7268`，无 Bridge 数据时静默），外加弱警告级的赋值类型不匹配提示
   - Inspections 分组（Settings → Editor → Inspections → DreamShader：Inputs/Outputs/Properties 未知类型，纳入 Inspect Code 批量扫描）
   - `dsc` 工具链动作（检查 / 格式化 / 迁移（先 `-Check` 预演）/ 刷新符号索引），由可配置的 dsc 可执行路径启用
   - 反编译产物支持：`Decompiled/` 与 `Intermediate/DreamShader/` 源码跳过平台错误高亮，默认进入阅读模式

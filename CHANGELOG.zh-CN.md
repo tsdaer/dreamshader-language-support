@@ -2,6 +2,21 @@
 
 # dreamshader-language-support 更新日志
 
+## [1.5.0] - 2026-10-03
+
+### 新增
+
+- 里程碑 M11 语义智能（上游 `2.0.2` @ `b3bbf48`）：
+  - **跨文件符号模型**（C1）：2.0 声明——`uniform`、全局变量、`export`/`extern` 函数（仅工作区可见链接）、`struct` 与 include 边——全部支持 PSI stub，经四个平台 StubIndex 提供查询（以 `stubElementTypeHolder` 接口注册）。`DreamShader2WorkspaceSymbols` 按名字合并 Bridge `dreamshader-symbol-index` v1 工件（权威）与离线 stub 索引兜底：同名时 Bridge 条目遮蔽 stub 条目，Bridge 数据缺失或 schema 不符时静默降级为纯 stub。include 闭包经共享 import 路径语义解析，供下游消费。500 文件规模项目索引与查询在预算内完成。
+  - **2.0 方言的保守类型推断**（C2）：覆盖 2.0 PSI 的值类型模型——数值标量/向量/矩阵、纹理种类、`SamplerState`、`material`、`Substrate`、`void` 与用户 struct。支持构造器/类型转换拼写、HLSL 逐分量提升（标量⊕向量仍为向量，`float` 拓宽 `half`，形状不同保持 Unknown）、swizzle 收缩（`float4.rgb` → `float3`）、material 属性类型（`FrontMaterial` → `Substrate`）、纹理 `Sample` → `float4`、catalog 驱动的 `UE.*` 返回类型（含离线兜底目录）、`Substrate.*` → `Substrate`、操作数透传的 `lerp`/`saturate`/`clamp`/`abs`，以及 include 闭包内的 struct/函数。推断不出的即 Unknown，绝不产生诊断。
+  - **按上游编号的 Substrate 语法糖检查**（A6）：糖外操作符按 `DSH5293` 报告（`-`、`/`、Substrate × Substrate、一元 `-`、复合赋值，以及把 Substrate 值与数值混合的 `lerp`）；`Substrate.Slab` 冲突实参按 `DSH5295` 报告（全部十一组引脚冲突对，调用与 builder 两种形态）；调用形态的 `Haziness` 缺 `Roughness`、`Thickness` 缺 `Transmittance` 按 `DSH5296` 报告；builder 值在首次使用或整体赋值后的成员写入按 `DSH5297` 报告（`Substrate.Slab()` 重新绑定会重置 builder），声明所在 `if` 之外的分支内成员写入按 `DSH5298` 报告（循环体保持沉默——那是引擎 DSH4383 的辖域）。位置实参跟在命名实参之后按 `DSH2158` 报告。全部检查只读语法树事实或置信推断类型，不依赖 Bridge 数据。
+  - **`.dsi` 覆盖对照父材质参数 schema 的检查**（A6）：当 Bridge 符号索引携带有效 `instance.schema` 时，检查未知参数名（`DSH7258`）、仅大小写匹配（`DSH7264`）、类型不匹配（`DSH7259`，含静态开关必须 `@static`、float3 保留父 alpha 两条规则）；仅作为图层/混合参数存在的名字按 `DSH7268` 报告（对照父源码自身的符号索引解析，同级目录优先）。schema 缺失或无效时零诊断——静默降级，绝不误报。
+  - **赋值类型不匹配提示**（C2 消费方）：赋值右侧推断类目与目标声明类目不同（数值 vs material/Substrate/纹理/采样器/struct）时给出弱警告。仅警告级——引擎检查仍是权威——bool 与数值之间的合法转换不触发。
+
+### 变更
+
+- 语言基线：`docs/language-v2-baseline.md` 扩充 M11 语义映射（stub 索引、工作区合并、类型模型、A6 检查）。
+
 ## [1.4.0] - 2026-10-03
 
 ### 新增
@@ -278,6 +293,7 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[1.5.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.1.0...1.2.0
