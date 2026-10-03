@@ -10,9 +10,10 @@
 <!-- plugin-metadata:start -->
 name: Dreamshader Language Extension
 description: |
-  Comprehensive DreamShaderLang support for JetBrains Rider, covering `.dsm`, `.dsf`, and `.dsh` files from language core to tooling.
+  Comprehensive DreamShaderLang support for JetBrains Rider, covering `.dsm`, `.dsf`, and `.dsh` files from language core to tooling, plus the DreamShader 2.0 dialect.
 
   **Language core**
+  - DreamShader 2.0 dialect support: `.dss` compilation units and `.dsi` material instances with dedicated icons, dialect-aware parsing and highlighting, `#pragma` / `uniform` / `export` declarations, and verbatim `/// @custom` bodies; mixed-dialect `.dsh` headers supported
   - Lexer, parser, PSI, and symbol model foundations
   - Syntax highlighting with semantic classification, color settings, and inline color previews for vector constructors, color aliases, hex colors, and conservative 0-255 channel values
   - Formatter with DreamShader code style settings, section assignment alignment, commenter, quote handling, brace matching, folding, and structure view
@@ -34,9 +35,10 @@ description: |
   - Material preview tool window backed by the portable DreamShader Bridge file transport
   - Unified DreamShader Hub entry and shared card-based UI surface for settings, diagnostics, preview, package, and template workflows
 description_zh: |
-  面向 JetBrains Rider 的完整 DreamShaderLang 支持，覆盖 `.dsm`、`.dsf`、`.dsh` 文件，从语言核心到工具集成。
+  面向 JetBrains Rider 的完整 DreamShaderLang 支持，覆盖 `.dsm`、`.dsf`、`.dsh` 文件，从语言核心到工具集成，并支持 DreamShader 2.0 方言。
 
   **语言核心**
+  - DreamShader 2.0 方言支持：`.dss` 编译单元与 `.dsi` 材质实例（独立图标）、按方言分流的解析与高亮、`#pragma` / `uniform` / `export` 声明、`/// @custom` 原文函数体，混合方言 `.dsh` 头文件
   - 词法、语法、PSI 与符号模型基础
   - 语法高亮，含语义分类、颜色设置，以及向量构造、颜色别名、十六进制颜色和保守 0-255 通道值的内联预览
   - 格式化、DreamShader 代码样式设置、section 赋值对齐、注释、引号处理、括号匹配、折叠与结构视图
@@ -59,7 +61,7 @@ description_zh: |
   - 统一的 DreamShader Hub 入口与卡片化共享 UI 表面，整合设置、诊断、预览、包与模板工作流
 <!-- plugin-metadata:end -->
 
-JetBrains Rider plugin for DreamShaderLang (`.dsm`, `.dsf`, `.dsh`).
+JetBrains Rider plugin for DreamShaderLang (`.dsm`, `.dsf`, `.dsh`, plus the DreamShader 2.0 dialect: `.dss`, `.dsi`).
 Built on IntelliJ Platform SDK with platform module dependency (`com.intellij.modules.platform`).
 
 ## Documentation

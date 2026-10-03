@@ -2,6 +2,22 @@
 
 # dreamshader-language-support 更新日志
 
+## [1.2.0] - 2026-10-03
+
+### 新增
+
+- DreamShader 2.0 方言支持（里程碑 M8，上游 `2.0.2` @ `b3bbf48`）：注册 `.dss` 编译单元与 `.dsi` 材质实例文件类型（独立项目图标），与 `.dsm`/`.dsf`/`.dsh` 共享 DreamShader 文件类型。
+- 方言模型（`DreamShaderDialect`：`V1` / `V2` / `HEADER_MIXED`），按扩展名 + 内容标记判定方言。标记扫描使用冻结的 1.x lexer，注释与字符串不会造成误判，1.x 的 `#Region` 布局指令仍归 1.x。
+- DreamShader 2.0 lexer：独立的 `.` / `,` / `;` 标点 token、`///` 文档注释 token、行首 `#pragma` / `#include` / `#if` 系指令 token、多字符运算符（`==`、`<=`、`+=`、`<<=` 等）、大小写敏感的关键词/类型判定（`export`、`uniform`、`Texture2D`、`Substrate` 等），以及保留原文的字面量（`.5`、`1.f`、`1e3`、`1.5e-3`、`2.5h`、`1u`、`0x1F`、`1L`）。
+- DreamShader 2.0 宽容解析器（零 error 元素 PSI）：pragma/include 指令、`///` 文档块、uniform/全局/结构体/函数声明、参数表、完整语句集（块/变量/表达式/`if`/`for`/`while`/`do`/`return`/`break`/`continue`/`discard`/空语句）、调用、命名实参（含 `Pin[0] = ...` 引脚索引形态）、成员/索引链、构造器、类型转换与 `{...}` 初始化列表。`/// @custom` 函数体按原文捕获（括号平衡，对 `$`、`@`、行中 `#` 以及字符串/注释内的花括号完全透明）。
+- 混合方言头文件：任一 2.0 标记即走 2.0 前端，旧 1.x 块以不透明块捕获；1.x 文件保持冻结的 1.x 管线不变。
+- DreamShader 2.0 语法高亮，新增可配置颜色项（文档注释、预处理指令、标点）。
+- 上游 2.0 一致性 fixture：上游 `Tests/Corpus/Lang` 语料库（72 个文件）、三份 `language-v2` 文档示例集、上游 `.dss`/`.dsi` 模板全部纳入测试——有效示例零 error 解析。
+
+### 变更
+
+- 语言基线拆分为双基线：`docs/language-baseline.md`（1.x，冻结）与新增 `docs/language-v2-baseline.md`（2.0 覆盖映射与测试映射）。
+
 ## [1.1.0] - 2026-09-01
 
 ### 新增
@@ -228,6 +244,8 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[1.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.1.0...1.2.0
+[1.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.10...1.0.0
 [0.0.10]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.9...0.0.10
 [0.0.9]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.8...0.0.9

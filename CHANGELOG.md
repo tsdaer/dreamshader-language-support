@@ -2,6 +2,22 @@
 
 # dreamshader-language-support Changelog
 
+## [1.2.0] - 2026-10-03
+
+### Added
+
+- DreamShader 2.0 dialect support (milestone M8, upstream `2.0.2` @ `b3bbf48`): `.dss` compilation units and `.dsi` material instances are now registered file types with dedicated project icons, joining `.dsm`/`.dsf`/`.dsh` on the shared DreamShader file type.
+- Dialect model (`DreamShaderDialect`: `V1` / `V2` / `HEADER_MIXED`) detecting the dialect from extension plus content markers. Marker scanning runs the frozen 1.x lexer, so comments and string literals cannot trigger misdetection, and the 1.x `#Region` layout directive stays a 1.x marker.
+- DreamShader 2.0 lexer: independent `.` / `,` / `;` punctuation tokens, `///` doc-comment tokens, line-start `#pragma` / `#include` / `#if`-style directive tokens, multi-character operators (`==`, `<=`, `+=`, `<<=`, ...), case-sensitive keyword/type classification (`export`, `uniform`, `Texture2D`, `Substrate`, ...), and exact-lexeme literals (`.5`, `1.f`, `1e3`, `1.5e-3`, `2.5h`, `1u`, `0x1F`, `1L`).
+- DreamShader 2.0 parser with a permissive, error-element-free PSI: pragma/include directives, `///` doc blocks, uniform/global/struct/function declarations, parameters, the full statement set (block / variable / expression / `if` / `for` / `while` / `do` / `return` / `break` / `continue` / `discard` / empty), calls, named arguments (including `Pin[0] = ...` pin-index form), member/index chains, constructors, casts, and `{...}` initializer lists. `/// @custom` function bodies are captured verbatim (brace-balanced, opaque to `$`, `@`, mid-line `#`, and braces inside strings or comments).
+- Mixed-dialect headers: a file with any 2.0 marker parses under the 2.0 front end while legacy 1.x blocks are captured as opaque blocks; 1.x files keep the frozen 1.x pipeline unchanged.
+- DreamShader 2.0 syntax highlighting with new configurable color settings (doc comment, preprocessor directive, punctuation).
+- Upstream 2.0 conformance fixtures: the upstream `Tests/Corpus/Lang` corpus (72 files), the three `language-v2` documentation example sets, and the upstream `.dss`/`.dsi` templates are all parsed in tests - valid examples with zero error elements.
+
+### Changed
+
+- Language baseline split into a dual baseline: `docs/language-baseline.md` (1.x, frozen) and new `docs/language-v2-baseline.md` (2.0 coverage map and test mapping).
+
 ## [1.1.0] - 2026-09-01
 
 ### Added
@@ -220,6 +236,8 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[1.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.1.0...1.2.0
+[1.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.10...1.0.0
 [0.0.10]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.9...0.0.10
 [0.0.9]: https://github.com/tsdaer/dreamshader-language-support/compare/0.0.8...0.0.9
