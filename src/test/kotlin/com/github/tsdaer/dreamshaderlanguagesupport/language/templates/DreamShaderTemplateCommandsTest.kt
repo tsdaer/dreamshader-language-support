@@ -1,9 +1,18 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.templates
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderDefaultTemplatePropertiesProvider
+import com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateNames
+import com.github.tsdaer.dreamshaderlanguagesupport.language.templates.DreamShaderTemplateService
+import com.intellij.ide.fileTemplates.FileTemplateManager
+import com.intellij.ide.fileTemplates.FileTemplateUtil
 import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.psi.PsiDirectory
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Properties
 import kotlin.io.path.*
 
 class DreamShaderTemplateCommandsTest : BasePlatformTestCase() {
@@ -163,6 +172,105 @@ class DreamShaderTemplateCommandsTest : BasePlatformTestCase() {
 
         val libraryFile = firstLibraryDsh(root.resolve("Library"))
         assertTrue(libraryFile.readText().contains("Namespace FullRequest"))
+    }
+
+    fun testCreateMaterial2TemplateProducesValidDss() {
+        val service = DreamShaderTemplateService(project)
+        val result = service.createMaterial2Template("DShader/Templates/M_NewMaterial.dss")
+
+        assertTrue(result.success)
+        val target = requireNotNull(result.targetPath)
+        assertTrue(target.isRegularFile())
+
+        val text = target.readText()
+        assertTrue(text.contains("#pragma material(Domain = Surface, ShadingModel = DefaultLit)"))
+        assertTrue(text.contains("export void M_NewMaterial(inout material m)"))
+        assertFalse(text.contains("{FILENAME}"))
+        assertFalse(text.contains("{ASSETPATH}"))
+        assertFalse(text.contains("{STEM}"))
+        // Upstream convention: a file under DShader/Materials/ compiles to /Game/Materials/….
+        assertTrue(text, text.contains("/Game/Templates/M_NewMaterial"))
+        assertNoErrors("M_NewMaterial.dss", text)
+    }
+
+    fun testCreateFunction2TemplateProducesValidDss() {
+        val service = DreamShaderTemplateService(project)
+        val result = service.createFunction2Template("Templates/MF_NewFunction.dss")
+
+        assertTrue(result.success)
+        val target = requireNotNull(result.targetPath)
+        assertTrue(target.isRegularFile())
+
+        val text = target.readText()
+        assertTrue(text.contains("export float3 MF_NewFunction(float3 InColor, float Strength = 1.0)"))
+        assertFalse(text.contains("Shader("))
+        assertFalse(text.contains("{STEM}"))
+        assertNoErrors("MF_NewFunction.dss", text)
+    }
+
+    fun testCreateInstanceTemplateProducesValidDsi() {
+        val service = DreamShaderTemplateService(project)
+        val result = service.createInstanceTemplate("Templates/MI_NewInstance.dsi", "M_Skin")
+
+        assertTrue(result.success)
+        val target = requireNotNull(result.targetPath)
+        assertTrue(target.isRegularFile())
+
+        val text = target.readText()
+        assertTrue(text.contains("""#pragma instance(Parent = "M_Skin")"""))
+        assertFalse(text.contains("{PARENT}"))
+        assertFalse(text.contains("{FILENAME}"))
+        assertNoErrors("MI_NewInstance.dsi", text)
+    }
+
+    fun testCreateInstanceTemplateRejectsBlankParent() {
+        val service = DreamShaderTemplateService(project)
+        val result = service.createInstanceTemplate("Templates/MI_NewInstance.dsi", "   ")
+
+        assertTrue(result.message, !result.success)
+        assertFalse(result.targetPath?.isRegularFile() == true)
+    }
+
+    fun testCreateInstanceTemplateAcceptsAssetPathParent() {
+        val service = DreamShaderTemplateService(project)
+        val result = service.createInstanceTemplate("Templates/MI_AssetParent.dsi", "/Game/Materials/M_Skin")
+
+        assertTrue(result.message, result.success)
+        assertTrue(result.targetPath?.readText()?.contains("""#pragma instance(Parent = "/Game/Materials/M_Skin")""") == true)
+        assertNoErrors("MI_NewInstance.dsi", result.targetPath?.readText().orEmpty())
+    }
+
+    fun testUpstream2FileTemplatesRenderAndParse() {
+        val directory = PsiManager.getInstance(project)
+            .findDirectory(myFixture.tempDirFixture.findOrCreateDir("Templates"))
+            ?: throw AssertionError("could not resolve Templates directory")
+        val manager = FileTemplateManager.getInstance(project)
+        val provider = DreamShaderDefaultTemplatePropertiesProvider()
+
+        val names = mapOf(
+            DreamShaderTemplateNames.MATERIAL2 to "M_NewMaterial",
+            DreamShaderTemplateNames.FUNCTION2 to "MF_NewFunction",
+            DreamShaderTemplateNames.INSTANCE to "MI_NewInstance"
+        )
+        for ((templateName, fileName) in names) {
+            val template = manager.getTemplate(templateName)
+            assertTrue("missing file template: $templateName", template != null)
+
+            val props = Properties()
+            props.setProperty("NAME", fileName)
+            provider.fillProperties(directory, props)
+
+            val element = FileTemplateUtil.createFromTemplate(
+                requireNotNull(template),
+                fileName,
+                props,
+                directory
+            )
+            val text = (element as? PsiFile)?.text ?: element.containingFile.text
+            assertFalse("template still contains Velocity placeholders: $templateName", text.contains("\${"))
+            val extension = templateName.substringAfterLast('.')
+            assertNoErrors("$fileName.$extension", text)
+        }
     }
 
     private fun firstLibraryDsh(libraryDir: Path): Path {

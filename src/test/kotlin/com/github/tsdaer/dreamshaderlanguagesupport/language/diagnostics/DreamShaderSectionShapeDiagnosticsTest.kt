@@ -124,7 +124,7 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.configureByText("invalid_shader_function.dsh", text)
 
-        assertHasError("Top-level ShaderFunction declaration is not allowed in .dsh files")
+        assertHasError("Top-level ShaderFunction declaration is not allowed in .dsh files (upstream DSH2249)")
     }
 
     fun testDshDisallowsTopLevelShaderLayer() {
@@ -137,7 +137,7 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.configureByText("invalid_shader_layer.dsh", text)
 
-        assertHasError("Top-level ShaderLayer declaration is not allowed in .dsh files")
+        assertHasError("Top-level ShaderLayer declaration is not allowed in .dsh files (upstream DSH2249)")
     }
 
     fun testDshDisallowsTopLevelShaderLayerBlend() {
@@ -154,7 +154,7 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.configureByText("invalid_shader_layer_blend.dsh", text)
 
-        assertHasError("Top-level ShaderLayerBlend declaration is not allowed in .dsh files")
+        assertHasError("Top-level ShaderLayerBlend declaration is not allowed in .dsh files (upstream DSH2249)")
     }
 
     fun testDshAllowsFunctionAndGraphFunctionDeclarations() {
@@ -170,10 +170,10 @@ class DreamShaderSectionShapeDiagnosticsTest : BasePlatformTestCase() {
         myFixture.configureByText("valid_header_declarations.dsh", text)
 
         assertNoError(
-            "Top-level Shader declaration is not allowed in .dsh files",
-            "Top-level ShaderFunction declaration is not allowed in .dsh files",
-            "Top-level ShaderLayer declaration is not allowed in .dsh files",
-            "Top-level ShaderLayerBlend declaration is not allowed in .dsh files"
+            "Top-level Shader declaration is not allowed in .dsh files (upstream DSH2249)",
+            "Top-level ShaderFunction declaration is not allowed in .dsh files (upstream DSH2249)",
+            "Top-level ShaderLayer declaration is not allowed in .dsh files (upstream DSH2249)",
+            "Top-level ShaderLayerBlend declaration is not allowed in .dsh files (upstream DSH2249)"
         )
     }
 

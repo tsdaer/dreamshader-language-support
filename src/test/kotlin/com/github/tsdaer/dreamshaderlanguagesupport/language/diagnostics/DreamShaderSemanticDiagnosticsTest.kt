@@ -572,6 +572,7 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
     }
 
     fun testUnknownTypeInInputs() {
+        myFixture.enableInspections(DreamShaderUnknownTypeInspection())
         val text = """
             Shader Main {
                 Inputs {
@@ -584,6 +585,7 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
     }
 
     fun testUnknownTypeQuickFixReplacesWithSuggestion() {
+        myFixture.enableInspections(DreamShaderUnknownTypeInspection())
         val text = """
             Shader Main {
                 Inputs {
@@ -598,6 +600,7 @@ class DreamShaderSemanticDiagnosticsTest : BasePlatformTestCase() {
     }
 
     fun testUnknownTypeWithoutSuggestionWhenTooFar() {
+        myFixture.enableInspections(DreamShaderUnknownTypeInspection())
         val text = """
             Shader Main {
                 Inputs {
