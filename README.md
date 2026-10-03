@@ -10,7 +10,7 @@
 <!-- plugin-metadata:start -->
 name: Dreamshader Language Extension
 description: |
-  Comprehensive DreamShaderLang support for JetBrains Rider, covering `.dsm`, `.dsf`, and `.dsh` files from language core to tooling, plus the DreamShader 2.0 dialect.
+  Comprehensive DreamShaderLang support for JetBrains Rider, covering `.dsm`, `.dsf`, and `.dsh` files from language core to tooling, plus the DreamShader 2.0 dialect and its editor-bridge artifacts.
 
   **Language core**
   - DreamShader 2.0 dialect support: `.dss` compilation units and `.dsi` material instances with dedicated icons, dialect-aware parsing and highlighting, `#pragma` / `uniform` / `export` declarations, and verbatim `/// @custom` bodies; mixed-dialect `.dsh` headers supported
@@ -27,6 +27,7 @@ description: |
   **Diagnostics and project integration**
   - Cached semantic diagnostics (syntax, section-shape, semantic) plus Bridge diagnostics mapping, with parser recovery and targeted Bridge-failure-prevention checks
   - Configurable project settings: project root, manifest path, Unreal Engine source root with auto-detect, material-expression scan toggle and cache path, status bar, code lens, inlay parameter hints, out placeholder suffix, import extension strategy, hover doc overrides, and Bridge commands
+  - DreamShader 2.0 editor-bridge artifacts: `dreamshader-builtin-catalog.json` drives `UE.*` / `Substrate.*` completion and signature help (with a bundled offline fallback covering all 27 registered builtins), `dreamshader-symbol-index` v1 is consumed read-only, `bridge.db` meta is exposed, the status bar shows editor online/offline from the `status.json` heartbeat, and a **Reveal Node in Unreal Material Editor** action maps a `.dss`/`.dsi` line back to its material node
   - Bridge tool window and workflow actions (refresh diagnostics, recompile current or all, clean generated shaders, open Bridge paths)
 
   **Packages, templates, and hub**
@@ -35,7 +36,7 @@ description: |
   - Material preview tool window backed by the portable DreamShader Bridge file transport
   - Unified DreamShader Hub entry and shared card-based UI surface for settings, diagnostics, preview, package, and template workflows
 description_zh: |
-  面向 JetBrains Rider 的完整 DreamShaderLang 支持，覆盖 `.dsm`、`.dsf`、`.dsh` 文件，从语言核心到工具集成，并支持 DreamShader 2.0 方言。
+  面向 JetBrains Rider 的完整 DreamShaderLang 支持，覆盖 `.dsm`、`.dsf`、`.dsh` 文件，从语言核心到工具集成，并支持 DreamShader 2.0 方言及其编辑器桥接工件。
 
   **语言核心**
   - DreamShader 2.0 方言支持：`.dss` 编译单元与 `.dsi` 材质实例（独立图标）、按方言分流的解析与高亮、`#pragma` / `uniform` / `export` 声明、`/// @custom` 原文函数体，混合方言 `.dsh` 头文件
@@ -52,6 +53,7 @@ description_zh: |
   **诊断与项目集成**
   - 带缓存的语义诊断（语法、section-shape、语义）以及 Bridge 诊断映射，包含 parser 恢复与针对 Bridge 失败的预防性检查
   - 可配置项目设置：项目根、manifest 路径、可自动检测的 Unreal Engine 源码根、material-expression 扫描开关与缓存路径、状态栏、code lens、内联参数提示、out 占位后缀、import 扩展名策略、悬浮文档覆盖与 Bridge 命令
+  - DreamShader 2.0 编辑器桥接工件：`dreamshader-builtin-catalog.json` 驱动 `UE.*` / `Substrate.*` 补全与签名帮助（内置覆盖全部 27 个注册调用的离线兜底目录），只读消费 `dreamshader-symbol-index` v1，暴露 `bridge.db` meta 表，状态栏按 `status.json` 心跳显示编辑器在线/离线，并提供把 `.dss`/`.dsi` 源行映射回材质节点的「在虚幻材质编辑器中显示节点」动作
   - Bridge 工具窗口与工作流操作（刷新诊断、重编译当前或全部、清理生成的 shader、打开 Bridge 路径）
 
   **包、模板与 Hub**

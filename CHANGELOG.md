@@ -2,6 +2,22 @@
 
 # dreamshader-language-support Changelog
 
+## [1.3.0] - 2026-10-03
+
+### Added
+
+- DreamShader editor-bridge 2.0 artifacts (milestone M9, upstream `2.0.2` @ `b3bbf48`):
+  - `dreamshader-builtin-catalog.json` (the 2.0 binder's node catalog, also written by `dsc export-catalog`) is consumed at the top of the material-expression merge chain, above the 1.x `material-expressions.json`: classes, input pins, literal properties, aliases and positional-parameter order drive `UE.*` / `Substrate.*` completion and signature help. Schema/version mismatches degrade silently to the next data source.
+  - `dreamshader-symbol-index` v1 read-only repository: parses `Saved/DreamShader/Index/<root>/<source>.index.json` (declarations, references, includes, parameter schema, `.dsi` instance schema) with schema validation and stamp-based rereads - the data foundation for the upcoming cross-file symbol model.
+  - `reveal-node` support: the new **Reveal Node in Unreal Material Editor** action (`.dss` / `.dsi` files) checks the editor heartbeat, writes the request through the temp-file + atomic-rename queue, polls `Responses/<requestId>.json`, marks the revealed line with a gutter icon, and surfaces `DSH9050`-`DSH9057` navigate failures.
+  - `bridge.db` `meta` table is now read and exposed as key/value pairs (generation timestamps, and `protocol` / `pluginVersion` / `engineDir` rows when the editor writes them).
+  - `status.json` heartbeat and `owner.lock` liveness model: the status bar widget shows editor online/offline (with the editor's plugin version), and the preview and reveal-node request writers refuse to write requests into a dead editor (upstream discards them).
+
+### Changed
+
+- Bundled offline fallback upgraded (B2): a full V2 catalog (`dreamshader-builtin-catalog-fallback.json`) derived from upstream `Docs/builtins/ue.md` @2.0.2 - the 27 registered `UE.*` builtins plus `UE.StaticSwitchParameter`, `UE.CollectionParam`, `UE.SceneTexture`, and `UE.Expression` - is merged with the legacy six-entry manifest, so offline installs still complete all registered calls.
+- Language baseline: `docs/language-v2-baseline.md` extended with the bridge-artifact consumption map (catalog / symbol index / meta / reveal-node / status).
+
 ## [1.2.0] - 2026-10-03
 
 ### Added

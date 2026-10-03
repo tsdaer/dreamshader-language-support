@@ -2,6 +2,22 @@
 
 # dreamshader-language-support 更新日志
 
+## [1.3.0] - 2026-10-03
+
+### 新增
+
+- DreamShader 编辑器桥接 2.0 工件（里程碑 M9，上游 `2.0.2` @ `b3bbf48`）：
+  - `dreamshader-builtin-catalog.json`（2.0 绑定器节点目录，`dsc export-catalog` 亦写出）接入 material-expression 合并链最高优先级（高于 1.x 的 `material-expressions.json`）：类、输入引脚、字面量属性、别名与位置参数顺序驱动 `UE.*` / `Substrate.*` 补全与签名帮助。schema/版本不符时静默降级到下一数据源。
+  - `dreamshader-symbol-index` v1 只读仓库：解析 `Saved/DreamShader/Index/<root>/<source>.index.json`（声明、提及、include 闭包、参数 schema、`.dsi` 实例 schema），带 schema 校验与按 (mtime, size) 的重读缓存——为后续跨文件符号模型打数据地基。
+  - `reveal-node` 支持：新增「在虚幻材质编辑器中显示节点」动作（`.dss` / `.dsi` 文件），先检查编辑器心跳，经临时文件 + 原子 rename 请求队列写入，轮询 `Responses/<requestId>.json`，在成功行装订 gutter 图标，并透出 `DSH9050`-`DSH9057` 导航失败码。
+  - 读取并暴露 `bridge.db` 的 `meta` 表（键值对：生成时间戳，以及编辑器写入的 `protocol` / `pluginVersion` / `engineDir` 行）。
+  - `status.json` 心跳与 `owner.lock` 存活模型：状态栏 widget 显示编辑器在线/离线（含编辑器插件版本），材质预览与 reveal-node 的请求写入器拒绝对已死编辑器写请求（上游会直接丢弃）。
+
+### 变更
+
+- 离线兜底升级（B2）：依据上游 `Docs/builtins/ue.md` @2.0.2 内嵌完整 V2 目录（`dreamshader-builtin-catalog-fallback.json`）——27 个注册 `UE.*` 调用加 `UE.StaticSwitchParameter`、`UE.CollectionParam`、`UE.SceneTexture`、`UE.Expression`，与旧 6 条 manifest 合并，离线安装仍可补全全部注册调用。
+- 语言基线：`docs/language-v2-baseline.md` 新增桥接工件消费映射（catalog / symbol index / meta / reveal-node / status）。
+
 ## [1.2.0] - 2026-10-03
 
 ### 新增
