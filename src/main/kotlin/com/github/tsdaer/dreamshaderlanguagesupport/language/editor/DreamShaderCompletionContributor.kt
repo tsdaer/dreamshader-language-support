@@ -387,7 +387,7 @@ private data class DreamShaderDeclarationHeadCompletionContext(
 /**
  * Singleton for DreamShaderCompletionData.
  */
-private object DreamShaderCompletionData {
+internal object DreamShaderCompletionData {
     val settingsKeys = listOf(
         "MaterialDomain",
         "Domain",
@@ -1406,7 +1406,7 @@ internal object DreamShaderCompletionSuggester {
 /**
  * Implementation of DreamShaderInsertTextHandler.
  */
-private class DreamShaderInsertTextHandler(
+internal class DreamShaderInsertTextHandler(
     private val insertText: String,
     private val caretOffset: Int?,
     private val replacementStartOffset: Int? = null
