@@ -139,6 +139,38 @@ object DreamShaderTextAttributes {
         DefaultLanguageHighlighterColors.DOT
     )
 
+    // --- M12 C4: 2.0 dialect semantic colors ---
+
+    @JvmField
+    val UNIFORM_PARAMETER: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_UNIFORM_PARAMETER",
+        DefaultLanguageHighlighterColors.INSTANCE_FIELD
+    )
+
+    @JvmField
+    val FUNCTION_PARAMETER: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_FUNCTION_PARAMETER",
+        DefaultLanguageHighlighterColors.PARAMETER
+    )
+
+    @JvmField
+    val SUBSTRATE_VALUE: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_SUBSTRATE_VALUE",
+        DefaultLanguageHighlighterColors.FUNCTION_DECLARATION
+    )
+
+    @JvmField
+    val DOC_ATTRIBUTE_KEY: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_DOC_ATTRIBUTE_KEY",
+        DefaultLanguageHighlighterColors.METADATA
+    )
+
+    @JvmField
+    val PARENT_OVERRIDE: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+        "DREAMSHADER_PARENT_OVERRIDE",
+        DefaultLanguageHighlighterColors.STATIC_FIELD
+    )
+
     @JvmField
     val BAD_CHARACTER: TextAttributesKey =
         TextAttributesKey.createTextAttributesKey("DREAMSHADER_BAD_CHAR", HighlighterColors.BAD_CHARACTER)

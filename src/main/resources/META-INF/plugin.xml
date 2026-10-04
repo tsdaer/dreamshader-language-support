@@ -52,6 +52,8 @@
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderStructureViewFactory"/>
         <referencesSearch
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderReferencesSearchExecutor"/>
+        <referencesSearch
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2ReferencesSearchExecutor"/>
         <gotoDeclarationHandler
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.navigation.DreamShaderGotoDeclarationHandler"/>
         <gotoClassContributor

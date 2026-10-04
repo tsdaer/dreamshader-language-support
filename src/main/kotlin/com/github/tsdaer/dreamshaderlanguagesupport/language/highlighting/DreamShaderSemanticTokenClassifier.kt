@@ -37,6 +37,12 @@ internal object DreamShaderSemanticTokenClassifier {
     }
 
     private fun classifyIdentifier(element: PsiElement): TextAttributesKey? {
+        // The 2.0 dialect gets its own structural classification first (C4); the frozen
+        // 1.x rules below only apply when no V2 rule matched.
+        if (DreamShader2SemanticClassifier.isV2File(element)) {
+            DreamShader2SemanticClassifier.classifyIdentifier(element)?.let { return it }
+        }
+
         val declaration = PsiTreeUtil.getParentOfType(element, DreamShaderDeclaration::class.java, false)
         if (declaration != null && element == declaration.nameIdentifier) {
             return DreamShaderTextAttributes.DECLARATION_NAME

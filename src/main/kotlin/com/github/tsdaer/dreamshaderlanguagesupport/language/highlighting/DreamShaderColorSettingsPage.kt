@@ -31,7 +31,12 @@ private val COLOR_ATTRIBUTES = arrayOf(
     AttributesDescriptor("DreamShader Constant", DreamShaderTextAttributes.CONSTANT),
     AttributesDescriptor("DreamShader Import", DreamShaderTextAttributes.IMPORT),
     AttributesDescriptor("DreamShader Settings Key", DreamShaderTextAttributes.SETTINGS_KEY),
-    AttributesDescriptor("DreamShader Builtin Function", DreamShaderTextAttributes.BUILTIN_FUNCTION)
+    AttributesDescriptor("DreamShader Builtin Function", DreamShaderTextAttributes.BUILTIN_FUNCTION),
+    AttributesDescriptor("DreamShader Uniform Parameter (2.0)", DreamShaderTextAttributes.UNIFORM_PARAMETER),
+    AttributesDescriptor("DreamShader Function Parameter (2.0)", DreamShaderTextAttributes.FUNCTION_PARAMETER),
+    AttributesDescriptor("DreamShader Substrate Value (2.0)", DreamShaderTextAttributes.SUBSTRATE_VALUE),
+    AttributesDescriptor("DreamShader Doc Attribute Key (2.0)", DreamShaderTextAttributes.DOC_ATTRIBUTE_KEY),
+    AttributesDescriptor("DreamShader Parent Override Name (2.0)", DreamShaderTextAttributes.PARENT_OVERRIDE)
 )
 
 private val DEMO_TAG_MAP: Map<String, TextAttributesKey> = mapOf(
@@ -49,7 +54,12 @@ private val DEMO_TAG_MAP: Map<String, TextAttributesKey> = mapOf(
     "qualifier" to DreamShaderTextAttributes.QUALIFIER,
     "const" to DreamShaderTextAttributes.CONSTANT,
     "setting" to DreamShaderTextAttributes.SETTINGS_KEY,
-    "bfunc" to DreamShaderTextAttributes.BUILTIN_FUNCTION
+    "bfunc" to DreamShaderTextAttributes.BUILTIN_FUNCTION,
+    "uniform" to DreamShaderTextAttributes.UNIFORM_PARAMETER,
+    "fparam" to DreamShaderTextAttributes.FUNCTION_PARAMETER,
+    "substrate" to DreamShaderTextAttributes.SUBSTRATE_VALUE,
+    "dockey" to DreamShaderTextAttributes.DOC_ATTRIBUTE_KEY,
+    "override" to DreamShaderTextAttributes.PARENT_OVERRIDE
 )
 
 /**

@@ -5,6 +5,9 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBun
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDialects
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.highlighting.DreamShaderTextAttributes
+import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderSymbolIndexRepository
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2UniformDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2ArgumentList
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2NamedArgument
 import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2WorkspaceSymbols
@@ -33,19 +36,70 @@ import com.intellij.psi.util.PsiTreeUtil
  * - C2 mismatch — warning-level category conflicts on assignment (never an error).
  */
 internal object DreamShader2DiagnosticsPass {
+    private val DOC_ATTRIBUTE_KEY_PATTERN = Regex("@[A-Za-z][A-Za-z0-9_]*")
 
     fun annotate(file: DreamShaderPsiFile, sourceText: String, holder: AnnotationHolder) {
         if (!routesToV2Analysis(file, sourceText)) return
         val workspace = file.project.getService(DreamShader2WorkspaceSymbols::class.java)
         val inference = DreamShader2InferenceContext.forFile(file, workspace)
 
+        annotateDocAttributeKeys(file, holder)
         annotateNamedArgumentOrder(file, holder)
         annotateSubstrateOperators(file, inference, holder)
         annotateSubstrateBuilders(file, holder)
         annotateAssignmentCategoryMismatches(file, inference, holder)
         if (DreamShaderDialects.extensionOf(file.virtualFile?.name ?: file.name) == "dsi") {
             DreamShader2InstanceOverridePass.annotate(file, holder)
+            annotateParentOverrideNames(file, holder)
         }
+    }
+
+    // ------------------------------------------------------------------
+    // C4 — semantic colors: `/// @key` attributes and .dsi override names
+    // ------------------------------------------------------------------
+
+    /** Colors the `@key` attribute names inside the file's `///` doc blocks. */
+    private fun annotateDocAttributeKeys(file: DreamShaderPsiFile, holder: AnnotationHolder) {
+        PsiTreeUtil.processElements(file) { element ->
+            if (element.node?.elementType != DreamShaderTokenTypes.DOC_COMMENT) return@processElements true
+            val text = element.text
+            DOC_ATTRIBUTE_KEY_PATTERN.findAll(text).forEach { match ->
+                val absolute = com.intellij.openapi.util.TextRange(
+                    element.textRange.startOffset + match.range.first,
+                    element.textRange.startOffset + match.range.last + 1,
+                )
+                holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(absolute)
+                    .textAttributes(DreamShaderTextAttributes.DOC_ATTRIBUTE_KEY)
+                    .create()
+            }
+            true
+        }
+    }
+
+    /** Colors the uniform override names that resolve to the parent's parameter schema. */
+    private fun annotateParentOverrideNames(file: DreamShaderPsiFile, holder: AnnotationHolder) {
+        val schemaParameters = parentSchemaParameterNames(file) ?: return
+        PsiTreeUtil.collectElementsOfType(file, DreamShader2UniformDeclaration::class.java).forEach { uniform ->
+            val nameLeaf = uniform.declarationName()?.let { name ->
+                PsiTreeUtil.collectElements(uniform) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER && it.text == name }
+                    .firstOrNull()
+            } ?: return@forEach
+            if (nameLeaf.text in schemaParameters) {
+                holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(nameLeaf)
+                    .textAttributes(DreamShaderTextAttributes.PARENT_OVERRIDE)
+                    .create()
+            }
+        }
+    }
+
+    private fun parentSchemaParameterNames(file: DreamShaderPsiFile): Set<String>? {
+        val virtualFile = file.virtualFile ?: return null
+        val repository = file.project.getService(DreamShaderSymbolIndexRepository::class.java)
+        val schema = repository.indexForSource(virtualFile).data?.instance?.schema ?: return null
+        if (!schema.valid) return null
+        return schema.parameters.mapNotNull { it.name }.toSet()
     }
 
     private fun routesToV2Analysis(file: DreamShaderPsiFile, sourceText: String): Boolean {
