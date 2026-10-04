@@ -18,7 +18,17 @@ import java.util.*
 /**
  * Implementation of DreamShaderDeclarationImpl.
  */
-class DreamShaderDeclarationImpl(node: ASTNode) : ASTWrapperPsiElement(node), DreamShaderDeclaration {
+class DreamShaderDeclarationImpl(node: ASTNode) :
+    ASTWrapperPsiElement(node),
+    DreamShaderDeclaration,
+    com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderHlslBodyHost {
+
+    /** Bare-HLSL injection (D7): function-like bodies only, brace-inside range. */
+    override fun dreamShaderHlslBodyRange(): com.intellij.openapi.util.TextRange? {
+        if (!isFunctionLike()) return null
+        return com.github.tsdaer.dreamshaderlanguagesupport.language.editor.braceInsideRange(this)
+    }
+
     override fun keywordText(): String? {
         val keywordNode = node.findChildByType(DreamShaderTokenTypes.KEYWORD) ?: return null
         return keywordNode.text.lowercase(Locale.ROOT)

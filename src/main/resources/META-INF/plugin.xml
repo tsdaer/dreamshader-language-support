@@ -178,6 +178,34 @@
         <stubElementTypeHolder
                 class="com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2StubElementTypes"
                 externalIdPrefix="dreamshader2."/>
+
+        <!-- M12 D-line editor experience (D1-D7) -->
+        <highlightUsagesHandlerFactory
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderHighlightUsagesHandlerFactory"/>
+        <surroundDescriptor
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderSurroundDescriptor"/>
+        <codeBlockSupportHandler
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCodeBlockSupportHandler"/>
+        <joinLinesHandler
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderJoinLinesHandler"/>
+        <moveLeftRightHandler
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMoveElementLeftRightHandler"/>
+        <statementUpDownMover
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderStatementUpDownMover"/>
+        <listSplitJoinContext
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderListSplitJoinContext"/>
+        <multiHostInjector
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderHlslInjector"/>
+        <suggestedRefactoringSupport
+                language="DreamShaderLang"
+                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderSuggestedRefactoringSupport"/>
+        <copyPathProvider
+                implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCopyPathProvider"/>
     </extensions>
 
     <actions>

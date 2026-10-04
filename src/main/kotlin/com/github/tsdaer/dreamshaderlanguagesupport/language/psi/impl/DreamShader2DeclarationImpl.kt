@@ -20,6 +20,9 @@ import com.intellij.extapi.psi.ASTWrapperPsiElement
 import com.intellij.extapi.psi.StubBasedPsiElementBase
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFileFactory
+import com.intellij.psi.PsiNameIdentifierOwner
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
 import com.intellij.psi.StubBasedPsiElement
 import com.intellij.psi.stubs.StubElement
 import com.intellij.psi.tree.IElementType
@@ -151,10 +154,35 @@ open class DreamShader2GlobalDeclarationImpl : DreamShader2StubbedDeclarationBas
 }
 
 open class DreamShader2FunctionDeclarationImpl : DreamShader2StubbedDeclarationBase<DreamShader2FunctionStub>,
-    DreamShader2FunctionDeclaration {
+    DreamShader2FunctionDeclaration,
+    PsiNameIdentifierOwner,
+    com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderHlslBodyHost {
 
     constructor(node: ASTNode) : super(node)
     constructor(stub: DreamShader2FunctionStub, nodeType: IElementType) : super(stub, nodeType)
+
+    override fun getName(): String? = declarationName()
+
+    override fun getNameIdentifier(): PsiElement? =
+        dreamShader2FirstLeafAfterType(this, DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.TYPE)?.psi
+
+    override fun setName(name: String): PsiElement {
+        val identifier = getNameIdentifier() ?: throw incorrectOperation("Function declaration has no name")
+        val newName = PsiFileFactory.getInstance(project)
+            .createFileFromText("dummy.dss", DreamShaderLanguage, "export void $name() {}")
+            .let { dummy ->
+                dreamShader2FirstLeafAfterType(dummy, DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.TYPE)?.psi
+            } ?: throw incorrectOperation("Cannot create identifier '$name'")
+        return identifier.replace(newName)
+    }
+
+    private fun incorrectOperation(message: String) = com.intellij.util.IncorrectOperationException(message)
+
+    /** Bare-HLSL injection (D7): `/// @custom` bodies only, brace-inside range. */
+    override fun dreamShaderHlslBodyRange(): com.intellij.openapi.util.TextRange? {
+        if (!hasCustomBody()) return null
+        return com.github.tsdaer.dreamshaderlanguagesupport.language.editor.customBodyRange(this)
+    }
 
     override fun declarationName(): String? = stub?.name
         ?: dreamShader2FirstLeafAfterType(this, DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.TYPE)?.text

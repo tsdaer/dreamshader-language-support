@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew test *)",
+      "WebSearch",
+      "Read(//tmp/**)",
+      "Bash(ls -la /tmp/)",
+      "Read(//c/tmp/**)",
+      "Read(//j//**)",
+      "Read(//c/Users/Bunny/.vscode/extensions/**)",
+      "Read(//c/Users/Bunny/.vscode-oss/**)",
+      "Bash(ls -la language/navigation/)",
+      "Bash(ls -la language/editor/)",
+      "Bash(wc -l language/navigation/*.kt language/editor/*.kt)"
+    ]
+  }
+}
