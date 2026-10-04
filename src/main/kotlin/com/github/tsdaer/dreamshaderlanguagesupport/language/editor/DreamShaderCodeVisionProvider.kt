@@ -59,6 +59,7 @@ class DreamShaderCodeVisionProvider : CodeVisionProvider<Void?> {
             val entry = ClickableTextCodeVisionEntry(hint, id, onClick = { _, _ -> })
             lenses.add(range to entry)
         }
+        lenses.addAll(DreamShader2CodeVision.compute(file, id))
         return CodeVisionState.Ready(lenses)
     }
 
