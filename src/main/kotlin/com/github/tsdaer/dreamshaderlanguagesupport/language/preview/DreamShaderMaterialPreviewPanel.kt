@@ -40,10 +40,18 @@ internal class DreamShaderMaterialPreviewPanel(
     private val swingImageLabel = JLabel(DreamShaderBundle.message("preview.panel.waiting"), SwingConstants.CENTER)
     private var sourceFile: VirtualFile? = null
     private var lastRequestId: String? = null
+    private var wsClient: DreamShaderPreviewWsClient? = null
+    private val probeButton = JButton(DreamShaderBundle.message("preview.panel.probe.set"))
+    private val clearProbeButton = JButton(DreamShaderBundle.message("preview.panel.probe.clear"))
+    private val isWebSocketTransport: Boolean
+        get() = project.getService(DreamShaderProjectSettings::class.java).state.previewTransport
+            .equals("websocket", ignoreCase = true)
 
     init {
         project.getService(DreamShaderMaterialPreviewPanelService::class.java).panel = this
         buildUi()
+        probeButton.addActionListener { sendProbeFromEditor() }
+        clearProbeButton.addActionListener { wsClient?.clearProbe() }
         subscribeToEditor()
         subscribeToDocumentChanges()
         subscribeToPreviewEvents()
@@ -75,6 +83,8 @@ internal class DreamShaderMaterialPreviewPanel(
                 add(JLabel(DreamShaderBundle.message("preview.panel.mesh.label")))
                 add(meshCombo)
                 add(refreshButton)
+                add(probeButton)
+                add(clearProbeButton)
             }
             add(identity, BorderLayout.CENTER)
             add(controls, BorderLayout.EAST)
@@ -163,6 +173,10 @@ internal class DreamShaderMaterialPreviewPanel(
             schedulePreviewRequest()
             return
         }
+        if (isWebSocketTransport) {
+            startWebSocketPreview(file)
+            return
+        }
         // A3.5：status.json 心跳缺席意味着编辑器已关停——请求会被上游直接丢弃，不写。
         val bridgeDir = DreamShaderBridgePathResolver.resolveBridgeDirectory(project, file)
         if (!DreamShaderBridgeStatus.resolveLiveness(bridgeDir).alive) {
@@ -227,6 +241,75 @@ internal class DreamShaderMaterialPreviewPanel(
         } else if (status.equals("error", ignoreCase = true)) {
             renderMessage(message.ifBlank { DreamShaderBundle.message("preview.panel.error") })
         }
+    }
+
+    /** M12 A7: live streaming preview over the bridge's loopback WebSocket server. */
+    private fun startWebSocketPreview(file: VirtualFile) {
+        val settings = project.getService(DreamShaderProjectSettings::class.java).state
+        val client = wsClient ?: DreamShaderPreviewWsClient(
+            listener = object : DreamShaderPreviewWsClient.Listener {
+                override fun onResult(json: String) {
+                    javax.swing.SwingUtilities.invokeLater {
+                        statusLabel.text = DreamShaderBundle.message("preview.panel.status", "previewResult")
+                    }
+                }
+
+                override fun onFrame(image: java.awt.image.BufferedImage?) {
+                    if (image == null) return
+                    javax.swing.SwingUtilities.invokeLater {
+                        swingImageLabel.text = null
+                        swingImageLabel.icon = ImageIcon(image)
+                        swingImageLabel.preferredSize = Dimension(image.width, image.height)
+                        swingImageLabel.revalidate()
+                        swingImageLabel.repaint()
+                    }
+                }
+
+                override fun onProbeState(json: String) {
+                    javax.swing.SwingUtilities.invokeLater {
+                        statusLabel.text = DreamShaderBundle.message("preview.panel.probe.status")
+                    }
+                }
+
+                override fun onError(message: String) {
+                    javax.swing.SwingUtilities.invokeLater {
+                        statusLabel.text = DreamShaderBundle.message("preview.panel.wsError", message)
+                    }
+                }
+            },
+            port = settings.previewWebSocketPort,
+        ).also {
+            wsClient = it
+            it.connect()
+        }
+
+        val requestId = UUID.randomUUID().toString()
+        lastRequestId = requestId
+        val connected = client.sendPreviewMaterial(
+            sourceFile = file.path,
+            mesh = meshCombo.selectedItem?.toString().orEmpty(),
+            requestId = requestId,
+            frameRate = settings.previewLiveFrameRate.coerceAtLeast(1).toDouble(),
+            encoding = "raw",
+        )
+        statusLabel.text = if (connected) {
+            DreamShaderBundle.message("preview.panel.wsStreaming")
+        } else {
+            DreamShaderBundle.message("preview.panel.wsConnectFailed")
+        }
+    }
+
+    /** Editor-line linkage: the probe attaches at the caret line of the active editor. */
+    private fun sendProbeFromEditor() {
+        val client = wsClient ?: return
+        val editor = FileEditorManager.getInstance(project).selectedTextEditor
+        val document = sourceFile?.let { file -> FileDocumentManager.getInstance().getDocument(file) }
+        val line: Int = if (editor != null && document != null && editor.document == document) {
+            editor.caretModel.logicalPosition.line + 1
+        } else {
+            0
+        }
+        client.sendProbe(line)
     }
 
     private fun renderImage(path: Path) {

@@ -97,17 +97,29 @@ class DreamShaderRevealNodeAction : DumbAwareAction() {
                 NotificationType.ERROR,
                 DreamShaderBundle.message("bridge.notification.revealNode.timedOut")
             )
-            !response.ok -> notify(
-                project,
-                NotificationType.ERROR,
-                DreamShaderBundle.message(
+            !response.ok -> {
+                val diagnostic = response.diagnostics
+                    .firstOrNull { it.stage.equals("navigate", ignoreCase = true) }
+                val notificationContent = DreamShaderBundle.message(
                     "bridge.notification.revealNode.failed",
                     response.navigateFailureCode ?: "-",
                     response.message ?: DreamShaderBundle.message("common.unknownError")
                 )
-            )
+                // C7: a navigate failure that carries a source location offers "Open at line".
+                if (diagnostic != null && !diagnostic.file.isNullOrBlank() && diagnostic.line >= 1) {
+                    notifyWithOpenAtLine(project, NotificationType.ERROR, notificationContent, diagnostic)
+                } else {
+                    notify(project, NotificationType.ERROR, notificationContent)
+                }
+            }
             else -> {
                 DreamShaderRevealNodeMarker.mark(editor, line, response)
+                // C7: the reverse direction lands the caret on the revealed source line.
+                val document = editor.document
+                if (line >= 1 && line <= document.lineCount) {
+                    editor.caretModel.moveToOffset(document.getLineStartOffset(line - 1))
+                    editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER)
+                }
                 notify(
                     project,
                     NotificationType.INFORMATION,
@@ -119,6 +131,30 @@ class DreamShaderRevealNodeAction : DumbAwareAction() {
                 )
             }
         }
+    }
+
+    /** The failure notification plus an "Open at line" jump to the diagnostic's source row. */
+    private fun notifyWithOpenAtLine(
+        project: Project,
+        type: NotificationType,
+        content: String,
+        diagnostic: DreamShaderRevealNodeDiagnosticDto,
+    ) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup("DreamShader Notifications")
+            .createNotification(DreamShaderBundle.message("bridge.title"), content, type)
+        val actionText = DreamShaderBundle.message("bridge.notification.revealNode.openAtLine")
+        notification.addAction(object : com.intellij.openapi.project.DumbAwareAction(actionText) {
+            override fun actionPerformed(e: com.intellij.openapi.actionSystem.AnActionEvent) {
+                DreamShaderSourceSpanNavigator.openAtLine(
+                    project,
+                    diagnostic.file.orEmpty(),
+                    diagnostic.line,
+                    diagnostic.column,
+                )
+            }
+        })
+        notification.notify(project)
     }
 
     private fun notify(project: Project, type: NotificationType, content: String) {

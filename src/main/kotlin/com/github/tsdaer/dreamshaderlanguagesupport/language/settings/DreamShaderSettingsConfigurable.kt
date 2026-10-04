@@ -58,6 +58,8 @@ class DreamShaderSettingsConfigurable(
     private var recompileAllCommandField: JBTextField? = null
     private var cleanGeneratedCommandField: JBTextField? = null
     private var previewAutoRefreshDelayField: JBTextField? = null
+    private var previewTransportCombo: com.intellij.openapi.ui.ComboBox<String>? = null
+    private var previewWebSocketPortField: JBTextField? = null
     private var bridgeStatusLabel: JLabel? = null
 
     override fun getDisplayName(): String = DreamShaderBundle.message("settings.title")
@@ -376,6 +378,8 @@ class DreamShaderSettingsConfigurable(
         cleanGeneratedCommandField = JBTextField()
         dscExecutablePathField = JBTextField()
         previewAutoRefreshDelayField = JBTextField()
+        previewTransportCombo = com.intellij.openapi.ui.ComboBox(arrayOf("file", "websocket"))
+        previewWebSocketPortField = JBTextField()
 
         bridgeStatusLabel = createInfoLabel(BRIDGE_STATUS_LABEL_NAME)
 
@@ -514,6 +518,16 @@ class DreamShaderSettingsConfigurable(
             previewAutoRefreshDelayField as JBTextField,
             DreamShaderBundle.message("settings.previewAutoRefreshDelay.tooltip")
         ))
+        previewSection.addSectionRow(DreamShaderUi.formRow(
+            DreamShaderBundle.message("settings.previewTransport.label"),
+            previewTransportCombo as com.intellij.openapi.ui.ComboBox<String>,
+            DreamShaderBundle.message("settings.previewTransport.tooltip")
+        ))
+        previewSection.addSectionRow(DreamShaderUi.formRow(
+            DreamShaderBundle.message("settings.previewWebSocketPort.label"),
+            previewWebSocketPortField as JBTextField,
+            DreamShaderBundle.message("settings.previewWebSocketPort.tooltip")
+        ))
         addSection(
             title = DreamShaderBundle.message("preview.title"),
             description = DreamShaderBundle.message("settings.previewAutoRefreshDelay.tooltip"),
@@ -590,7 +604,8 @@ class DreamShaderSettingsConfigurable(
         state.dscExecutablePath = dscExecutablePathField?.text.orEmpty().trim()
         state.bridgeRecompileAllCommand = recompileAllCommandField?.text.orEmpty().trim()
         state.bridgeCleanGeneratedShadersCommand = cleanGeneratedCommandField?.text.orEmpty().trim()
-        state.previewTransport = "file"
+        state.previewTransport = previewTransportCombo?.selectedItem?.toString().orEmpty().ifBlank { "file" }
+        state.previewWebSocketPort = previewWebSocketPortField?.text?.trim()?.toIntOrNull()?.coerceIn(1, 65535) ?: 17864
         state.previewAutoRefreshDelayMs = normalizePreviewDelay(previewAutoRefreshDelayField?.text.orEmpty())
 
         if (oldEnableCodeLens != state.enableCodeLens || oldEnableInlayParameterHints != state.enableInlayParameterHints) {
@@ -618,6 +633,8 @@ class DreamShaderSettingsConfigurable(
         recompileAllCommandField?.text = state.bridgeRecompileAllCommand
         cleanGeneratedCommandField?.text = state.bridgeCleanGeneratedShadersCommand
         previewAutoRefreshDelayField?.text = state.previewAutoRefreshDelayMs.coerceIn(250, 10000).toString()
+        previewTransportCombo?.selectedItem = state.previewTransport.ifBlank { "file" }
+        previewWebSocketPortField?.text = state.previewWebSocketPort.toString()
         refreshImportExtensionPreview()
         refreshProjectRootAutoResolvedHint()
         refreshBridgeStatusHint()
@@ -651,6 +668,8 @@ class DreamShaderSettingsConfigurable(
         recompileAllCommandField = null
         cleanGeneratedCommandField = null
         previewAutoRefreshDelayField = null
+        previewTransportCombo = null
+        previewWebSocketPortField = null
         bridgeStatusLabel = null
     }
 
