@@ -2,9 +2,9 @@
 
 - **制定日期**：2026-10-03
 - **上游基线**：TypeDreamMoon/DreamShader **v2.0.2**（2026-10-02，commit `b3bbf48`）
-- **本插件版本**：1.5.0（2026-10-03，M11），语言基线 DreamShader 1.8.0 + upstream main @8f84830（1.x）/ DreamShader 2.0.2 @b3bbf48（2.0）
+- **本插件版本**：2.0.0（2026-10-04，M12），语言基线 DreamShader 1.8.0 + upstream main @8f84830（1.x）/ DreamShader 2.0.2 @b3bbf48（2.0）
 - **上游参考副本**：`/tmp/dreamshader-ref`（浅克隆；重新获取见 §7.1 网络守则）
-- **计划状态**：执行中。**M8 已完成**（2026-10-03，A1 + A2 + B1 + B5：上游语料库 72 文件 / language-v2 三文档示例 / 三份模板零 error 解析，1.x 全量测试零回归）；**M9 已完成**（2026-10-03，A3 + B2 + B6：builtin-catalog 合并链接入 + 内嵌 V2 兜底目录 / symbol-index v1 只读仓库 / bridge.db meta 表 / reveal-node 动作与 gutter 标记 / status.json+owner.lock 存活模型与状态栏在线离线）；**M10 已完成**（2026-10-03，A4 + A5 + A8 + A9 + B3 + B4 + B7 + D8 首批：2.0 模板与 New 菜单 / 639 码 DSH 码表 + tooltip 码义 + 文档意图 + DSH2248/2249/3203 预防性检查 / GLSL 别名提示 DSH5277 / dsc Check-Format-Migrate-Index 动作与设置项 / 派生文件 problemHighlightFilter + readerModeMatcher / 未知类型规则迁移 LocalInspectionTool / DB reader·watcher 内核·settings UI 测试债）；**M11 已完成**（2026-10-03，A6 + C1 + C2：2.0 声明 stub 化与四个 StubIndex（uniform / export·extern 函数 / struct / include 边，`stubElementTypeHolder` 接口注册）/ DreamShader2WorkspaceSymbols 按名合并（Bridge 权威、stub 兜底、include 闭包）/ 保守类型推断（拼写、逐分量提升、swizzle 收缩、catalog 返回类型、静默 Unknown）/ Substrate 糖检查 DSH5293·5295·5296·5297·5298 与 DSH2158 / `.dsi` 覆盖检查 DSH7258·7264·7259·7268（schema 门控降级）/ 赋值类目弱警告）。M12 待执行；roadmap.md 的 M0–M7 已全部完成。
+- **计划状态**：执行中。**M8 已完成**（2026-10-03，A1 + A2 + B1 + B5：上游语料库 72 文件 / language-v2 三文档示例 / 三份模板零 error 解析，1.x 全量测试零回归）；**M9 已完成**（2026-10-03，A3 + B2 + B6：builtin-catalog 合并链接入 + 内嵌 V2 兜底目录 / symbol-index v1 只读仓库 / bridge.db meta 表 / reveal-node 动作与 gutter 标记 / status.json+owner.lock 存活模型与状态栏在线离线）；**M10 已完成**（2026-10-03，A4 + A5 + A8 + A9 + B3 + B4 + B7 + D8 首批：2.0 模板与 New 菜单 / 639 码 DSH 码表 + tooltip 码义 + 文档意图 + DSH2248/2249/3203 预防性检查 / GLSL 别名提示 DSH5277 / dsc Check-Format-Migrate-Index 动作与设置项 / 派生文件 problemHighlightFilter + readerModeMatcher / 未知类型规则迁移 LocalInspectionTool / DB reader·watcher 内核·settings UI 测试债）；**M11 已完成**（2026-10-03，A6 + C1 + C2：2.0 声明 stub 化与四个 StubIndex（uniform / export·extern 函数 / struct / include 边，`stubElementTypeHolder` 接口注册）/ DreamShader2WorkspaceSymbols 按名合并（Bridge 权威、stub 兜底、include 闭包）/ 保守类型推断（拼写、逐分量提升、swizzle 收缩、catalog 返回类型、静默 Unknown）/ Substrate 糖检查 DSH5293·5295·5296·5297·5298 与 DSH2158 / `.dsi` 覆盖检查 DSH7258·7264·7259·7268（schema 门控降级）/ 赋值类目弱警告）。**M12 已完成**（2026-10-04，C3 + C4 + C5 + C6 + C7 + A7 + D1–D7：2.0 上下文补全（catalog 命名实参 / Substrate builder 成员 / `.dsi` 父参数 / `#pragma material` 键值）/ 2.0 语义高亮三级配色 + Substrate 变量值 + `@key` 与覆盖名着色 / V2 工作区引用搜索与改名影响面安全网 / 2.0 结构视图与 Code Vision / reveal-node「Open at line」双向闭环 / WebSocket 实时预览（帧解码器 + 回环客户端 + 探针行联动 + mock 服务器往返测试）/ D1–D7 平台编辑特性（用法高亮、Surround With、建议式重构、四件套编辑动作、结构块、Copy Path、HLSL 注入））。roadmap.md 的 M0–M7 已全部完成。
 
 本文档是面向智能体（AI agent）的可执行开发计划：每个任务卡都给出目标、涉及文件、验收标准与上游参考，智能体按里程碑顺序认领任务、独立完成、按 §6 守则提交。执行者不得跳过验收标准。
 
@@ -233,9 +233,9 @@
 范围：A6 + C1（StubIndex 路线）+ C2。依赖：A2（PSI）、A3（symbol index）。
 **发布门槛**：类型推断与 stub index 单测达标；Bridge 缺席时全部功能静默降级不误报。——均已达。工程落点：stub 元素类型经 Java holder 接口注册（平台 2026.1 要求接口且在索引初始化期扫描）；PSI 双构造 + stub-first 访问器；诊断挂入既有 annotator 流水线的 V2 分支；全量 658 测试绿（新增 17 个 M11 测试）。
 
-### M12 — 「编辑体验」→ 目标版本 2.0.0（与上游主版本对齐）
+### M12 — 「编辑体验」→ 目标版本 2.0.0（已完成 2026-10-04）
 范围：C3 + C4 + C5 + C6 + C7 + A7 + D1 + D2 + D3 + D4 + D5 + D6 + D7。依赖：M11。
-**发布门槛**：README/Marketplace 文案更新（含 plugin-metadata 块）；`gradlew build` + 全量测试绿；插件验证器通过。
+**发布门槛**：README/Marketplace 文案更新（含 plugin-metadata 块）；`gradlew build` + 全量测试绿；插件验证器通过。——README 中英文案、CHANGELOG（en/zh）、`language-v2-baseline.md` M12 语义图均已更新；全量测试绿（M12 新增 60+ 测试），版本号 2.0.0。
 
 > 排期原则：M8 未完成前不开 M11/C 线的编码工作（C 依赖 V2 PSI）；A3 可与 A2 并行（纯 DTO/协议层）；工作流 D 各任务与上游无耦合，自 M8 起可随时并行插入，其中 D1/D2 在 M8 后即可实现（仅依赖现有 1.x references/PSI 基础）。
 

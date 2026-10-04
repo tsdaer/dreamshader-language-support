@@ -21,7 +21,8 @@ description: |
   **Editing and navigation**
   - Context-aware completion for sections, types, settings values, catalog-driven `UE.*` / `Substrate.*`, HLSL, and imports
   - Goto declaration, find usages, references, Rename, Safe Delete, Copy/Paste Reference, breadcrumbs, Context Info, hover docs, signature help, plain-text symbol completion, and rename suggestions, with `UE.*` / `Substrate.*` served from the shared material-expression catalog
-  - Inlay parameter hints, Code Vision hints, declaration/import gutter markers, and Bridge diagnostic line markers with source-location navigation
+  - Inlay parameter hints, Code Vision hints (usage counts above 2.0 export functions and a clickable Parent hint on `.dsi` instance pragmas), declaration/import gutter markers, and Bridge diagnostic line markers with source-location navigation
+  - 2.0 editor experience: in-file usage highlighting, Surround With (`{ }` / `if` / `for`; named sections for 1.x), statement up/down and list element moving, comment-line joining, split/join of argument lists, code block navigation, in-file Copy Path (returns the `/Game/...` asset path inside the source root), and conditional HLSL injection for the bare-HLSL bodies, silent when no HLSL language is installed
   - IDE include/dependency integration for DreamShader `import "..."` statements
 
   **Diagnostics and project integration**
@@ -38,7 +39,7 @@ description: |
   **Packages, templates, and hub**
   - Package tooling: package store dialog with search/filter/details/install-state markers, background install-update-remove, add-remove index sources, GitHub install/update/remove, open packages folder, and package-aware import resolution
   - Native File and Code Templates plus template tools for 2.0 material/function (`.dss`) and instance (`.dsi`), 1.x material/function/header, texture sample, noise material, package scaffold, and package wizard workflows
-  - Material preview tool window backed by the portable DreamShader Bridge file transport
+  - Material preview tool window backed by the portable DreamShader Bridge file transport, with an opt-in WebSocket transport (`ws://127.0.0.1:17864`) streaming live RGBA8 frames plus Graph probes attached at the editor's caret line
   - Unified DreamShader Hub entry and shared card-based UI surface for settings, diagnostics, preview, package, and template workflows
 description_zh: |
   面向 JetBrains Rider 的完整 DreamShaderLang 支持，覆盖 `.dsm`、`.dsf`、`.dsh` 文件，从语言核心到工具集成，并支持 DreamShader 2.0 方言的编辑器桥接工件、DSH 编码诊断与 `dsc` 工具链。
@@ -52,7 +53,8 @@ description_zh: |
   **编辑与导航**
   - 上下文感知补全：sections、类型、设置值、catalog 驱动的 `UE.*` / `Substrate.*`、HLSL 与 imports
   - 跳转声明、查找用法、引用、重命名、安全删除、Copy/Paste Reference、面包屑、Context Info、悬浮文档、签名帮助、纯文本符号补全与重命名建议，`UE.*` / `Substrate.*` 由共享的 material-expression catalog 提供
-  - 内联参数提示、Code Vision 提示、声明/import gutter 标记，以及可跳转源码位置的 Bridge 诊断行标记
+  - 内联参数提示、Code Vision 提示（2.0 export 函数上方的引用计数与 `.dsi` instance pragma 上方可点击的 Parent 提示）、声明/import gutter 标记，以及可跳转源码位置的 Bridge 诊断行标记
+  - 2.0 编辑体验：文件内用法高亮、Surround With（`{ }` / `if` / `for`；1.x 为命名 section）、语句上下移动与列表元素左右移动、注释行合并、实参列表拆行合并、结构块导航、文件内 Copy Path（源码根内返回 `/Game/...` 资产路径），以及裸 HLSL 函数体的条件式 HLSL 注入（无 HLSL 语言时静默）
   - 将 DreamShader `import "..."` 接入 IDE include/dependency 机制
 
   **诊断与项目集成**
@@ -69,7 +71,7 @@ description_zh: |
   **包、模板与 Hub**
   - 包工具：带搜索/筛选/详情/安装状态标记的 package store 对话框、后台安装-更新-移除、增删索引源、GitHub 安装/更新/移除、打开包目录，以及包感知的 import 解析
   - 原生 File and Code Templates，以及 2.0 材质/函数（`.dss`）与实例（`.dsi`）、1.x 材质/函数/头文件、贴图采样、噪声材质、包脚手架与包向导的模板工具
-  - 基于 DreamShader Bridge 文件传输的材质预览工具窗口
+  - 基于 DreamShader Bridge 文件传输的材质预览工具窗口，并支持可选的 WebSocket 传输（`ws://127.0.0.1:17864`）流式获取 RGBA8 实时帧，附上与编辑器光标行联动的 Graph 探针
   - 统一的 DreamShader Hub 入口与卡片化共享 UI 表面，整合设置、诊断、预览、包与模板工作流
 <!-- plugin-metadata:end -->
 

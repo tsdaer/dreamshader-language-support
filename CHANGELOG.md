@@ -2,6 +2,19 @@
 
 # dreamshader-language-support Changelog
 
+## [2.0.0] - 2026-10-04
+
+### Added
+
+- Milestone M12 editing experience (upstream `2.0.2` @ `b3bbf48`), aligning the plugin version with the upstream 2.0 line:
+  - **Context-aware 2.0 completion** (C3): a new PSI-driven contributor for `.dss`/`.dsi` files - named-argument completion driven by the builtin catalog's `inputs[]` (filled names and positionally consumed pins are excluded), `Substrate` builder member completion on C2-typed receivers with a documented offline pin fallback, `.dsi` parent-parameter completion from the Bridge symbol index, and `#pragma material(...)` keys/values with Bridge settings.json first and an offline fallback table from the upstream settings page.
+  - **Semantic highlighting for the 2.0 dialect** (C4): three-level identifier colors (uniform parameter / function parameter / locals, structural and AST-layer based), a dedicated value color for explicitly `Substrate`/`material`-typed variables at usage sites, `/// @key` attribute names and `.dsi` override names colored in the file-level pass, and five new configurable color keys.
+  - **Workspace usages and the rename safety net** (C5): a second references-search executor serves the stub-backed 2.0 declarations over the word index (derived files excluded, `.dsi` override declarations surface as renameable usages), and the rename impact checker spells out `.dsi` overrides for uniforms and same-name export/call-site files before a rename.
+  - **Structure view and Code Vision for 2.0** (C6): includes, uniforms grouped by `/// @group`, globals, structs and functions; a navigable Parent node in `.dsi` files; usage counts above export functions and a clickable "Parent: X" hint above the instance pragma. 1.x files keep the legacy structure view untouched.
+  - **Two-way navigation closure** (C7): a shared source-span navigator backs the new "Open at line" action on reveal-node failure notifications (navigate-stage diagnostics carry file/line/column), and a successful reveal also lands the caret on the revealed line. Reveal gutter-marker rendering is covered by tests.
+  - **WebSocket live preview** (A7): the transport B protocol - the `[u32 LE length][tag][payload]` envelope, the 24-byte RGBA8 raw-frame header, the png-encoding pairing rule - implemented as an opt-in loopback client with `setProbe`/`clearProbe` wired to the active editor's caret line; the file transport stays the default fallback, and a mock loopback WebSocket server covers the round-trip.
+  - **Editor experience platform features** (D1-D7): in-file usage highlighting, Surround With (`{ }` / `if` / `for` for 2.0, named sections for 1.x), rename-only suggested refactorings for 2.0 functions (with `PsiNameIdentifierOwner` on the V2 function PSI), Join Lines for stacked comments, Alt+Shift+Left/Right inside 2.0 lists, statement up/down for 1.x declarations/sections and 2.0 statements, split/join of 2.0 comma lists, code block support over the structural braces, a language-aware Copy Path offering the `/Game/...` asset path inside the source root, and conditional HLSL injection for the bare-HLSL bodies (1.x functions and 2.0 `/// @custom`), silent when no HLSL language is installed.
+
 ## [1.5.0] - 2026-10-03
 
 ### Added
@@ -285,6 +298,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[2.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.5.0...2.0.0
 [1.5.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.2.0...1.3.0

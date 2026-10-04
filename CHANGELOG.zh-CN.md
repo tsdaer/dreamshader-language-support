@@ -2,6 +2,19 @@
 
 # dreamshader-language-support 更新日志
 
+## [2.0.0] - 2026-10-04
+
+### 新增
+
+- M12 编辑体验里程碑（上游 `2.0.2` @ `b3bbf48`），插件版本与上游 2.0 对齐：
+  - **2.0 上下文补全**（C3）：面向 `.dss`/`.dsi` 的 PSI 驱动补全——catalog `inputs[]` 驱动的命名实参补全、C2 类型驱动的 Substrate builder 成员补全、来自 Bridge 符号索引的 `.dsi` 父参数补全、`#pragma material(...)` 键值补全（Bridge settings.json 优先、离线兜底表次之）。
+  - **2.0 语义高亮**（C4）：uniform 参数 / 函数参数 / 局部变量三级配色、显式 `Substrate`/`material` 类型变量专用色、`/// @key` 属性名与 `.dsi` 覆盖名着色，新增五个可配置颜色项。
+  - **工作区用法与改名安全网**（C5）：第二个引用搜索执行器服务 stub 化 2.0 声明（排除派生文件、`.dsi` 覆盖声明可随改名同步），改名前影响面检查列出 `.dsi` 覆盖与同名 export/调用点文件。
+  - **2.0 结构视图与 Code Vision**（C6）：includes、按 `/// @group` 分组的 uniforms、globals/structs/functions；`.dsi` 显示可导航 Parent 节点；export 函数上方显示引用计数，instance pragma 上方显示可点击的 "Parent: X"。1.x 文件保持既有结构视图不变。
+  - **双向导航闭环**（C7）：共享源码行导航器支撑 reveal 失败通知上的「跳转到该行」，成功时把光标落到被揭示的源行；reveal gutter 标记渲染有测试覆盖。
+  - **WebSocket 实时预览**（A7）：传输 B 协议——二进制帧信封、24 字节 RGBA8 原始帧头、png 配对规则——以可选回环客户端实现，`setProbe`/`clearProbe` 与活动编辑器光标行联动；文件传输保持默认回退，本地 mock WebSocket 服务器覆盖往返测试。
+  - **平台编辑体验特性**（D1–D7）：文件内用法高亮、Surround With、仅重命名的建议式重构、注释行合并、2.0 列表左右移动、语句上下移动、2.0 逗号列表拆合、结构块支持、语言感知 Copy Path（源码根内返回 `/Game/...` 资产路径），以及裸 HLSL 函数体的条件式 HLSL 注入（无 HLSL 语言时静默）。
+
 ## [1.5.0] - 2026-10-03
 
 ### 新增
@@ -293,6 +306,7 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[2.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.5.0...2.0.0
 [1.5.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.2.0...1.3.0

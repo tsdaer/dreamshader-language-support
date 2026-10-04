@@ -47,6 +47,20 @@ Coverage notes for the DreamShader 2.0 dialect supported by this Rider plugin. R
 | Argument order (A6) | `DSH2158`: a positional argument after a named one on any V2 argument list |
 | Mismatch hints (C2) | Weak warning when assignment categories differ (numeric/texture/sampler/material/Substrate/struct); bool↔numeric stays exempt; never an error |
 
+## M12 Editing Experience (plugin 2.0.0, upstream `2.0.2` @ `b3bbf48`)
+
+| Capability | Behavior |
+|---|---|
+| Context completion (C3) | PSI-driven contributor for `.dss`/`.dsi`: catalog-driven named arguments (`inputs[]` order; filled names and positionally consumed pins excluded), Substrate builder members on Substrate-typed receivers (C2 inference; already-written members excluded; documented offline pin fallback), `.dsi` parent parameters from the Bridge symbol index (silent without a valid schema), and `#pragma material(...)` keys/values (Bridge settings.json first, offline fallback from the upstream settings page) |
+| Semantic colors (C4) | Three-level identifier colors (uniform parameter / function parameter / locals) via AST-layer name-slot detection; dedicated value color for explicitly `Substrate`/`material`-typed variables (per-file cached declared names; nothing inferred); `/// @key` attribute names and `.dsi` override names colored in the file-level pass; five new configurable color keys |
+| Workspace usages (C5) | A second references-search executor serves the stub-backed 2.0 declarations over the word index; derived files (`Decompiled/`, `Intermediate/DreamShader/`) are excluded; `.dsi` override declarations surface as renameable usages so a rename can reach them |
+| Rename safety net (C5) | `DreamShaderRenameImpactChecker` lists `.dsi` override files for a uniform rename and same-name export/call-site files for an export rename |
+| Structure view (C6) | V2 factory/model/element: includes, uniforms grouped by `/// @group`, globals, structs, functions; `.dsi` shows a Parent node from the `#pragma instance` header; 1.x files keep the legacy structure view |
+| Code Vision (C6) | Usage counts above export functions; a clickable "Parent: X" hint above a `.dsi` instance pragma that opens the resolved parent file |
+| Navigation closure (C7) | `DreamShaderSourceSpanNavigator.openAtLine` backs the "Open at line" action on reveal-node failure notifications (navigate-stage diagnostics carry file/line/column); a successful reveal also moves the caret to the revealed line |
+| WebSocket preview (A7) | Opt-in `previewTransport = "websocket"`: the `[u32 LE length][tag][payload]` envelope, tag-3 24-byte RGBA8 header, png pairing rule, plain-JSON `previewMaterial`/`previewControl`/`setProbe`/`clearProbe` out, frames in; probes attach at the active editor's caret line; the file transport stays the default fallback |
+| Platform features (D1-D7) | In-file usage highlighting, Surround With (2.0 `{ }`/`if`/`for`, 1.x named section), rename-only suggested refactorings (V2 function PSI now implements `PsiNameIdentifierOwner`), comment-line Join Lines, list element moving, statement up/down, comma-list split/join, code block support, language-aware Copy Path (`/Game/...` inside the source root), conditional HLSL injection (silent without an HLSL language) |
+
 ## Deliberate Limitations (downstream milestones)
 
 - **The plugin is not the compiler.** The parser emits no error elements; the engine bridge and `dsc check` stay the semantic authority. M10/M11 add only conservative, upstream-keyed heuristics that go silent when their deciding data (a confident inferred type, a valid Bridge schema) is absent.
@@ -75,3 +89,10 @@ Coverage notes for the DreamShader 2.0 dialect supported by this Rider plugin. R
 | `DreamShader2SubstrateDiagnosticsTest` | `DSH5293`/`DSH5295`/`DSH5296`/`DSH5297`/`DSH5298` and `DSH2158` positive+negative pairs; C2 mismatch is weak-warning-only |
 | `DreamShader2InstanceOverridePassTest` | `DSH7258`/`DSH7264`/`DSH7259`/`DSH7268` with a valid schema; silence without Bridge data or with an invalid schema |
 | `DreamShaderRevealNodeTest` | Request body fields vs upstream contract, line clamp, envelope + added fields, navigate failure code, foreign-id/missing-file degradation, no temp residue |
+| `DreamShader2CompletionTest` | Named-argument catalog completion (fill/positional exclusion), Substrate member completion with C2 typing and written-member exclusion, `.dsi` parent-parameter completion and degrade, `#pragma material` keys/values, non-material pragma ignore |
+| `DreamShader2SemanticClassifierTest` | Uniform/function parameter name slots, Substrate variable usage color, V1 files skip the V2 branches |
+| `DreamShader2RenameImpactTest` | Export uniform references, `.dsi` override impacts, same-name export impacts with derived exclusion, light-reference rename |
+| `DreamShader2StructureViewTest` | V2-only builder routing, `@group` grouping, includes/structs/globals, `.dsi` Parent node |
+| `DreamShader2CodeVisionTest` | Export usage counts, helper silence, `.dsi` Parent hint, legacy-file silence |
+| `DreamShaderSourceSpanNavigatorTest` | Hook-injected navigation, missing-file report, gutter marker rendering (range/tooltip/equality), out-of-range line rejection |
+| `DreamShaderPreviewWsTest` | Frame envelope decode (JSON/PNG/raw), raw header fields, image painting, truncated-header rejection, client message contract, mock-server round-trip |
