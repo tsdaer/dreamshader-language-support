@@ -252,4 +252,58 @@ class DreamShaderSignatureHelpAnalyzerTest {
         assertNull(DreamShaderSignatureHelpAnalyzer.findEnclosingCall(commentText, commentText.length))
         assertNull(DreamShaderSignatureHelpAnalyzer.findEnclosingCall(stringText, stringText.indexOf("0") + 1))
     }
+
+    // ------------------------------------------------------------------
+    // C19 — named-argument aware parameter highlighting + overload union
+    // ------------------------------------------------------------------
+
+    private fun parameterIndexAt(text: String, needle: String, caretDelta: Int): Int {
+        val signature = DreamShaderSignatureHelpAnalyzer.resolveSignatures("UE.TransformVector").first()
+        val offset = text.indexOf(needle) + caretDelta
+        val call = DreamShaderSignatureHelpAnalyzer.findEnclosingCall(text, offset, allowStringInterior = true)!!
+        return DreamShaderSignatureHelpAnalyzer.parameterIndex(text, call, signature, offset)
+    }
+
+    @Test
+    fun `named argument caret highlights the matching parameter`() {
+        val text = "float3 T = UE.TransformVector(Input = Normal, Source = \"Tangent\", Destination = \"Wo\");"
+        // caret inside the Destination string value
+        assertEquals(2, parameterIndexAt(text, "Wo\"", 0))
+        // caret inside the Source value
+        assertEquals(1, parameterIndexAt(text, "Tangent\"", 0))
+        // caret in the Input value
+        assertEquals(0, parameterIndexAt(text, "Normal,", 0))
+    }
+
+    @Test
+    fun `positional index still decides between arguments and for unknown names`() {
+        // gap after the Source comma: the comma count says Destination (index 2) — the caret
+        // must not attach to the previous named argument's name match (which would give 1)
+        val text = "float3 T = UE.TransformVector(Input = Normal, Source = \"Tangent\", Destination = \"World\");"
+        val gapNeedle = "Source = \"Tangent\", "
+        assertEquals(2, parameterIndexAt(text, gapNeedle, gapNeedle.length - 1))
+
+        // an argument name without a signature match falls back to the positional index
+        val unknown = "float3 T = UE.TransformVector(Input = Normal, Bogus = 1, Destination = \"World\");"
+        assertEquals(1, parameterIndexAt(unknown, "Bogus", 0))
+
+        // positional argument after a named one keeps the comma-count behaviour
+        assertEquals(2, parameterIndexAt(unknown, "Destination", 0))
+    }
+
+    @Test
+    fun `merge keeps primary order and drops duplicate presentations`() {
+        val primary = DreamShaderCallSignature(
+            presentableText = "UE.TransformVector(Input, Source, Destination)",
+            parameterRanges = listOf(18..22, 25..30, 33..43),
+            parameterNames = listOf("Input", "Source", "Destination"),
+        )
+        val documented = DreamShaderSignatureHelpAnalyzer.resolveSignatures("UE.TransformVector")
+
+        val merged = DreamShaderSignatureHelpAnalyzer.mergeDistinctSignatures(listOf(primary), documented)
+
+        assertEquals(listOf(primary, documented[0]), merged)
+        val deduped = DreamShaderSignatureHelpAnalyzer.mergeDistinctSignatures(listOf(primary, documented[0]), documented)
+        assertEquals(listOf(primary, documented[0]), deduped)
+    }
 }

@@ -177,6 +177,24 @@ object DreamShaderSignatureHelpAnalyzer {
         return signatureLookup[key].orEmpty()
     }
 
+    /**
+     * Union of two signature tiers keeping order: [primary] rows first, then [secondary]
+     * rows whose presentation is not already shown. Overload expansion for the call popup —
+     * a catalog entry and the documented built-in spelling of the same callable both appear.
+     */
+    fun mergeDistinctSignatures(
+        primary: List<DreamShaderCallSignature>,
+        secondary: List<DreamShaderCallSignature>,
+    ): List<DreamShaderCallSignature> {
+        val seen = HashSet<String>()
+        val merged = ArrayList<DreamShaderCallSignature>(primary.size + secondary.size)
+        (primary + secondary).forEach { candidate ->
+            val key = candidate.presentableText.lowercase(Locale.ROOT)
+            if (seen.add(key)) merged.add(candidate)
+        }
+        return merged
+    }
+
     fun resolveDeclaredSignatures(
         functionName: String,
         sourceText: String? = null,
@@ -232,10 +250,25 @@ object DreamShaderSignatureHelpAnalyzer {
         )
     }
 
-    fun findEnclosingCall(text: String, offset: Int): DreamShaderParsedCall? {
+    fun findEnclosingCall(text: String, offset: Int): DreamShaderParsedCall? =
+        findEnclosingCall(text, offset, allowStringInterior = false)
+
+    /**
+     * [allowStringInterior] keeps the enclosing call discoverable when the caret sits inside a
+     * string-literal argument value (`Destination = "Wo⌷"`) — parameter info must keep working
+     * there; comment/block-comment offsets still return null.
+     */
+    fun findEnclosingCall(
+        text: String,
+        offset: Int,
+        allowStringInterior: Boolean,
+    ): DreamShaderParsedCall? {
         if (text.isEmpty()) return null
         val safeOffset = offset.coerceIn(0, text.length)
-        if (isOffsetInCommentOrString(text, safeOffset)) return null
+        if (isOffsetInCommentOrString(text, safeOffset)) {
+            if (!allowStringInterior) return null
+            if (isOffsetInComment(text, safeOffset)) return null
+        }
         var depth = 0
         var i = safeOffset - 1
 
@@ -362,6 +395,39 @@ object DreamShaderSignatureHelpAnalyzer {
         }
         return parameterIndex
     }
+
+    /**
+     * Parameter to highlight at [offset] when the argument shapes are known: a named argument
+     * maps to its parameter by name (case-insensitive), so `Destination = "Wo⌷"` highlights
+     * `Destination` regardless of where the named argument sits. Falls back to the positional
+     * comma count when the caret is in the gap between arguments or the name does not match.
+     */
+    fun parameterIndex(
+        text: String,
+        call: DreamShaderParsedCall,
+        signature: DreamShaderCallSignature?,
+        offset: Int,
+    ): Int {
+        val safeOffset = offset.coerceIn(0, text.length)
+        if (signature != null && signature.parameterNames.isNotEmpty()) {
+            argumentTrailingAtOffset(call, safeOffset)?.let { argument ->
+                if (argument.isNamed) {
+                    val name = argument.text.substringBefore('=').trim()
+                    val matched = signature.parameterNames.indexOfFirst { it.equals(name, ignoreCase = true) }
+                    if (matched >= 0) return matched
+                }
+            }
+        }
+        return parameterIndex(
+            text,
+            DreamShaderCallContext(call.functionName, call.nameStartOffset, call.leftParenOffset),
+            safeOffset,
+        )
+    }
+
+    /** The argument the caret sits in (trailing edge included); null in the gap before the next one. */
+    private fun argumentTrailingAtOffset(call: DreamShaderParsedCall, offset: Int): DreamShaderCallArgument? =
+        call.arguments.lastOrNull { offset >= it.startOffset && offset <= it.endOffset }
 
     private fun findFunctionNameRange(text: String, leftParenOffset: Int): IntRange? {
         var end = leftParenOffset - 1
@@ -736,6 +802,38 @@ object DreamShaderSignatureHelpAnalyzer {
         while (i >= 0 && isIdentifierChar(text[i])) i--
         val token = text.substring(i + 1, end).lowercase(Locale.ROOT)
         return token in DreamShaderLanguageKeywords.DECLARATION_KEYWORDS
+    }
+
+    private fun isOffsetInComment(text: String, offset: Int): Boolean {
+        var i = 0
+        var inLineComment = false
+        var inBlockComment = false
+        val safeOffset = offset.coerceIn(0, text.length)
+        while (i < safeOffset) {
+            val ch = text[i]
+            val next = text.getOrNull(i + 1)
+            when {
+                inLineComment -> {
+                    if (ch == '\n' || ch == '\r') inLineComment = false
+                }
+                inBlockComment -> {
+                    if (ch == '*' && next == '/') {
+                        inBlockComment = false
+                        i++
+                    }
+                }
+                ch == '/' && next == '/' -> {
+                    inLineComment = true
+                    i++
+                }
+                ch == '/' && next == '*' -> {
+                    inBlockComment = true
+                    i++
+                }
+            }
+            i++
+        }
+        return inLineComment || inBlockComment
     }
 
     private fun isOffsetInCommentOrString(text: String, offset: Int): Boolean {

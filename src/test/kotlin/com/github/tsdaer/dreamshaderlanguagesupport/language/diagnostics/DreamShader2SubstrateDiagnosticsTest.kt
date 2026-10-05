@@ -269,4 +269,70 @@ class DreamShader2SubstrateDiagnosticsTest : BasePlatformTestCase() {
         assertTrue(weak.any { it.contains("inferred type") }, "expected the C2 mismatch warning, got: $weak")
         assertTrue(errors.none { it.contains("inferred type") }, "the mismatch must never be an error, got: $errors")
     }
+
+    fun testCompoundAssignmentMismatchWarnsAndStaysSilentOnSubstrate() {
+        val file = addV2File(
+            "DShader/Materials/M_MismatchCompound.dss",
+            """
+            export void M(inout material m)
+            {
+                float3 Color = float3(1, 0, 0);
+                Texture2D Map;
+                Color += Map;
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.openFileInEditor(file)
+        val weak = myFixture.doHighlighting(HighlightSeverity.WEAK_WARNING).mapNotNull(HighlightInfo::getDescription)
+        assertTrue(
+            weak.any { it.contains("inferred type") },
+            "compound assignment into a texture must warn, got: $weak",
+        )
+    }
+
+    fun testCompoundAssignmentWithSubstrateDoesNotDoubleReport() {
+        val file = addV2File(
+            "DShader/Materials/M_MismatchSubstrate.dss",
+            """
+            export void M(inout material m)
+            {
+                Substrate A = Substrate.Slab();
+                Substrate B = Substrate.Slab();
+                A += B;
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.openFileInEditor(file)
+        val weak = myFixture.doHighlighting(HighlightSeverity.WEAK_WARNING).mapNotNull(HighlightInfo::getDescription)
+        val errors = myFixture.doHighlighting(HighlightSeverity.ERROR).mapNotNull(HighlightInfo::getDescription)
+        assertTrue(errors.any { it.contains("DSH5293") }, "DSH5293 keeps the compound-assignment rule: $errors")
+        assertTrue(
+            weak.none { it.contains("inferred type") },
+            "the mismatch warning must not stack on the DSH5293 error, got: $weak",
+        )
+    }
+
+    fun testCompoundAssignmentBetweenNumericsStaysSilent() {
+        val file = addV2File(
+            "DShader/Materials/M_MismatchCompoundOk.dss",
+            """
+            export void M(inout material m)
+            {
+                float3 Color = float3(1, 0, 0);
+                float3 Other = float3(0, 1, 0);
+                Color += Other;
+                Color *= 0.5;
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.openFileInEditor(file)
+        val weak = myFixture.doHighlighting(HighlightSeverity.WEAK_WARNING).mapNotNull(HighlightInfo::getDescription)
+        assertTrue(
+            weak.none { it.contains("inferred type") },
+            "numeric compound assignments are legal, got: $weak",
+        )
+    }
 }

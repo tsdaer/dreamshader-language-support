@@ -193,6 +193,11 @@ internal class DreamShader2InferenceContext private constructor(
     /**
      * Flat binary/unary/ternary folds: operands are the non-OPERATOR direct children, folded
      * left to right. A leading operator means the prefix form (unary `-`, `!`).
+     *
+     * Ternary folding keeps a frame stack: `?` opens a branch pair (the accumulated condition
+     * is discarded — it is `bool`, never the result), `:` snapshots the then-arm, and frames
+     * close innermost-first so right-nested chains (`a ? b : c ? d : e`) merge correctly.
+     * Compound assignments keep the LHS type — the RHS never widens the stored shape.
      */
     private fun flatExpressionType(element: PsiElement): DreamShader2Type {
         val children = dreamShader2MeaningfulChildren(element)
@@ -208,19 +213,41 @@ internal class DreamShader2InferenceContext private constructor(
 
         var accumulator: DreamShader2Type = DreamShader2Type.Unknown
         var pendingOperator: String? = null
+        val ternaryFrames = ArrayDeque<TernaryFrame>()
         children.forEach { child ->
             if (child.elementType == DreamShaderTokenTypes.OPERATOR) {
-                pendingOperator = child.text
+                when (val op = child.text) {
+                    "?" -> {
+                        ternaryFrames.addLast(TernaryFrame())
+                        pendingOperator = null
+                    }
+                    ":" -> {
+                        while (ternaryFrames.isNotEmpty() && ternaryFrames.last().sawColon) {
+                            accumulator = ternaryFrames.removeLast().mergeWith(accumulator)
+                        }
+                        ternaryFrames.lastOrNull()?.let { frame ->
+                            frame.sawColon = true
+                            frame.thenBranch = accumulator
+                        }
+                        accumulator = DreamShader2Type.Unknown
+                        pendingOperator = null
+                    }
+                    else -> pendingOperator = op
+                }
                 return@forEach
             }
             val operandType = typeOf(child.psi)
-            accumulator = when (val op = pendingOperator) {
-                null -> operandType
-                "&&", "||", "==", "!=", "<", ">", "<=", ">=" -> booleanResult(accumulator, operandType)
-                "?", ":" -> accumulator // ternary: keep the accumulated left-hand opinion
+            val op = pendingOperator
+            accumulator = when {
+                op == null -> operandType
+                op in BOOLEAN_RESULT_OPERATORS -> booleanResult(accumulator, operandType)
+                op in DreamShader2DiagnosticsPass.COMPOUND_ASSIGNMENTS -> accumulator
                 else -> binaryArithmetic(accumulator, operandType, op)
             }
             pendingOperator = null
+        }
+        while (ternaryFrames.isNotEmpty()) {
+            accumulator = ternaryFrames.removeLast().mergeWith(accumulator)
         }
         return accumulator
     }
@@ -313,6 +340,14 @@ internal class DreamShader2InferenceContext private constructor(
         analysis.functionByName(path)?.let { function ->
             function.returnTypeText()?.let { return DreamShader2Type.fromSpelling(it) }
         }
+        // Include-closure declarations (non-export helpers included) resolve before the
+        // workspace export view: lexical proximity wins, and helpers are invisible to the
+        // export index. First closure hit in include order keeps this deterministic.
+        includeClosure.forEach { includee ->
+            DreamShader2FileAnalysis.of(includee).functionByName(path)?.let { function ->
+                function.returnTypeText()?.let { return DreamShader2Type.fromSpelling(it) }
+            }
+        }
         workspace?.exportedFunctions(sourceFile)?.forEach { entry ->
             if (entry.name == path) {
                 entry.returnType?.let { return DreamShader2Type.fromSpelling(it) }
@@ -345,6 +380,9 @@ internal class DreamShader2InferenceContext private constructor(
     companion object {
         /** x/y/z/w, r/g/b/a, s/t/p/q — the three HLSL swizzle sets, any case. */
         private const val SWIZZLE_LETTERS = "xyzwrgbastpq"
+
+        /** Comparison/logical operators: confident operands always yield `bool`. */
+        private val BOOLEAN_RESULT_OPERATORS = setOf("&&", "||", "==", "!=", "<", ">", "<=", ">=")
 
         fun forFile(file: DreamShaderPsiFile, workspace: DreamShader2WorkspaceSymbols?): DreamShader2InferenceContext {
             val closure = workspace?.includeClosurePsi(file).orEmpty().filterIsInstance<DreamShaderPsiFile>()
@@ -392,6 +430,25 @@ internal class DreamShader2InferenceContext private constructor(
             } else {
                 DreamShader2Type.Scalar(DreamShader2Type.Family.BOOL)
             }
+
+        /** Either-or merge for ternary arms: a confident arm beats Unknown, shapes promote like `+`. */
+        private fun branchMerge(
+            thenBranch: DreamShader2Type,
+            elseBranch: DreamShader2Type,
+        ): DreamShader2Type = when {
+            thenBranch is DreamShader2Type.Unknown -> elseBranch
+            elseBranch is DreamShader2Type.Unknown -> thenBranch
+            thenBranch == elseBranch -> thenBranch
+            thenBranch.isNumeric && elseBranch.isNumeric -> binaryArithmetic(thenBranch, elseBranch, "+")
+            else -> DreamShader2Type.Unknown
+        }
+
+        private class TernaryFrame {
+            var thenBranch: DreamShader2Type = DreamShader2Type.Unknown
+            var sawColon: Boolean = false
+
+            fun mergeWith(elseBranch: DreamShader2Type): DreamShader2Type = branchMerge(thenBranch, elseBranch)
+        }
 
         private fun binaryArithmetic(
             left: DreamShader2Type,

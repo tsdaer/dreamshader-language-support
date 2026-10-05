@@ -515,12 +515,13 @@ internal object DreamShader2DiagnosticsPass {
                 ?: return@forEach
             val children = dreamShader2MeaningfulChildren(expression)
             val assignIndex = children.indexOfFirst {
-                it.elementType == DreamShaderTokenTypes.OPERATOR && it.text == "="
+                it.elementType == DreamShaderTokenTypes.OPERATOR &&
+                    (it.text == "=" || it.text in COMPOUND_ASSIGNMENTS)
             }
             if (assignIndex <= 0) return@forEach
             val target = children[assignIndex - 1].psi
             val rhs = children.getOrNull(assignIndex + 1)?.psi ?: return@forEach
-            reportMismatch(target, rhs, inference, holder)
+            reportMismatch(target, rhs, inference, holder, isCompound = children[assignIndex].text != "=")
         }
         psiTreeWalk(file).filter {
             it.node.elementType == DreamShader2ElementTypes.VARIABLE_DECLARATION_STATEMENT
@@ -535,6 +536,7 @@ internal object DreamShader2DiagnosticsPass {
         value: PsiElement,
         inference: DreamShader2InferenceContext,
         holder: AnnotationHolder,
+        isCompound: Boolean = false,
     ) {
         // Flat expressions wrap their operands in single-child EXPRESSION nodes — unwrap first.
         var targetNode = target.node
@@ -548,6 +550,13 @@ internal object DreamShader2DiagnosticsPass {
         }
         val valueType = inference.typeOf(value)
         if (targetType is DreamShader2Type.Unknown || valueType is DreamShader2Type.Unknown) return
+        // Compound assignment with a Substrate operand is already an ERROR (DSH5293);
+        // layering the weak warning on top would double-report the same operand.
+        if (isCompound &&
+            (targetType == DreamShader2Type.Substrate || valueType == DreamShader2Type.Substrate)
+        ) {
+            return
+        }
         val targetCategory = targetType.category
         val valueCategory = valueType.category
         if (targetCategory == valueCategory) return
@@ -640,7 +649,7 @@ internal object DreamShader2DiagnosticsPass {
         DreamShader2ElementTypes.EMPTY_STATEMENT,
     )
 
-    private val COMPOUND_ASSIGNMENTS = setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^=")
+    internal val COMPOUND_ASSIGNMENTS = setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^=")
 
     /**
      * Upstream `Docs/language-v2/substrate.md`: the argument pairs that parameterize the same

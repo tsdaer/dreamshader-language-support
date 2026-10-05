@@ -183,4 +183,126 @@ class DreamShader2TypeInferenceTest : BasePlatformTestCase() {
         assertEquals(DreamShader2Type.Substrate, typedValueOf(file, "Substrate Slab ="))
         assertEquals(DreamShader2Type.Substrate, typedValueOf(file, "Substrate Mixed ="))
     }
+
+    // ------------------------------------------------------------------
+    // C17 — ternary folding, compound assignments, include-closure helpers
+    // ------------------------------------------------------------------
+
+    fun testTernaryFoldsToBranchTypeNotConditionType() {
+        val file = openFile(
+            """
+            export void M_Ternary(inout material m)
+            {
+                float3 A = float3(1, 0, 0);
+                float3 B = float3(0, 1, 0);
+                float3 R = true ? A : B;
+            }
+            """.trimIndent(),
+            "M_Ternary.dss",
+        )
+        assertEquals(
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3),
+            typedValueOf(file, "float3 R ="),
+        )
+    }
+
+    fun testTernaryPromotesScalarAndVectorArms() {
+        val file = openFile(
+            """
+            export void M_TernaryPromote(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float2 P = true ? 1.0 : UV;
+            }
+            """.trimIndent(),
+            "M_TernaryPromote.dss",
+        )
+        assertEquals(
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 2),
+            typedValueOf(file, "float2 P ="),
+        )
+    }
+
+    fun testTernaryRightNestingMergesInnerFirst() {
+        val file = openFile(
+            """
+            export void M_TernaryNested(inout material m)
+            {
+                float3 A = float3(1, 0, 0);
+                float3 B = float3(0, 1, 0);
+                float3 C = float3(0, 0, 1);
+                float3 R = false ? A : true ? B : C;
+            }
+            """.trimIndent(),
+            "M_TernaryNested.dss",
+        )
+        assertEquals(
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3),
+            typedValueOf(file, "float3 R ="),
+        )
+    }
+
+    fun testCompoundAssignmentKeepsLeftHandShape() {
+        val file = openFile(
+            """
+            export void M_Compound(inout material m)
+            {
+                float x = 0.5;
+                float2 UV = UE.TexCoord(Index = 0);
+                x += UV;
+                UV *= 0.5;
+            }
+            """.trimIndent(),
+            "M_Compound.dss",
+        )
+        val context = DreamShader2InferenceContext.forFile(file, null)
+        val compoundStatements = psiTreeWalk(file).filter {
+            it.node.elementType == DreamShader2ElementTypes.EXPRESSION_STATEMENT
+        }.toList()
+        val scalarStatement = compoundStatements.first { it.text.contains("+=") }
+        val vectorStatement = compoundStatements.first { it.text.contains("*=") }
+        assertEquals(
+            DreamShader2Type.Scalar(DreamShader2Type.Family.FLOAT),
+            context.typeOf(scalarStatement.node.findChildByType(DreamShader2ElementTypes.EXPRESSION)!!.psi),
+        )
+        assertEquals(
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 2),
+            context.typeOf(vectorStatement.node.findChildByType(DreamShader2ElementTypes.EXPRESSION)!!.psi),
+        )
+    }
+
+    fun testIncludeClosureHelperCallResolvesReturnType() {
+        myFixture.addFileToProject(
+            "DShader/Materials/TintHelpers.dsh",
+            """
+            uniform float HelperTint = 0.5;
+
+            float3 TintScale(float x)
+            {
+                return float3(x, x, x);
+            }
+            """.trimIndent(),
+        )
+        val file = myFixture.configureByText(
+            "M_Closure.dss",
+            """
+            #include "DShader/Materials/TintHelpers.dsh"
+
+            export void M_Entry(inout material m)
+            {
+                float3 Tinted = TintScale(0.5);
+            }
+            """.trimIndent(),
+        ) as DreamShaderPsiFile
+
+        // The closure tier runs through the workspace service's include resolution.
+        val workspace = file.project.getService(com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2WorkspaceSymbols::class.java)
+        val context = DreamShader2InferenceContext.forFile(file, workspace)
+        val call = psiTreeWalk(file).firstOrNull { it.node.elementType == DreamShader2ElementTypes.CALL_EXPRESSION }
+            ?: error("call expression not found")
+        assertEquals(
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3),
+            context.typeOf(call),
+        )
+    }
 }

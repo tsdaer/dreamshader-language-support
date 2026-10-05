@@ -16,7 +16,11 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
     override fun findElementForParameterInfo(context: CreateParameterInfoContext): PsiFile? {
         val file = context.file
         if (file.language != DreamShaderLanguage) return null
-        val call = DreamShaderSignatureHelpAnalyzer.findEnclosingCall(file.text, context.offset) ?: return null
+        val call = DreamShaderSignatureHelpAnalyzer.findEnclosingCall(
+            file.text,
+            context.offset,
+            allowStringInterior = true,
+        ) ?: return null
         val signatures = DreamShaderCallSignatureResolver.resolveSignatures(call.functionName, file)
         if (signatures.isEmpty()) return null
         context.itemsToShow = signatures.toTypedArray()
@@ -44,7 +48,11 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
     }
 
     override fun updateParameterInfo(element: PsiFile, context: UpdateParameterInfoContext) {
-        val call = DreamShaderSignatureHelpAnalyzer.findCallContext(element.text, context.offset)
+        val call = DreamShaderSignatureHelpAnalyzer.findEnclosingCall(
+            element.text,
+            context.offset,
+            allowStringInterior = true,
+        )
         if (call == null) {
             context.removeHint()
             return
@@ -56,7 +64,14 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
             return
         }
 
-        val parameterIndex = DreamShaderSignatureHelpAnalyzer.parameterIndex(element.text, call, context.offset)
+        // Named arguments map to their parameter by name; the positional comma count only
+        // decides when the caret is between arguments or the name has no match.
+        val parameterIndex = DreamShaderSignatureHelpAnalyzer.parameterIndex(
+            element.text,
+            call,
+            signatures.first(),
+            context.offset,
+        )
         context.setCurrentParameter(parameterIndex)
 
         val objects = context.objectsToView

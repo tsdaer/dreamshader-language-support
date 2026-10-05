@@ -30,13 +30,20 @@ internal object DreamShaderCallSignatureResolver {
             if (importedDeclared.isNotEmpty()) return importedDeclared
         }
 
+        // Catalog row first (authoritative), then any documented built-in spelling of the same
+        // callable that differs — overload expansion instead of first-tier-wins.
         val catalogEntries = collectCatalogEntries(sourceFile)
         val catalogSignatures = DreamShaderSignatureHelpAnalyzer.resolveCatalogSignatures(
             functionName = functionName,
             catalogEntries = catalogEntries,
             requireComplete = true
         )
-        if (catalogSignatures.isNotEmpty()) return catalogSignatures
+        if (catalogSignatures.isNotEmpty()) {
+            return DreamShaderSignatureHelpAnalyzer.mergeDistinctSignatures(
+                primary = catalogSignatures,
+                secondary = DreamShaderSignatureHelpAnalyzer.resolveSignatures(functionName)
+            )
+        }
 
         return DreamShaderSignatureHelpAnalyzer.resolveSignatures(functionName)
     }
