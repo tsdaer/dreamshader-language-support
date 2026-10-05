@@ -52,20 +52,25 @@ class DreamShader2WorkspaceSymbolsTest : BasePlatformTestCase() {
     }
 
     /**
-     * Full-suite runs keep the shared project dumb for a while; the service degrades to
-     * Bridge-only in that window, so index-backed asserts pump the event queue and retry
-     * until the stub indexes answer.
+     * Full-suite runs keep the shared project dumb for a while, and [DreamShader2WorkspaceSymbols.query]
+     * swallows [com.intellij.openapi.project.IndexNotReadyException] by contract (Bridge-only
+     * degradation), so the stub half of a merged answer arrives as *missing data*, not as a
+     * thrown exception. Index-backed asserts therefore retry until the stub indexes answer:
+     * both the swallowed window (no exception to catch) and the dumb window (the exception
+     * the caller would have seen) resolve once indexing completes.
      */
     private fun <T> withStubIndexesReady(action: () -> T): T {
-        var last: com.intellij.openapi.project.IndexNotReadyException? = null
+        var last: Throwable? = null
         repeat(60) {
             try {
                 return action()
             } catch (e: com.intellij.openapi.project.IndexNotReadyException) {
                 last = e
-                com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
-                Thread.sleep(100)
+            } catch (e: AssertionError) {
+                last = e
             }
+            com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+            Thread.sleep(100)
         }
         throw last ?: IllegalStateException("stub indexes never became ready")
     }
@@ -104,15 +109,17 @@ class DreamShader2WorkspaceSymbolsTest : BasePlatformTestCase() {
             """.trimIndent(),
         )
 
-        val merged = withStubIndexesReady { workspace.exportedFunctions(source) }
-        val both = merged.filter { it.name == "MF_Both" }
-        assertEquals(1, both.size, "same-name entries must collapse: $merged")
-        assertEquals(DreamShader2WorkspaceSymbols.SymbolSource.BRIDGE, both.single().source)
-        assertEquals("float1", both.single().returnType)
-
-        assertTrue(merged.any { it.name == "MF_StubOnly" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.STUB })
-        assertTrue(merged.any { it.name == "MF_BridgeOnly" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.BRIDGE })
-        assertTrue(merged.any { it.name == "MF_BridgeOnly" && it.isExtern })
+        withStubIndexesReady {
+            val functions = workspace.exportedFunctions(source)
+            val both = functions.filter { it.name == "MF_Both" }
+            assertEquals(1, both.size, "same-name entries must collapse: $functions")
+            assertEquals(DreamShader2WorkspaceSymbols.SymbolSource.BRIDGE, both.single().source)
+            assertEquals("float1", both.single().returnType)
+            assertTrue(functions.any { it.name == "MF_StubOnly" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.STUB })
+            assertTrue(functions.any { it.name == "MF_BridgeOnly" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.BRIDGE })
+            assertTrue(functions.any { it.name == "MF_BridgeOnly" && it.isExtern })
+            functions
+        }
     }
 
     fun testMissingBridgeDataDegradesToStubIndex() {
@@ -121,9 +128,11 @@ class DreamShader2WorkspaceSymbolsTest : BasePlatformTestCase() {
             "export float MF_Q(float k) { return k; }\n",
         )
 
-        val merged = withStubIndexesReady { workspace.exportedFunctions(source) }
-        assertTrue(merged.any { it.name == "MF_Q" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.STUB })
-        assertEquals("float", merged.first { it.name == "MF_Q" }.returnType)
+        withStubIndexesReady {
+            val merged = workspace.exportedFunctions(source)
+            assertTrue(merged.any { it.name == "MF_Q" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.STUB })
+            assertEquals("float", merged.first { it.name == "MF_Q" }.returnType)
+        }
     }
 
     fun testStructsAndUniformsMergeAcrossSources() {
@@ -150,15 +159,17 @@ class DreamShader2WorkspaceSymbolsTest : BasePlatformTestCase() {
             """.trimIndent(),
         )
 
-        val structs = workspace.structs(source)
-        assertTrue(structs.any { it.name == "BridgeShape" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.BRIDGE })
-        assertTrue(structs.any { it.name == "InputShape" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.STUB })
-
         // The sandbox is shared across test classes: assert on the names this test owns.
-        val uniforms = withStubIndexesReady { workspace.uniforms(source) }
-        val gains = uniforms.filter { it.name == "Gain" }
-        assertTrue(gains.isNotEmpty())
-        assertTrue(gains.all { it.source == DreamShader2WorkspaceSymbols.SymbolSource.BRIDGE && it.type == "float1" })
+        withStubIndexesReady {
+            val structs = workspace.structs(source)
+            assertTrue(structs.any { it.name == "BridgeShape" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.BRIDGE })
+            assertTrue(structs.any { it.name == "InputShape" && it.source == DreamShader2WorkspaceSymbols.SymbolSource.STUB })
+
+            val uniforms = workspace.uniforms(source)
+            val gains = uniforms.filter { it.name == "Gain" }
+            assertTrue(gains.isNotEmpty())
+            assertTrue(gains.all { it.source == DreamShader2WorkspaceSymbols.SymbolSource.BRIDGE && it.type == "float1" })
+        }
     }
 
     fun testInstanceSchemaReadsBridgeIndexAndDegradesSilently() {
