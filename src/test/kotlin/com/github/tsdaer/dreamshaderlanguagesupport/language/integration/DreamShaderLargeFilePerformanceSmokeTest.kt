@@ -1,6 +1,10 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.integration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionSuggester
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMaterialExpressionManifest
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.V1_IMPORT_EXTENSIONS
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.collectCallableCandidates
+import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.collectProjectImportCandidates
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLexer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderParserDefinition
 import com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShaderPsiParser
@@ -60,6 +64,46 @@ class DreamShaderLargeFilePerformanceSmokeTest : BasePlatformTestCase() {
         assertTrue(labels.contains("Expression"))
         assertTrue(
             "Completion smoke test exceeded budget: ${elapsed}ms",
+            elapsed < 10_000
+        )
+    }
+
+    /**
+     * C15: the production hot path - file-backed context analysis, the merged callable
+     * candidates, and the (lazily collected, cached) import candidates - over a large file.
+     */
+    fun testLargeFileCompletionViaPsiHotPathSmoke() {
+        myFixture.addFileToProject("Common/Lib.dsm", "Shader Lib {\n}\n")
+        val text = buildLargeMaterialFile(declarationCount = 320, graphStatements = 8) + """
+            Shader(Name="Materials/CompletionTail") {
+                Graph = {
+                    UE.
+                }
+            }
+        """.trimIndent()
+        val file = myFixture.configureByText("LargeCompletionPsiSmoke.dsm", text)
+        val offset = text.lastIndexOf("UE.") + "UE.".length
+
+        var labels = emptySet<String>()
+        val elapsed = measureTimeMillis {
+            repeat(2) {
+                labels = DreamShaderCompletionSuggester
+                    .suggest(
+                        file,
+                        offset,
+                        importCandidates = { collectProjectImportCandidates(file, V1_IMPORT_EXTENSIONS) },
+                        callableCandidates = collectCallableCandidates(file),
+                        materialExpressionCatalogEntries = DreamShaderMaterialExpressionManifest.catalogEntries(project, null),
+                    )
+                    .map { it.label }
+                    .toSet()
+            }
+        }
+
+        assertTrue(labels.contains("Expression"))
+        assertTrue(labels.isNotEmpty())
+        assertTrue(
+            "Completion hot-path smoke test exceeded budget: ${elapsed}ms",
             elapsed < 10_000
         )
     }

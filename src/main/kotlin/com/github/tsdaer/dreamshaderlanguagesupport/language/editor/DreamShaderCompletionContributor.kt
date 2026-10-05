@@ -24,18 +24,25 @@ import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import java.nio.charset.StandardCharsets
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import javax.swing.Icon
 
 internal val TYPE_KEYWORDS = DreamShaderLexer.TYPES.sorted()
@@ -717,8 +724,60 @@ internal object DreamShaderCompletionSuggester {
         materialExpressionCatalogEntries: List<DreamShaderMaterialExpressionInfo> = emptyList(),
         bridgeSettingValueOverrides: Map<String, List<String>> = emptyMap(),
         bridgeSettingValueDisplayNames: Map<String, Map<String, String>> = emptyMap()
+    ): List<DreamShaderCompletionItem> = suggest(
+        text,
+        offset,
+        DreamShaderCompletionContextAnalyzer.analyze(text, offset),
+        importCandidates = { importCandidates },
+        expressionClassCandidates = expressionClassCandidates,
+        callableCandidates = callableCandidates,
+        namespaceCallableCandidates = namespaceCallableCandidates,
+        materialExpressionCatalogEntries = materialExpressionCatalogEntries,
+        bridgeSettingValueOverrides = bridgeSettingValueOverrides,
+        bridgeSettingValueDisplayNames = bridgeSettingValueDisplayNames
+    )
+
+    /**
+     * File-backed entry for the completion hot path (C15): context analysis reads the
+     * committed originalFile PSI and only falls back to the lexer pass - the whole-file
+     * re-parse stays with the text-based entry (tests) and is never paid per popup.
+     * [importCandidates] is a supplier so the project-wide path collection runs only when
+     * the caret sits in an `import "..."` context.
+     */
+    fun suggest(
+        file: PsiFile,
+        offset: Int,
+        importCandidates: () -> List<String> = { emptyList() },
+        expressionClassCandidates: List<String> = emptyList(),
+        callableCandidates: DreamShaderCallableCandidates = DreamShaderCallableCandidates(),
+        materialExpressionCatalogEntries: List<DreamShaderMaterialExpressionInfo> = emptyList(),
+        bridgeSettingValueOverrides: Map<String, List<String>> = emptyMap(),
+        bridgeSettingValueDisplayNames: Map<String, Map<String, String>> = emptyMap()
+    ): List<DreamShaderCompletionItem> = suggest(
+        file.text,
+        offset,
+        DreamShaderCompletionContextAnalyzer.analyze(file, offset),
+        importCandidates = importCandidates,
+        expressionClassCandidates = expressionClassCandidates,
+        callableCandidates = callableCandidates.plain,
+        namespaceCallableCandidates = callableCandidates.namespaced,
+        materialExpressionCatalogEntries = materialExpressionCatalogEntries,
+        bridgeSettingValueOverrides = bridgeSettingValueOverrides,
+        bridgeSettingValueDisplayNames = bridgeSettingValueDisplayNames
+    )
+
+    private fun suggest(
+        text: String,
+        offset: Int,
+        context: DreamShaderCompletionContext,
+        importCandidates: () -> List<String>,
+        expressionClassCandidates: List<String>,
+        callableCandidates: List<DreamShaderCompletionItem>,
+        namespaceCallableCandidates: List<DreamShaderNamespaceCallableCandidate>,
+        materialExpressionCatalogEntries: List<DreamShaderMaterialExpressionInfo>,
+        bridgeSettingValueOverrides: Map<String, List<String>>,
+        bridgeSettingValueDisplayNames: Map<String, Map<String, String>>
     ): List<DreamShaderCompletionItem> {
-        val context = DreamShaderCompletionContextAnalyzer.analyze(text, offset)
         val suggestions = linkedMapOf<String, DreamShaderCompletionItem>()
         fun add(item: DreamShaderCompletionItem) {
             val key = item.label.lowercase(Locale.ROOT)
@@ -731,7 +790,7 @@ internal object DreamShaderCompletionSuggester {
 
         val importPrefix = importCompletionPrefix(text, offset)
         if (importPrefix != null) {
-            importCandidates
+            importCandidates()
                 .filter { it.lowercase(Locale.ROOT).startsWith(importPrefix.prefix.lowercase(Locale.ROOT)) }
                 .sorted()
                 .forEach { path ->
@@ -1464,21 +1523,45 @@ internal class DreamShaderTemplateInsertHandler(
 }
 
 /** Import path candidates serve `import "` (1.x); 2.0 `#include` shares the collector. */
-private val V1_IMPORT_EXTENSIONS = listOf("dsh", "dsf", "dsm")
+internal val V1_IMPORT_EXTENSIONS = listOf("dsh", "dsf", "dsm")
 internal val V2_INCLUDE_EXTENSIONS = listOf("dsh", "dss", "dsi")
+
+private val SHADER_FILE_LIST_KEYS = ConcurrentHashMap<String, Key<CachedValue<List<VirtualFile>>>>()
+
+/**
+ * Project-wide shader files per extension set (C15): the FilenameIndex scan is cached per
+ * project revision, so import/include completion stops rescanning the index on every popup;
+ * the per-file exclusion and path normalization stay outside the cache.
+ */
+internal fun collectProjectShaderFiles(project: Project, extensions: List<String>): List<VirtualFile> {
+    val key = SHADER_FILE_LIST_KEYS.computeIfAbsent(extensions.joinToString(",")) {
+        Key.create("dreamshader.completion.shader.files.$it")
+    }
+    return CachedValuesManager.getManager(project).getCachedValue(
+        project,
+        key,
+        {
+            val files = linkedMapOf<String, VirtualFile>()
+            val scope = GlobalSearchScope.projectScope(project)
+            extensions.forEach { extension ->
+                FilenameIndex.getAllFilesByExt(project, extension, scope).forEach { vf ->
+                    files.putIfAbsent(vf.path, vf)
+                }
+            }
+            CachedValueProvider.Result.create(
+                files.values.toList(),
+                PsiModificationTracker.MODIFICATION_COUNT,
+                VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS
+            )
+        },
+        false
+    )
+}
 
 internal fun collectProjectImportCandidates(file: PsiFile, extensions: List<String> = V1_IMPORT_EXTENSIONS): List<String> {
     val project = file.project
-    val scope = GlobalSearchScope.projectScope(project)
-    val files = linkedMapOf<String, VirtualFile>()
-    extensions.forEach { extension ->
-        FilenameIndex.getAllFilesByExt(project, extension, scope).forEach { vf ->
-            files.putIfAbsent(vf.path, vf)
-        }
-    }
-
     val basePath = project.basePath?.replace('\\', '/')
-    val pathCandidates = files.values
+    val pathCandidates = collectProjectShaderFiles(project, extensions)
         .asSequence()
         .filter { it != file.virtualFile }
         .flatMap { vf ->
@@ -1570,14 +1653,43 @@ private fun collectMaterialExpressionCatalogEntries(file: PsiFile): List<DreamSh
     )
 }
 
-private fun collectCallableCompletionCandidates(file: PsiFile): List<DreamShaderCompletionItem> {
+/** Callable completion candidates for one file, both shapes from a single signature pass. */
+internal data class DreamShaderCallableCandidates(
+    val plain: List<DreamShaderCompletionItem> = emptyList(),
+    val namespaced: List<DreamShaderNamespaceCallableCandidate> = emptyList()
+)
+
+private val CALLABLE_CANDIDATES_KEY: Key<CachedValue<DreamShaderCallableCandidates>> =
+    Key.create("dreamshader.completion.callable.candidates")
+
+/**
+ * Callables of the file plus its import closure (C15): one closure walk and one signature
+ * parse per PSI revision, shared by the graph and namespace-qualified completion branches -
+ * previously both branches re-resolved the closure and re-parsed every source per popup.
+ */
+internal fun collectCallableCandidates(file: PsiFile): DreamShaderCallableCandidates =
+    CachedValuesManager.getManager(file.project).getCachedValue(
+        file,
+        CALLABLE_CANDIDATES_KEY,
+        {
+            CachedValueProvider.Result.create(
+                computeCallableCandidates(file),
+                PsiModificationTracker.MODIFICATION_COUNT,
+                VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS
+            )
+        },
+        false
+    )
+
+private fun computeCallableCandidates(file: PsiFile): DreamShaderCallableCandidates {
     val importedSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(file)
         .drop(1)
         .map { it.text }
-    return DreamShaderSignatureHelpAnalyzer.collectDeclaredCallables(
+    val callables = DreamShaderSignatureHelpAnalyzer.collectDeclaredCallables(
         sourceText = file.text,
         additionalSourceTexts = importedSourceTexts
-    ).map { callable ->
+    )
+    val plain = callables.map { callable ->
         DreamShaderCompletionItem(
             label = callable.name,
             insertText = "${callable.name}()",
@@ -1589,16 +1701,7 @@ private fun collectCallableCompletionCandidates(file: PsiFile): List<DreamShader
             caretOffset = callable.name.length + 1
         )
     }
-}
-
-private fun collectNamespaceCallableCompletionCandidates(file: PsiFile): List<DreamShaderNamespaceCallableCandidate> {
-    val importedSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(file)
-        .drop(1)
-        .map { it.text }
-    return DreamShaderSignatureHelpAnalyzer.collectDeclaredCallables(
-        sourceText = file.text,
-        additionalSourceTexts = importedSourceTexts
-    ).mapNotNull { callable ->
+    val namespaced = callables.mapNotNull { callable ->
         val parts = callable.name.split("::").filter { it.isNotBlank() }
         if (parts.size < 2) return@mapNotNull null
         val memberName = parts.last()
@@ -1617,6 +1720,7 @@ private fun collectNamespaceCallableCompletionCandidates(file: PsiFile): List<Dr
             )
         )
     }
+    return DreamShaderCallableCandidates(plain, namespaced)
 }
 
 /**
@@ -1690,11 +1794,10 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                     val targetResult = importPrefix?.let { result.withPrefixMatcher(it.prefix) } ?: result
 
                     val suggestions = DreamShaderCompletionSuggester.suggest(
-                        text = file.text,
+                        file = file,
                         offset = parameters.offset,
-                        importCandidates = collectProjectImportCandidates(file, V1_IMPORT_EXTENSIONS),
-                        callableCandidates = collectCallableCompletionCandidates(file),
-                        namespaceCallableCandidates = collectNamespaceCallableCompletionCandidates(file),
+                        importCandidates = { collectProjectImportCandidates(file, V1_IMPORT_EXTENSIONS) },
+                        callableCandidates = collectCallableCandidates(file),
                         materialExpressionCatalogEntries = collectMaterialExpressionCatalogEntries(file),
                         bridgeSettingValueOverrides = collectBridgeSettingValueOverrides(file),
                         bridgeSettingValueDisplayNames = collectBridgeSettingValueDisplayNames(file)

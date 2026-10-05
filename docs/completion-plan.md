@@ -3,7 +3,7 @@
 - **制定日期**：2026-10-05
 - **基线**：本插件 2.0.0（2026-10-04，M12 完成）；上游 DreamShader 2.0.2 @ `b3bbf48`
 - **触发问题**（用户反馈）：「按下 `.` 之后给出的建议是乱的，尤其是新语言（2.0 方言）支持」
-- **计划状态**：执行中（2026-10-05 首批落地，见 §6 执行记录）。任务卡并入 `docs/agent-development-plan.md` 作为 M13，版本目标 2.1.0。
+- **计划状态**：已完成（2026-10-05 两批落地，见 §6 执行记录，版本 2.1.0）。任务卡并入 `docs/agent-development-plan.md` 作为 M13。
 
 ---
 
@@ -201,3 +201,25 @@
 - D9 的 1.x settings 值路径行为不变（其裸插入语义自洽），仅修复 2.0 pragma 的双引号叠加。
 
 **待办（下一批）**：C15 → C11 任务 2 → D9 收尾。
+
+### 2026-10-05 第二批落地（C15 + C11 任务 2 + D9 收尾）——M13 完结，版本 2.1.0
+
+**已交付**：
+
+- C15（性能加固，全部任务项收口）：
+  - 上下文分析复用 PSI：`DreamShaderCompletionSuggester` 新增文件入口，1.x 补全热路径直接读 `parameters.originalFile` 的已提交 PSI（`analyzeWithPsi`），失败仅作 lexer 级回退——每次弹窗不再全文件重解析；文本入口保留（全量解析语义不变，服务测试与既有调用）。
+  - 候选集合并与缓存：`collectCallableCompletionCandidates` 与 `collectNamespaceCallableCompletionCandidates` 合并为单趟 `collectCallableCandidates`（一次 import 闭包 + 一次签名解析产出两种形态），按 PSI 修订缓存（`MODIFICATION_COUNT` + VFS 结构变更，沿用 import 闭包缓存先例）。
+  - FilenameIndex 懒加载 + 缓存：扫描按项目修订缓存（`collectProjectShaderFiles`，1.x import 与 2.0 `#include` 共享），import 候选在 suggest 入口改为惰性求值——非 import 上下文零索引访问。
+  - `substrateWrittenMembers` 作用域收窄已随首批 C9 落地，本批补齐其余三项后 C15 收口。
+- C11 任务 2（catalog 枚举值补全）：命名实参值槽位（`Source = ` / `Source = "Wo`）按 catalog `Enum` 标注参数给出文档化基名表——TransformVector（className `Transform`）与 TransformPosition 的 `Source`/`Destination`，值来自上游 `Docs/builtins/transform.md`（向量基含 `Tangent`，位置基含 `PeriodicWorld`/`TranslatedWorld`）；裸槽位插入带引号值、已开引号内裸插入（D9 语义）；非 Enum 参数或闭合值槽位回退标识符补全。
+- D9 收尾：真实补全插入矩阵测试（`completeBasic` + 显式选中项 + 文档断言）——「已键入开引号（闭引号就位）→ 裸值插入」与「未键入引号 → `"值"` 插入」均验证无双引号叠加；1.x settings 值路径维持既定决策（裸插入语义自洽）不变。
+- 测试：新增 `DreamShaderCompletionHotPathTest` 6 例（PSI/文本两入口 7 上下文对等矩阵、import 候选惰性求值正反例、callable 候选缓存与 PSI 修订失效、FilenameIndex 缓存与新文件可见性、import 补全走缓存收集器）；`DreamShader2CompletionTest` 增至 35 例（C11.2 五例 + D9 两例）；大文件补全烟测新增「真实 PSI 热路径 + 真实收集器 + 重复调用」用例（预算 10s）。
+- 文档：`language-v2-baseline.md` 补 M13 补全覆盖映射小节并更新 Test Mapping；CHANGELOG（en/zh）新增 2.1.0 段；README 元数据块补全描述同步；版本号升至 2.1.0（M13 目标版本）。
+
+**实现决策与偏差**：
+
+- C11.2 枚举值为文档兜底表（同 `FALLBACK_SUBSTRATE_PINS` 先例）：引擎 catalog 与 bundled fallback 只标注 `Enum` 类型、不含值清单；按 entry `className` 查表，未知参数静默降级（架构红线 1）。
+- 值槽位判定使用真实 caret offset（而非 leaf 起点）：闭合引号后的 leaf 起点会把槽位误判为未闭合；且前缀过滤不自行实现、交给平台 PrefixMatcher——真实补全会话中携带 dummy identifier 的文本会让自过滤清空弹窗。
+- 值槽位建议不按已键入前缀预筛：label 全量进弹窗由平台过滤，与 pragma 值/命名实参的既有模式一致。
+
+**任务卡状态**：C8–C16、A10、D9、T13 全部完成，M13 收官（全量 757 例零失败）。后续方向见 §4（M14 候选）。

@@ -40,7 +40,8 @@ import java.util.Locale
  *   struct fields via the symbol model, matrix cells, texture `sample`, `material`
  *   attributes, `Substrate` builder pins, and catalog namespaces (`UE.*` / `Substrate.*`);
  *   an unknown receiver degrades to namespace roots plus callables, never keywords;
- * - named arguments for catalog-known calls, only at the parameter-name slot (C11);
+ * - named arguments for catalog-known calls, only at the parameter-name slot (C11), and
+ *   documented enum values at their value slots (`Source = ` on `Enum`-annotated parameters);
  * - `.dsi` parent-parameter completion from the Bridge symbol index;
  * - `#pragma material(...)` key/value completion (Bridge settings.json first, the 1.x
  *   settings-key table as offline fallback), quote-aware at value positions;
@@ -98,6 +99,7 @@ internal object DreamShader2CompletionSuggester {
             ?: includePathCompletions(file, offset)
             ?: memberCompletions(file, caretLeaf, catalogEntries)
             ?: namedArgumentCompletions(caretLeaf, catalogEntries)
+            ?: namedArgumentValueCompletions(offset, caretLeaf, catalogEntries)
             ?: instanceParameterCompletions(file, caretLeaf)
             ?: instanceOverrideValueCompletions(file, offset)
             ?: bareIdentifierCompletions(file, caretLeaf)
@@ -519,6 +521,127 @@ internal object DreamShader2CompletionSuggester {
                 info.aliases.any { it.equals(normalized, ignoreCase = true) }
         }
     }
+
+    // ------------------------------------------------------------------
+    // C11.2 enum values at named-argument value positions
+    // ------------------------------------------------------------------
+
+    /**
+     * Value completion for a named argument's value slot (`Source = ` / `Source = "Wo`).
+     * Only catalog parameters annotated `Enum` suggest values, from the documented
+     * basis-name tables (upstream `Docs/builtins/transform.md`; the engine catalog marks
+     * the type but carries no value lists). A non-enum parameter or a slot that is no
+     * longer a plain value prefix (closed quote, nested call) returns null so the chain
+     * falls through to identifier completion. The typed prefix is left to the platform
+     * PrefixMatcher - the caret text may carry the completion dummy identifier, so
+     * self-filtering here would empty the popup in the real editor. Quoting follows D9:
+     * an open quote takes a bare value, a bare slot inserts quoted.
+     */
+    fun namedArgumentValueCompletions(
+        offset: Int,
+        caretLeaf: PsiElement,
+        catalogEntries: List<DreamShaderMaterialExpressionInfo>,
+    ): List<DreamShaderCompletionItem>? {
+        val argumentList = nearestAncestorOfType(caretLeaf, DreamShader2ElementTypes.ARGUMENT_LIST) ?: return null
+        val slot = namedArgumentValueSlot(argumentList, offset) ?: return null
+
+        val call = argumentList.parent
+        val calleeName = callCalleeName(call) ?: return null
+        val entry = findCatalogEntry(calleeName, catalogEntries) ?: return null
+        val parameter = entry.parameters.firstOrNull { it.name.equals(slot.parameterName, ignoreCase = true) }
+            ?: return null
+        if (!parameter.type.equals("Enum", ignoreCase = true)) return null
+
+        val values = documentedEnumValues(entry, parameter.name) ?: return null
+        return values.map { value ->
+            DreamShaderCompletionItem(
+                label = value,
+                insertText = if (slot.insideQuotes) value else "\"$value\"",
+                detail = "${entry.qualifiedName}.${parameter.name}",
+                typeText = "enum value",
+                icon = DreamShaderIcons.SECTION_SETTINGS,
+                priority = DreamShaderCompletionPriorities.NAMED_ARGUMENT,
+            )
+        }
+    }
+
+    private class NamedArgumentValueSlot(
+        val parameterName: String,
+        val insideQuotes: Boolean,
+    )
+
+    /**
+     * The named argument whose value the caret sits in: the text between the argument
+     * list's opening paren (or the last top-level comma) and the caret holds `Name = pre`.
+     * Name slots, nested calls, strings outside the value prefix, and closed values
+     * return null.
+     */
+    private fun namedArgumentValueSlot(
+        argumentList: PsiElement,
+        caretOffset: Int,
+    ): NamedArgumentValueSlot? {
+        val range = argumentList.textRange
+        val caret = caretOffset.coerceIn(range.startOffset, range.endOffset)
+        val before = argumentList.text.substring(0, caret - range.startOffset)
+        var depth = 0
+        var slotStart = -1
+        var inString = false
+        var index = 0
+        while (index < before.length) {
+            val ch = before[index]
+            when {
+                inString -> {
+                    if (ch == '\\') index++
+                    else if (ch == '"') inString = false
+                }
+                ch == '"' -> inString = true
+                ch == '(' -> {
+                    depth++
+                    if (depth == 1) slotStart = index
+                }
+                ch == ')' -> depth--
+                ch == ',' && depth == 1 -> slotStart = index
+            }
+            index++
+        }
+        if (slotStart < 0) return null
+        val slot = before.substring(slotStart + 1)
+        val assignment = Regex("""([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]*)$""").find(slot) ?: return null
+        val rawValuePrefix = assignment.groupValues[2]
+        val insideQuotes = rawValuePrefix.count { it == '"' } % 2 == 1
+        val valuePrefix = if (insideQuotes) rawValuePrefix.removePrefix("\"") else rawValuePrefix.trim()
+        if (valuePrefix.contains('(') || valuePrefix.contains('"')) return null
+        if (!insideQuotes && valuePrefix.contains(' ')) return null
+        return NamedArgumentValueSlot(
+            parameterName = assignment.groupValues[1],
+            insideQuotes = insideQuotes,
+        )
+    }
+
+    /**
+     * Documented enum values for an `Enum`-annotated parameter, keyed by catalog class
+     * name (upstream `Docs/builtins/transform.md` @2.0.2: vector bases take `Tangent`,
+     * position bases take `PeriodicWorld`/`TranslatedWorld`; `Tangent` is not a position
+     * basis and `PeriodicWorld` is not a vector basis). Unknown parameters degrade silently.
+     */
+    private fun documentedEnumValues(
+        entry: DreamShaderMaterialExpressionInfo,
+        parameterName: String,
+    ): List<String>? {
+        val table = FALLBACK_ENUM_VALUES[entry.className] ?: FALLBACK_ENUM_VALUES[entry.ueName] ?: return null
+        return table[parameterName.lowercase(Locale.ROOT)]
+    }
+
+    private val FALLBACK_ENUM_VALUES = mapOf(
+        "Transform" to mapOf(
+            "source" to listOf("Tangent", "Local", "World", "View", "Camera", "Instance"),
+            "destination" to listOf("Tangent", "Local", "World", "View", "Camera", "Instance"),
+        ),
+        "TransformPosition" to mapOf(
+            "source" to listOf("Local", "World", "PeriodicWorld", "TranslatedWorld", "FirstPersonTranslatedWorld", "View", "Camera", "Instance"),
+            "destination" to listOf("Local", "World", "PeriodicWorld", "TranslatedWorld", "FirstPersonTranslatedWorld", "View", "Camera", "Instance"),
+        ),
+    )
 
     // ------------------------------------------------------------------
     // C3.3 .dsi parent parameters

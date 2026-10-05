@@ -278,6 +278,90 @@ class DreamShader2CompletionTest : BasePlatformTestCase() {
     }
 
     // ------------------------------------------------------------------
+    // C11.2 enum values at named-argument value slots
+    // ------------------------------------------------------------------
+
+    fun testEnumValuesSuggestAtValueSlot() {
+        val file = myFixture.configureByText(
+            "enum_values.dss",
+            "export void Work() {\n    UE.TransformVector(NormalTS, Source = )\n}\n",
+        )
+        val offset = file.text.indexOf("Source = ") + "Source = ".length
+        val entries = suggest(file, offset)
+        val labels = entries.map { it.label }
+        assertEquals(
+            "vector transform bases, got $labels",
+            listOf("Tangent", "Local", "World", "View", "Camera", "Instance"),
+            labels,
+        )
+        assertTrue(
+            "a bare slot inserts the value quoted, got ${entries.firstOrNull()?.insertText}",
+            entries.all { it.insertText == "\"${it.label}\"" },
+        )
+        assertTrue(entries.all { it.typeText == "enum value" })
+    }
+
+    fun testEnumValuesDifferBetweenVectorAndPositionBases() {
+        val file = myFixture.configureByText(
+            "enum_values_position.dss",
+            "export void Work() {\n    UE.TransformPosition(WorldPos, Source = )\n}\n",
+        )
+        val offset = file.text.indexOf("Source = ") + "Source = ".length
+        val labels = suggest(file, offset).map { it.label }
+        assertTrue("position bases include PeriodicWorld, got $labels", labels.contains("PeriodicWorld"))
+        assertFalse("Tangent is not a position basis", labels.contains("Tangent"))
+    }
+
+    fun testEnumValuesInsideOpenQuoteInsertBare() {
+        val file = myFixture.configureByText(
+            "enum_values_quoted.dss",
+            "export void Work() {\n    UE.TransformVector(NormalTS, Source = \"Wo)\n}\n",
+        )
+        val offset = file.text.indexOf("Source = \"Wo") + "Source = \"Wo".length
+        val entries = suggest(file, offset)
+        assertEquals(
+            "the full basis set rides the popup; the platform filters by the typed prefix, got ${entries.map { it.label }}",
+            listOf("Tangent", "Local", "World", "View", "Camera", "Instance"),
+            entries.map { it.label },
+        )
+        assertTrue(
+            "an open quote takes a bare value (D9), got ${entries.firstOrNull()?.insertText}",
+            entries.all { it.insertText == it.label },
+        )
+    }
+
+    fun testNonEnumParameterValueFallsThroughToIdentifiers() {
+        val file = myFixture.configureByText(
+            "enum_values_nonenum.dss",
+            "export void Work() {\n    UE.TransformPosition(WorldPos, PeriodicWorldTileSize = )\n}\n",
+        )
+        val offset = file.text.indexOf("PeriodicWorldTileSize = ") + "PeriodicWorldTileSize = ".length
+        val entries = suggest(file, offset)
+        assertTrue(
+            "non-enum parameters get no enum values, got ${entries.map { it.label }}",
+            entries.none { it.typeText == "enum value" },
+        )
+        assertTrue(
+            "the value slot gets no pin names either",
+            entries.none { it.typeText == "named argument" },
+        )
+        assertTrue("bare identifiers still serve the slot", entries.isNotEmpty())
+    }
+
+    fun testCompletedEnumValueStopsEnumSuggestions() {
+        val file = myFixture.configureByText(
+            "enum_values_done.dss",
+            "export void Work() {\n    UE.TransformVector(NormalTS, Source = \"World\")\n}\n",
+        )
+        val offset = file.text.indexOf("\")") + 1
+        val entries = suggest(file, offset)
+        assertTrue(
+            "a closed value slot yields identifiers, not enum values, got ${entries.map { it.label }}",
+            entries.none { it.typeText == "enum value" },
+        )
+    }
+
+    // ------------------------------------------------------------------
     // C13 bare-identifier completion
     // ------------------------------------------------------------------
 
@@ -316,6 +400,41 @@ class DreamShader2CompletionTest : BasePlatformTestCase() {
         val entries = DreamShader2CompletionSuggester.includePathCompletions(file as DreamShaderPsiFile, offset)
         val labels = entries.orEmpty().map { it.label }
         assertTrue("expected project include candidates, got $labels", labels.any { it.endsWith("Lib.dss") })
+    }
+
+    // ------------------------------------------------------------------
+    // D9 quote-aware pragma value insertion
+    // ------------------------------------------------------------------
+
+    fun testPragmaValueInsertsBareInsideOpenQuote() {
+        myFixture.configureByText("pragma_quote.dss", "#pragma material(MaterialDomain = \"<caret>\")\n")
+        myFixture.completeBasic()
+        selectLookupItem("Surface")
+        assertEquals(
+            "no double-quote stacking inside a pre-typed pair",
+            "#pragma material(MaterialDomain = \"Surface\")\n",
+            myFixture.editor.document.text,
+        )
+    }
+
+    fun testPragmaValueInsertsQuotedOnBareSlot() {
+        myFixture.configureByText("pragma_bare.dss", "#pragma material(MaterialDomain = <caret>)\n")
+        myFixture.completeBasic()
+        selectLookupItem("Surface")
+        assertEquals(
+            "a bare value slot receives the closing quote with the value",
+            "#pragma material(MaterialDomain = \"Surface\")\n",
+            myFixture.editor.document.text,
+        )
+    }
+
+    private fun selectLookupItem(lookupString: String) {
+        val lookup = myFixture.lookup
+        assertNotNull("popup must open", lookup)
+        val impl = lookup as com.intellij.codeInsight.lookup.impl.LookupImpl
+        impl.currentItem = impl.items.firstOrNull { it.lookupString == lookupString }
+            ?: error("lookup item '$lookupString' not in ${impl.items.map { it.lookupString }}")
+        myFixture.finishLookup(com.intellij.codeInsight.lookup.Lookup.NORMAL_SELECT_CHAR)
     }
 
     // ------------------------------------------------------------------
