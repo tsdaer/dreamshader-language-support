@@ -12,6 +12,7 @@ This directory is the long-form home for project knowledge. The top-level README
 - [Package Baseline](package-baseline.md): package layout, import resolution, store/index behavior, and implementation notes.
 - [Roadmap and Progress](roadmap.md): project goal, current progress, detailed TODOs, audit matrices, and changelog policy.
 - [Agent Development Plan](agent-development-plan.md): executable milestone plan (M8–M12) for upstream DreamShader 2.0.x support, fixes, and intelligence goals; task cards and agent working rules.
+- [Completion Intelligence Plan](completion-plan.md): M13 plan (pending review) for the "messy suggestions after dot" problem - root-cause research and task cards for dialect-aware completion, receiver-typed member completion, unified priorities, and completion hot-path performance.
 - [Development Guide](development.md): build/test/run commands, signing/publishing, Rider actions, settings, and troubleshooting.
 
 ## Maintenance Rules
