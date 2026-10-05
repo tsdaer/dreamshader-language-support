@@ -305,4 +305,81 @@ class DreamShader2TypeInferenceTest : BasePlatformTestCase() {
             context.typeOf(call),
         )
     }
+
+    fun testLocalResolutionRespectsLexicalScope() {
+        val file = openFile(
+            """
+            export void M_Scope(inout material m)
+            {
+                if (true)
+                {
+                    float3 Shadowed = float3(0.0, 0.0, 0.0);
+                }
+                float x = Shadowed;
+                float3 Visible = float3(0.0, 0.0, 0.0);
+                float ok = Visible;
+                for (int i = 0; i < 4; i++)
+                {
+                    float y = i;
+                }
+                float z = i;
+                float v = 1.0;
+                if (true)
+                {
+                    float2 v = float2(0.0, 0.0);
+                    float a = v;
+                }
+            }
+            """.trimIndent(),
+            "M_Scope.dss",
+        )
+        // An earlier if-arm's declaration is out of scope: no confident type leaks across.
+        assertEquals(DreamShader2Type.Unknown, typedValueOf(file, "float x ="))
+        assertEquals(
+            "same-block declarations stay visible",
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3),
+            typedValueOf(file, "float ok ="),
+        )
+        // A for-init declaration scopes to the loop: visible inside, gone after it.
+        assertEquals(
+            DreamShader2Type.Scalar(DreamShader2Type.Family.INT),
+            typedValueOf(file, "float y ="),
+        )
+        assertEquals(DreamShader2Type.Unknown, typedValueOf(file, "float z ="))
+        // Shadowing resolves innermost-first.
+        assertEquals(
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 2),
+            typedValueOf(file, "float a ="),
+        )
+    }
+
+    fun testOperandTypedIntrinsicsExtendTheConfidentSet() {
+        val file = openFile(
+            """
+            export void M_Intrinsics(inout material m)
+            {
+                float3 Base = float3(1.0, 2.0, 3.0);
+                float3 Other = float3(1.0, 1.0, 1.0);
+                float4 Wide = float4(1.0, 1.0, 1.0, 1.0);
+                float3 N = normalize(Base);
+                float D = dot(Base, Other);
+                float B = dot(Base, Wide);
+                float3 C = cross(Base, Other);
+                float F = floor(Base.x);
+                float U = reflect(Base, Other);
+            }
+            """.trimIndent(),
+            "M_Intrinsics.dss",
+        )
+        assertEquals(
+            "normalize carries the operand shape",
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3),
+            typedValueOf(file, "float3 N ="),
+        )
+        assertEquals("dot of equal shapes widens to a scalar", DreamShader2Type.Scalar(DreamShader2Type.Family.FLOAT), typedValueOf(file, "float D ="))
+        assertEquals("dot of different shapes stays Unknown", DreamShader2Type.Unknown, typedValueOf(file, "float B ="))
+        assertEquals(DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3), typedValueOf(file, "float3 C ="))
+        assertEquals(DreamShader2Type.Scalar(DreamShader2Type.Family.FLOAT), typedValueOf(file, "float F ="))
+        assertEquals("unlisted intrinsics stay Unknown", DreamShader2Type.Unknown, typedValueOf(file, "float U ="))
+    }
 }

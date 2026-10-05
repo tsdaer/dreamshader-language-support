@@ -48,6 +48,7 @@ internal object DreamShader2DiagnosticsPass {
         annotateSubstrateOperators(file, inference, holder)
         annotateSubstrateBuilders(file, holder)
         annotateAssignmentCategoryMismatches(file, inference, holder)
+        annotateCallArgumentMismatches(file, inference, holder)
         if (DreamShaderDialects.extensionOf(file.virtualFile?.name ?: file.name) == "dsi") {
             DreamShader2InstanceOverridePass.annotate(file, holder)
             annotateParentOverrideNames(file, holder)
@@ -528,6 +529,72 @@ internal object DreamShader2DiagnosticsPass {
         }.forEach { statement ->
             val initializer = initializerOf(statement) ?: return@forEach
             reportMismatch(statement, initializer, inference, holder)
+        }
+    }
+
+    /**
+     * C24.3 — call-site parameter flow: arguments of user-declared calls are checked against
+     * the callee's declared parameter types (file + include closure; the workspace export
+     * layer carries no parameter shapes and stays unchecked). Warning-level, confident pairs
+     * only — the same category scale as the assignment mismatch family.
+     */
+    private fun annotateCallArgumentMismatches(
+        file: DreamShaderPsiFile,
+        inference: DreamShader2InferenceContext,
+        holder: AnnotationHolder,
+    ) {
+        psiTreeWalk(file).filter {
+            it.node.elementType == DreamShader2ElementTypes.CALL_EXPRESSION
+        }.forEach { call ->
+            val path = call.callPath() ?: return@forEach
+            val parameters = inference.calleeParameters(path) ?: return@forEach
+            val argumentList = call.node.findChildByType(DreamShader2ElementTypes.ARGUMENT_LIST)?.psi ?: return@forEach
+            val arguments = dreamShader2MeaningfulChildren(argumentList)
+                .filter {
+                    it.elementType == DreamShader2ElementTypes.ARGUMENT ||
+                        it.elementType == DreamShader2ElementTypes.NAMED_ARGUMENT
+                }
+            // More arguments than parameters means defaults/overloads we cannot see - stay silent.
+            if (arguments.size > parameters.size) return@forEach
+            arguments.forEachIndexed { index, argumentNode ->
+                val parameter = when (argumentNode.elementType) {
+                    DreamShader2ElementTypes.NAMED_ARGUMENT ->
+                        (argumentNode.psi as? DreamShader2NamedArgument)?.argumentName()
+                            ?.let { name ->
+                                parameters.firstOrNull { it.parameterName()?.equals(name, ignoreCase = true) == true }
+                            }
+                    else -> parameters.getOrNull(index)
+                } ?: return@forEachIndexed
+                val declaredType = parameter.typeName()?.let(DreamShader2Type::fromSpelling) ?: return@forEachIndexed
+                if (declaredType is DreamShader2Type.Unknown) return@forEachIndexed
+                val value = dreamShader2MeaningfulChildren(argumentNode.psi).lastOrNull()?.psi ?: return@forEachIndexed
+                val argumentType = inference.typeOf(value)
+                if (argumentType is DreamShader2Type.Unknown) return@forEachIndexed
+                if (declaredType == argumentType) return@forEachIndexed
+                val declaredCategory = declaredType.category
+                val argumentCategory = argumentType.category
+                if (declaredCategory == argumentCategory &&
+                    declaredCategory != DreamShader2Type.Category.STRUCT
+                ) {
+                    return@forEachIndexed
+                }
+                if (declaredCategory == DreamShader2Type.Category.STRUCT &&
+                    argumentCategory == DreamShader2Type.Category.STRUCT &&
+                    (declaredType as? DreamShader2Type.StructType)?.name ==
+                    (argumentType as? DreamShader2Type.StructType)?.name
+                ) {
+                    return@forEachIndexed
+                }
+                if (declaredCategory !in MISMATCH_CATEGORIES || argumentCategory !in MISMATCH_CATEGORIES) {
+                    return@forEachIndexed
+                }
+                holder.newAnnotation(
+                    HighlightSeverity.WEAK_WARNING,
+                    DreamShaderBundle.message("diagnostic.dsh2.argumentTypeMismatch"),
+                )
+                    .range(value)
+                    .create()
+            }
         }
     }
 

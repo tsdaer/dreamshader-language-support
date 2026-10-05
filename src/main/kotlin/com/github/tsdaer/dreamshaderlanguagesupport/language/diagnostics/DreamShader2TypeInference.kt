@@ -161,16 +161,29 @@ internal class DreamShader2InferenceContext private constructor(
 
     private fun callType(element: PsiElement): DreamShader2Type {
         val path = calleePath(element) ?: return DreamShader2Type.Unknown
+        val lowerPath = path.lowercase()
         return when {
-            path.startsWith("Substrate.", ignoreCase = true) -> DreamShader2Type.Substrate
-            path.startsWith("UE.", ignoreCase = true) -> catalogReturnType(path) ?: DreamShader2Type.Unknown
-            path.endsWith(".sample", ignoreCase = true) -> sampledType(path, element)
-            path.equals("lerp", ignoreCase = true) ||
-                path.equals("saturate", ignoreCase = true) ||
-                path.equals("clamp", ignoreCase = true) ||
-                path.equals("abs", ignoreCase = true) -> firstArgumentType(element)
+            lowerPath.startsWith("substrate.") -> DreamShader2Type.Substrate
+            lowerPath.startsWith("ue.") -> catalogReturnType(path) ?: DreamShader2Type.Unknown
+            lowerPath.endsWith(".sample") -> sampledType(path, element)
+            lowerPath == "dot" -> dotResultType(element)
+            lowerPath == "cross" -> crossResultType(element)
+            lowerPath in FIRST_ARGUMENT_INTRINSICS -> firstArgumentType(element)
             else -> userFunctionReturnType(path, element)
         }
+    }
+
+    /**
+     * Declared parameters of a user function call target (M15 C24.3), resolved in the same
+     * order as [userFunctionReturnType]: this file first, then the include closure. The
+     * workspace export layer stays unchecked — its entries carry no parameter shapes.
+     */
+    fun calleeParameters(path: String): List<DreamShader2Parameter>? {
+        analysis.functionByName(path)?.let { return it.parameterList()?.parameters() }
+        includeClosure.forEach { includee ->
+            DreamShader2FileAnalysis.of(includee).functionByName(path)?.let { return it.parameterList()?.parameters() }
+        }
+        return null
     }
 
     /** HLSL operand-typed intrinsics: the result carries the first argument's type. */
@@ -179,6 +192,33 @@ internal class DreamShader2InferenceContext private constructor(
         val first = dreamShader2MeaningfulChildren(arguments.psi)
             .firstOrNull { it.elementType == DreamShader2ElementTypes.ARGUMENT } ?: return DreamShader2Type.Unknown
         return typeOf(first.psi)
+    }
+
+    /** HLSL `dot`: two equally sized confident numeric operands give a scalar of the wider family. */
+    private fun dotResultType(call: PsiElement): DreamShader2Type {
+        val (first, second) = positionalArgumentTypes(call, 2)
+        if (first == DreamShader2Type.Unknown || second == DreamShader2Type.Unknown) return DreamShader2Type.Unknown
+        if (!first.isNumeric || !second.isNumeric) return DreamShader2Type.Unknown
+        if (first.componentCount != second.componentCount) return DreamShader2Type.Unknown
+        return widerFamily(first, second)?.let { DreamShader2Type.Scalar(it) } ?: DreamShader2Type.Unknown
+    }
+
+    /** HLSL `cross`: two confident same-family 3-vectors give the same 3-vector. */
+    private fun crossResultType(call: PsiElement): DreamShader2Type {
+        val (first, second) = positionalArgumentTypes(call, 2)
+        val vector = first as? DreamShader2Type.Vector ?: return DreamShader2Type.Unknown
+        return if (vector.size == 3 && vector == second) vector else DreamShader2Type.Unknown
+    }
+
+    /** The first [count] positional arguments' types; fewer arguments or named ones stay Unknown. */
+    private fun positionalArgumentTypes(call: PsiElement, count: Int): List<DreamShader2Type> {
+        val arguments = call.node.findChildByType(DreamShader2ElementTypes.ARGUMENT_LIST)
+            ?: return List(count) { DreamShader2Type.Unknown }
+        val positional = dreamShader2MeaningfulChildren(arguments.psi)
+            .filter { it.elementType == DreamShader2ElementTypes.ARGUMENT }
+            .map { typeOf(it.psi) }
+            .toList()
+        return if (positional.size < count) List(count) { DreamShader2Type.Unknown } else positional.take(count)
     }
 
     private fun sampledType(path: String, useSite: PsiElement): DreamShader2Type {
@@ -259,7 +299,13 @@ internal class DreamShader2InferenceContext private constructor(
     private fun enclosingFunctionOf(useSite: PsiElement): DreamShader2FunctionDeclaration? =
         PsiTreeUtil.getParentOfType(useSite, DreamShader2FunctionDeclaration::class.java)
 
-    /** Locals declared textually before [useSite] inside [function]'s body (any block depth). */
+    /**
+     * Locals declared before [useSite] and lexically visible there (M15 C24.1): the
+     * declaration's scope owner — its nearest BLOCK, or the `for` header for loop-init
+     * declarations — must also be an ancestor of the use site, so a sibling block's
+     * declaration (an earlier `if` arm, a finished loop) can no longer lend its type.
+     * The nearest matching declaration wins, which resolves shadowing innermost-first.
+     */
     private fun localDeclaredTypeIn(
         function: DreamShader2FunctionDeclaration,
         name: String,
@@ -267,15 +313,49 @@ internal class DreamShader2InferenceContext private constructor(
     ): DreamShader2Type? {
         val functionRange = function.textRange
         if (!functionRange.contains(useSite.textRange)) return null
-        val locals = psiTreeWalk(function).filter {
+        val visibleScopes = ancestorScopesOf(useSite)
+        var match: DreamShader2Type? = null
+        var matchStart = Int.MIN_VALUE
+        psiTreeWalk(function).filter {
             it.node.elementType == DreamShader2ElementTypes.VARIABLE_DECLARATION_STATEMENT
-        }
-        locals.forEach { statement ->
-            if (statement.textRange.startOffset < useSite.textRange.startOffset) {
+        }.forEach { statement ->
+            val start = statement.textRange.startOffset
+            if (start > matchStart && start < useSite.textRange.startOffset && scopeOwnerOf(statement) in visibleScopes) {
                 declaredNamesAndType(statement)?.let { (names, type) ->
-                    if (name in names) return type
+                    if (name in names) {
+                        match = type
+                        matchStart = start
+                    }
                 }
             }
+        }
+        return match
+    }
+
+    /** Every BLOCK / `for` header on [useSite]'s ancestor chain — the scopes it can see. */
+    private fun ancestorScopesOf(useSite: PsiElement): Set<PsiElement> {
+        val scopes = HashSet<PsiElement>()
+        var current: PsiElement? = useSite.parent
+        while (current != null) {
+            if (current.node?.elementType == DreamShader2ElementTypes.BLOCK ||
+                current.node?.elementType == DreamShader2ElementTypes.FOR_STATEMENT
+            ) {
+                scopes.add(current)
+            }
+            current = current.parent
+        }
+        return scopes
+    }
+
+    /** The BLOCK (or `for` header) that directly owns [statement]'s scope, or null. */
+    private fun scopeOwnerOf(statement: PsiElement): PsiElement? {
+        var current: PsiElement? = statement.parent
+        while (current != null) {
+            when (current.node?.elementType) {
+                DreamShader2ElementTypes.BLOCK, DreamShader2ElementTypes.FOR_STATEMENT -> return current
+                DreamShader2ElementTypes.FUNCTION_DECLARATION -> return null
+            }
+            current = current.parent
         }
         return null
     }
@@ -380,6 +460,16 @@ internal class DreamShader2InferenceContext private constructor(
     companion object {
         /** x/y/z/w, r/g/b/a, s/t/p/q — the three HLSL swizzle sets, any case. */
         private const val SWIZZLE_LETTERS = "xyzwrgbastpq"
+
+        /**
+         * HLSL component-wise intrinsics whose result carries the first argument's type
+         * (M15 C24.2). Anything not listed stays Unknown — the list only grows with
+         * documented, unambiguous operand-typed semantics.
+         */
+        private val FIRST_ARGUMENT_INTRINSICS = setOf(
+            "lerp", "saturate", "clamp", "abs", "normalize",
+            "min", "max", "floor", "ceil", "round", "frac",
+        )
 
         /** Comparison/logical operators: confident operands always yield `bool`. */
         private val BOOLEAN_RESULT_OPERATORS = setOf("&&", "||", "==", "!=", "<", ">", "<=", ">=")

@@ -59,6 +59,73 @@ class DreamShader2CompletionTest : BasePlatformTestCase() {
         assertFalse(DreamShaderCompletionDialects.servesV2(dshMixed))
     }
 
+    fun testMixedDshRegionsSplitCompletionByDialect() {
+        val mixed = myFixture.configureByText(
+            "regions_mixed.dsh",
+            """
+            Shader("M") {
+                Graph = { }
+            }
+            #pragma material(MaterialDomain = "Surface")
+            uniform float Gain;
+            export void Work() {
+                float3 v = float3(0.0, 0.0, 0.0);
+                v.
+            }
+            """.trimIndent(),
+        ) as DreamShaderPsiFile
+        val legacyBody = mixed.text.indexOf("Graph")
+        val topLevelGap = mixed.text.indexOf("\n}") + 2
+        val pragmaLine = mixed.text.indexOf("MaterialDomain")
+        val uniformLine = mixed.text.indexOf("Gain")
+        val v2Member = mixed.text.indexOf("v.") + 2
+
+        assertEquals(
+            "legacy block body is a 1.x region",
+            DreamShaderCompletionDialects.Region.V1,
+            DreamShaderCompletionDialects.regionAt(mixed, legacyBody),
+        )
+        assertEquals(
+            "the gap between top-level nodes hosts both dialects",
+            DreamShaderCompletionDialects.Region.BOTH,
+            DreamShaderCompletionDialects.regionAt(mixed, topLevelGap),
+        )
+        assertEquals(
+            "a pragma directive is a V2 region",
+            DreamShaderCompletionDialects.Region.V2,
+            DreamShaderCompletionDialects.regionAt(mixed, pragmaLine),
+        )
+        assertEquals("a uniform declaration is a V2 region",
+            DreamShaderCompletionDialects.Region.V2,
+            DreamShaderCompletionDialects.regionAt(mixed, uniformLine),
+        )
+        assertEquals(
+            "a V2 function body is a V2 region",
+            DreamShaderCompletionDialects.Region.V2,
+            DreamShaderCompletionDialects.regionAt(mixed, v2Member),
+        )
+
+        assertFalse(DreamShaderCompletionDialects.servesV1At(mixed, uniformLine))
+        assertTrue(DreamShaderCompletionDialects.servesV2At(mixed, uniformLine))
+        assertTrue(DreamShaderCompletionDialects.servesV1At(mixed, legacyBody))
+        assertFalse(DreamShaderCompletionDialects.servesV2At(mixed, legacyBody))
+        assertTrue(DreamShaderCompletionDialects.servesV1At(mixed, topLevelGap))
+        assertTrue(DreamShaderCompletionDialects.servesV2At(mixed, topLevelGap))
+
+        // The 2.0 suggester answers member contexts inside the V2 regions of a mixed file.
+        val entries = suggest(mixed, v2Member)
+        val labels = entries.map { it.label }
+        assertTrue("swizzles expected inside the mixed file's V2 region, got $labels", labels.contains("xyz"))
+
+        // Pure files keep their file-level answer at every offset.
+        val dss = myFixture.configureByText("regions_pure.dss", "uniform float Gain;\n") as DreamShaderPsiFile
+        val dsm = myFixture.configureByText("regions_pure.dsm", "Shader(\"M\") {\n}\n") as DreamShaderPsiFile
+        assertEquals(DreamShaderCompletionDialects.Region.V2, DreamShaderCompletionDialects.regionAt(dss, 0))
+        assertEquals(DreamShaderCompletionDialects.Region.V2, DreamShaderCompletionDialects.regionAt(dss, dss.text.length))
+        assertEquals(DreamShaderCompletionDialects.Region.V1, DreamShaderCompletionDialects.regionAt(dsm, 0))
+        assertEquals(DreamShaderCompletionDialects.Region.V1, DreamShaderCompletionDialects.regionAt(dsm, dsm.text.length))
+    }
+
     // ------------------------------------------------------------------
     // C9 receiver-typed member completion
     // ------------------------------------------------------------------

@@ -1789,7 +1789,8 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                     if (file.language != DreamShaderLanguage) return
                     // C8: pure 2.0 files are served by DreamShader2CompletionContributor only -
                     // without this gate the 1.x suggester answered `.` in `.dss` with 1.x keywords.
-                    if (file is DreamShaderPsiFile && !DreamShaderCompletionDialects.servesV1(file)) return
+                    // C23: in a mixed `.dsh` the caret's region decides - legacy blocks only.
+                    if (file is DreamShaderPsiFile && !DreamShaderCompletionDialects.servesV1At(file, parameters.offset)) return
                     val importPrefix = DreamShaderCompletionSuggester.importCompletionPrefix(file.text, parameters.offset)
                     val targetResult = importPrefix?.let { result.withPrefixMatcher(it.prefix) } ?: result
 
@@ -1917,8 +1918,11 @@ class DreamShaderCompletionTypedHandler : TypedHandlerDelegate() {
         if (file.language != DreamShaderLanguage) return Result.CONTINUE
         val text = editor.document.charsSequence.toString()
         val offset = editor.caretModel.offset.coerceIn(0, text.length)
+        // C23: region-aware - a mixed `.dsh` applies the V2 lexical rules only inside real
+        // V2 declarations, keeping the 1.x analyzer rules for legacy blocks and the top level.
         val isV2File = (file as? DreamShaderPsiFile)
-            ?.let { DreamShaderCompletionDialects.servesV2(it) } == true
+            ?.let { DreamShaderCompletionDialects.regionAt(it, offset) == DreamShaderCompletionDialects.Region.V2 }
+            ?: false
         if (!DreamShaderCompletionAutoPopup.shouldAutoPopup(text, offset, charTyped, isV2File)) {
             return Result.CONTINUE
         }

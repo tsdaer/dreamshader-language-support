@@ -65,7 +65,9 @@ class DreamShader2CompletionContributor : CompletionContributor() {
                     result: CompletionResultSet,
                 ) {
                     val file = parameters.originalFile as? DreamShaderPsiFile ?: return
-                    if (!DreamShaderCompletionDialects.servesV2(file)) return
+                    // C23: in a mixed `.dsh` the 2.0 contributor answers only inside real V2
+                    // declarations; legacy blocks stay with the 1.x contributor.
+                    if (!DreamShaderCompletionDialects.servesV2At(file, parameters.offset)) return
 
                     val offset = parameters.offset
                     val leaf = file.findElementAt(if (offset > 0) offset - 1 else offset) ?: return

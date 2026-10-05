@@ -335,4 +335,37 @@ class DreamShader2SubstrateDiagnosticsTest : BasePlatformTestCase() {
             "numeric compound assignments are legal, got: $weak",
         )
     }
+
+    fun testCallArgumentMismatchWarnsAgainstDeclaredParameter() {
+        val file = addV2File(
+            "DShader/Materials/M_CallArg.dss",
+            """
+            void Tint(float3 Color)
+            {
+            }
+            export void M(inout material m)
+            {
+                Texture2D Map;
+                Tint(Map);
+                Tint(Color = Map);
+                float3 Ok = float3(1, 0, 0);
+                Tint(Ok);
+                Tint(UnknownThing);
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.openFileInEditor(file)
+        val weak = myFixture.doHighlighting(HighlightSeverity.WEAK_WARNING).mapNotNull(HighlightInfo::getDescription)
+        assertEquals(
+            "the positional and named texture arguments warn, the numeric and unknown ones stay silent: $weak",
+            2,
+            weak.count { it.contains("argument's inferred type") },
+        )
+        val errors = myFixture.doHighlighting(HighlightSeverity.ERROR).mapNotNull(HighlightInfo::getDescription)
+        assertTrue(
+            errors.none { it.contains("argument's inferred type") },
+            "the argument mismatch must never be an error, got: $errors",
+        )
+    }
 }
