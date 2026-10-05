@@ -631,4 +631,23 @@ class DreamShaderCompletionSuggesterTest {
         assertTrue(DreamShaderCompletionAutoPopup.shouldAutoPopup("""import "@""", """import "@""".length, '@'))
         assertTrue(!DreamShaderCompletionAutoPopup.shouldAutoPopup("// UE.", "// UE.".length, '.'))
     }
+
+    @Test
+    fun `unknown receiver dot keeps locals and callables only`() {
+        val text = """
+            Shader MySurface {
+                Graph {
+                    float3 Tint = float3(1.0, 1.0, 1.0);
+                    Tint.
+                }
+            }
+        """.trimIndent()
+        val offset = text.indexOf("Tint.") + "Tint.".length
+
+        val labels = DreamShaderCompletionSuggester.suggest(text, offset).map { it.label }.toSet()
+        assertTrue(labels.contains("Tint"), "scope locals stay suggested, got $labels")
+        assertTrue(!labels.contains("UE"), "namespace roots are not members, got $labels")
+        assertTrue(!labels.contains("saturate"), "HLSL intrinsics are not members, got $labels")
+        assertTrue(!labels.contains("float3"), "type constructors are not members, got $labels")
+    }
 }
