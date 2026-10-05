@@ -240,4 +240,101 @@ class DreamShaderInlayParameterHintsProviderTest : BasePlatformTestCase() {
 
         assertTrue(hints.isEmpty())
     }
+
+    // ------------------------------------------------------------------
+    // M16 C28: V2 user functions and dialect-segmented resolution
+    // ------------------------------------------------------------------
+
+    fun testProducesHintsForV2UserFunctionCall() {
+        val file = myFixture.configureByText(
+            "inlay_v2_call.dss",
+            """
+            export float Tint(float color, float gain) {
+                return color * gain;
+            }
+
+            export float Work() {
+                return Tint(0.5, 2.0);
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers
+            .flatMap { provider.getParameterHints(it) }
+            .sortedBy { it.offset }
+
+        assertEquals(listOf("color:", "gain:"), hints.map { hint: InlayInfo -> hint.text })
+        assertTrue(
+            "Expected inlay at first V2 argument",
+            hints.any { it.text == "color:" && file.text.substring(it.offset).startsWith("0.5") },
+        )
+    }
+
+    fun testProducesHintsForV2FunctionFromIncludeClosure() {
+        project.getService(DreamShaderProjectSettings::class.java).state.enableInlayParameterHints = true
+        myFixture.addFileToProject(
+            "Includes/helpers.dss",
+            """
+            export void Apply(float amount, float2 uvIn) {
+            }
+            """.trimIndent()
+        )
+        val file = myFixture.configureByText(
+            "inlay_v2_include_call.dss",
+            """
+            #include "Includes/helpers.dss"
+
+            export void Work() {
+                Apply(1.0, float2(0.0, 1.0));
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers
+            .flatMap { provider.getParameterHints(it) }
+            .sortedBy { it.offset }
+
+        assertEquals(listOf("amount:", "uvIn:"), hints.map { hint: InlayInfo -> hint.text })
+    }
+
+    fun testMixedDshRegionsResolveTheirOwnDialect() {
+        project.getService(DreamShaderProjectSettings::class.java).state.enableInlayParameterHints = true
+        val file = myFixture.configureByText(
+            "inlay_mixed.dsh",
+            """
+            Function LegacyTint(in vec3 color, out vec3 result) {
+                result = color;
+            }
+
+            uniform float Gain = 1.0;
+
+            export float V2Tint(float amount) {
+                return amount * Gain;
+            }
+
+            export float Work() {
+                return V2Tint(0.5);
+            }
+
+            Shader Main {
+                Graph = {
+                    LegacyTint(float3(1,1,1), tinted);
+                }
+            }
+            """.trimIndent()
+        )
+
+        val identifiers = PsiTreeUtil.collectElements(file) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER }
+        val hints = identifiers
+            .flatMap { provider.getParameterHints(it) }
+            .sortedBy { it.offset }
+
+        assertEquals(
+            "V2 region resolves the V2 function, legacy region the 1.x declaration",
+            listOf("amount:", "color:", "result:"),
+            hints.map { hint: InlayInfo -> hint.text },
+        )
+    }
 }

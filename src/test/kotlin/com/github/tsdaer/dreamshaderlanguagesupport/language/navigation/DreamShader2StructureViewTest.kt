@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.navigation
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
 import com.intellij.ide.structureView.StructureViewTreeElement
+import com.intellij.ide.structureView.TreeBasedStructureViewBuilder
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 /**
@@ -116,5 +117,80 @@ class DreamShader2StructureViewTest : BasePlatformTestCase() {
         val file = myFixture.configureByText("plain.dss", "uniform float A;\n") as DreamShaderPsiFile
         val labels = labels(rootOf(file))
         assertTrue(labels.none { it.startsWith("Parent:") })
+    }
+
+    // ------------------------------------------------------------------
+    // M16 C27: dialect routing and legacy-block segmentation
+    // ------------------------------------------------------------------
+
+    fun testFactoryRoutesV2FilesToTwoDotOhModel() {
+        val dss = myFixture.configureByText("routed.dss", "uniform float A;\n")
+        val builder = DreamShaderStructureViewFactory().getStructureViewBuilder(dss)
+        assertTrue(
+            "A .dss routes to the 2.0 model through the single registered factory",
+            (builder as TreeBasedStructureViewBuilder).createStructureViewModel(null) is DreamShader2StructureViewModel,
+        )
+
+        val v2Dsh = myFixture.configureByText("routed.dsh", "uniform float A;\n")
+        val dshBuilder = DreamShaderStructureViewFactory().getStructureViewBuilder(v2Dsh)
+        assertTrue(
+            "A V2-marked .dsh routes to the 2.0 model too",
+            (dshBuilder as TreeBasedStructureViewBuilder).createStructureViewModel(null) is DreamShader2StructureViewModel,
+        )
+
+        val legacyDsh = myFixture.configureByText("legacy.dsh", "Shader Main {\n}\n")
+        val legacyBuilder = DreamShaderStructureViewFactory().getStructureViewBuilder(legacyDsh)
+        assertTrue(
+            "A legacy-only .dsh keeps the 1.x model",
+            (legacyBuilder as TreeBasedStructureViewBuilder).createStructureViewModel(null) is DreamShaderStructureViewModel,
+        )
+    }
+
+    fun testMixedDshShowsLegacyBlocksAndV2Declarations() {
+        val file = myFixture.configureByText(
+            "mixed.dsh",
+            """
+            uniform float Gain = 1.0;
+
+            Shader Main {
+                Graph = {
+                    float x = 1.0;
+                }
+            }
+
+            export float Work(float c) {
+                return c;
+            }
+            """.trimIndent()
+        ) as DreamShaderPsiFile
+
+        val builder = DreamShaderStructureViewFactory().getStructureViewBuilder(file) as TreeBasedStructureViewBuilder
+        val model = builder.createStructureViewModel(null)
+        val root = model.root as DreamShader2StructureViewElement
+        val labels = labels(root)
+        assertTrue("Ungrouped uniform group expected, got $labels", "Ungrouped" in labels)
+        assertTrue("V2 function expected, got $labels", labels.any { it.startsWith("export function Work") })
+        val ungrouped = root.children
+            .map { it as StructureViewTreeElement }
+            .filterIsInstance<DreamShader2StructureViewElement>()
+            .first { it.presentation.presentableText == "Ungrouped" }
+        assertTrue(
+            "V2 uniform expected inside its group",
+            labels(ungrouped).any { it.startsWith("uniform Gain") },
+        )
+
+        val legacyLabel = labels.firstOrNull { it == "Shader Main" }
+        assertTrue("Legacy block label expected from its first declaration, got $labels", legacyLabel != null)
+        val legacyNode = root.children
+            .map { it as StructureViewTreeElement }
+            .filterIsInstance<DreamShader2StructureViewElement>()
+            .first { it.presentation.presentableText == "Shader Main" }
+        val legacyLabels = labels(legacyNode)
+        assertEquals("Legacy block children come from the 1.x reparse", listOf("Shader Main"), legacyLabels)
+        val legacyChild = legacyNode.children
+            .map { it as StructureViewTreeElement }
+            .filterIsInstance<DreamShader2StructureViewElement>()
+            .first()
+        assertTrue("Legacy declaration should navigate into the host file", legacyChild.canNavigate())
     }
 }

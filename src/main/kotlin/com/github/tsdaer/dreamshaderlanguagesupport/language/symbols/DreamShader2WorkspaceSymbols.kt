@@ -132,7 +132,10 @@ class DreamShader2WorkspaceSymbols(private val project: Project) {
             val next = mutableListOf<PsiFile>()
             frontier.forEach { current ->
                 includesOf(current).forEach { path ->
-                    val target = DreamShaderImportResolver.resolveImport(current, path) ?: return@forEach
+                    // 2.0 `#include` targets may be .dss/.dsi as well as .dsh; the resolver
+                    // defaults to the frozen 1.x import extension set.
+                    val target = DreamShaderImportResolver.resolveImport(current, path, DreamShaderImportResolver.V2_INCLUDE_EXTENSIONS)
+                        ?: return@forEach
                     if (!visitedPaths.add(target.path)) return@forEach
                     val psi = psiManager.findFile(target) ?: return@forEach
                     next.add(psi)
