@@ -2,6 +2,19 @@
 
 # dreamshader-language-support 更新日志
 
+## [2.3.0] - 2026-10-06
+
+### Added
+
+- 重构里程碑 M15（计划：`docs/m15-plan.md`）：
+  - **2.0 方言的提取函数**（C21）：在 `.dss` 函数体内选中完整语句后，会在当前函数之后插入一个文件级 helper 函数，并把选区替换为调用。签名由选区的数据流合成——选区读取的外部名字成为值参数（取声明类型拼写），选区内写入且区后仍使用的名字以 `out` 参数带回（选区同时读取时为 `inout`，如 `x = x + 1`），新函数名与调用点联动就地重命名。`return`/`break`/`continue`、部分选区、经由成员或索引的赋值、会改变作用域的声明、类型无法解析的名字一律拒绝（提示 + 文档零改动）；解析为函数或命名空间根的名字保持原样而不变成参数。
+  - **2.0 方言的内联 Uniform**（C22）：`Refactoring` 菜单动作（`DreamShader.InlineUniform`）把当前 `.dss` 中单声明器 uniform 的全部使用处替换为其带括号的初始化器，并连同 `///` doc 块一起删除声明。写入前逐项预检：`.dsi` 材质实例覆盖（复用重命名安全网）、其他文件中的使用、其他初始化器读取该 uniform、缺少初始化器、多声明器声明——全部拒绝并保持文档不变。
+
+### Changed
+
+- **混合 `.dsh` 补全按光标区域分流**（C23）：HEADER_MIXED 的 `.dsh` 由 2.0 前端解析，光标所在节点决定服务方言——legacy 块由 1.x Contributor 应答，真实 V2 声明（uniform/global/struct/function/pragma/include/doc 块）由 2.0 Contributor 应答，声明之间的顶层空隙同时容纳两方言的关键词集。纯文件在所有偏移保持文件级结论；`.`/`(`/`=` 自动弹窗仅在 V2 区域应用 2.0 词法规则。
+- **类型推断切片**（C24）：局部名解析改为词法作用域约束——声明的 scope owner（最近的块，循环初始化则为 `for` 头）必须同时包含使用点，兄弟块内先前的同名局部不再提供虚假自信类型，遮蔽按最内层优先解析；操作数型内建扩展 `normalize`/`min`/`max`/`floor`/`ceil`/`round`/`frac` 以及 `dot`（等形状时取更宽族的标量）与 `cross`（同族 3 向量）；用户声明的函数调用实参按被调形参类型给出弱警告级检查（本文件 + include 闭包解析、命名实参按名对位、仅自信对触发）。
+
 ## [2.2.0] - 2026-10-05
 
 ### 新增
@@ -343,6 +356,7 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[2.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.5.0...2.0.0

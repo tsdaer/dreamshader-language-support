@@ -2,6 +2,19 @@
 
 # dreamshader-language-support Changelog
 
+## [2.3.0] - 2026-10-06
+
+### Added
+
+- Refactoring milestone M15 (plan: `docs/m15-plan.md`):
+  - **Extract Function for the 2.0 dialect** (C21): selecting complete statements inside a `.dss` function body inserts a file-local helper function after the current one and replaces the selection with a call. The signature is synthesized from the selection's data flow - names read from outside become value parameters with their declared type spelling, names written in the selection and used afterwards come back as `out` parameters (`inout` when the selection also reads them, e.g. `x = x + 1`), and the new function name starts a linked in-place rename template with the call site. Extraction refuses - with a hint and an untouched document - on `return`/`break`/`continue`, partial selections, assignments through members or indexes, declarations that would change scope, and names whose type cannot be resolved; names that resolve to functions or namespace roots stay as-is instead of becoming parameters.
+  - **Inline Uniform for the 2.0 dialect** (C22): a `Refactoring`-menu action (`DreamShader.InlineUniform`) replaces every usage of a single-declarator uniform in the current `.dss` with its parenthesized initializer and removes the declaration together with its `///` doc block. Every precondition is checked before the write: `.dsi` material instances overriding the uniform (via the rename safety net), usages in other files, other initializers reading the uniform, missing initializers, and multi-declarator declarations all refuse with a hint and an untouched document.
+
+### Changed
+
+- **Mixed-`.dsh` completion now dispatches per caret region** (C23): a HEADER_MIXED `.dsh` is parsed by the 2.0 front end, so the caret's enclosing node decides the serving dialect - legacy blocks are answered by the 1.x contributor, real V2 declarations (uniform/global/struct/function/pragma/include/doc blocks) by the 2.0 one, and the top-level gaps between declarations host both dialects' keyword sets. Pure files keep their file-level answer at every offset, and the typed `.`/`(`/`=` auto-popup applies the V2 lexical rules only inside V2 regions.
+- **Type inference slices** (C24): local name resolution is lexically scoped - a declaration's scope owner (its nearest block, or the `for` header for loop-init declarations) must also contain the use site, so an earlier sibling block's same-name local no longer lends a false confident type, and shadowing resolves innermost-first; the operand-typed intrinsic set grows by `normalize`/`min`/`max`/`floor`/`ceil`/`round`/`frac` plus `dot` (scalar of the wider family, equal shapes) and `cross` (same-family 3-vectors); call arguments of user-declared functions are checked against the callee's declared parameter types as weak warnings (file + include closure resolution, named arguments matched by name, confident pairs only).
+
 ## [2.2.0] - 2026-10-05
 
 ### Added
@@ -335,6 +348,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[2.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.5.0...2.0.0

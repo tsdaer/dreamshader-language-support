@@ -249,6 +249,12 @@
 
 **M15 候选（顺延）**：Extract Function / Inline Uniform（复用 C20 handler 地基）；`.dsh` 混合方言逐声明分段补全；表达式推断后续切片（`?:` 右嵌套以外的流敏感场景、用户函数参数流）。
 
+### M15 — 「重构扩展与方言精修」→ 目标版本 2.3.0（已完成 2026-10-06）
+范围：C21 + C22 + C23 + C24 + T15。任务卡全文见 `docs/m15-plan.md`（含 C20 地基盘点与推断缺口研究）；来源为上方 M15 候选（M14 顺延项）。依赖 C20 handler 骨架、C5 影响面检查、V2 解析器的 LEGACY_BLOCK 捕获（均就绪）。
+**发布门槛**：`gradlew build` + 全量测试绿。——已落地：C21 提取函数（语句集选区 + 数据流合成签名：读外部名 → 值参数、写且区后用 → `out`/`inout`，`ExtractMethod` 平台动作接线）；C22 内联 Uniform（`DreamShader.InlineUniform` 菜单动作，预检 `.dsi` 覆盖/跨文件使用/初始化器链后内联 + 删声明）；C23 混合 `.dsh` 按光标区域分流（`LEGACY_BLOCK` → 1.x、V2 声明 → 2.0、顶层双服务，typed handler 同步）；C24 推断三切片（词法作用域收紧、`dot`/`cross`/`normalize` 等操作数型内建、调用实参对照形参的弱警告）；CHANGELOG（en/zh）2.3.0 段、`language-v2-baseline.md` M15 覆盖映射、README 元数据块同步；版本号 2.3.0；全量 800 例零失败。
+
+**M16 候选（顺延）**：Inline Variable（局部变量内联，复用 C22 的预检骨架）；Extract Function 的「单一返回值」启发（唯一存活写出参时返回而非 `out`）；`.dsh` 混合方言的结构视图与 inlay 分段；流敏感推断后续（out/inout 参数写回后的变量类型收窄）；`.dsi` 覆盖值的 schema 驱动补全升级（Bridge schema 可用时精确到枚举值清单）。
+
 
 ---
 

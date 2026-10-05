@@ -3,7 +3,7 @@
 - **制定日期**：2026-10-06
 - **基线**：本插件 2.2.0（2026-10-05，M14 完成）；上游 DreamShader 2.0.2 @ `b3bbf48`
 - **来源**：`docs/agent-development-plan.md` 的 M15 候选（M14 顺延项）：Extract Function / Inline Uniform（复用 C20 handler 地基）、`.dsh` 混合方言逐声明分段补全、表达式推断后续切片
-- **计划状态**：执行中（分两批，目标版本 2.3.0）
+- **计划状态**：已完成（2026-10-06 两批落地，见 §5 执行记录，版本 2.3.0）。任务卡并入 `docs/agent-development-plan.md` 作为 M15。
 
 ---
 
@@ -125,4 +125,28 @@
 
 ## 5. 执行记录
 
-（随批次落地追加）
+### 2026-10-06 两批落地——M15 完结，版本 2.3.0
+
+**批次 1（C23/C24，提交 `2086145`）**：
+
+- C23：`DreamShaderCompletionDialects` 新增 `Region`（V1/V2/BOTH）与 `regionAt`/`servesV1At`/`servesV2At`——区域索引（顶层 `LEGACY_BLOCK` 范围 vs V2 声明范围）按文件 PSI CachedValue 缓存；纯文件在所有偏移返回文件级结论。1.x Contributor gate、2.0 Contributor gate、typed handler 的 `isV2File` 判定三处改 offset 感知（V2 区域走 C12 词法规则、legacy/顶层走 1.x 分析器）。混合 `.dsh` 顶层 BOTH：两方言的关键词集并存（混合头文件顶层合法地容纳两种声明，baseline 已记录）。
+- C24.1：`localDeclaredTypeIn` 收紧为词法作用域——声明的 scope owner（最近 BLOCK，for-init 则为 `FOR_STATEMENT`）必须同时是使用点的祖先；近声明优先（遮蔽按最内层解析）。
+- C24.2：`callType` 内建表扩至 `normalize`/`min`/`max`/`floor`/`ceil`/`round`/`frac`（首参类型）+ `dot`（等形状数值 → 更宽族标量）+ `cross`（同族 3 向量）。
+- C24.3：`DreamShader2DiagnosticsPass.annotateCallArgumentMismatches`——调用实参对照被调形参声明类目（本文件 → include 闭包；workspace 导出层无形参形状不检查），命名实参按名对位（大小写不敏感），实参数超形参数静默（默认值/重载不可见）；新 bundle 键 `diagnostic.dsh2.argumentTypeMismatch`（en/zh）。
+- 测试：`DreamShader2CompletionTest` +1（混合方言区域矩阵 + 纯文件整文件答案）；`DreamShader2TypeInferenceTest` +2（作用域正反例四组、内建族六组）；`DreamShader2SubstrateDiagnosticsTest` +1（位置/命名实参告警、同类目与 Unknown 静默）。全量 784 例零失败。
+
+**批次 2（C21/C22，提交 `b72b32c`）**：
+
+- C21：新 `refactoring/DreamShader2ExtractFunctionHandler.kt`——选区必须恰好覆盖同块内的完整语句（首语句起点对齐、末语句终点对齐）；数据流分析（读取 = 非写目标的 REFERENCE 集；写入 = 赋值 LHS/`++`/`--` 目标/声明初始化器；控制流转移与成员/索引写入拒绝）；签名合成（值参数 = 读取且解析为声明的名字，取声明拼写；`out`/`inout` = 写入且区后使用，读过即 `inout`；函数名与命名空间根保持原样）；新函数（裸 `void` 形式）插入当前函数之后，语句按原相对缩进重排到 4 空格基准；`ExtractMethod` 平台动作经 `getExtractMethodHandler()` 接线；TemplateBuilder 双位置联动。
+- C22：新 `refactoring/DreamShader2InlineUniformHandler.kt` + `DreamShaderInlineUniformAction`（`DreamShader.InlineUniform` 注册进 `RefactoringMenu`）——目标解析（声明名或使用处 → `DreamShader2FileAnalysis.uniforms` 名字匹配）；五项预检全过才写：单声明器、有初始化器、无其他初始化器读取、无 `.dsi` 覆盖（`DreamShaderRenameImpactChecker.impactsOf`）、无跨文件使用（`ReferencesSearch`）；写入 = 使用处倒序替换为带括号初始化器 + 声明连同前置 doc 块与行尾整行删除。
+- 测试：`DreamShader2ExtractFunctionTest` 9 例（单语句 in/out、多语句零参、`inout` 判定、平台动作接线、拒绝矩阵四组、1.x 静默）；`DreamShader2InlineUniformTest` 7 例（内联 diff、菜单动作接线、拒绝矩阵四组、1.x 静默）。全量 800 例零失败。
+
+**实现决策与偏差**：
+
+- C21 出参限定词实现了 `inout` 而非按计划卡拒绝「先读后写」——`x = x + 1` 用 `out` 在 HLSL 中读未定义初值，`inout` 才是正确拼写，且实现成本相同；计划卡的保守意图由「类型不可知即拒绝」承担。
+- C21 对解析为函数或命名空间根（`UE.`）的自由名保持原样而非拒绝——为它们合成参数既不必要也会改变调用形态；未解析名的语义由既有诊断兜底。
+- C22 限定 `.dss`（`.dsi` 的 uniform 是覆盖声明，内联即删覆盖，超出本批范围）；多声明器 uniform 拒绝（逐声明器初始化器提取留 M16 与 Inline Variable 一并考虑）。
+- C23 顶层 BOTH 策略使混合文件顶层弹窗同时出现两方言关键词——这是混合头文件的真实语义（上游按声明判定方言），已写入 baseline 的 M15 映射表。
+- 平台 `getExtractMethodHandler()` 覆写即被 `ExtractMethod` 动作调用（无元素感知重载需求），与 C20 的 `IntroduceVariable` 双重载模式不同。
+
+**任务卡状态**：C21–C24、T15 全部完成，M15 收官（`build` 通过，全量 800 例零失败）。后续方向见 `agent-development-plan.md` M16 候选。
