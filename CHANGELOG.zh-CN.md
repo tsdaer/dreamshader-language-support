@@ -2,6 +2,19 @@
 
 # dreamshader-language-support 更新日志
 
+## [2.2.0] - 2026-10-05
+
+### 新增
+
+- 表达式级智能里程碑 M14（计划：`docs/m14-plan.md`）：
+  - **2.0 方言的提取变量重构**（C20）：在 `.dss`/`.dsi` 函数体内选中（或将光标落在其后）表达式，在所在语句之前插入带推断类型拼写的局部声明，出现处以去重后的建议名替换；声明处与使用处进入联动就地重命名模板。类型不可知、或位于 if 分支/循环体内（提出会改变求值时机）时给出提示并保持文档原样拒绝。1.x 文件保持平台默认行为。
+  - **2.0 方言的后缀模板**（C18）：后缀模板选择器开始服务 `.dss`/`.dsi`——模板候选取最后一个顶层赋值（`=`、`+=` 等）之后的值片段而非整行，`$expr$` 包裹表达式形态的 PSI 节点而非叶子——`if`/`ifel` 首次在 2.0 文件可用；新增四个表达式模板：`lerp(expr, y, s)`、`saturate(expr)`、`expr.Sample()`、`expr.<分量>`。
+
+### 变更
+
+- **表达式类型推断加固**（C17，长期推断目标的首批收口）：三元表达式折叠取分支类型（丢弃条件类型，两分支按标量/向量提升规则合并，右嵌套链由内向外闭合），不再把条件类型当结果；复合赋值保持左侧形状，不再吸收右侧向量形状；用户函数调用经 include 闭包（含非 export helper）解析声明的返回类型，先于工作区导出视图；赋值类目不匹配告警覆盖复合赋值，DSH5293 已报 Substrate 操作数时保持静默不叠报。
+- **命名实参感知的签名帮助**（C19）：参数信息的光标位置按实参名匹配对应参数（大小写不敏感，含字符串值内部的光标），`Destination = "Wo` 高亮 `Destination` 而非按逗号计数；仅在实参间隙与名字无匹配时回退位置索引。catalog 签名与同一可调用的文档化内建拼写按重载行并列展示（catalog 在前，按展示文本去重）。
+
 ## [2.1.0] - 2026-10-05
 
 ### 新增
@@ -330,6 +343,7 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[2.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.5.0...2.0.0
 [1.5.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.4.0...1.5.0

@@ -2,9 +2,9 @@
 
 - **制定日期**：2026-10-03
 - **上游基线**：TypeDreamMoon/DreamShader **v2.0.2**（2026-10-02，commit `b3bbf48`）
-- **本插件版本**：2.1.0（2026-10-05，M13），语言基线 DreamShader 1.8.0 + upstream main @8f84830（1.x）/ DreamShader 2.0.2 @b3bbf48（2.0）
+- **本插件版本**：2.2.0（2026-10-05，M14），语言基线 DreamShader 1.8.0 + upstream main @8f84830（1.x）/ DreamShader 2.0.2 @b3bbf48（2.0）
 - **上游参考副本**：`/tmp/dreamshader-ref`（浅克隆；重新获取见 §7.1 网络守则）
-- **计划状态**：执行中。**M8 已完成**（2026-10-03，A1 + A2 + B1 + B5：上游语料库 72 文件 / language-v2 三文档示例 / 三份模板零 error 解析，1.x 全量测试零回归）；**M9 已完成**（2026-10-03，A3 + B2 + B6：builtin-catalog 合并链接入 + 内嵌 V2 兜底目录 / symbol-index v1 只读仓库 / bridge.db meta 表 / reveal-node 动作与 gutter 标记 / status.json+owner.lock 存活模型与状态栏在线离线）；**M10 已完成**（2026-10-03，A4 + A5 + A8 + A9 + B3 + B4 + B7 + D8 首批：2.0 模板与 New 菜单 / 639 码 DSH 码表 + tooltip 码义 + 文档意图 + DSH2248/2249/3203 预防性检查 / GLSL 别名提示 DSH5277 / dsc Check-Format-Migrate-Index 动作与设置项 / 派生文件 problemHighlightFilter + readerModeMatcher / 未知类型规则迁移 LocalInspectionTool / DB reader·watcher 内核·settings UI 测试债）；**M11 已完成**（2026-10-03，A6 + C1 + C2：2.0 声明 stub 化与四个 StubIndex（uniform / export·extern 函数 / struct / include 边，`stubElementTypeHolder` 接口注册）/ DreamShader2WorkspaceSymbols 按名合并（Bridge 权威、stub 兜底、include 闭包）/ 保守类型推断（拼写、逐分量提升、swizzle 收缩、catalog 返回类型、静默 Unknown）/ Substrate 糖检查 DSH5293·5295·5296·5297·5298 与 DSH2158 / `.dsi` 覆盖检查 DSH7258·7264·7259·7268（schema 门控降级）/ 赋值类目弱警告）。**M12 已完成**（2026-10-04，C3 + C4 + C5 + C6 + C7 + A7 + D1–D7：2.0 上下文补全（catalog 命名实参 / Substrate builder 成员 / `.dsi` 父参数 / `#pragma material` 键值）/ 2.0 语义高亮三级配色 + Substrate 变量值 + `@key` 与覆盖名着色 / V2 工作区引用搜索与改名影响面安全网 / 2.0 结构视图与 Code Vision / reveal-node「Open at line」双向闭环 / WebSocket 实时预览（帧解码器 + 回环客户端 + 探针行联动 + mock 服务器往返测试）/ D1–D7 平台编辑特性（用法高亮、Surround With、建议式重构、四件套编辑动作、结构块、Copy Path、HLSL 注入））。**M13 已完成**（2026-10-05，C8–C16 + A10 + D9 + T13：方言分流与补全门控 / 2.0 接收者类型驱动成员补全（swizzle、矩阵、struct 字段、贴图 sample、material 属性、Substrate pin、catalog 命名空间）/ 统一优先级与去重 / 命名实参槽位收紧与 catalog 枚举值补全 / `.` 自动弹出方言感知 / 2.0 裸标识符与 `#include` 路径补全 / `.dsi` 覆盖值类型感知补全 / 1.x 按点降级收紧 / 字符串插入引号规范化 / 补全热路径 PSI 复用与候选缓存）。roadmap.md 的 M0–M7 已全部完成。
+- **计划状态**：执行中。**M8 已完成**（2026-10-03，A1 + A2 + B1 + B5：上游语料库 72 文件 / language-v2 三文档示例 / 三份模板零 error 解析，1.x 全量测试零回归）；**M9 已完成**（2026-10-03，A3 + B2 + B6：builtin-catalog 合并链接入 + 内嵌 V2 兜底目录 / symbol-index v1 只读仓库 / bridge.db meta 表 / reveal-node 动作与 gutter 标记 / status.json+owner.lock 存活模型与状态栏在线离线）；**M10 已完成**（2026-10-03，A4 + A5 + A8 + A9 + B3 + B4 + B7 + D8 首批：2.0 模板与 New 菜单 / 639 码 DSH 码表 + tooltip 码义 + 文档意图 + DSH2248/2249/3203 预防性检查 / GLSL 别名提示 DSH5277 / dsc Check-Format-Migrate-Index 动作与设置项 / 派生文件 problemHighlightFilter + readerModeMatcher / 未知类型规则迁移 LocalInspectionTool / DB reader·watcher 内核·settings UI 测试债）；**M11 已完成**（2026-10-03，A6 + C1 + C2：2.0 声明 stub 化与四个 StubIndex（uniform / export·extern 函数 / struct / include 边，`stubElementTypeHolder` 接口注册）/ DreamShader2WorkspaceSymbols 按名合并（Bridge 权威、stub 兜底、include 闭包）/ 保守类型推断（拼写、逐分量提升、swizzle 收缩、catalog 返回类型、静默 Unknown）/ Substrate 糖检查 DSH5293·5295·5296·5297·5298 与 DSH2158 / `.dsi` 覆盖检查 DSH7258·7264·7259·7268（schema 门控降级）/ 赋值类目弱警告）。**M12 已完成**（2026-10-04，C3 + C4 + C5 + C6 + C7 + A7 + D1–D7：2.0 上下文补全（catalog 命名实参 / Substrate builder 成员 / `.dsi` 父参数 / `#pragma material` 键值）/ 2.0 语义高亮三级配色 + Substrate 变量值 + `@key` 与覆盖名着色 / V2 工作区引用搜索与改名影响面安全网 / 2.0 结构视图与 Code Vision / reveal-node「Open at line」双向闭环 / WebSocket 实时预览（帧解码器 + 回环客户端 + 探针行联动 + mock 服务器往返测试）/ D1–D7 平台编辑特性（用法高亮、Surround With、建议式重构、四件套编辑动作、结构块、Copy Path、HLSL 注入））。**M13 已完成**（2026-10-05，C8–C16 + A10 + D9 + T13：方言分流与补全门控 / 2.0 接收者类型驱动成员补全（swizzle、矩阵、struct 字段、贴图 sample、material 属性、Substrate pin、catalog 命名空间）/ 统一优先级与去重 / 命名实参槽位收紧与 catalog 枚举值补全 / `.` 自动弹出方言感知 / 2.0 裸标识符与 `#include` 路径补全 / `.dsi` 覆盖值类型感知补全 / 1.x 按点降级收紧 / 字符串插入引号规范化 / 补全热路径 PSI 复用与候选缓存）。**M14 已完成**（2026-10-05，C17–C20 + T14：三元/复合赋值/include 闭包 helper 三类表达式推断收口与复合赋值类目告警 / 后缀模板 V2 化（选择器按赋值行取值片段 + lerp·saturate·sample·swizzle）/ 命名实参感知的参数信息高亮与 catalog-内建签名重载并集 / 2.0 提取变量重构（推断类型拼写、联动就地重命名、求值时机保守拒绝））。roadmap.md 的 M0–M7 已全部完成。
 
 本文档是面向智能体（AI agent）的可执行开发计划：每个任务卡都给出目标、涉及文件、验收标准与上游参考，智能体按里程碑顺序认领任务、独立完成、按 §6 守则提交。执行者不得跳过验收标准。
 
@@ -242,6 +242,13 @@
 ### M13 — 「补全智能化」→ 目标版本 2.1.0（已完成 2026-10-05）
 范围：C8 + C9 + C10 + C11 + C12 + C13 + C14 + C15 + C16 + A10 + D9 + T13。任务卡全文（含根因分析与验收矩阵）见 `docs/completion-plan.md`；依赖 M11（`DreamShader2InferenceContext`/`structFields`）与 M12 C3。
 **发布门槛**：`gradlew build` + 全量测试绿。——已更新：CHANGELOG（en/zh）2.1.0 段、`language-v2-baseline.md` M13 补全覆盖映射、README 元数据块补全描述；版本号 2.1.0；全量 757 例零失败。
+
+### M14 — 「表达式级智能」→ 目标版本 2.2.0（已完成 2026-10-05）
+范围：C17 + C18 + C19 + C20 + T14。任务卡全文见 `docs/m14-plan.md`（含推断缺口研究与验收矩阵）；来源为 `docs/completion-plan.md` §4 的 M14 候选方向与 roadmap 长期推断目标的首批切片。依赖 M11 推断上下文与 M13 闭包收集（均就绪）。
+**发布门槛**：`gradlew build` + 全量测试绿。——已落地：C17 三元/复合赋值/闭包 helper 三类推断收口 + 复合赋值类目告警；C18 后缀模板 V2 化（选择器重写 + 四表达式模板）；C19 命名实参感知参数高亮 + catalog/内建签名重载并集；C20 提取变量（推断拼写 + 联动就地重命名 + 保守拒绝）；CHANGELOG（en/zh）2.2.0 段、`language-v2-baseline.md` M14 覆盖映射、README 元数据块同步；版本号 2.2.0；全量 780 例零失败。
+
+**M15 候选（顺延）**：Extract Function / Inline Uniform（复用 C20 handler 地基）；`.dsh` 混合方言逐声明分段补全；表达式推断后续切片（`?:` 右嵌套以外的流敏感场景、用户函数参数流）。
+
 
 ---
 

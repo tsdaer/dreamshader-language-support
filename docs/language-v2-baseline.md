@@ -85,6 +85,21 @@ The completion coverage map per context; both contributors share one priority sc
 | `.dsi` override value slot (A10) | Declared-type-driven templates: `bool` -> `true`/`false`, scalars -> placeholders, vectors/matrices -> constructors; resource types stay silent |
 | Hot path (C15) | Context analysis reads the committed originalFile PSI (lexer fallback only - no per-popup re-parse); callable candidates from one cached closure+signature pass; FilenameIndex scan cached per project revision and import candidates collected lazily |
 
+## M14 Expression Intelligence (plugin 2.2.0, upstream `2.0.2` @ `b3bbf48`)
+
+The first slice of the long-term "full expression type inference" target plus editor-facing consumers.
+
+| Capability (task) | Behavior |
+|---|---|
+| Ternary typing (C17) | `a ? b : c` folds to the branch types - condition type discarded, arms merge with scalar/vector promotion, right-nested chains (`a ? b : c ? d : e`) close innermost-first; an Unknown arm yields the other arm |
+| Compound assignments (C17) | `+=`/`-=`/`*=`/`/=`/... keep the left-hand type instead of absorbing the right-hand vector shape |
+| Include-closure calls (C17) | User function calls resolve declared return types through the include closure (non-export helpers included) before the workspace export view; nearest include first, Unknown as fallback |
+| Compound-assignment mismatch (C17) | The weak-warning category check covers compound assignments and stays silent when `DSH5293` already flags the Substrate operand |
+| Signature help named arguments (C19) | The parameter-info highlight maps a named argument to its parameter by name (case-insensitive, string-literal value carets included); positional comma count decides only in gaps and for unmatched names |
+| Signature overload union (C19) | Catalog signatures and the documented built-in spelling of the same callable appear as distinct rows (catalog first, presentations de-duplicated) |
+| Postfix templates (C18) | The selector serves `.dss`/`.dsi`: the candidate is the value after the last top-level assignment (`==`/comparisons excluded, compound forms included), and `$expr$` wraps the expression-shaped PSI node; templates `if` / `ifel` / `lerp(expr, y, s)` / `saturate(expr)` / `expr.Sample()` / `expr.$swz$` |
+| Extract Variable (C20) | Selection or caret gesture inside a 2.0 function body inserts `Type name = expr;` before the enclosing statement (inferred spelling, de-duplicated suggested name) and starts a linked in-place rename over declaration + use site; refuses with a hint when the type is unknowable or the statement sits in an `if` arm / loop body; 1.x files keep the platform default |
+
 ## Deliberate Limitations (downstream milestones)
 
 - **The plugin is not the compiler.** The parser emits no error elements; the engine bridge and `dsc check` stay the semantic authority. M10/M11 add only conservative, upstream-keyed heuristics that go silent when their deciding data (a confident inferred type, a valid Bridge schema) is absent.
@@ -109,8 +124,11 @@ The completion coverage map per context; both contributors share one priority sc
 | `DreamShaderBridgeStatusTest` | status identity fields, busy-over-heartbeat rule, 30s staleness, owner.lock parse, ISO-8601 heartbeat |
 | `DreamShader2StubIndexTest` | Stub population (uniform/function/struct/include), linkage-only function index, rebuild idempotency after rename, 500-file scale budget |
 | `DreamShader2WorkspaceSymbolsTest` | Bridge-shadows-stub merge per name, degrade-to-stub without Bridge data, structs/uniforms merge, instance-schema validity gating, include closure resolution |
-| `DreamShader2TypeInferenceTest` | Spelling parsing (`float1`, matrices), file-scope/parameter types, upstream expression examples (swizzle, promotion, catalog, Sample), silent-Unknown contract, constructor/Substrate typing |
-| `DreamShader2SubstrateDiagnosticsTest` | `DSH5293`/`DSH5295`/`DSH5296`/`DSH5297`/`DSH5298` and `DSH2158` positive+negative pairs; C2 mismatch is weak-warning-only |
+| `DreamShader2TypeInferenceTest` | Spelling parsing (`float1`, matrices), file-scope/parameter types, upstream expression examples (swizzle, promotion, catalog, Sample), silent-Unknown contract, constructor/Substrate typing; C17: ternary branch typing (plain/promoted/right-nested), compound-assignment left-hand shape, include-closure helper returns |
+| `DreamShader2SubstrateDiagnosticsTest` | `DSH5293`/`DSH5295`/`DSH5296`/`DSH5297`/`DSH5298` and `DSH2158` positive+negative pairs; C2 mismatch is weak-warning-only; C17: compound-assignment mismatch warns, stays silent on Substrate operands and between numerics |
+| `DreamShaderSignatureHelpAnalyzerTest` | Call-context resolution, parameter indices, declared/catalog/built-in signature tiers; C19: named-argument caret mapping (string interiors included), gap and unmatched-name fallbacks, overload union order and dedup |
+| `DreamShaderPostfixTemplatesTest` | Template registration and template strings; 1.x line rules (accept bare expressions, reject assignment lines); C18: V2 declaration/caret contexts accepted, empty/statement contexts rejected, compound/comparison `=` handling |
+| `DreamShader2ExtractVariableTest` | C20: call/member/literal extraction with inferred spellings and document diffs, caret gesture, `IntroduceVariable` action routing, unknown-type and loop-body refusal with untouched documents, 1.x silence |
 | `DreamShader2InstanceOverridePassTest` | `DSH7258`/`DSH7264`/`DSH7259`/`DSH7268` with a valid schema; silence without Bridge data or with an invalid schema |
 | `DreamShaderRevealNodeTest` | Request body fields vs upstream contract, line clamp, envelope + added fields, navigate failure code, foreign-id/missing-file degradation, no temp residue |
 | `DreamShader2CompletionTest` | The M13 completion matrix (35 cases): dialect gating, receiver-typed members (swizzle/matrix/struct/texture/material/Substrate/namespaces/degraded), named-argument slot checks and catalog enum values, bare identifiers, `#include` paths, `.dsi` parent parameters and override values, pragma keys/values, and the D9 quote-aware insertion matrix via real lookup selection |

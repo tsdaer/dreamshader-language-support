@@ -2,6 +2,19 @@
 
 # dreamshader-language-support Changelog
 
+## [2.2.0] - 2026-10-05
+
+### Added
+
+- Expression intelligence milestone M14 (plan: `docs/m14-plan.md`):
+  - **Extract Variable for the 2.0 dialect** (C20): selecting (or placing the caret after) an expression inside a `.dss`/`.dsi` function body inserts a local declaration before the enclosing statement with the inferred type spelling and replaces the occurrence with a suggested, de-duplicated name; the declaration and the use site start a linked in-place rename template. Extraction refuses - with a hint and an untouched document - when the type is not knowable, and inside `if` arms or loop bodies where hoisting would change evaluation order. 1.x files keep the platform default.
+  - **Postfix templates for the 2.0 dialect** (C18): the postfix expression selector now serves `.dss`/`.dsi` - the template candidate is the value after the last top-level assignment (`=`, `+=`, ...) instead of the whole line, and the wrapped `$expr$` is the expression-shaped PSI node rather than a leaf - so `if`/`ifel` work in 2.0 files for the first time; four expression templates join: `lerp(expr, y, s)`, `saturate(expr)`, `expr.Sample()`, and `expr.<components>`.
+
+### Changed
+
+- **Expression type inference hardening** (C17, first slice of the long-term inference target): ternary expressions fold to the branch types (the condition type is discarded, arms merge with scalar/vector promotion, right-nested chains close innermost-first) instead of reporting the condition's type; compound assignments keep the left-hand shape instead of absorbing the right-hand vector shape; user function calls resolve declared return types through the include closure (non-export helpers included) before the workspace export view; the assignment category-mismatch warning now covers compound assignments too, staying silent when DSH5293 already flags the Substrate operand.
+- **Signature help with named arguments** (C19): the parameter-info caret position maps a named argument to its parameter by name (case-insensitive, string-literal value carets included), so `Destination = "Wo` highlights `Destination` instead of the comma-count slot; the positional index only decides in gaps between arguments and for unmatched names. Catalog signatures now appear together with the documented built-in spelling of the same callable as distinct overload rows (catalog first, presentations de-duplicated).
+
 ## [2.1.0] - 2026-10-05
 
 ### Added
@@ -322,6 +335,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[2.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.5.0...2.0.0
 [1.5.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.4.0...1.5.0

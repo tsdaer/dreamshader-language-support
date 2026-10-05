@@ -112,4 +112,26 @@
 
 ## 5. 执行记录
 
-（随批次落地补记）
+### 2026-10-05 单日两批落地——M14 完结，版本 2.2.0
+
+**批次 1（C17/C18/C19，提交 `1c65aff`）**：
+
+- C17：`flatExpressionType` 重写为三元帧栈折叠（`?` 开帧丢弃条件类型、`:` 快照 then 臂、帧由内向外闭合，右嵌套 `a ? b : c ? d : e` 正确；分支合并在双 Unknown 之外取自信支、数值形状不同按 `+` 提升规则）；复合赋值在折叠循环中直接保持 accumulator（LHS 形状）；`userFunctionReturnType` 增加闭包层（本文件 → include 闭包逐个 `DreamShader2FileAnalysis.of(includee).functionByName`（含非 export helper）→ workspace 导出表）；`COMPOUND_ASSIGNMENTS` 提升为 `internal` 共享；mismatch 检查覆盖复合赋值，且 Substrate 操作数已有 DSH5293 error 时不叠加弱警告。
+- C19：`findEnclosingCall` 增加 `allowStringInterior` 宽容模式（字符串值内部的光标仍可定位调用，注释仍拒绝；`isOffsetInComment` 拆分复用）；新增 `parameterIndex(text, parsedCall, signature, offset)` 重载——命名实参按名匹配（大小写不敏感），间隙与无匹配回退逗号计数；`DreamShaderParameterInfoHandler` 两个入口改走宽容模式 + 新签名；`mergeDistinctSignatures` 重载并集（presentableText 小写去重、primary 在前），`DreamShaderCallSignatureResolver` 在 catalog 命中后并入内建表签名。
+- C18：选择器 V2 分流——`.dss`/`.dsi`（扩展名判定）行前缀先取最后一个顶层赋值 `=` 之后的值片段（嵌套/字符串感知；`==`/`<=`/`>=`/`!=` 非赋值，复合形式算赋值），1.x 整行规则不变（`testPostfixSelectorRejectsAssignmentLines` 回归锁定）；`$expr$` 包裹光标前最外层表达式形态 PSI 节点（`expressionElementAt`，仅 V2 生效）；新模板 `lerp`/`saturate`/`sample`/`swizzle`（StringBasedPostfixTemplate，`$expr$` 由平台以选择器元素文本回填，机制经平台字节码确认）。
+
+**批次 2（C20 + T14）**：
+
+- C20：新 `refactoring/DreamShader2ExtractVariableHandler.kt`——选区精确覆盖 / 光标尾随两种目标手势；`enclosingStatement` 锚定并拒绝 if 臂与循环体（改变求值时机）；类型拼写来源 = C17 推断（Scalar 按族、向量/矩阵拼维度、Texture 取 kind、Substrate/material/struct 取名）→ 构造器/转换的显式 TYPE 词兜底 → 拒绝（单测模式 `showErrorHint` 抛 `RefactoringErrorHintException`，文档零改动）；建议名取表达式末标识符去大写化 + 与可见名去重；`WriteCommandAction` 内插声明 + 替换使用处，`TemplateBuilderImpl` 双位置联动就地重命名。`DreamShaderRefactoringSupportProvider` 覆写 `getIntroduceVariableHandler()`（无参 dispatch 路径）与元素感知重载；bundle 增 4 键（en/zh）。
+- 测试：`DreamShader2TypeInferenceTest` +5（三元三态/复合赋值保形/闭包 helper）；`DreamShader2SubstrateDiagnosticsTest` +4（复合赋值 mismatch 正例、Substrate 不叠报、数值静默）；`DreamShaderSignatureHelpAnalyzerTest` +3（命名实参 caret 矩阵、间隙/未知名回退、重载并集）；`DreamShaderPostfixTemplatesTest` 重写 +6（模板注册/串、V2 声明行接受、空值与语句上下文拒绝、`==`/复合赋值分流、1.x 回归锁定）；新 `DreamShader2ExtractVariableTest` 8 例（调用/成员/字面量提取 diff、光标手势、`IntroduceVariable` 平台动作接线、未知类型与循环体拒绝、1.x 静默）。
+- 文档：`language-v2-baseline.md` 增 M14 覆盖映射小节并更新 Test Mapping；`agent-development-plan.md` 增 M14 段与 M15 候选；CHANGELOG（en/zh）2.2.0 段 + compare 链接；README 元数据块四处同步；版本号 2.2.0。
+
+**实现决策与偏差**：
+
+- C20 任务 1 的「无选区取 caret 所在引用/调用」实现为「最外层表达式形态节点尾随光标」（`expressionEndingAt`），比逐引用扫描覆盖面更广且与后缀模板选择器同一判定形状。
+- C19.2 按计划仅在 catalog 命中层展开并集；declared/imported 层维持首个权威即返回（声明签名唯一，无重载源）。
+- C17.5「多个同名声明取最近 include」实现为 include 顺序首个命中（闭包收集已是 BFS 近序），不额外做距离排序。
+- 后缀模板 `sample`/`swizzle` 的 `shouldReformat = false`（插入点在行中，重排会破坏缩进）；`if`/`ifel`/`lerp`/`saturate` 维持 true。
+- 平台 `IntroduceVariable` 动作实际走 provider 无参重载（元素感知重载未被该动作调用），两者均覆写；handler 内部再做方言门控，1.x 文件静默返回。
+
+**任务卡状态**：C17–C20、T14 全部完成，M14 收官（`build` 通过，全量 780 例零失败）。后续方向见 `agent-development-plan.md` M15 候选。
