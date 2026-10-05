@@ -214,6 +214,14 @@
     </extensions>
 
     <actions>
+        <action id="DreamShader.InlineUniform"
+                class="com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderInlineUniformAction"
+                text="Inline Uniform">
+            <add-to-group group-id="RefactoringMenu" anchor="last"/>
+        </action>
+    </actions>
+
+    <actions>
         <group id="DreamShader.Tools.Group"
                text="DreamShader"
                description="DreamShader tools and workflows"

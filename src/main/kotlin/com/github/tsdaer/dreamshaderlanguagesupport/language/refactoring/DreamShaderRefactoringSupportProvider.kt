@@ -24,4 +24,7 @@ class DreamShaderRefactoringSupportProvider : RefactoringSupportProvider() {
 
     /** The action dispatch path has no element context; the handler itself re-checks the dialect. */
     override fun getIntroduceVariableHandler(): RefactoringActionHandler = DreamShader2ExtractVariableHandler()
+
+    /** Extract Function is wired for pure 2.0 files only (M15 C21); the handler re-checks. */
+    override fun getExtractMethodHandler(): RefactoringActionHandler = DreamShader2ExtractFunctionHandler()
 }
