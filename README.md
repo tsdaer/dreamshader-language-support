@@ -20,6 +20,7 @@ description: |
 
   **Editing and navigation**
   - Context-aware completion for sections, types, settings values, catalog-driven `UE.*` / `Substrate.*`, HLSL, and imports
+  - 2.0 completion intelligence: receiver-typed members after `.` (vector swizzles, matrix cells, struct fields, texture `sample`, material attributes, `Substrate` builder pins, catalog namespaces), named arguments with documented catalog enum values, `#include` path candidates, `.dsi` override values typed by the declared spelling, and bare-identifier completion over the 2.0 symbol model - dialect-dispatched contributors on one shared priority scale, with the 1.x hot path serving context from the committed PSI and cached candidate sets
   - Goto declaration, find usages, references, Rename, Safe Delete, Copy/Paste Reference, breadcrumbs, Context Info, hover docs, signature help, plain-text symbol completion, and rename suggestions, with `UE.*` / `Substrate.*` served from the shared material-expression catalog
   - Inlay parameter hints, Code Vision hints (usage counts above 2.0 export functions and a clickable Parent hint on `.dsi` instance pragmas), declaration/import gutter markers, and Bridge diagnostic line markers with source-location navigation
   - 2.0 editor experience: in-file usage highlighting, Surround With (`{ }` / `if` / `for`; named sections for 1.x), statement up/down and list element moving, comment-line joining, split/join of argument lists, code block navigation, in-file Copy Path (returns the `/Game/...` asset path inside the source root), and conditional HLSL injection for the bare-HLSL bodies, silent when no HLSL language is installed
@@ -52,6 +53,7 @@ description_zh: |
 
   **编辑与导航**
   - 上下文感知补全：sections、类型、设置值、catalog 驱动的 `UE.*` / `Substrate.*`、HLSL 与 imports
+  - 2.0 补全智能化：按 `.` 后接收者类型的成员补全（向量 swizzle、矩阵单元、struct 字段、贴图 `sample`、material 属性、`Substrate` builder pin、catalog 命名空间）、命名实参与文档化的 catalog 枚举值、`#include` 路径候选、按声明类型给值的 `.dsi` 覆盖值，以及基于 2.0 符号模型的裸标识符补全——按方言分流的 Contributor 与统一优先级体系，1.x 热路径直接读已提交 PSI 与缓存候选集
   - 跳转声明、查找用法、引用、重命名、安全删除、Copy/Paste Reference、面包屑、Context Info、悬浮文档、签名帮助、纯文本符号补全与重命名建议，`UE.*` / `Substrate.*` 由共享的 material-expression catalog 提供
   - 内联参数提示、Code Vision 提示（2.0 export 函数上方的引用计数与 `.dsi` instance pragma 上方可点击的 Parent 提示）、声明/import gutter 标记，以及可跳转源码位置的 Bridge 诊断行标记
   - 2.0 编辑体验：文件内用法高亮、Surround With（`{ }` / `if` / `for`；1.x 为命名 section）、语句上下移动与列表元素左右移动、注释行合并、实参列表拆行合并、结构块导航、文件内 Copy Path（源码根内返回 `/Game/...` 资产路径），以及裸 HLSL 函数体的条件式 HLSL 注入（无 HLSL 语言时静默）

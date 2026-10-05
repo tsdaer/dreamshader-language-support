@@ -2,6 +2,18 @@
 
 # dreamshader-language-support 更新日志
 
+## [2.1.0] - 2026-10-05
+
+### 新增
+
+- 补全智能化第二批（M13 收官，计划：`docs/completion-plan.md`）：
+  - **catalog 枚举参数值槽位补全**（C11.2）：`Source = ` / `Source = "Wo` 处对 catalog 标注为 `Enum` 的参数给出文档化基名——向量变换（`UE.TransformVector`）为 `Tangent` 一类基，位置变换（`UE.TransformPosition`）为 `PeriodicWorld`/`TranslatedWorld` 一类基，值来自上游 `Docs/builtins/transform.md`。裸槽位插入带引号值、已开引号内裸插入，非 Enum 参数或闭合值槽位回退标识符补全。
+
+### 变更
+
+- **补全热路径加固**（C15）：1.x 补全上下文改为直接读已提交的 `originalFile` PSI（仅 lexer 级回退），每次弹窗不再全文件重解析；两个可调用候选收集器合并为按 PSI 修订缓存的单趟「import 闭包 + 签名解析」；全项目 FilenameIndex 扫描按项目修订缓存（`import "` 与 `#include "` 补全共享）且 import 候选惰性收集——非 import 上下文零索引访问。
+- **引号感知插入矩阵**（D9 收尾）：以真实补全插入测试锁定 `#pragma material` 值的「已键入开引号 / 未键入 × 选值」矩阵（无双引号叠加）；1.x settings 值路径维持裸插入语义。
+
 ## [2.0.0] - 2026-10-04
 
 ### 新增
@@ -318,6 +330,7 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[2.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.5.0...2.0.0
 [1.5.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.3.0...1.4.0

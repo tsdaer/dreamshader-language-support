@@ -61,6 +61,30 @@ Coverage notes for the DreamShader 2.0 dialect supported by this Rider plugin. R
 | WebSocket preview (A7) | Opt-in `previewTransport = "websocket"`: the `[u32 LE length][tag][payload]` envelope, tag-3 24-byte RGBA8 header, png pairing rule, plain-JSON `previewMaterial`/`previewControl`/`setProbe`/`clearProbe` out, frames in; probes attach at the active editor's caret line; the file transport stays the default fallback |
 | Platform features (D1-D7) | In-file usage highlighting, Surround With (2.0 `{ }`/`if`/`for`, 1.x named section), rename-only suggested refactorings (V2 function PSI now implements `PsiNameIdentifierOwner`), comment-line Join Lines, list element moving, statement up/down, comma-list split/join, code block support, language-aware Copy Path (`/Game/...` inside the source root), conditional HLSL injection (silent without an HLSL language) |
 
+## M13 Completion Intelligence (plugin 2.1.0, upstream `2.0.2` @ `b3bbf48`)
+
+The completion coverage map per context; both contributors share one priority scale (`DreamShaderCompletionPriorities`) and one lookup-element factory, and dispatch per dialect (`DreamShaderCompletionDialects`).
+
+| Context (press `.` / Ctrl+Space) | Suggestions |
+|---|---|
+| Dialect gating (C8) | The 1.x contributor stays silent in pure 2.0 files (`.dss`/`.dsi` and V2-marked `.dsh`); mixed `.dsh` headers keep legacy service; the 2.0 contributor serves only pure 2.0 files |
+| Vector receiver (C9) | All in-set swizzles (`xyzw`/`rgba`, lengths 1..4) with result-shape tails |
+| Scalar receiver (C9) | `x`/`r` with the family tail |
+| Matrix receiver (C9) | `_mRC` cells for the declared rows x cols |
+| Struct receiver (C9) | Fields from the symbol model (file + include closure) with declared types |
+| Texture receiver (C9) | `sample()` with the `float4` result tail |
+| `material` receiver (C9) | Material attributes (`FrontMaterial`, `BaseColor`, ...) mirroring the inference's attribute table |
+| `Substrate` receiver (C9) | Builder pins from the catalog types plus the documented offline fallback; already-written pins excluded (scan limited to the enclosing function body) |
+| Namespace prefix (`UE.` / `Substrate.` / catalog) (C9) | Catalog members with signatures, snippets, and output types; the two builtin namespaces stay suggestable offline |
+| Unknown receiver (C9/C16) | 2.0: namespace roots plus callables; 1.x graph: scope callables plus locals - never cross-dialect keywords or intrinsics/constructor dumps |
+| Named-argument name slot (C11) | Remaining catalog parameters (`Name = `, filled names and positionally consumed pins excluded), only after `(` or a top-level comma |
+| Named-argument value slot (C11.2) | Documented enum values for `Enum`-annotated catalog parameters (transform vector/position bases from upstream `Docs/builtins/transform.md`); bare slot inserts quoted, open quote takes a bare value; non-enum parameters fall through to identifiers |
+| Auto popup (C12) | `.` / `(` / `=` popup per dialect - 2.0 through lexical rules (member access, call args, pragma value slots), 1.x through the PSI-backed context analyzer |
+| Bare Ctrl+Space in 2.0 (C13) | Locals before the caret, parameters, uniforms/globals with types, structs, file + workspace callables, constructors, HLSL intrinsics, dialect keywords/directives |
+| `#include "` (C14) | Project `.dsh`/`.dss`/`.dsi` paths with in-string replacement, sharing the import candidate collector |
+| `.dsi` override value slot (A10) | Declared-type-driven templates: `bool` -> `true`/`false`, scalars -> placeholders, vectors/matrices -> constructors; resource types stay silent |
+| Hot path (C15) | Context analysis reads the committed originalFile PSI (lexer fallback only - no per-popup re-parse); callable candidates from one cached closure+signature pass; FilenameIndex scan cached per project revision and import candidates collected lazily |
+
 ## Deliberate Limitations (downstream milestones)
 
 - **The plugin is not the compiler.** The parser emits no error elements; the engine bridge and `dsc check` stay the semantic authority. M10/M11 add only conservative, upstream-keyed heuristics that go silent when their deciding data (a confident inferred type, a valid Bridge schema) is absent.
@@ -89,7 +113,9 @@ Coverage notes for the DreamShader 2.0 dialect supported by this Rider plugin. R
 | `DreamShader2SubstrateDiagnosticsTest` | `DSH5293`/`DSH5295`/`DSH5296`/`DSH5297`/`DSH5298` and `DSH2158` positive+negative pairs; C2 mismatch is weak-warning-only |
 | `DreamShader2InstanceOverridePassTest` | `DSH7258`/`DSH7264`/`DSH7259`/`DSH7268` with a valid schema; silence without Bridge data or with an invalid schema |
 | `DreamShaderRevealNodeTest` | Request body fields vs upstream contract, line clamp, envelope + added fields, navigate failure code, foreign-id/missing-file degradation, no temp residue |
-| `DreamShader2CompletionTest` | Named-argument catalog completion (fill/positional exclusion), Substrate member completion with C2 typing and written-member exclusion, `.dsi` parent-parameter completion and degrade, `#pragma material` keys/values, non-material pragma ignore |
+| `DreamShader2CompletionTest` | The M13 completion matrix (35 cases): dialect gating, receiver-typed members (swizzle/matrix/struct/texture/material/Substrate/namespaces/degraded), named-argument slot checks and catalog enum values, bare identifiers, `#include` paths, `.dsi` parent parameters and override values, pragma keys/values, and the D9 quote-aware insertion matrix via real lookup selection |
+| `DreamShaderCompletionHotPathTest` | C15: PSI-backed vs text-backed suggest parity across contexts, lazy import-candidate evaluation, callable-candidate cache with PSI-revision invalidation, cached FilenameIndex scan visibility |
+| `DreamShaderCompletionSuggesterTest` | 1.x suggester contexts (settings keys/values, declaration heads, outputs `Base.*`, graph keywords/callables) and the C16 non-namespace dot tightening |
 | `DreamShader2SemanticClassifierTest` | Uniform/function parameter name slots, Substrate variable usage color, V1 files skip the V2 branches |
 | `DreamShader2RenameImpactTest` | Export uniform references, `.dsi` override impacts, same-name export impacts with derived exclusion, light-reference rename |
 | `DreamShader2StructureViewTest` | V2-only builder routing, `@group` grouping, includes/structs/globals, `.dsi` Parent node |

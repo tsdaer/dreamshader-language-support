@@ -2,6 +2,18 @@
 
 # dreamshader-language-support Changelog
 
+## [2.1.0] - 2026-10-05
+
+### Added
+
+- Completion intelligence second batch (M13 close-out, plan: `docs/completion-plan.md`):
+  - **Catalog enum values at named-argument value slots** (C11.2): `Source = ` / `Source = "Wo` on `Enum`-annotated catalog parameters suggests the documented basis names - vector transforms (`UE.TransformVector`) take `Tangent`-style bases, position transforms (`UE.TransformPosition`) take `PeriodicWorld`/`TranslatedWorld`-style bases, from upstream `Docs/builtins/transform.md`. A bare slot inserts the value quoted, an open quote takes a bare value, and non-enum parameters or closed value slots fall through to identifier completion.
+
+### Changed
+
+- **Completion hot-path hardening** (C15): the 1.x completion context is now analyzed from the committed `originalFile` PSI (lexer pass as the only fallback) instead of re-parsing the whole file on every popup; the two callable-candidate collectors merged into one cached closure + signature pass per PSI revision; the project-wide FilenameIndex scan is cached per project revision (shared by `import "` and `#include "` completion) and import candidates are collected lazily - contexts outside import strings touch no index.
+- **Quote-aware insertion matrix** (D9 close-out): real-completion tests cover the "opening quote typed / not typed" x "value selected" matrix for `#pragma material` values, locking the no-double-quote insertion; the 1.x settings value path keeps its bare-insert semantics.
+
 ## [2.0.0] - 2026-10-04
 
 ### Added
@@ -310,6 +322,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[2.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.5.0...2.0.0
 [1.5.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/tsdaer/dreamshader-language-support/compare/1.3.0...1.4.0
