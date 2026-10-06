@@ -261,6 +261,12 @@
 
 **M17 候选（顺延）**：Inline Function（调用点展开需实参-形参绑定与副作用矩阵）；`.dsh` 混合方言逐声明分段的补全（M13 顺延至今，结构视图分段已先行，补全侧仍按区域粗分）；多写出参合并返回 / 元组返回（C26 启发的放宽通道，需支配树分析）；LEGACY_BLOCK 解析器改造（分段视图的文本级重解析升级为结构化解析）；`.dsi` 覆盖值枚举值清单（blocked：上游 symbol-index 工件无枚举字段，待上游扩展后解封）。
 
+### M17 — 「内联函数与 legacy 补全分段」→ 目标版本 2.5.0（已完成 2026-10-07）
+范围：C31 + C32 + C33。任务卡全文见 `docs/m17-plan.md`（含 C25/C30 判定原语盘点、补全区域粗分的根源定位——`analyzeWithPsi` 在 LEGACY_BLOCK 内 `isTopLevel` 恒真、支配树的直线代码替代）；来源为上方 M17 候选（M16 顺延项）。依赖 C25 纯度矩阵、C30 写回表原语、C26 调用点改写 machinery、C27 文本级重解析规则（均就绪）。
+**发布门槛**：`gradlew build` + 全量测试绿。——已落地：C31 内联函数（`DreamShader.InlineFunction` 菜单动作，副作用矩阵：实参抗漂移、out/inout 朴素无别名写回、值形参写穿拒绝、单末位 return 改写/丢弃、循环外 break 拒绝、递归拒绝、名字冲突拒绝、三种调用点位形态）；C32 legacy 区段逐声明补全（块级缓存 1.x 重解析 + 分析器前置分支，块内恢复 isInDeclarationBody/isFunctionLike/settings 上下文，纯文件逐字节不变）；C33 多写出参合并返回（≥2 纯 out 直线代码合并为生成的 `Extracted_Result` 结构体返回，调用点拆回字段，任一条件不满足回落 out 矩阵）；CHANGELOG（en/zh）2.5.0 段、`language-v2-baseline.md` M17 覆盖映射、README 元数据块同步；版本号 2.5.0；全量 875 例零失败。
+
+**M18 候选（顺延）**：LEGACY_BLOCK 解析器改造（分段视图/补全的文本级重解析升级为结构化解析，需先证明高亮/结构视图 fixture 零 diff）；内联函数的临时变量提升通道（实参不纯时 `__inlinedN` hoist 替代直接拒绝）；多返回点/中位 return 的内联展开（需出口归一分析）；提取函数返回结构体的就地重命名联动（`result` 接收变量与 rebinding 行的模板链接）；`.dsi` 覆盖值枚举值清单（继续 blocked：上游 symbol-index 工件无枚举字段，待上游扩展后解封）。
+
 
 ---
 

@@ -3,7 +3,7 @@
 - **制定日期**：2026-10-07
 - **基线**：本插件 2.4.0（2026-10-06，M16 完成）；上游 DreamShader 2.0.2 @ `b3bbf48`
 - **来源**：`docs/agent-development-plan.md` 的 M17 候选（M16 顺延项）：Inline Function（复用 C22/C25 预检骨架与 C30 写回表原语）、`.dsh` 混合方言逐声明分段的补全（结构视图分段已先行，补全侧仍按区域粗分）、多写出参合并返回（C26 启发的放宽通道）。LEGACY_BLOCK 解析器改造继续顺延（解析侧冻结红线），`.dsi` 覆盖值枚举清单继续 blocked（上游工件无枚举字段）。
-- **计划状态**：进行中（2026-10-07 制定）。
+- **计划状态**：已完成（2026-10-07 三批落地，见 §5 执行记录，版本 2.5.0）。任务卡并入 `docs/agent-development-plan.md` 作为 M17。
 
 ---
 
@@ -113,4 +113,23 @@
 
 ## 5. 执行记录
 
-（随批次追加）
+### Batch 1 — C31 Inline Function（2026-10-07）
+
+`DreamShader2InlineFunctionHandler` + `DreamShader.InlineFunction` action + bundle 双语。实现要点与计划的偏差：
+
+- 实参值文本必须取自**调用方文件**（实参 PSI 偏移属于调用方，被调函数可能在另一文件）——`bindArguments` 接收 `callerText`，纯度检查的 `resolveDeclaredSignatures` 仍用被调文件文本。
+- 初始化器位形态：声明初始化器解析为单子 `EXPRESSION` 包装，分类器接受「包装的唯一有意义子节点即调用」；头部守卫为「spelling 与名字之间仅空白、spelling 之前仅修饰符关键词」（初版的 `endsWith` 文本守卫被名字前空格击穿，已修正）。
+- 返回值表达式在改写为赋值前先做形参替换（`substitutedReturnText`）；裸 `return;` 在值位拒绝（`noReturnValue`）。
+- 26 例测试：三种位置形态、缩进、out/inout 写回、命名实参、include 闭包、13 项拒绝矩阵、1.x 静默、action 接线。
+
+### Batch 2 — C32 legacy 补全分段（2026-10-07）
+
+`DreamShaderLegacyCompletionSubtrees`（`DreamShaderCompletionSupport.kt`，C27 规则共享）+ 分析器前置分支（`legacyRegionContextAt`：HEADER_MIXED 且命中 legacy 块 → 子根 `analyzeFromParsedRoot`，偏移回映射）+ `analyzeFromParsedRoot` 转 internal。研究修正：callable 候选走 `collectDeclaredCallables` 的**文本级**签名扫描，混合文件中本就可见 legacy 声明——C32 的缺口只在上下文层（`analyzeWithPsi` 在块内 `isTopLevel` 恒真），测试以「块内上下文标志 + suggester 产出（内建/`UE`/设置键）+ 三值区域不变 + callable 仍含 legacy 声明 + 纯文件不受影响」钉住。9 例测试。
+
+### Batch 3 — C33 多写出参合并返回（2026-10-07）
+
+`structReturnMerge`（≥2 纯 out + 直线代码 + 全部 C26 裸声明条件 + 首现即写）→ 生成 `struct <Name>_Result` 插在 helper 之前，体内全部引用改写 `result.<field>`，调用点 `Struct result = Name(inParams);` + 每值一行 `name = result.name;`（续行带调用语句缩进）。研究修正：选择区内任一读取都会把值判为 `inout`（C21 的 readNames 规则），故「读先于写」经 inout 限定符检查即拒绝——`firstOccurrenceIsWrite` 保留为防御性守卫。`Extract Function` 既有 `testMultipleOutValuesKeepOutMatrix` 升级为结构体断言，另补四例回落（inout 混入、读先于写、选择区含分支、初始化声明混入）。
+
+### 收尾（2026-10-07）
+
+CHANGELOG（en/zh）2.5.0 段、`language-v2-baseline.md` M17 覆盖映射与测试映射行、README 元数据块（en/zh）、版本号 2.5.0、本计划状态与执行记录、`agent-development-plan.md` M17 段 + M18 候选。全量 875 例零失败。

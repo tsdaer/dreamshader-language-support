@@ -2,6 +2,15 @@
 
 # dreamshader-language-support Changelog
 
+## [2.5.0] - 2026-10-07
+
+### Added
+
+- Refactoring milestone M17 (plan: `docs/m17-plan.md`):
+  - **Inline Function for the 2.0 dialect** (C31): the Refactoring-menu action (`DreamShader.InlineFunction`) replaces a call to a user function declared in the file or its include closure with the function's body statements. The side-effect matrix runs fully before the write: by-value arguments must be drift-proof (no side-effect operators, no user-declared or unknown callees), `out`/`inout` arguments must be plain unaliased variable references whose formals carry the body's writes back, by-value formals may never be written in the body (including through member/index chains), the body transfers control only through a single trailing `return` (dropped in statement position, rewritten onto the assignment target or receiving declaration at value sites), `break`/`continue` must stay inside the body's own loops, recursion refuses, body locals may not share a name visible at the call site, and the call must be a whole statement, an assignment RHS, or a declaration initializer. The callee declaration stays.
+  - **Per-declaration completion in mixed-`.dsh` legacy regions** (C32): each legacy block's text gets a cached 1.x reparse (the C27 structure-view rule shared by the completion context), so the caret inside a legacy function body now sees `isInDeclarationBody`/`isFunctionLike` context — HLSL intrinsics, `UE`, local symbols — and a legacy `Settings` section serves its setting keys, where the region-coarse dispatch previously answered top-level keywords everywhere inside the block. Pure V1/V2 files and V2 regions keep the existing branches byte-for-byte.
+  - **Extract Function multi-out struct return** (C33): when two or more pure `out` values qualify in straight-line code (no branch or loop in the selection; each a bare same-block declaration whose first selection occurrence is a write), the helper returns a generated `Extracted_Result` struct and the call site splits the fields back onto the caller's variables (`A = result.A;`), whose bare declarations stay. A read inside the selection turns the value `inout` and refuses the merge; anything unqualified keeps the `out` matrix.
+
 ## [2.4.0] - 2026-10-06
 
 ### Added
