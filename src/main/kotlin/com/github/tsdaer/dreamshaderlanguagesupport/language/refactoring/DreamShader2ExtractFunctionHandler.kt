@@ -39,8 +39,15 @@ import com.intellij.refactoring.util.CommonRefactoringUtil
  *   declaration's own type spelling; names that resolve to functions or to nothing
  *   (namespace roots like `UE`) stay as-is instead of becoming parameters;
  * - names assigned in the selection and used after it come back as `out` parameters
- *   (`inout` when the selection also reads them, e.g. `x = x + 1`); their types must be
- *   declared outside, otherwise the refactoring refuses;
+ *   (`inout` when the selection also reads them — a compound assignment or `++`/`--`
+ *   target reads its own old value, so `x += 1` and `x++` come back `inout` too); their
+ *   types must be declared outside, otherwise the refactoring refuses;
+ * - when exactly one `out` value's final write is a simple last-statement assignment and
+ *   the name is a bare same-block declaration with no uses between them, the helper
+ *   returns the value instead (`Type Name(inParams) { …; return name; }`, the call site
+ *   becomes `Type name = Name(inParams);` and the bare declaration line is removed) —
+ *   parameters, initialized or outer declarations, and any intermediate use keep the
+ *   `out` matrix (M16 C26);
  * - statements that transfer control (`return`/`break`/`continue`), assignments through
  *   a member or index, partial selections, and declarations that would change scope are
  *   refused with a hint — the document is never left half-refactored.
@@ -112,8 +119,12 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
             inParams[name] = resolver.declaredSpelling(name) ?: continue
         }
 
+        // M16 C26: the single pure-out value whose last statement is its final assignment
+        // becomes the return value; every other shape keeps the out matrix.
+        val upgrade = singleReturnValueUpgrade(function, statements, usage, outParams, selectionStart)
+
         val name = suggestedName(analysis, workspace, file)
-        runRefactoring(project, editor, file, function, statements, selection.first, selection.second, name, inParams, outParams)
+        runRefactoring(project, editor, file, function, statements, selection.first, selection.second, name, inParams, outParams, upgrade)
     }
 
     override fun invoke(project: Project, elements: Array<out PsiElement>, dataContext: DataContext?) = Unit
@@ -179,6 +190,115 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
         }
 
     // ------------------------------------------------------------------
+    // single return value (M16 C26)
+    // ------------------------------------------------------------------
+
+    /**
+     * The return-value upgrade when the out matrix has exactly one `out` value and the
+     * selection's last statement is that name's final simple assignment. The replacement
+     * is a declaration (`Type name = Name(args);`), so it only fires when the name's
+     * declaration is a bare same-block statement that nothing reads between itself and the
+     * selection — the inserted declaration takes that declaration's place. Parameters and
+     * initialized/outer declarations keep the out matrix: replacing their assignment with
+     * a same-name declaration would redeclare (HLSL redefinition semantics) or shadow a
+     * binding later code still reads.
+     */
+    private fun singleReturnValueUpgrade(
+        function: DreamShader2FunctionDeclaration,
+        statements: List<PsiElement>,
+        usage: SelectionUsage,
+        outParams: Map<String, OutParam>,
+        selectionStart: Int,
+    ): ReturnValueUpgrade? {
+        if (outParams.size != 1) return null
+        val name = outParams.keys.first()
+        if (outParams.getValue(name).qualifier != "out") return null
+        if (function.parameterList()?.parameters().orEmpty().any { it.parameterName() == name }) return null
+        val last = statements.last()
+        if (last.node?.elementType != DreamShader2ElementTypes.EXPRESSION_STATEMENT) return null
+        val assignment = topLevelAssignmentOf(last) ?: return null
+        if (assignment.first != name) return null
+        val declaration = bareDeclarationBefore(name, statements.first().parent, selectionStart, function)
+            ?: return null
+        val singleWrite = usage.writeTargets.count { it.text == name } == 1
+        return ReturnValueUpgrade(name, declaration.second, assignment.second, declaration.first, singleWrite)
+    }
+
+    /** `(lhsName, rhsText)` when [statement] is a top-level `name = expr;` assignment, else null. */
+    private fun topLevelAssignmentOf(statement: PsiElement): Pair<String, String>? {
+        var expression = dreamShader2MeaningfulChildren(statement).firstOrNull {
+            it.elementType == DreamShader2ElementTypes.EXPRESSION
+        } ?: return null
+        while (true) {
+            val children = dreamShader2MeaningfulChildren(expression.psi)
+            val operatorIndex = children.indexOfFirst {
+                it.elementType == DreamShaderTokenTypes.OPERATOR && it.text == "="
+            }
+            if (operatorIndex >= 0) {
+                val lhs = unwrapOperand(children.getOrNull(operatorIndex - 1)) ?: return null
+                if (lhs.elementType != DreamShader2ElementTypes.REFERENCE_EXPRESSION) return null
+                val statementStart = statement.textRange.startOffset
+                val rhsStart = children[operatorIndex].startOffset + children[operatorIndex].textLength
+                val rhsEnd = expression.startOffset + expression.textLength
+                if (rhsEnd <= rhsStart) return null
+                val rhs = statement.text.substring(rhsStart - statementStart, rhsEnd - statementStart)
+                    .trim().trimEnd(';').trim()
+                if (rhs.isEmpty()) return null
+                return lhs.text to rhs
+            }
+            expression = children.singleOrNull()?.takeIf {
+                it.elementType == DreamShader2ElementTypes.EXPRESSION
+            } ?: return null
+        }
+    }
+
+    /**
+     * The nearest bare (no initializer, single declarator) declaration of [name] directly
+     * inside [block] before the selection, provided nothing references the name between
+     * that declaration and the selection — only then can the declaration be replaced by
+     * the upgraded call-site line without changing observable behavior.
+     */
+    private fun bareDeclarationBefore(
+        name: String,
+        block: PsiElement,
+        selectionStart: Int,
+        function: DreamShader2FunctionDeclaration,
+    ): Pair<PsiElement, String>? {
+        var match: Pair<PsiElement, String>? = null
+        for (child in block.children) {
+            if (child.textRange.startOffset >= selectionStart) break
+            if (child.node?.elementType != DreamShader2ElementTypes.VARIABLE_DECLARATION_STATEMENT) continue
+            val declarator = bareSingleDeclarator(child) ?: continue
+            if (declarator.second == name) match = child to declarator.first
+        }
+        val found = match ?: return null
+        val declarationEnd = found.first.textRange.endOffset
+        val referencedInBetween = psiTreeWalk(function).any {
+            it.node?.elementType == DreamShader2ElementTypes.REFERENCE_EXPRESSION &&
+                it.text == name &&
+                it.textRange.startOffset >= declarationEnd &&
+                it.textRange.startOffset < selectionStart
+        }
+        return if (referencedInBetween) null else found
+    }
+
+    /** `Type Name;` — exactly one spelling token and one declarator name, no initializer or comma. */
+    private fun bareSingleDeclarator(statement: PsiElement): Pair<String, String>? {
+        val tokens = dreamShader2MeaningfulChildren(statement)
+            .filter { it.elementType != DreamShaderTokenTypes.SEMICOLON }
+        if (tokens.size != 2) return null
+        val spelling = tokens[0]
+        val name = tokens[1]
+        if (spelling.elementType != DreamShaderTokenTypes.TYPE &&
+            spelling.elementType != DreamShaderTokenTypes.IDENTIFIER
+        ) {
+            return null
+        }
+        if (name.elementType != DreamShaderTokenTypes.IDENTIFIER) return null
+        return spelling.text to name.text
+    }
+
+    // ------------------------------------------------------------------
     // name suggestion
     // ------------------------------------------------------------------
 
@@ -218,6 +338,7 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
         name: String,
         inParams: Map<String, String>,
         outParams: Map<String, OutParam>,
+        upgrade: ReturnValueUpgrade?,
     ) {
         val document = editor.document
         WriteCommandAction.runWriteCommandAction(
@@ -226,35 +347,95 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
             null,
             Runnable {
                 val indent = lineIndentOf(document, statements.first().textRange.startOffset)
-                val bodyText = statements.joinToString("\n") { statement ->
-                    reindentStatement(statement.text, indent, BODY_INDENT)
-                }
                 val parameters = ArrayList<String>()
                 inParams.forEach { (paramName, spelling) -> parameters.add("$spelling $paramName") }
-                outParams.forEach { (paramName, out) -> parameters.add("${out.qualifier} ${out.spelling} $paramName") }
-                val newFunction = "void $name(${parameters.joinToString(", ")})\n{\n$bodyText\n}"
+                if (upgrade == null) {
+                    outParams.forEach { (paramName, out) -> parameters.add("${out.qualifier} ${out.spelling} $paramName") }
+                }
+                val returnSpelling = upgrade?.spelling ?: "void"
+                val newFunction = "$returnSpelling $name(${parameters.joinToString(", ")})\n{\n${extractedBodyText(statements, indent, upgrade)}\n}"
 
+                // Edits run highest offset first so earlier ranges stay valid: the helper
+                // lands after the current function, the selection is replaced next, and the
+                // (lowest) bare declaration of the return value is removed last.
                 val insertOffset = function.textRange.endOffset
                 document.insertString(insertOffset, "\n\n$newFunction")
 
                 val arguments = ArrayList<String>()
                 arguments.addAll(inParams.keys)
-                arguments.addAll(outParams.keys)
-                val callText = "$name(${arguments.joinToString(", ")});"
+                if (upgrade == null) arguments.addAll(outParams.keys)
+                val callText = if (upgrade == null) {
+                    "$name(${arguments.joinToString(", ")});"
+                } else {
+                    "${upgrade.spelling} ${upgrade.name} = $name(${arguments.joinToString(", ")});"
+                }
                 document.replaceString(selectionStart, selectionEnd, callText)
+
+                val removed = upgrade?.let {
+                    val (removalStart, removalEnd) = declarationRemovalRange(document, it.declaration)
+                    document.deleteString(removalStart, removalEnd)
+                    removalEnd - removalStart
+                } ?: 0
                 PsiDocumentManager.getInstance(project).commitDocument(document)
 
-                val callNameOffset = selectionStart
-                val functionNameOffset = insertOffset + "\n\n".length + "void ".length
-                val callLeaf = identifierLeafAt(file, callNameOffset) ?: return@Runnable
-                val functionLeaf = identifierLeafAt(file, functionNameOffset) ?: return@Runnable
+                val functionNameOffset = insertOffset - removed + "\n\n".length + returnSpelling.length + 1
+                val callStart = selectionStart - removed
+                val callNameOffset = when (upgrade) {
+                    null -> callStart
+                    else -> callStart + upgrade.spelling.length + 1 + upgrade.name.length + " = ".length
+                }
+                val functionLeaf = identifierLeafAt(file, functionNameOffset)?.takeIf { it.text == name }
+                    ?: return@Runnable
+                val callLeaf = identifierLeafAt(file, callNameOffset)?.takeIf { it.text == name }
+                    ?: return@Runnable
 
                 val builder = TemplateBuilderImpl(file)
                 builder.replaceElement(functionLeaf, NAME_VARIABLE, TextExpression(name), true)
                 builder.replaceElement(callLeaf, NAME_VARIABLE, TextExpression(name), true)
+                if (upgrade != null) {
+                    val valueLeaf = identifierLeafAt(file, callStart)?.takeIf { it.text == upgrade.name }
+                        ?: return@Runnable
+                    builder.replaceElement(valueLeaf, NAME_VARIABLE, TextExpression(upgrade.name), true)
+                }
                 TemplateManager.getInstance(project).startTemplate(editor, builder.buildTemplate())
             },
         )
+    }
+
+    /** The extracted body: the statements re-indented, plus the return-value bookkeeping. */
+    private fun extractedBodyText(statements: List<PsiElement>, indent: String, upgrade: ReturnValueUpgrade?): String {
+        val lines = statements.mapTo(ArrayList()) { reindentStatement(it.text, indent, BODY_INDENT) }
+        if (upgrade != null) {
+            // The final write produces the value: a single write becomes the initialized
+            // declaration; several writes keep their statements under a bare declaration.
+            if (upgrade.singleWrite) {
+                lines[lines.size - 1] =
+                    reindentStatement("${upgrade.spelling} ${upgrade.name} = ${upgrade.rhsText};", indent, BODY_INDENT)
+            } else {
+                lines.add(0, reindentStatement("${upgrade.spelling} ${upgrade.name};", indent, BODY_INDENT))
+            }
+            lines.add("${BODY_INDENT}return ${upgrade.name};")
+        }
+        return lines.joinToString("\n")
+    }
+
+    /**
+     * The range that removes a bare declaration: its whole line (indentation through line
+     * break) when the statement owns the line, else exactly the statement itself.
+     */
+    private fun declarationRemovalRange(document: Document, declaration: PsiElement): Pair<Int, Int> {
+        val text = document.charsSequence
+        val start = declaration.textRange.startOffset
+        var end = declaration.textRange.endOffset
+        val lineNumber = document.getLineNumber(start)
+        val lineStart = document.getLineStartOffset(lineNumber)
+        val lineEnd = document.getLineEndOffset(lineNumber)
+        val ownsLine = (lineStart until start).all { text[it].isWhitespace() } &&
+            (end until lineEnd).all { text[it].isWhitespace() }
+        if (!ownsLine) return start to end
+        if (end < text.length && text[end] == '\r') end++
+        if (end < text.length && text[end] == '\n') end++
+        return lineStart to end
     }
 
     /**
@@ -299,6 +480,15 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
 
     private data class OutParam(val spelling: String, val qualifier: String)
 
+    /** The M16 C26 return-value shape for one single pure-out value; null keeps the out matrix. */
+    private data class ReturnValueUpgrade(
+        val name: String,
+        val spelling: String,
+        val rhsText: String,
+        val declaration: PsiElement,
+        val singleWrite: Boolean,
+    )
+
     companion object {
         private const val NAME_VARIABLE = "ExtractedFunctionName"
         private const val BODY_INDENT = "    "
@@ -327,6 +517,7 @@ private class SelectionUsage(
     val assignedNames: Set<String>,
     val hasControlTransfer: Boolean,
     val writesThroughReference: Boolean,
+    val writeTargets: Set<PsiElement> = emptySet(),
 )
 
 /** Reads/writes/control-transfer analysis over the selected statements (M15 C21). */
@@ -334,6 +525,9 @@ private fun analyzeSelectionUsage(statements: List<PsiElement>): SelectionUsage 
     val declaredInside = mutableSetOf<String>()
     val writes = LinkedHashSet<String>()
     val writeTargets = mutableSetOf<PsiElement>()
+    // Compound assignments and ++/-- read their own old value (HLSL semantics), so their
+    // targets count as reads as well — that is what makes their qualifier `inout` (M16 C26).
+    val readWrites = mutableSetOf<String>()
     var control = false
     var memberWrite = false
     statements.forEach { statement ->
@@ -350,7 +544,7 @@ private fun analyzeSelectionUsage(statements: List<PsiElement>): SelectionUsage 
                 DreamShader2ElementTypes.JUMP_STATEMENT,
                 -> control = true
                 DreamShader2ElementTypes.EXPRESSION -> {
-                    if (collectExpressionWrites(node, writes, writeTargets)) memberWrite = true
+                    if (collectExpressionWrites(node, writes, writeTargets, readWrites)) memberWrite = true
                 }
             }
         }
@@ -359,6 +553,7 @@ private fun analyzeSelectionUsage(statements: List<PsiElement>): SelectionUsage 
     // ++/-- operand). Flat expressions wrap operands in single-child EXPRESSION nodes, so
     // the sweep goes through the whole subtree rather than direct children only.
     val reads = LinkedHashSet<String>()
+    reads.addAll(readWrites)
     statements.forEach { statement ->
         psiTreeWalk(statement).forEach { node ->
             if (node.node?.elementType == DreamShader2ElementTypes.REFERENCE_EXPRESSION &&
@@ -368,7 +563,7 @@ private fun analyzeSelectionUsage(statements: List<PsiElement>): SelectionUsage 
             }
         }
     }
-    return SelectionUsage(declaredInside, reads, writes, control, memberWrite)
+    return SelectionUsage(declaredInside, reads, writes, control, memberWrite, writeTargets)
 }
 
 /**
@@ -379,6 +574,7 @@ private fun collectExpressionWrites(
     expression: PsiElement,
     writes: MutableSet<String>,
     writeTargets: MutableSet<PsiElement>,
+    readWrites: MutableSet<String>,
 ): Boolean {
     var writesThroughReference = false
     val children = dreamShader2MeaningfulChildren(expression)
@@ -391,28 +587,50 @@ private fun collectExpressionWrites(
                 }
             }
             in DreamShader2DiagnosticsPass.COMPOUND_ASSIGNMENTS -> {
-                if (recordSelectionWrite(children.getOrNull(index - 1), false, writes, writeTargets)) {
+                if (recordSelectionWrite(
+                        children.getOrNull(index - 1),
+                        false,
+                        writes,
+                        writeTargets,
+                        readsOldValue = true,
+                        readWrites = readWrites,
+                    )
+                ) {
                     writesThroughReference = true
                 }
             }
-            "++", "--" -> recordSelectionWrite(children.getOrNull(index - 1), true, writes, writeTargets)
+            "++", "--" -> recordSelectionWrite(
+                children.getOrNull(index - 1),
+                true,
+                writes,
+                writeTargets,
+                readsOldValue = true,
+                readWrites = readWrites,
+            )
         }
     }
     return writesThroughReference
 }
 
-/** Records one write target (unwrapping its EXPRESSION wrapper); true when it is a member/index. */
+/**
+ * Records one write target (unwrapping its EXPRESSION wrapper); true when it is a member or
+ * index. [readsOldValue] marks targets that consume their own previous value (compound
+ * assignments and `++`/`--`) — those names are recorded into [readWrites] as reads too.
+ */
 private fun recordSelectionWrite(
     operand: ASTNode?,
     incrementsOnly: Boolean,
     writes: MutableSet<String>,
     writeTargets: MutableSet<PsiElement>,
+    readsOldValue: Boolean = false,
+    readWrites: MutableSet<String> = mutableSetOf(),
 ): Boolean {
     val target = unwrapOperand(operand) ?: return false
     return when (target.elementType) {
         DreamShader2ElementTypes.REFERENCE_EXPRESSION -> {
             writes.add(target.text)
             writeTargets.add(target.psi)
+            if (readsOldValue) readWrites.add(target.text)
             false
         }
         else -> !incrementsOnly

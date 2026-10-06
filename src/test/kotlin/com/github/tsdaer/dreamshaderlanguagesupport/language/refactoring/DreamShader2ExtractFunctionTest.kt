@@ -54,18 +54,222 @@ class DreamShader2ExtractFunctionTest : BasePlatformTestCase() {
         invokeHandler(file)
 
         val after = myFixture.editor.document.text
+        // A compound assignment reads its own old value, so the written-then-used local
+        // comes back `inout` (M16 C26 correction; the old `out` read an undefined value).
         assertTrue(
-            after.contains("void Extracted(float Gain, out float3 Tinted)\n{\n    Tinted *= Gain;\n}"),
+            after.contains("void Extracted(float Gain, inout float3 Tinted)\n{\n    Tinted *= Gain;\n}"),
             "extracted function expected: ${after.lines()}",
         )
         assertTrue(
             after.contains("    Extracted(Gain, Tinted);"),
             "call site replacement expected: ${after.lines()}",
         )
-        // The read uniform becomes the value parameter; the written-then-used local is `out`
-        // (the compound assignment writes it but never reads it).
         assertTrue(after.indexOf("void Extracted") > before.indexOf("m.BaseColor"), "the helper lands after the current function")
-        assertFalse("no inout qualifier for write-only values", after.contains("inout float3 Tinted"))
+    }
+
+    fun testIncrementTargetBecomesInout() {
+        val file = openFile(
+            """
+            export void M_Inc(inout material m)
+            {
+                float Weight = 0.5;
+                Weight++;
+                m.BaseColor = float3(Weight, Weight, Weight);
+            }
+            """.trimIndent(),
+            "M_ExtractInc.dss",
+        )
+        select(file, "Weight++;")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("void Extracted(inout float Weight)"),
+            "`++` target reads its old value and must be inout: ${after.lines()}",
+        )
+    }
+
+    fun testSingleOutValueBecomesReturnValue() {
+        val file = openFile(
+            """
+            export void M_ReturnValue(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 Tinted;
+                Tinted = TintScale(UV);
+                m.BaseColor = Tinted;
+            }
+            """.trimIndent(),
+            "M_ExtractReturn.dss",
+        )
+        select(file, "Tinted = TintScale(UV);")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("float3 Extracted(float2 UV)\n{\n    float3 Tinted = TintScale(UV);\n    return Tinted;\n}"),
+            "return-value signature with `return` line expected: ${after.lines()}",
+        )
+        assertTrue(
+            after.contains("    float3 Tinted = Extracted(UV);"),
+            "call site becomes the receiving declaration: ${after.lines()}",
+        )
+        assertFalse("the bare declaration line is removed", after.contains("float3 Tinted;"))
+        assertTrue(after.contains("m.BaseColor = Tinted;"), "later code is untouched: ${after.lines()}")
+    }
+
+    fun testMultipleWritesOfReturnValueKeepTheirStatements() {
+        val file = openFile(
+            """
+            export void M_MultiWrite(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 Tinted;
+                Tinted = TintScale(UV);
+                Tinted = TintScale(UV * 2.0);
+                m.BaseColor = Tinted;
+            }
+            """.trimIndent(),
+            "M_ExtractMultiWrite.dss",
+        )
+        select(file, "Tinted = TintScale(UV);\n    Tinted = TintScale(UV * 2.0);")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("float3 Extracted(float2 UV)\n{\n    float3 Tinted;\n    Tinted = TintScale(UV);\n    Tinted = TintScale(UV * 2.0);\n    return Tinted;\n}"),
+            "multi-write body keeps its statements under a bare declaration: ${after.lines()}",
+        )
+        assertTrue(after.contains("float3 Tinted = Extracted(UV);"), "call site declaration expected: ${after.lines()}")
+        assertFalse("the bare declaration line is removed", after.contains("\n    float3 Tinted;\n    Tinted = TintScale(UV);\n    Tinted = TintScale(UV * 2.0);\n    m.BaseColor"))
+    }
+
+    fun testUpgradeFallsBackToOutParameterForInitializedDeclaration() {
+        val file = openFile(
+            """
+            export void M_InitDecl(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 Tinted = TintScale(UV);
+                Tinted = TintScale(UV * 2.0);
+                m.BaseColor = Tinted;
+            }
+            """.trimIndent(),
+            "M_ExtractInitDecl.dss",
+        )
+        select(file, "Tinted = TintScale(UV * 2.0);")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        // Replacing the assignment with a same-name declaration would redeclare the
+        // initialized local, so the out matrix holds.
+        assertTrue(
+            after.contains("void Extracted(float2 UV, out float3 Tinted)"),
+            "initialized declaration keeps the out matrix: ${after.lines()}",
+        )
+        assertTrue(after.contains("Extracted(UV, Tinted);"))
+    }
+
+    fun testUpgradeFallsBackToOutParameterForParameterTarget() {
+        val file = openFile(
+            """
+            export void M_ParamTarget(float3 Tinted, inout material m)
+            {
+                Tinted = TintScale(UE.TexCoord(Index = 0));
+                m.BaseColor = Tinted;
+            }
+            """.trimIndent(),
+            "M_ExtractParamTarget.dss",
+        )
+        select(file, "Tinted = TintScale(UE.TexCoord(Index = 0));")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("void Extracted(out float3 Tinted)"),
+            "a parameter target keeps the out matrix: ${after.lines()}",
+        )
+        assertTrue(after.contains("Extracted(Tinted);"))
+    }
+
+    fun testUpgradeFallsBackWhenDeclarationHasIntermediateUses() {
+        val file = openFile(
+            """
+            export void M_GapUse(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 Tinted;
+                Tinted = TintScale(UV);
+                Tinted = TintScale(UV * 2.0);
+                m.BaseColor = Tinted;
+            }
+            """.trimIndent(),
+            "M_ExtractGapUse.dss",
+        )
+        select(file, "Tinted = TintScale(UV * 2.0);")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        // The first assignment between the bare declaration and the selection reads/writes
+        // the declared name — removing the declaration would break it, so the out matrix holds.
+        assertTrue(
+            after.contains("void Extracted(float2 UV, out float3 Tinted)"),
+            "intermediate uses keep the out matrix: ${after.lines()}",
+        )
+        assertTrue(after.contains("    float3 Tinted;"), "the bare declaration survives: ${after.lines()}")
+    }
+
+    fun testMultipleOutValuesKeepOutMatrix() {
+        val file = openFile(
+            """
+            export void M_TwoOuts(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 A;
+                float B;
+                A = TintScale(UV);
+                B = 2.0;
+                m.BaseColor = A * B;
+            }
+            """.trimIndent(),
+            "M_ExtractTwoOuts.dss",
+        )
+        select(file, "A = TintScale(UV);\n    B = 2.0;")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("void Extracted(float2 UV, out float3 A, out float B)"),
+            "two written values keep the out matrix: ${after.lines()}",
+        )
+        assertFalse(after.contains("return A;") || after.contains("return B;"), "no return-value upgrade: ${after.lines()}")
+    }
+
+    fun testConditionalLastStatementKeepsOutMatrix() {
+        val file = openFile(
+            """
+            export void M_CondLast(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 Tinted;
+                if (Gain > 0.0)
+                {
+                    Tinted = TintScale(UV);
+                }
+                m.BaseColor = Tinted;
+            }
+            """.trimIndent(),
+            "M_ExtractCondLast.dss",
+        )
+        select(file, "if (Gain > 0.0)\n    {\n        Tinted = TintScale(UV);\n    }")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("void Extracted(float2 UV, out float3 Tinted)"),
+            "a conditional final write keeps the out matrix: ${after.lines()}",
+        )
+        assertFalse(after.contains("return Tinted;"), "no return-value upgrade: ${after.lines()}")
     }
 
     fun testExtractsMultipleStatementsWithoutFreeVariables() {
