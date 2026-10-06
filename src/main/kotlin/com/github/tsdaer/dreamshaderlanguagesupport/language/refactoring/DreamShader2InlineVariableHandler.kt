@@ -185,7 +185,10 @@ internal class DreamShader2InlineVariableHandler : RefactoringActionHandler {
 
         fun walk(element: PsiElement): String? {
             val range = element.textRange
-            if (range.startOffset < start || range.endOffset > end) return null
+            // Everything below the statement must sit inside the initializer slot: after the
+            // `=` (left-inclusive keeps the declaration's own operator out) and before the
+            // `;` (right-exclusive keeps the initializer that touches the semicolon).
+            if (range.startOffset <= start || range.endOffset > end) return null
             val elementType = element.node?.elementType
             if (elementType == DreamShader2ElementTypes.CALL_EXPRESSION) {
                 val path = callPath(element) ?: return "refactoring.inlineVariable.unsupportedCall"
@@ -214,7 +217,15 @@ internal class DreamShader2InlineVariableHandler : RefactoringActionHandler {
             }
             return null
         }
-        return walk(statement)
+
+        // The statement straddles its own initializer slot (its head is the type and the
+        // name), so the scan starts at the children and the per-element guard takes over.
+        var child = statement.firstChild
+        while (child != null) {
+            walk(child)?.let { return it }
+            child = child.nextSibling
+        }
+        return null
     }
 
     /** Dotted callee spelling of a flat call node (the inference pass's rule, locally). */
@@ -332,8 +343,22 @@ internal class DreamShader2InlineVariableHandler : RefactoringActionHandler {
                 }
 
                 // The declaration goes last, together with its doc block and the line break.
-                val startElement = docBlockBefore(statement) ?: statement
-                val start = document.getLineStartOffset(document.getLineNumber(startElement.textRange.startOffset))
+                // Body comments above a local are lexer trivia — no DOC_BLOCK node — so the
+                // declaration's documentation lines are swallowed textually (C22 semantics).
+                val docBlock = docBlockBefore(statement)
+                var start = document.getLineStartOffset(
+                    document.getLineNumber((docBlock ?: statement).textRange.startOffset),
+                )
+                if (docBlock == null) {
+                    var firstLine = document.getLineNumber(start)
+                    while (firstLine > 0) {
+                        val previousStart = document.getLineStartOffset(firstLine - 1)
+                        val previousEnd = document.getLineEndOffset(firstLine - 1)
+                        val line = document.charsSequence.subSequence(previousStart, previousEnd).trim()
+                        if (line.startsWith("//")) firstLine-- else break
+                    }
+                    start = document.getLineStartOffset(firstLine)
+                }
                 var end = statement.textRange.endOffset
                 val text = document.charsSequence
                 if (end < text.length && text[end] == '\r') end++
