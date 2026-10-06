@@ -144,6 +144,49 @@ internal class DreamShaderCompletionRegions(
     }
 }
 
+/** One legacy block's 1.x reparse: the block's host-file range plus the parsed sub-file. */
+internal class DreamShaderLegacySubtree(val blockRange: TextRange, val parsed: com.intellij.psi.PsiFile)
+
+/**
+ * A 1.x reparse per legacy block of a mixed `.dsh` (M17 C32). The blocks are opaque token
+ * flat nodes in the 2.0 tree — no [com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration]
+ * or section nodes — so the 1.x completion context cannot see declarations inside them from
+ * the host PSI. Each block's text goes through `createFileFromText` with the dialect-aware
+ * parser (legacy-only text routes to the frozen 1.x front end), the C27 structure-view rule
+ * shared by the completion context. Cached on the file PSI; a malformed block yields a
+ * sub-file whose context analysis degrades, never a diagnostic.
+ */
+internal object DreamShaderLegacyCompletionSubtrees {
+    private val KEY: Key<CachedValue<List<DreamShaderLegacySubtree>>> =
+        Key.create("dreamshader.completion.legacySubtrees")
+
+    fun of(file: DreamShaderPsiFile): List<DreamShaderLegacySubtree> =
+        CachedValuesManager.getManager(file.project).getCachedValue(
+            file,
+            KEY,
+            { CachedValueProvider.Result.create(compute(file), file) },
+            false,
+        )
+
+    /** The subtree whose legacy block hosts [offset], end-exclusive like the region index. */
+    fun subtreeAt(file: DreamShaderPsiFile, offset: Int): DreamShaderLegacySubtree? =
+        of(file).firstOrNull { offset >= it.blockRange.startOffset && offset < it.blockRange.endOffset }
+
+    private fun compute(file: DreamShaderPsiFile): List<DreamShaderLegacySubtree> {
+        val result = mutableListOf<DreamShaderLegacySubtree>()
+        file.node.getChildren(null).forEach { node ->
+            if (node.elementType != DreamShader2ElementTypes.LEGACY_BLOCK) return@forEach
+            val text = node.text
+            if (text.isBlank()) return@forEach
+            val parsed = com.intellij.psi.PsiFileFactory.getInstance(file.project)
+                .createFileFromText("legacy.dsh", com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage, text)
+                ?: return@forEach
+            result.add(DreamShaderLegacySubtree(node.textRange, parsed))
+        }
+        return result
+    }
+}
+
 /**
  * One construction path for lookup elements across both contributors (C10): every item
  * carries its priority, so [PrioritizedLookupElement] wrapping is not optional anymore.

@@ -1,5 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 import com.github.tsdaer.dreamshaderlanguagesupport.language.bridge.DreamShaderBridgeSettingsRepository
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDialect
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDialects
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderElementTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderIcons
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLanguage
@@ -104,11 +106,29 @@ internal object DreamShaderCompletionContextAnalyzer {
     }
 
     fun analyze(file: PsiFile, offset: Int): DreamShaderCompletionContext {
+        if (file is DreamShaderPsiFile) {
+            // C32: a mixed `.dsh`'s legacy regions carry no 1.x PSI nodes in the 2.0 tree,
+            // so the PSI branch would answer top-level everywhere inside them — the block's
+            // own cached reparse answers instead.
+            legacyRegionContextAt(file, offset)?.let { return it }
+        }
         val fromPsi = analyzeWithPsi(file, offset)
         if (fromPsi != null) {
             return fromPsi
         }
         return analyzeWithLexer(file.text, offset)
+    }
+
+    /**
+     * The 1.x context from the caret's legacy block reparse, or null when the file is not
+     * HEADER_MIXED or the caret is not inside a legacy block — pure V1/V2 files and V2
+     * regions keep the existing branches byte-for-byte.
+     */
+    private fun legacyRegionContextAt(file: DreamShaderPsiFile, offset: Int): DreamShaderCompletionContext? {
+        if (DreamShaderCompletionDialects.dialectOf(file) != DreamShaderDialect.HEADER_MIXED) return null
+        val subtree = DreamShaderLegacyCompletionSubtrees.subtreeAt(file, offset) ?: return null
+        val mappedOffset = (offset - subtree.blockRange.startOffset).coerceIn(0, subtree.parsed.textLength)
+        return analyzeFromParsedRoot(subtree.parsed.node, mappedOffset, subtree.parsed.text)
     }
 
     private fun analyzeWithParsedText(text: String, offset: Int): DreamShaderCompletionContext? {
@@ -266,7 +286,7 @@ internal object DreamShaderCompletionContextAnalyzer {
         )
     }
 
-    private fun analyzeFromParsedRoot(
+    internal fun analyzeFromParsedRoot(
         root: com.intellij.lang.ASTNode,
         offset: Int,
         text: String
