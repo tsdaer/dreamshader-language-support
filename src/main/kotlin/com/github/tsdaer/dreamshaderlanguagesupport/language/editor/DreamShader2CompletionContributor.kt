@@ -687,23 +687,43 @@ internal object DreamShader2CompletionSuggester {
     internal data class ParentParameter(val name: String, val type: String?)
 
     // ------------------------------------------------------------------
-    // A10 .dsi override values, typed from the declared override spelling
+    // A10 / C29 .dsi override values, schema-driven with declared-spelling fallback
     // ------------------------------------------------------------------
 
     /**
-     * Value-slot completion of a `.dsi` override (`uniform float3 BaseColor = `). The
-     * declared type spelling drives the templates, so suggestions match the parent schema
-     * type by construction (the DSH7259 rule ties the two together) and work without
-     * Bridge data. Resource-typed overrides stay empty - their value spellings are the
-     * engine's business.
+     * Value-slot completion of a `.dsi` override (`uniform float3 BaseColor = `). A valid
+     * parent-schema parameter matching the override name is the authority (M16 C29): the
+     * schema `type` spelling re-drives the templates, a `StaticSwitch` kind forces
+     * true/false even when the override spells int/float (the engine's static semantics
+     * live in the kind), and `Texture` stays silent — resource values are the engine's
+     * business. Without a schema (or without a parameter of that name) the declared type
+     * spelling drives the templates, so suggestions match the parent schema type by
+     * construction (the DSH7259 rule ties the two together) and work without Bridge data.
      */
     fun instanceOverrideValueCompletions(file: DreamShaderPsiFile, offset: Int): List<DreamShaderCompletionItem>? {
         if (DreamShaderDialects.extensionOf(file.name) != "dsi") return null
         val linePrefix = linePrefixBefore(file.text, offset) ?: return null
         if (!Regex("""^\s*uniform\b""").containsMatchIn(linePrefix)) return null
         if (!Regex("""[A-Za-z_][A-Za-z0-9_]*\s*=\s*[^\s=;]*$""").containsMatchIn(linePrefix)) return null
-        val typeMatch = Regex("""^\s*uniform\s+([A-Za-z_][A-Za-z0-9_]*)""").find(linePrefix) ?: return null
-        return overrideValueItems(DreamShader2Type.fromSpelling(typeMatch.groupValues[1]))
+        val declaration = Regex("""^\s*uniform\s+([A-Za-z_][A-Za-z0-9_]*)(\s+([A-Za-z_][A-Za-z0-9_]*))?""").find(linePrefix)
+            ?: return null
+        val declaredSpelling = declaration.groupValues[1]
+        val overrideName = declaration.groupValues[3]
+        if (overrideName.isNotEmpty()) {
+            val schemaParameter = file.project.getService(DreamShader2WorkspaceSymbols::class.java)
+                .instanceSchema(file.virtualFile)
+                ?.parameters
+                ?.firstOrNull { it.name == overrideName }
+            if (schemaParameter != null) {
+                return when {
+                    schemaParameter.kind.equals("StaticSwitch", ignoreCase = true) ->
+                        overrideValueItems(DreamShader2Type.Scalar(DreamShader2Type.Family.BOOL))
+                    schemaParameter.kind.equals("Texture", ignoreCase = true) -> emptyList()
+                    else -> overrideValueItems(DreamShader2Type.fromSpelling(schemaParameter.type))
+                }
+            }
+        }
+        return overrideValueItems(DreamShader2Type.fromSpelling(declaredSpelling))
     }
 
     private fun overrideValueItems(type: DreamShader2Type): List<DreamShaderCompletionItem> {

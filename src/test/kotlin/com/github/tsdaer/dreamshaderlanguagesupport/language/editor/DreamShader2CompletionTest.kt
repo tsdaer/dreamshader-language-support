@@ -622,23 +622,86 @@ class DreamShader2CompletionTest : BasePlatformTestCase() {
     }
 
     // ------------------------------------------------------------------
+    // C29 .dsi override values driven by the parent schema
+    // ------------------------------------------------------------------
+
+    fun testSchemaTypeAgreesWithDeclarationKeepsSuggestions() {
+        val virtualFile = writeDsiFixture(
+            name = "M_SchemaAgree",
+            sourceText = "#pragma instance(Parent = \"M_P\")\nuniform float3 BaseColor = ",
+            schemaParameters = """{ "name": "BaseColor", "kind": "global", "type": "float3", "group": "Surface" }""",
+        )
+        val file = com.intellij.psi.PsiManager.getInstance(project).findFile(virtualFile) as DreamShaderPsiFile
+        val entries = DreamShader2CompletionSuggester.instanceOverrideValueCompletions(file, file.text.length)
+        val labels = entries.orEmpty().map { it.label }
+        assertTrue("schema float3 keeps the constructor template, got $labels", "float3(0.0, 0.0, 0.0)" in labels)
+    }
+
+    fun testSchemaStaticSwitchForcesTrueFalseOverDeclaredInt() {
+        val virtualFile = writeDsiFixture(
+            name = "M_SchemaSwitch",
+            sourceText = "#pragma instance(Parent = \"M_P\")\nuniform int Count = ",
+            schemaParameters = """{ "name": "Count", "kind": "StaticSwitch", "type": "int", "group": "Options" }""",
+        )
+        val file = com.intellij.psi.PsiManager.getInstance(project).findFile(virtualFile) as DreamShaderPsiFile
+        val entries = DreamShader2CompletionSuggester.instanceOverrideValueCompletions(file, file.text.length)
+        val labels = entries.orEmpty().map { it.label }
+        assertTrue("StaticSwitch kind forces true/false, got $labels", "true" in labels && "false" in labels)
+        assertFalse("the declared int placeholder must not appear", "0" in labels)
+    }
+
+    fun testSchemaTextureKindStaysSilent() {
+        val virtualFile = writeDsiFixture(
+            name = "M_SchemaTexture",
+            sourceText = "#pragma instance(Parent = \"M_P\")\nuniform int Mask = ",
+            schemaParameters = """{ "name": "Mask", "kind": "Texture", "type": "texture2d", "group": "Resources" }""",
+        )
+        val file = com.intellij.psi.PsiManager.getInstance(project).findFile(virtualFile) as DreamShaderPsiFile
+        val entries = DreamShader2CompletionSuggester.instanceOverrideValueCompletions(file, file.text.length)
+        assertTrue(
+            "the value slot is recognized but resource values stay empty, got ${entries.orEmpty().map { it.label }}",
+            entries != null && entries.isEmpty(),
+        )
+    }
+
+    fun testSchemaWithoutTheOverrideNameKeepsDeclaredSpelling() {
+        val virtualFile = writeDsiFixture(
+            name = "M_SchemaMiss",
+            sourceText = "#pragma instance(Parent = \"M_P\")\nuniform int Count = ",
+            schemaParameters = """{ "name": "Other", "kind": "StaticSwitch", "type": "int", "group": "Options" }""",
+        )
+        val file = com.intellij.psi.PsiManager.getInstance(project).findFile(virtualFile) as DreamShaderPsiFile
+        val entries = DreamShader2CompletionSuggester.instanceOverrideValueCompletions(file, file.text.length)
+        val labels = entries.orEmpty().map { it.label }
+        assertTrue("a name miss falls back to the declared spelling, got $labels", "0" in labels && "true" !in labels)
+    }
+
+    // ------------------------------------------------------------------
 
     /** Creates a `.dsi` source plus a schema-bearing symbol index under the Bridge layout. */
-    private fun writeDsiFixture(): com.intellij.openapi.vfs.VirtualFile {
+    private fun writeDsiFixture(
+        name: String = "M_Inst",
+        sourceText: String = "#pragma instance(Parent = \"M_Parent\")\nuniform float Gain;\n",
+        schemaParameters: String = (
+            "{ \"name\": \"Gain\", \"kind\": \"global\", \"type\": \"float1\", \"group\": \"Tuning\" },\n" +
+                "                    { \"name\": \"Roughness\", \"kind\": \"global\", \"type\": \"float1\", \"group\": \"Surface\" },\n" +
+                "                    { \"name\": \"BaseColor\", \"kind\": \"global\", \"type\": \"float3\", \"group\": \"Surface\" }"
+            ),
+    ): com.intellij.openapi.vfs.VirtualFile {
         val base = Paths.get(project.basePath!!)
         Files.createDirectories(base)
         base.resolve("Demo.uproject").writeText("{}")
-        val source = base.resolve("DShader/Materials/M_Inst.dsi")
+        val source = base.resolve("DShader/Materials/$name.dsi")
         Files.createDirectories(source.parent)
-        source.writeText("#pragma instance(Parent = \"M_Parent\")\nuniform float Gain;\n")
-        val index = base.resolve("Saved/DreamShader/Index/Project/DShader/Materials/M_Inst.dsi.index.json")
+        source.writeText(sourceText)
+        val index = base.resolve("Saved/DreamShader/Index/Project/DShader/Materials/$name.dsi.index.json")
         Files.createDirectories(index.parent)
         index.writeText(
             """
             {
               "schema": "dreamshader-symbol-index",
               "version": 1,
-              "file": "M_Inst.dsi",
+              "file": "$name.dsi",
               "declarations": [],
               "references": [],
               "includes": [],
@@ -650,9 +713,7 @@ class DreamShader2CompletionTest : BasePlatformTestCase() {
                   "valid": true,
                   "origin": "asset",
                   "parameters": [
-                    { "name": "Gain", "kind": "global", "type": "float1", "group": "Tuning" },
-                    { "name": "Roughness", "kind": "global", "type": "float1", "group": "Surface" },
-                    { "name": "BaseColor", "kind": "global", "type": "float3", "group": "Surface" }
+                    $schemaParameters
                   ]
                 }
               }

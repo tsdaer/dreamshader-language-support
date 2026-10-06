@@ -5,6 +5,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsi
 import com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderMaterialExpressionManifest
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2FunctionDeclaration
+import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2NamedArgument
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2Parameter
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2ParameterList
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2StructField
@@ -34,6 +35,7 @@ internal class DreamShader2InferenceContext private constructor(
 ) {
     private val typeCache = HashMap<PsiElement, DreamShader2Type>()
     private val closureStructFields = HashMap<String, List<DreamShader2StructField>>()
+    private val writeBacks = HashMap<DreamShader2FunctionDeclaration, List<WriteBackRecord>>()
     private val catalogReturnTypes by lazy { buildCatalogReturnTypes() }
 
     fun typeOf(expression: PsiElement?): DreamShader2Type {
@@ -44,10 +46,22 @@ internal class DreamShader2InferenceContext private constructor(
         return computed
     }
 
-    /** Declared/inferred type of a name used at [useSite]: locals before it, then file scope. */
+    /**
+     * Declared/inferred type of a name used at [useSite]. The out/inout write-back table
+     * (M16 C30) comes first — a call that wrote the name re-typed it — but a re-declaration
+     * of the name nearer to the use site than that call wins back: the record rewrote the
+     * previous binding, not the new one. Otherwise locals (lexically visible, nearest
+     * first), then parameters, then file scope.
+     */
     fun typeOfName(name: String, useSite: PsiElement): DreamShader2Type {
         enclosingFunctionOf(useSite)?.let { function ->
-            localDeclaredTypeIn(function, name, useSite)?.let { return it }
+            val declaration = localDeclarationBefore(function, name, useSite)
+            val record = latestWriteBackBefore(function, name, useSite)
+            when {
+                record != null && (declaration == null || declaration.first < record.callStart) ->
+                    return record.type
+                declaration != null -> return declaration.second
+            }
             parameterType(function, name)?.let { return it }
         }
         fileScopeType(name)?.let { return it }
@@ -310,11 +324,18 @@ internal class DreamShader2InferenceContext private constructor(
         function: DreamShader2FunctionDeclaration,
         name: String,
         useSite: PsiElement,
-    ): DreamShader2Type? {
+    ): DreamShader2Type? = localDeclarationBefore(function, name, useSite)?.second
+
+    /** The nearest visible declaration: its start offset (for the write-back merge) and type. */
+    private fun localDeclarationBefore(
+        function: DreamShader2FunctionDeclaration,
+        name: String,
+        useSite: PsiElement,
+    ): Pair<Int, DreamShader2Type>? {
         val functionRange = function.textRange
         if (!functionRange.contains(useSite.textRange)) return null
         val visibleScopes = ancestorScopesOf(useSite)
-        var match: DreamShader2Type? = null
+        var match: Pair<Int, DreamShader2Type>? = null
         var matchStart = Int.MIN_VALUE
         psiTreeWalk(function).filter {
             it.node.elementType == DreamShader2ElementTypes.VARIABLE_DECLARATION_STATEMENT
@@ -323,7 +344,7 @@ internal class DreamShader2InferenceContext private constructor(
             if (start > matchStart && start < useSite.textRange.startOffset && scopeOwnerOf(statement) in visibleScopes) {
                 declaredNamesAndType(statement)?.let { (names, type) ->
                     if (name in names) {
-                        match = type
+                        match = start to type
                         matchStart = start
                     }
                 }
@@ -331,6 +352,103 @@ internal class DreamShader2InferenceContext private constructor(
         }
         return match
     }
+
+    // ------------------------------------------------------------------
+    // out/inout write-back table (M16 C30)
+    // ------------------------------------------------------------------
+
+    /**
+     * The latest call before [useSite] that writes [name] through an `out`/`inout` formal
+     * with a confident spelling type. Uses at or inside the call itself stay pre-call: the
+     * write-back happens when the call returns, so only sites at or after the call's end
+     * consume the record — which also keeps the C24.3 argument mismatch check reading the
+     * declared type of the very argument that receives the write.
+     */
+    private fun latestWriteBackBefore(
+        function: DreamShader2FunctionDeclaration,
+        name: String,
+        useSite: PsiElement,
+    ): WriteBackRecord? {
+        val useOffset = useSite.textRange.startOffset
+        return writeBacksIn(function).lastOrNull { it.name == name && it.callEnd <= useOffset }
+    }
+
+    /**
+     * One record per (call, argument) pair where a plain variable reference is passed to an
+     * `out`/`inout` formal whose spelling type is confident: after the call, that variable
+     * holds the formal's type. Lazy per enclosing function; the scan only reads PSI and
+     * declared spellings — no inference recursion.
+     */
+    private fun writeBacksIn(function: DreamShader2FunctionDeclaration): List<WriteBackRecord> =
+        writeBacks.getOrPut(function) {
+            val records = mutableListOf<WriteBackRecord>()
+            psiTreeWalk(function).forEach { node ->
+                if (node.node.elementType != DreamShader2ElementTypes.CALL_EXPRESSION) return@forEach
+                val path = calleePath(node) ?: return@forEach
+                val formals = calleeParameters(path) ?: return@forEach
+                val argumentList = node.node.findChildByType(DreamShader2ElementTypes.ARGUMENT_LIST)?.psi
+                    ?: return@forEach
+                val arguments = dreamShader2MeaningfulChildren(argumentList)
+                    .filter {
+                        it.elementType == DreamShader2ElementTypes.ARGUMENT ||
+                            it.elementType == DreamShader2ElementTypes.NAMED_ARGUMENT
+                    }
+                // More arguments than parameters means defaults/overloads we cannot see - stay
+                // silent (the C24.3 pairing rule).
+                if (arguments.size > formals.size) return@forEach
+                arguments.forEachIndexed { index, argumentNode ->
+                    val formal = when (argumentNode.elementType) {
+                        DreamShader2ElementTypes.NAMED_ARGUMENT ->
+                            (argumentNode.psi as? DreamShader2NamedArgument)?.argumentName()
+                                ?.let { argumentName ->
+                                    formals.firstOrNull {
+                                        it.parameterName()?.equals(argumentName, ignoreCase = true) == true
+                                    }
+                                }
+                        else -> formals.getOrNull(index)
+                    } ?: return@forEachIndexed
+                    if (firstKeywordText(formal) !in WRITE_BACK_QUALIFIERS) return@forEachIndexed
+                    val formalType = formal.typeName()?.let(DreamShader2Type::fromSpelling)
+                        ?.takeIf { it != DreamShader2Type.Unknown }
+                        ?: return@forEachIndexed
+                    val written = plainReferenceArgument(argumentNode) ?: return@forEachIndexed
+                    records.add(
+                        WriteBackRecord(
+                            node.textRange.startOffset,
+                            node.textRange.endOffset,
+                            written,
+                            formalType,
+                        ),
+                    )
+                }
+            }
+            records.sortedBy { it.callStart }
+        }
+
+    /** `out`/`inout` when the parameter opens with that keyword; plain `in` parameters are null. */
+    private fun firstKeywordText(parameter: DreamShader2Parameter): String? =
+        dreamShader2MeaningfulChildren(parameter).firstOrNull()
+            ?.takeIf { it.elementType == DreamShaderTokenTypes.KEYWORD }
+            ?.text
+
+    /**
+     * The variable name when the argument's value is a plain reference (possibly through
+     * single-child EXPRESSION wrappers) — member/index/computed arguments never write back.
+     */
+    private fun plainReferenceArgument(argumentNode: ASTNode): String? {
+        var value = dreamShader2MeaningfulChildren(argumentNode.psi).lastOrNull() ?: return null
+        while (value.elementType == DreamShader2ElementTypes.EXPRESSION) {
+            value = dreamShader2MeaningfulChildren(value.psi).singleOrNull() ?: return null
+        }
+        return value.takeIf { it.elementType == DreamShader2ElementTypes.REFERENCE_EXPRESSION }?.text
+    }
+
+    private class WriteBackRecord(
+        val callStart: Int,
+        val callEnd: Int,
+        val name: String,
+        val type: DreamShader2Type,
+    )
 
     /** Every BLOCK / `for` header on [useSite]'s ancestor chain — the scopes it can see. */
     private fun ancestorScopesOf(useSite: PsiElement): Set<PsiElement> {
@@ -473,6 +591,9 @@ internal class DreamShader2InferenceContext private constructor(
 
         /** Comparison/logical operators: confident operands always yield `bool`. */
         private val BOOLEAN_RESULT_OPERATORS = setOf("&&", "||", "==", "!=", "<", ">", "<=", ">=")
+
+        /** Parameter qualifiers that rewrite the argument variable when the call returns. */
+        private val WRITE_BACK_QUALIFIERS = setOf("out", "inout")
 
         fun forFile(file: DreamShaderPsiFile, workspace: DreamShader2WorkspaceSymbols?): DreamShader2InferenceContext {
             val closure = workspace?.includeClosurePsi(file).orEmpty().filterIsInstance<DreamShaderPsiFile>()

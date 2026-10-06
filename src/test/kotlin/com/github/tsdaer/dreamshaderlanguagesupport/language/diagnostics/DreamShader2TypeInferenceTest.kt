@@ -382,4 +382,183 @@ class DreamShader2TypeInferenceTest : BasePlatformTestCase() {
         assertEquals(DreamShader2Type.Scalar(DreamShader2Type.Family.FLOAT), typedValueOf(file, "float F ="))
         assertEquals("unlisted intrinsics stay Unknown", DreamShader2Type.Unknown, typedValueOf(file, "float U ="))
     }
+
+    // ------------------------------------------------------------------
+    // C30 out/inout write-back narrowing
+    // ------------------------------------------------------------------
+
+    private val writeBackBody = """
+        void Fill(out float3 v, float s)
+        {
+            v = float3(s, s, s);
+        }
+
+        export void M_Entry(inout material m)
+        {
+            float x = 0.5;
+            Fill(x, 1.0);
+            float3 After = x;
+            float2 Mixed = x.xy;
+        }
+    """.trimIndent()
+
+    /** The `x` references of [file] in document order (call argument first, uses after). */
+    private fun xReferencesOf(file: DreamShaderPsiFile): List<PsiElement> =
+        psiTreeWalk(file).filter {
+            it.node.elementType == DreamShader2ElementTypes.REFERENCE_EXPRESSION && it.text == "x"
+        }.toList()
+
+    fun testOutWriteBackNarrowsAfterTheCall() {
+        val file = openFile(writeBackBody, "M_WriteBack.dss")
+        val context = DreamShader2InferenceContext.forFile(file, null)
+        val references = xReferencesOf(file)
+        // references: Fill's argument, the `float3 After = x` initializer, the `x.xy` swizzle base
+        assertEquals(3, references.size)
+        assertEquals(
+            "the call argument keeps its declared type (pre-call)",
+            DreamShader2Type.Scalar(DreamShader2Type.Family.FLOAT),
+            context.typeOfName("x", references[0]),
+        )
+        assertEquals(
+            "after the call the out formal's type holds",
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3),
+            context.typeOfName("x", references[1]),
+        )
+        assertEquals(
+            "the swizzle base is narrowed too",
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3),
+            context.typeOfName("x", references[2]),
+        )
+    }
+
+    fun testInoutWriteBackNarrowsAfterTheCall() {
+        val file = openFile(
+            """
+            void MixInto(inout float2 v)
+            {
+                v = v * 2.0;
+            }
+
+            export void M_Entry(inout material m)
+            {
+                float x = 0.5;
+                MixInto(x);
+                float2 After = x;
+            }
+            """.trimIndent(),
+            "M_InoutBack.dss",
+        )
+        val context = DreamShader2InferenceContext.forFile(file, null)
+        val references = xReferencesOf(file)
+        assertEquals(
+            "an inout formal re-types the variable after the call",
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 2),
+            context.typeOfName("x", references[1]),
+        )
+    }
+
+    fun testNamedArgumentWriteBackHitsTheFormalByName() {
+        val file = openFile(
+            """
+            void Fill(out float3 v, float s)
+            {
+                v = float3(s, s, s);
+            }
+
+            export void M_Entry(inout material m)
+            {
+                float x = 0.5;
+                Fill(s = 1.0, v = x);
+                float3 After = x;
+            }
+            """.trimIndent(),
+            "M_NamedBack.dss",
+        )
+        val context = DreamShader2InferenceContext.forFile(file, null)
+        val references = xReferencesOf(file)
+        assertEquals(
+            "the named out argument re-types x after the call",
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3),
+            context.typeOfName("x", references[1]),
+        )
+    }
+
+    fun testUnknownFormalTypeStaysSilent() {
+        val file = openFile(
+            """
+            void FillUnknown(out float5 v)
+            {
+                v = v;
+            }
+
+            export void M_Entry(inout material m)
+            {
+                float x = 0.5;
+                FillUnknown(x);
+                float After = x;
+            }
+            """.trimIndent(),
+            "M_UnknownBack.dss",
+        )
+        val context = DreamShader2InferenceContext.forFile(file, null)
+        val references = xReferencesOf(file)
+        assertEquals(
+            "an unparsable formal spelling never narrows",
+            DreamShader2Type.Scalar(DreamShader2Type.Family.FLOAT),
+            context.typeOfName("x", references[1]),
+        )
+    }
+
+    fun testNearerRedeclarationBeatsTheWriteBack() {
+        val file = openFile(
+            """
+            void Fill(out float3 v, float s)
+            {
+                v = float3(s, s, s);
+            }
+
+            export void M_Entry(inout material m)
+            {
+                float x = 0.5;
+                Fill(x, 1.0);
+                float x = 2.0;
+                float After = x;
+            }
+            """.trimIndent(),
+            "M_ShadowBack.dss",
+        )
+        val context = DreamShader2InferenceContext.forFile(file, null)
+        val references = xReferencesOf(file)
+        // references: Fill's argument, then the `float After = x` initializer (declaration
+        // names are identifier leaves, not references).
+        assertEquals(
+            "the re-declared x answers with its own declared type",
+            DreamShader2Type.Scalar(DreamShader2Type.Family.FLOAT),
+            context.typeOfName("x", references[1]),
+        )
+    }
+
+    fun testWriteBackFeedsChainedInference() {
+        val file = openFile(
+            """
+            void Fill(out float3 v, float s)
+            {
+                v = float3(s, s, s);
+            }
+
+            export void M_Entry(inout material m)
+            {
+                float x = 0.5;
+                Fill(x, 1.0);
+                float3 Norm = normalize(x);
+            }
+            """.trimIndent(),
+            "M_ChainBack.dss",
+        )
+        // The normalize argument carries the write-back type, so the result is a float3.
+        assertEquals(
+            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 3),
+            typedValueOf(file, "float3 Norm ="),
+        )
+    }
 }
