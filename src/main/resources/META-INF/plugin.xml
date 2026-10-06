@@ -219,6 +219,11 @@
                 text="Inline Uniform">
             <add-to-group group-id="RefactoringMenu" anchor="last"/>
         </action>
+        <action id="DreamShader.InlineVariable"
+                class="com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderInlineVariableAction"
+                text="Inline Variable">
+            <add-to-group group-id="RefactoringMenu" anchor="last"/>
+        </action>
     </actions>
 
     <actions>
