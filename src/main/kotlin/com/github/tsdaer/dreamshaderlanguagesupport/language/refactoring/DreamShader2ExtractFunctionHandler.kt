@@ -48,6 +48,10 @@ import com.intellij.refactoring.util.CommonRefactoringUtil
  *   becomes `Type name = Name(inParams);` and the bare declaration line is removed) —
  *   parameters, initialized or outer declarations, and any intermediate use keep the
  *   `out` matrix (M16 C26);
+ * - when two or more pure `out` values qualify in straight-line code (no branch or loop
+ *   in the selection, each a bare same-block declaration whose first selection occurrence
+ *   is a write), they merge into a generated `Extracted_Result` struct the helper returns;
+ *   the call site splits the fields back onto the caller's variables (M17 C33);
  * - statements that transfer control (`return`/`break`/`continue`), assignments through
  *   a member or index, partial selections, and declarations that would change scope are
  *   refused with a hint — the document is never left half-refactored.
@@ -120,11 +124,13 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
         }
 
         // M16 C26: the single pure-out value whose last statement is its final assignment
-        // becomes the return value; every other shape keeps the out matrix.
+        // becomes the return value; M17 C33: two or more pure-out values in straight-line
+        // code merge into a generated result struct; every other shape keeps the out matrix.
         val upgrade = singleReturnValueUpgrade(function, statements, usage, outParams, selectionStart)
 
         val name = suggestedName(analysis, workspace, file)
-        runRefactoring(project, editor, file, function, statements, selection.first, selection.second, name, inParams, outParams, upgrade)
+        val structMerge = structReturnMerge(function, statements, usage, outParams, selectionStart, analysis, workspace, name)
+        runRefactoring(project, editor, file, function, statements, selection.first, selection.second, name, inParams, outParams, upgrade, structMerge)
     }
 
     override fun invoke(project: Project, elements: Array<out PsiElement>, dataContext: DataContext?) = Unit
@@ -299,6 +305,117 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
     }
 
     // ------------------------------------------------------------------
+    // struct return merge (M17 C33)
+    // ------------------------------------------------------------------
+
+    /**
+     * The struct-return merge when the out matrix has two or more pure-`out` values, the
+     * selection is straight-line code (no branch or loop — every write then reaches the
+     * exit without a dominance analysis), and each value passes the C26 bare-declaration
+     * conditions. The helper returns a generated `<Name>_Result` struct; the call site
+     * splits the fields back onto the caller's variables, whose bare declarations stay.
+     *
+     * A value the selection reads before writing it refuses: the field would be read
+     * uninitialized where the out formal only promised a write. Anything that does not
+     * qualify keeps the out matrix — the merge is a relaxation, never a replacement.
+     */
+    private fun structReturnMerge(
+        function: DreamShader2FunctionDeclaration,
+        statements: List<PsiElement>,
+        usage: SelectionUsage,
+        outParams: Map<String, OutParam>,
+        selectionStart: Int,
+        analysis: DreamShader2FileAnalysis,
+        workspace: DreamShader2WorkspaceSymbols,
+        suggestedName: String,
+    ): StructReturnMerge? {
+        if (outParams.size < 2) return null
+        if (outParams.values.any { it.qualifier != "out" }) return null
+        if (!selectionIsStraightLine(statements)) return null
+
+        val fields = ArrayList<Pair<String, String>>()
+        for ((valueName, out) in outParams) {
+            val declaration = bareDeclarationBefore(valueName, statements.first().parent, selectionStart, function)
+                ?: return null
+            if (!firstOccurrenceIsWrite(valueName, statements, usage)) return null
+            fields.add(declaration.second to valueName)
+        }
+
+        val taken = reservedNames(function, usage, analysis, workspace)
+        val structName = uniqueName("${suggestedName}_Result", "_Result", taken) { candidate ->
+            analysis.structByName(candidate) != null || closureDeclaresStruct(workspace, function, candidate)
+        }
+        val retName = uniqueName("result", "", taken + fields.map { it.second }) { false }
+        return StructReturnMerge(fields.map { it.second }, fields, structName, retName)
+    }
+
+    private fun selectionIsStraightLine(statements: List<PsiElement>): Boolean =
+        statements.none { statement ->
+            psiTreeWalk(statement).any { it.node?.elementType in BRANCH_OR_LOOP_TYPES }
+        }
+
+    /**
+     * True when the value's first occurrence inside the selection is one of the recorded
+     * write targets — reads before the first write would read an uninitialized field.
+     */
+    private fun firstOccurrenceIsWrite(
+        name: String,
+        statements: List<PsiElement>,
+        usage: SelectionUsage,
+    ): Boolean {
+        val first = statements
+            .flatMap { psiTreeWalk(it) }
+            .filter { it.node?.elementType == DreamShader2ElementTypes.REFERENCE_EXPRESSION && it.text == name }
+            .minByOrNull { it.textRange.startOffset }
+            ?: return false
+        return first in usage.writeTargets
+    }
+
+    private fun closureDeclaresStruct(
+        workspace: DreamShader2WorkspaceSymbols,
+        function: DreamShader2FunctionDeclaration,
+        name: String,
+    ): Boolean = workspace.includeClosurePsi(function.containingFile).orEmpty()
+        .filterIsInstance<com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile>()
+        .any { DreamShader2FileAnalysis.of(it).structByName(name) != null }
+
+    /** Every name the generated identifiers must avoid: selection names, parameters, file scope. */
+    private fun reservedNames(
+        function: DreamShader2FunctionDeclaration,
+        usage: SelectionUsage,
+        analysis: DreamShader2FileAnalysis,
+        workspace: DreamShader2WorkspaceSymbols,
+    ): Set<String> = buildSet {
+        addAll(usage.readNames)
+        addAll(usage.assignedNames)
+        addAll(usage.declaredInside)
+        function.parameterList()?.parameters().orEmpty().forEach { it.parameterName()?.let(::add) }
+        (analysis.uniforms + analysis.globals).forEach { addAll(dreamShader2DeclaratorNames(it)) }
+        workspace.includeClosurePsi(function.containingFile).orEmpty()
+            .filterIsInstance<com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile>()
+            .forEach { closure ->
+                val closureAnalysis = DreamShader2FileAnalysis.of(closure)
+                (closureAnalysis.uniforms + closureAnalysis.globals).forEach { addAll(dreamShader2DeclaratorNames(it)) }
+            }
+    }
+
+    /** `base`, `base2`, `base3`, … avoiding [taken] and whatever [declared] rejects. */
+    private fun uniqueName(
+        base: String,
+        suffix: String,
+        taken: Set<String>,
+        declared: (String) -> Boolean,
+    ): String {
+        var candidate = base
+        var index = 2
+        while (candidate in taken || declared(candidate)) {
+            candidate = "$base$index$suffix"
+            index++
+        }
+        return candidate
+    }
+
+    // ------------------------------------------------------------------
     // name suggestion
     // ------------------------------------------------------------------
 
@@ -339,6 +456,7 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
         inParams: Map<String, String>,
         outParams: Map<String, OutParam>,
         upgrade: ReturnValueUpgrade?,
+        structMerge: StructReturnMerge?,
     ) {
         val document = editor.document
         WriteCommandAction.runWriteCommandAction(
@@ -349,25 +467,45 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
                 val indent = lineIndentOf(document, statements.first().textRange.startOffset)
                 val parameters = ArrayList<String>()
                 inParams.forEach { (paramName, spelling) -> parameters.add("$spelling $paramName") }
-                if (upgrade == null) {
+                if (upgrade == null && structMerge == null) {
                     outParams.forEach { (paramName, out) -> parameters.add("${out.qualifier} ${out.spelling} $paramName") }
                 }
-                val returnSpelling = upgrade?.spelling ?: "void"
-                val newFunction = "$returnSpelling $name(${parameters.joinToString(", ")})\n{\n${extractedBodyText(statements, indent, upgrade)}\n}"
+                val returnSpelling = when {
+                    upgrade != null -> upgrade.spelling
+                    structMerge != null -> structMerge.structName
+                    else -> "void"
+                }
+                val bodyText = when {
+                    upgrade != null -> extractedBodyText(statements, indent, upgrade)
+                    structMerge != null -> structBodyText(statements, indent, structMerge)
+                    else -> statements.mapTo(ArrayList()) { reindentStatement(it.text, indent, BODY_INDENT) }
+                        .joinToString("\n")
+                }
+                val newFunction = "$returnSpelling $name(${parameters.joinToString(", ")})\n{\n$bodyText\n}"
+                val structText = structMerge?.let { structText(it) }
+                val inserted = if (structText != null) "\n\n$structText\n\n$newFunction" else "\n\n$newFunction"
 
                 // Edits run highest offset first so earlier ranges stay valid: the helper
                 // lands after the current function, the selection is replaced next, and the
                 // (lowest) bare declaration of the return value is removed last.
                 val insertOffset = function.textRange.endOffset
-                document.insertString(insertOffset, "\n\n$newFunction")
+                document.insertString(insertOffset, inserted)
 
                 val arguments = ArrayList<String>()
                 arguments.addAll(inParams.keys)
-                if (upgrade == null) arguments.addAll(outParams.keys)
-                val callText = if (upgrade == null) {
-                    "$name(${arguments.joinToString(", ")});"
-                } else {
-                    "${upgrade.spelling} ${upgrade.name} = $name(${arguments.joinToString(", ")});"
+                if (upgrade == null && structMerge == null) arguments.addAll(outParams.keys)
+                val callText = when {
+                    structMerge != null -> {
+                        val lines = ArrayList<String>()
+                        lines.add("${structMerge.structName} ${structMerge.retName} = $name(${arguments.joinToString(", ")});")
+                        structMerge.names.forEach { valueName ->
+                            lines.add("$indent$valueName = ${structMerge.retName}.$valueName;")
+                        }
+                        lines.joinToString("\n")
+                    }
+                    upgrade != null ->
+                        "${upgrade.spelling} ${upgrade.name} = $name(${arguments.joinToString(", ")});"
+                    else -> "$name(${arguments.joinToString(", ")});"
                 }
                 document.replaceString(selectionStart, selectionEnd, callText)
 
@@ -378,11 +516,16 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
                 } ?: 0
                 PsiDocumentManager.getInstance(project).commitDocument(document)
 
-                val functionNameOffset = insertOffset - removed + "\n\n".length + returnSpelling.length + 1
+                val structPrefixLength = if (structText != null) "\n\n".length + structText.length + "\n\n".length else 0
+                val functionNameOffset =
+                    insertOffset - removed + structPrefixLength + "\n\n".length + returnSpelling.length + 1
                 val callStart = selectionStart - removed
-                val callNameOffset = when (upgrade) {
-                    null -> callStart
-                    else -> callStart + upgrade.spelling.length + 1 + upgrade.name.length + " = ".length
+                val callNameOffset = when {
+                    structMerge != null ->
+                        callStart + structMerge.structName.length + 1 + structMerge.retName.length + " = ".length
+                    upgrade != null ->
+                        callStart + upgrade.spelling.length + 1 + upgrade.name.length + " = ".length
+                    else -> callStart
                 }
                 val functionLeaf = identifierLeafAt(file, functionNameOffset)?.takeIf { it.text == name }
                     ?: return@Runnable
@@ -417,6 +560,43 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
             lines.add("${BODY_INDENT}return ${upgrade.name};")
         }
         return lines.joinToString("\n")
+    }
+
+    /** `struct <Name>_Result { … };` — one field per merged value, in merge order. */
+    private fun structText(merge: StructReturnMerge): String =
+        "struct ${merge.structName}\n{\n" +
+            merge.fields.joinToString("\n") { "    ${it.first} ${it.second};" } +
+            "\n};"
+
+    /** The struct helper's body: the result variable, the rewritten statements, the return. */
+    private fun structBodyText(statements: List<PsiElement>, indent: String, merge: StructReturnMerge): String {
+        val lines = ArrayList<String>()
+        lines.add(reindentStatement("${merge.structName} ${merge.retName};", indent, BODY_INDENT))
+        statements.forEach { statement ->
+            lines.add(reindentStatement(rewrittenSelectionText(statement, merge), indent, BODY_INDENT))
+        }
+        lines.add("${BODY_INDENT}return ${merge.retName};")
+        return lines.joinToString("\n")
+    }
+
+    /** The statement's text with every merged value reference rewritten to `retName.field`. */
+    private fun rewrittenSelectionText(statement: PsiElement, merge: StructReturnMerge): String {
+        val start = statement.textRange.startOffset
+        val end = statement.textRange.endOffset
+        val replacements = psiTreeWalk(statement)
+            .filter { it.node?.elementType == DreamShader2ElementTypes.REFERENCE_EXPRESSION && it.text in merge.names }
+            .map {
+                Triple(
+                    it.textRange.startOffset - start,
+                    it.textRange.endOffset - start,
+                    "${merge.retName}.${it.text}",
+                )
+            }
+            .sortedByDescending { it.first }
+            .toList()
+        val builder = StringBuilder(statement.text)
+        replacements.forEach { (from, to, text) -> builder.replace(from, to, text) }
+        return builder.toString()
     }
 
     /**
@@ -489,6 +669,17 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
         val singleWrite: Boolean,
     )
 
+    /**
+     * The M17 C33 struct-return shape: the merged value names, their declared spellings,
+     * and the generated struct/result identifiers. Null keeps the out matrix.
+     */
+    private class StructReturnMerge(
+        val names: List<String>,
+        val fields: List<Pair<String, String>>,
+        val structName: String,
+        val retName: String,
+    )
+
     companion object {
         private const val NAME_VARIABLE = "ExtractedFunctionName"
         private const val BODY_INDENT = "    "
@@ -503,6 +694,14 @@ internal class DreamShader2ExtractFunctionHandler : RefactoringActionHandler {
             DreamShader2ElementTypes.RETURN_STATEMENT,
             DreamShader2ElementTypes.JUMP_STATEMENT,
             DreamShader2ElementTypes.EMPTY_STATEMENT,
+        )
+
+        /** Selection shapes the struct merge cannot carry: branches and loops. */
+        private val BRANCH_OR_LOOP_TYPES = setOf(
+            DreamShader2ElementTypes.IF_STATEMENT,
+            DreamShader2ElementTypes.FOR_STATEMENT,
+            DreamShader2ElementTypes.WHILE_STATEMENT,
+            DreamShader2ElementTypes.DO_WHILE_STATEMENT,
         )
     }
 }

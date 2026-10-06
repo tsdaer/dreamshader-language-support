@@ -219,7 +219,7 @@ class DreamShader2ExtractFunctionTest : BasePlatformTestCase() {
         assertTrue(after.contains("    float3 Tinted;"), "the bare declaration survives: ${after.lines()}")
     }
 
-    fun testMultipleOutValuesKeepOutMatrix() {
+    fun testMultipleOutValuesMergeIntoStructReturn() {
         val file = openFile(
             """
             export void M_TwoOuts(inout material m)
@@ -239,10 +239,132 @@ class DreamShader2ExtractFunctionTest : BasePlatformTestCase() {
 
         val after = myFixture.editor.document.text
         assertTrue(
-            after.contains("void Extracted(float2 UV, out float3 A, out float B)"),
-            "two written values keep the out matrix: ${after.lines()}",
+            after.contains("struct Extracted_Result\n{\n    float3 A;\n    float B;\n};"),
+            "the merged struct is generated: ${after.lines()}",
         )
-        assertFalse(after.contains("return A;") || after.contains("return B;"), "no return-value upgrade: ${after.lines()}")
+        assertTrue(
+            after.contains("Extracted_Result Extracted(float2 UV)"),
+            "the helper returns the struct: ${after.lines()}",
+        )
+        assertTrue(
+            after.contains("Extracted_Result result;\n    result.A = TintScale(UV);\n    result.B = 2.0;\n    return result;"),
+            "the body writes through the result variable: ${after.lines()}",
+        )
+        assertTrue(
+            after.contains("Extracted_Result result = Extracted(UV);\n    A = result.A;\n    B = result.B;"),
+            "the call site splits the fields back: ${after.lines()}",
+        )
+    }
+
+    fun testInoutAmongMergedValuesKeepsOutMatrix() {
+        val file = openFile(
+            """
+            export void M_InoutMix(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 A;
+                float B;
+                A = A + TintScale(UV);
+                B = 2.0;
+                m.BaseColor = A * B;
+            }
+            """.trimIndent(),
+            "M_ExtractInoutMix.dss",
+        )
+        select(file, "A = A + TintScale(UV);\n    B = 2.0;")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("void Extracted(float2 UV, inout float3 A, out float B)"),
+            "an inout value keeps the whole out matrix: ${after.lines()}",
+        )
+        assertFalse(after.contains("struct Extracted_Result"), "no struct merge: ${after.lines()}")
+    }
+
+    fun testReadBeforeWriteKeepsOutMatrix() {
+        val file = openFile(
+            """
+            export void M_ReadFirst(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 A;
+                float B;
+                float C = A;
+                A = TintScale(UV);
+                B = 2.0;
+                m.BaseColor = A * B;
+            }
+            """.trimIndent(),
+            "M_ExtractReadFirst.dss",
+        )
+        // Reading A before writing it marks A as read-and-written: the value turns `inout`,
+        // which refuses the merge and keeps the out matrix (a struct field would be read
+        // uninitialized where the out formal only promised a write).
+        select(file, "float C = A;\n    A = TintScale(UV);\n    B = 2.0;")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("void Extracted(float2 UV, inout float3 A, out float B)"),
+            "a read before the first write keeps the out matrix: ${after.lines()}",
+        )
+        assertFalse(after.contains("struct Extracted_Result"), "no struct merge: ${after.lines()}")
+    }
+
+    fun testBranchInsideSelectionKeepsOutMatrix() {
+        val file = openFile(
+            """
+            export void M_BranchMix(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 A;
+                float B;
+                if (Gain > 0.0)
+                {
+                    A = TintScale(UV);
+                }
+                B = 2.0;
+                m.BaseColor = A * B;
+            }
+            """.trimIndent(),
+            "M_ExtractBranchMix.dss",
+        )
+        select(file, "if (Gain > 0.0)\n    {\n        A = TintScale(UV);\n    }\n    B = 2.0;")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("void Extracted(float2 UV, out float3 A, out float B)"),
+            "a branch inside the selection keeps the out matrix: ${after.lines()}",
+        )
+        assertFalse(after.contains("struct Extracted_Result"), "no struct merge: ${after.lines()}")
+    }
+
+    fun testInitializedDeclarationAmongMergedValuesKeepsOutMatrix() {
+        val file = openFile(
+            """
+            export void M_InitMix(inout material m)
+            {
+                float2 UV = UE.TexCoord(Index = 0);
+                float3 A = float3(0.0, 0.0, 0.0);
+                float B;
+                A = TintScale(UV);
+                B = 2.0;
+                m.BaseColor = A * B;
+            }
+            """.trimIndent(),
+            "M_ExtractInitMix.dss",
+        )
+        select(file, "A = TintScale(UV);\n    B = 2.0;")
+        invokeHandler(file)
+
+        val after = myFixture.editor.document.text
+        assertTrue(
+            after.contains("void Extracted(float2 UV, out float3 A, out float B)"),
+            "an initialized declaration keeps the out matrix: ${after.lines()}",
+        )
+        assertFalse(after.contains("struct Extracted_Result"), "no struct merge: ${after.lines()}")
     }
 
     fun testConditionalLastStatementKeepsOutMatrix() {
