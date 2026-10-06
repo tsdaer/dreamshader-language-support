@@ -2,6 +2,22 @@
 
 # dreamshader-language-support Changelog
 
+## [2.4.0] - 2026-10-06
+
+### Added
+
+- Refactoring milestone M16 (plan: `docs/m16-plan.md`):
+  - **Inline Variable for the 2.0 dialect** (C25): the Refactoring-menu action (`DreamShader.InlineVariable`) replaces every read usage of a single-declarator local with the declaration's parenthesized initializer and removes the declaration together with its `///` doc comment. The precheck runs fully before the write and refuses - with a hint and an untouched document - when the initializer is missing, the declaration has several declarators, the initializer reads a parameter, local, or global (drift risk), contains assignments/compound assignments/`++`/`--`, calls a user-declared or unknown callable, when a usage is itself a write target, or when the target sits inside a `/// @custom` body; usages outside the declaration's lexical scope do not belong to it and stay untouched.
+  - **Extract Function single return value** (C26): when exactly one value is written by the selection, never read there, used afterwards, its final write is the last selected statement (`name = expr;`), and the name is a bare same-block declaration with no uses between itself and the selection, the helper returns the value instead of taking an `out` parameter - `Type Name(inParams) { …; return name; }`, the call site becomes the receiving declaration `Type name = Name(inParams);`, the bare declaration line goes away, and the linked in-place rename covers the new function name, the call-site name, and the receiving variable together. Parameter targets, initialized or outer declarations, and any intermediate use keep the `out` matrix.
+  - **Structure view dialect routing with mixed-`.dsh` segments** (C27): the structure view factory routes by dialect - pure V2 files (`.dss`/`.dsi`, V2-only `.dsh`) get the 2.0 model where the factory previously fell through to the 1.x model and produced an empty view (the 2.0 factory had never been registered); pure legacy files keep the 1.x model byte-for-byte; a mixed `.dsh` shows one Legacy node per legacy block (labeled from the block's first 1.x declaration) whose children come from a cached text-level 1.x re-scan, navigable at their absolute offsets.
+  - **Inlay parameter hints for 2.0 functions** (C28): V2 user functions declared in the file or its include closure now supply parameter names where the 1.x resolver draws a blank; mixed `.dsh` resolves per caret region (legacy regions keep the 1.x path, `@custom` bodies stay empty), and named arguments keep suppressing the hint.
+
+### Changed
+
+- **Extract Function `inout` correction** (C26): compound assignments and `++`/`--` read their own old value, so their targets now come back as `inout` parameters instead of `out` (which would read an undefined value in HLSL semantics).
+- **Schema-driven `.dsi` override values** (C29): when the Bridge symbol index carries a valid parent schema with a parameter matching the override's name, the schema type re-drives the value templates, a `StaticSwitch` kind forces `true`/`false` even when the override spells `int`/`float`, and a `Texture` kind stays silent; without a schema (or without a matching parameter) the declared-spelling path is unchanged.
+- **Flow-sensitive write-back narrowing** (C30): after a call passes a plain variable to a declared `out`/`inout` parameter with a confident type, the variable's inferred type narrows to the formal's spelling from the call's end onward - swizzle completion and type-mismatch checks see the written shape (named arguments match by name; a nearer re-declaration of the name beats the write-back; unparsable formal spellings stay silent).
+
 ## [2.3.0] - 2026-10-06
 
 ### Added

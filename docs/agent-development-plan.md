@@ -255,6 +255,12 @@
 
 **M16 候选（顺延）**：Inline Variable（局部变量内联，复用 C22 的预检骨架）；Extract Function 的「单一返回值」启发（唯一存活写出参时返回而非 `out`）；`.dsh` 混合方言的结构视图与 inlay 分段；流敏感推断后续（out/inout 参数写回后的变量类型收窄）；`.dsi` 覆盖值的 schema 驱动补全升级（Bridge schema 可用时精确到枚举值清单）。
 
+### M16 — 「内联家族与方言分段」→ 目标版本 2.4.0（已完成 2026-10-06）
+范围：C25 + C26 + C27 + C28 + C29 + C30 + T16。任务卡全文见 `docs/m16-plan.md`（含 C22 骨架盘点与结构视图/inlay 方言现状研究，含「2.0 结构视图工厂从未注册」缺陷定位）；来源为上方 M16 候选（M15 顺延项）。依赖 C22/C24 骨架、C23 区域判定、symbol-index 仓库与 `calleeParameters`（均就绪）。
+**发布门槛**：`gradlew build` + 全量测试绿。——已落地：C27 结构视图方言分流（修复 2.0 工厂未注册缺陷，`routesToV2` 路由 2.0 模型；混合 `.dsh` 的 Legacy 节点 + 文本级 1.x 重扫描子树，CachedValue 缓存）；C28 inlay V2 解析（1.x 解析为空且 V2 区域 → 文件/include 闭包 V2 用户函数形参名，混合 `.dsh` 按区域）；C25 内联变量（`DreamShader.InlineVariable` 菜单动作，纯度预检——引用面只允许 uniform、无副作用运算符、无用户调用——加写目标/`@custom` 拒绝，出作用域同名使用不串扰）；C26 提取函数单一返回值启发（恰一 `out` 出参 + 末语句简单赋值 + 同块裸声明无中间使用 → 返回值形态，调用点生成接收声明并删除裸声明行，三位置联动重命名）+ 复合赋值/`++`/`--` 目标改判 `inout`；C29 `.dsi` 覆盖值 schema 驱动（schema 命中按 schema 类型重推，StaticSwitch 强制 true/false、Texture 静默，未命中回落声明拼写）；C30 out/inout 写回类型收窄（函数级写回表 + `typeOfName` 消费，更近重声明压过写回）；CHANGELOG（en/zh）2.4.0 段、`language-v2-baseline.md` M16 覆盖映射、README 元数据块同步；版本号 2.4.0；全量测试零失败。
+
+**M17 候选（顺延）**：Inline Function（调用点展开需实参-形参绑定与副作用矩阵）；`.dsh` 混合方言逐声明分段的补全（M13 顺延至今，结构视图分段已先行，补全侧仍按区域粗分）；多写出参合并返回 / 元组返回（C26 启发的放宽通道，需支配树分析）；LEGACY_BLOCK 解析器改造（分段视图的文本级重解析升级为结构化解析）；`.dsi` 覆盖值枚举值清单（blocked：上游 symbol-index 工件无枚举字段，待上游扩展后解封）。
+
 
 ---
 

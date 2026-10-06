@@ -3,7 +3,7 @@
 - **制定日期**：2026-10-06
 - **基线**：本插件 2.3.0（2026-10-06，M15 完成）；上游 DreamShader 2.0.2 @ `b3bbf48`
 - **来源**：`docs/agent-development-plan.md` 的 M16 候选（M15 顺延项）：Inline Variable（复用 C22 预检骨架）、Extract Function 单一返回值启发、`.dsh` 混合方言的结构视图与 inlay 分段、out/inout 写回后的类型收窄、`.dsi` 覆盖值 schema 驱动升级
-- **计划状态**：进行中
+- **计划状态**：已完成（2026-10-06 三批落地，见 §5 执行记录，版本 2.4.0）。任务卡并入 `docs/agent-development-plan.md` 作为 M16。
 
 ---
 
@@ -146,4 +146,47 @@
 
 ## 5. 执行记录
 
-（分批填写）
+### 2026-10-06 首批落地（C27/C28）
+
+**已交付**：
+
+- C27：`DreamShaderStructureViewFactory` 按方言路由——`DreamShaderDialects.routesToV2`（`.dss`/`.dsi` 与带 V2 标记的 `.dsh`）构建 `DreamShader2StructureViewModel`，纯 legacy 文件维持 1.x 模型。混合 `.dsh`：`DreamShader2StructureViewModel` 顶层为每个 `LEGACY_BLOCK` 增加 Legacy 节点（label 取块内首个 1.x 声明关键词+名），子节点来自块文本的 1.x 重解析（`PsiFileFactory` + 方言感知解析器路由回 1.x 前端 + `DreamShaderPsiUtil.declarationsIn`，offset 回映射，文件级 `CachedValue` 缓存），畸形 legacy 文本静默降级为无子节点。
+- C28：`DreamShaderInlayParameterHintsProvider` 方言感知——1.x 解析（`DreamShaderCallSignatureResolver`）为空且 `servesV2At` 命中时走 V2 解析：被调名 → `DreamShader2FileAnalysis`（本文件）→ include 闭包 → `parameterList().parameters()` 名序列；legacy 区域维持纯 1.x 路径，`@custom` 体保持为空，命名实参跳过与 MethodInfo 结构维持现状。
+- 顺带：`DreamShaderImportResolver` 与 `DreamShader2WorkspaceSymbols` 的小幅接口整理（服务批次 1 的复用面）。
+- 测试：`DreamShader2StructureViewTest` 增工厂路由与混合 `.dsh` Legacy 子树 2 例；`DreamShaderInlayParameterHintsProviderTest` 增 V2 用户函数/include 闭包/混合区域 3 例。
+
+### 2026-10-06 第二批落地（C25）
+
+**已交付**：
+
+- C25：新 `refactoring/DreamShader2InlineVariableHandler.kt` + `DreamShader.InlineVariable` action（`Inline Uniform` 旁）。目标解析复用 C22 骨架（caret 叶子回退一位 → 声明名或使用处 → C24.1 可见性匹配回声明）；预检五项（单声明器、有初始化器、初始化器有效纯、使用处全为读、声明与使用处均不在 `@custom` 体内）全过才进 `WriteCommandAction`；写入与 C22 同一替换语义（使用处倒序带括号替换 → 声明连同前置 doc 块与行尾整行删除）。
+- 测试：本批未附测试（见第三批修正记录——批次 3 补齐 13 例并修复两处缺陷）。
+
+### 2026-10-06 第三批落地（C26 + C29 + C30 + T16）——M16 完结，版本 2.4.0
+
+**已交付**：
+
+- C26 判定修正：`collectExpressionWrites`/`recordSelectionWrite` 增加 `readWrites` 通道——复合赋值与 `++`/`--` 目标同时记入 reads（读旧值语义），限定词变 `inout`；`SelectionUsage` 暴露 `writeTargets` 供写次数统计。
+- C26 单一返回值启发：`singleReturnValueUpgrade` 前置判定（恰一 `out` 出参、末语句为 `name = expr;` 顶层简单赋值、非形参、同块裸声明且声明与选区间无任何引用）→ 新签名 `Type Name(inParams) { …; return name; }`（单次写入把末语句折叠为 `Type name = expr;`，多次写入在体首补裸声明）+ `return name;`；调用点 `Type name = Name(inParams);` 并删除裸声明行（语句独占整行时连缩进与换行整行删除，共享行时仅删语句）；TemplateBuilder 三位置（函数名/调用点名/接收变量名）同名联动；文档编辑按高偏移在前依次执行（插入 helper → 替换选区 → 删声明）保证坐标有效。
+- C29：`instanceOverrideValueCompletions` 前置查询 `instance.schema.parameters[]` 按名精确匹配——命中且 schema `valid`：schema `type` 拼写重推类型（`fromSpelling`，不可解析类型经 `overrideValueItems` 自然静默为空），`kind == "StaticSwitch"`（大小写不敏感）强制 true/false，`kind == "Texture"` 静默；名字未命中或 schema 缺席/invalid → 声明拼写路径逐字节不变（与 DSH7259 共用 `DreamShader2WorkspaceSymbols.instanceSchema` 读取）。
+- C30：`DreamShader2InferenceContext` 增加函数级写回表（惰性按所在函数构建、PSI-only 无推断递归）：`CALL_EXPRESSION` 经 `calleeParameters`（本文件 → include 闭包）解析形参，实参为朴素引用（单个子 EXPRESSION 包装解包后为 `REFERENCE_EXPRESSION`）、对应形参（位置对位；命名实参按名对位，与 C24.3 同序）带 `out`/`inout` 且拼写类型自信 → 记录 `(callStart, callEnd, varName → formalType)`；`typeOfName` 消费——useSite 之后（`callEnd <= useOffset`）最近记录命中且无更近的重新声明时返回形参类型，否则回落既有解析序（局部 → 形参 → 文件级）。
+- C25 补齐验收测试并修复批次 2 缺陷（见下）。
+- 测试：`DreamShader2ExtractFunctionTest` 增至 17 例（inout 修正回归 + 升级正例/多写形态/五类回落矩阵）；新 `DreamShader2InlineVariableTest` 13 例；`DreamShader2CompletionTest` 增至 40 例（C29 四例，注入 index fixture 辅助参数化）；`DreamShader2TypeInferenceTest` 增至 18 例（C30 六例）。
+- 文档：`language-v2-baseline.md` 增 M16 覆盖映射并更新 Test Mapping（结构视图/inlay/内联/提取函数/补全/推断行）；`agent-development-plan.md` 追加 M16 段与 M17 候选；CHANGELOG（en/zh）新增 2.4.0 段；README 元数据块同步；版本号升至 2.4.0。全量 836 例零失败。
+
+**批次 2 缺陷修正（随 C25 验收测试发现）**：
+
+- **纯度预检失效**：`initializerPurityProblem` 的 walk 对整条语句做槽位包含过滤，而语句根节点的起点（类型+名字）恒在 `=` 之前——首次调用立即返回 null，引用形参/局部/全局、用户调用等漂移场景全部静默放行。修复：根语句直接扫描子节点，子层守卫改为「`=` 之后（左闭）且 `;` 之前（右开）」——右开是关键：PSI 含 WHITE_SPACE 叶子且初始化器终点与分号起点重合，右闭会把整个初始化器剪掉。
+- **局部声明的 doc 注释残留**：函数体内的 `///` 注释是词法 trivia（无 DOC_BLOCK 节点，`docBlockBefore` 命不中），删除声明时 doc 行残留。修复：无 DOC_BLOCK 节点时按行向前吞并紧邻的 `//` 起始注释行（uniform 路径的 DOC_BLOCK 行为不变）。
+- 批次 2 未附验收测试属执行遗漏；本批 `DreamShader2InlineVariableTest`（13 例）补齐任务卡矩阵：单使用/多使用内联 + doc 删除、action 接线、无初始化器/多声明器/引用形参/局部/全局/副作用/用户调用/写目标/`@custom` 拒绝、出作用域不串扰、1.x 静默。
+
+**实现决策与偏差**：
+
+- C26 升级的触发面比任务卡字面收窄：`Type name = Name(args);` 是一条声明，按 HLSL 重定义语义（1.x 管线将同作用域重声明标为 ERROR）替换选区会与既有声明冲突——仅当名字解析为选区同块内的**裸声明**（无初始化器、单声明器）且声明与选区间无任何引用时触发，此时删除该声明、由调用点声明接管；形参目标、带初始化器声明、外层声明与文件级名维持 out 矩阵。「末语句为复合赋值」场景因 `inout` 修正自然不满足 `out` 前提，等价于仅简单赋值触发（宁可少升级不可错升级）。
+- C25「出作用域使用」按过滤处理而非拒绝：声明词法作用域之外的同名引用不指向该声明（指向外层绑定或未解析），跳过即正确，拒绝反而过严；任务卡的保守意图由其余拒绝面承担。
+- C26 对 `++`/`--` 成员目标（`m.x++`）的拒绝面维持批次现状：后缀自增的记录目标解析到字段名引用（非成员表达式节点），返回值被调用点忽略，修正其行为超出本卡范围。
+- C30 写回记录仅在调用结束之后消费（调用自身的实参位置保持调用前类型）——语义上 `out` 写回发生在调用返回时，同时避免 C24.3 实参检查读到「正被写回的实参」的写回后类型而漏报真实不匹配。
+- C29 命中 schema 且类型拼写不可解析时静默为空而非回落声明拼写——schema 参数按名命中后即是权威，回落可能与它矛盾。
+- T16 记录：`.dsi` 覆盖值枚举值清单保持 blocked（上游工件无字段，见 §2 非目标）。
+
+**任务卡状态**：C25–C30、T16 全部完成，M16 收官（全量 836 例零失败）。后续方向见 `agent-development-plan.md` M17 候选。
