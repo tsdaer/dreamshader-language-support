@@ -80,6 +80,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         DreamShaderDialectPreventionPass.annotate(fileName, sourceText, tokens, holder)
         DreamShaderLegacyAliasHintPass.annotate(fileName, sourceText, tokens, topLevelDeclarations, holder)
         DreamShader2DiagnosticsPass.annotate(file, sourceText, holder)
+        DreamShader211Diagnostics.annotate(file, holder)
         annotateSectionShapeDiagnostics(file, sourceText, tokens, topLevelDeclarations, declarationContexts, holder)
         annotateSemanticDiagnostics(file, sourceText, tokens, topLevelDeclarations, declarationContexts, holder)
         DreamShaderBridgeDiagnosticsPass.annotate(file, holder)
@@ -2508,7 +2509,8 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val fixedImportPath = replaceImportExtension(importPath, replacementExtension) ?: return null
         val filePointer: SmartPsiElementPointer<DreamShaderPsiFile> = SmartPointerManager.createPointer(file)
         val willUpdatePreferredDefault = willPersistPreferredImportExtension(file.project, replacementExtension)
-        return object : IntentionAction {
+        return object : IntentionAction, com.intellij.codeInsight.intention.PriorityAction {
+            override fun getPriority() = if (suggestion.resolvesExistingTarget) com.intellij.codeInsight.intention.PriorityAction.Priority.HIGH else com.intellij.codeInsight.intention.PriorityAction.Priority.NORMAL
             override fun getText(): String {
                 return formatImportExtensionQuickFixText(
                     replacementExtension = replacementExtension,
@@ -2628,10 +2630,11 @@ internal class DreamShaderSemanticAnnotationPipeline {
         val projectBasePath = file.project.basePath ?: return null
         val projectRoot = runCatching { Paths.get(projectBasePath).normalize().toAbsolutePath() }.getOrNull() ?: return null
         val containingPath = runCatching { Paths.get(containingDirectory.path).normalize().toAbsolutePath() }.getOrNull()
+        val sourceRoot = DreamShaderImportResolver.sourceRoot(file)?.let { Paths.get(it) } ?: return null
         val basePath = if (creationPlan.isScopedPackageImport) {
-            projectRoot.resolve("DShader").resolve("Packages")
+            sourceRoot.resolve("Packages")
         } else {
-            containingPath?.takeIf { it.startsWith(projectRoot) } ?: projectRoot
+            containingPath?.takeIf { it.startsWith(sourceRoot) } ?: sourceRoot
         }
         val normalizedTarget = runCatching {
             var target = basePath
@@ -3942,7 +3945,7 @@ internal class DreamShaderSemanticAnnotationPipeline {
         )
         private val IDENTIFIER_PATTERN: Pattern = Pattern.compile("\\b[A-Za-z_][A-Za-z0-9_]*\\b")
         private val PATH_CALL_PATTERN: Pattern = Pattern.compile("(?is)Path\\s*\\(.*\\)")
-        private val IMPORT_FILE_EXTENSIONS_ORDERED = listOf("dsh", "dsf", "dsm")
+        private val IMPORT_FILE_EXTENSIONS_ORDERED = listOf("dsh", "dss")
         private val IMPORT_FILE_EXTENSIONS = IMPORT_FILE_EXTENSIONS_ORDERED.toSet()
         private val WINDOWS_INVALID_PATH_SEGMENT_CHARS = setOf('<', '>', ':', '"', '|', '?', '*')
         private val BASE_MEMBER_PATTERN: Pattern = Pattern.compile("\\bBase\\.([A-Za-z_][A-Za-z0-9_]*)")

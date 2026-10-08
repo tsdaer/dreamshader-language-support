@@ -70,6 +70,10 @@ object DreamShader2ElementTypes {
     @JvmField
     val VARIABLE_DECLARATION_STATEMENT: IElementType = DreamShader2ElementType("VARIABLE_DECLARATION_STATEMENT")
 
+    /** Additional declarator names have their own Rename target. */
+    @JvmField
+    val LOCAL_DECLARATOR_NAME: IElementType = DreamShader2ElementType("LOCAL_DECLARATOR_NAME")
+
     @JvmField
     val EXPRESSION_STATEMENT: IElementType = DreamShader2ElementType("EXPRESSION_STATEMENT")
 

@@ -46,7 +46,8 @@ interface DreamShader2ParameterList : PsiElement {
     fun parameters(): List<DreamShader2Parameter>
 }
 
-interface DreamShader2Parameter : PsiElement {
+interface DreamShader2Parameter : DreamShader2NamedDeclaration {
+    override fun declarationName(): String? = parameterName()
     fun parameterName(): String?
 
     fun typeName(): String?

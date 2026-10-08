@@ -5,7 +5,6 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderLan
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2FunctionDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2NamedDeclaration
-import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2UniformDeclaration
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -17,7 +16,6 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.SearchScope
 import com.intellij.psi.search.UsageSearchContext
 import com.intellij.psi.search.searches.ReferencesSearch
-import com.intellij.psi.tree.IElementType
 import com.intellij.util.Processor
 import com.intellij.psi.util.PsiTreeUtil
 
@@ -49,15 +47,16 @@ class DreamShader2ReferencesSearchExecutor :
                 element.node?.elementType == DreamShaderTokenTypes.IDENTIFIER && element.text == name
             }
             for (identifier in identifiers) {
-                if (isDeclarationNameOf(identifier, declaration)) continue
-                if (!consumer.process(DreamShader2LightReference(identifier, declaration))) return false
+                val binding = DreamShader2SemanticResolver.resolveIdentifier(identifier) ?: continue
+                if (binding.owner != declaration || binding.identifier == identifier) continue
+                val reference = identifier.parent.reference as? DreamShader2LightReference ?: DreamShader2LightReference(identifier, declaration)
+                if (!consumer.process(reference)) return false
             }
         }
         return true
     }
 
     private fun candidateFilesFor(project: com.intellij.openapi.project.Project, name: String, scope: SearchScope): List<PsiFile> {
-        if (name.length < 2) return emptyList()
         val psiManager = PsiManager.getInstance(project)
         val globalScope = GlobalSearchScope.projectScope(project)
         val found = linkedMapOf<String, com.intellij.openapi.vfs.VirtualFile>()
@@ -91,28 +90,20 @@ class DreamShader2ReferencesSearchExecutor :
         }
     }
 
-    private fun isDeclarationNameOf(identifier: PsiElement, declaration: DreamShader2NamedDeclaration): Boolean {
-        val owner = PsiTreeUtil.getParentOfType(identifier, DreamShader2NamedDeclaration::class.java, false) ?: return false
-        if (owner !== declaration) return false
-        // The declaration's own name sits in a name slot (type spelling or comma before it);
-        // same-name identifiers elsewhere - including .dsi override declarations - stay
-        // searchable so a rename can reach them.
-        var node = identifier.node?.treePrev ?: return false
-        while (node != null && node.elementType == DreamShaderTokenTypes.WHITE_SPACE) node = node.treePrev
-        return node != null && (node.elementType == DreamShaderTokenTypes.TYPE || node.elementType == DreamShaderTokenTypes.COMMA)
-    }
-
     private val SEARCHABLE_EXTENSIONS = setOf("dss", "dsi", "dsh", "dsm", "dsf")
 }
 
 /** Lightweight synthetic reference for V2 declaration usages. */
-private class DreamShader2LightReference(
+internal class DreamShader2LightReference(
     private val sourceElement: PsiElement,
     private val targetDeclaration: DreamShader2NamedDeclaration,
+    private val identifier: PsiElement = sourceElement,
 ) : PsiReference {
+    override fun equals(other: Any?): Boolean = other is DreamShader2LightReference && other.sourceElement == sourceElement && other.targetDeclaration == targetDeclaration
+    override fun hashCode(): Int = sourceElement.hashCode() * 31 + targetDeclaration.hashCode()
     override fun getElement(): PsiElement = sourceElement
 
-    override fun getRangeInElement(): TextRange = TextRange(0, sourceElement.textLength)
+    override fun getRangeInElement(): TextRange = TextRange.from(identifier.textOffset - sourceElement.textOffset, identifier.textLength)
 
     override fun resolve(): PsiElement? = targetDeclaration
 
@@ -121,7 +112,8 @@ private class DreamShader2LightReference(
     override fun handleElementRename(newElementName: String): PsiElement {
         if (newElementName.isBlank()) return sourceElement
         val replacement = createIdentifierFromText(newElementName) ?: return sourceElement
-        return sourceElement.replace(replacement)
+        identifier.replace(replacement)
+        return sourceElement
     }
 
     override fun bindToElement(element: PsiElement): PsiElement = sourceElement

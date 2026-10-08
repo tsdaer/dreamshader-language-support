@@ -11,7 +11,7 @@ import java.nio.file.Paths
 class DreamShaderGotoDeclarationHandlerTest : BasePlatformTestCase() {
     fun testGotoDeclarationResolvesImportPathToFile() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val corePath = Paths.get(projectBase, "Common", "Core.dsh")
+        val corePath = Paths.get(projectBase, "DShader", "Common", "Core.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             VfsUtil.saveText(
                 VfsUtil.createDirectories(corePath.parent.toString()).createChildData(this, corePath.fileName.toString()),
@@ -416,7 +416,7 @@ class DreamShaderGotoDeclarationHandlerTest : BasePlatformTestCase() {
 
     fun testGotoDeclarationResolvesQualifiedMemberFromImportedFile() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val importedPath = Paths.get(projectBase, "Shared", "Common.dsh")
+        val importedPath = Paths.get(projectBase, "DShader", "Shared", "Common.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(importedPath.parent.toString())
             val file = parent.findOrCreateChildData(this, importedPath.fileName.toString())
@@ -460,7 +460,7 @@ class DreamShaderGotoDeclarationHandlerTest : BasePlatformTestCase() {
 
     fun testGotoDeclarationResolvesUnqualifiedFunctionCallFromImportedFile() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val importedPath = Paths.get(projectBase, "Shared", "Utils.dsh")
+        val importedPath = Paths.get(projectBase, "DShader", "Shared", "Utils.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(importedPath.parent.toString())
             val file = parent.findOrCreateChildData(this, importedPath.fileName.toString())
@@ -579,8 +579,8 @@ class DreamShaderGotoDeclarationHandlerTest : BasePlatformTestCase() {
 
     fun testGotoDeclarationResolvesImportedFunctionThroughRecursiveImportChain() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val apiPath = Paths.get(projectBase, "Shared", "Api.dsh")
-        val implPath = Paths.get(projectBase, "Shared", "Impl.dsh")
+        val apiPath = Paths.get(projectBase, "DShader", "Shared", "Api.dsh")
+        val implPath = Paths.get(projectBase, "DShader", "Shared", "Impl.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val apiParent = VfsUtil.createDirectories(apiPath.parent.toString())
             val apiFile = apiParent.findOrCreateChildData(this, apiPath.fileName.toString())

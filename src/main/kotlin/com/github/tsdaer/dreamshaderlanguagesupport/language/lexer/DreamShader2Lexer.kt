@@ -236,7 +236,7 @@ class DreamShader2Lexer : LexerBase() {
 
     private fun classifyIdentifier(word: String): IElementType = when {
         word in V2_KEYWORDS -> DreamShaderTokenTypes.KEYWORD
-        word in V2_TYPES -> DreamShaderTokenTypes.TYPE
+        word in TYPES -> DreamShaderTokenTypes.TYPE
         word.lowercase(Locale.ROOT) in V1_KEYWORDS_LOWER -> DreamShaderTokenTypes.KEYWORD
         word.lowercase(Locale.ROOT) in V1_TYPES_LOWER -> DreamShaderTokenTypes.TYPE
         else -> DreamShaderTokenTypes.IDENTIFIER
@@ -314,7 +314,7 @@ class DreamShader2Lexer : LexerBase() {
         )
 
         /** Case-sensitive 2.0 built-in types; anything else is a user struct or a later judgement. */
-        private val V2_TYPES: Set<String> = setOf(
+        internal val TYPES: Set<String> = setOf(
             "void",
             "float", "half", "double", "int", "uint", "bool",
             "float1", "float2", "float3", "float4",

@@ -7,25 +7,12 @@ import com.intellij.psi.PsiFile
 import java.nio.file.Path
 import java.nio.file.Paths
 
-/**
- * DreamShader 导入解析器。
- *
- * DreamShader 1.8 source-root aware import resolver.
- *
- * Unqualified imports stay inside the source root which owns the importing file. A project and
- * every project plugin containing a `DShader` directory are independent roots. Cross-root imports
- * must use `Project:` or `Plugin.<Name>:`/`Plugins.<Name>:`. Every candidate is containment checked,
- * matching the compiler and preventing `..`/absolute-path escapes.
- */
+/** DreamShader 2.1.1 source-root aware header resolution, shared by both dialects. */
 internal object DreamShaderImportResolver {
-    private val IMPORT_EXTENSIONS = listOf("dsh", "dsf", "dsm")
+    private val IMPORT_EXTENSIONS = listOf("dsh", "dss")
 
-    /**
-     * The 2.0 `#include` extension set (M13 C14): `.dsh` plus the 2.0-only `.dss`/`.dsi`.
-     * Resolution defaults to the frozen 1.x import set; V2 callers pass this so a `.dss`
-     * include target resolves without widening what a 1.x `import` may point at.
-     */
-    internal val V2_INCLUDE_EXTENSIONS = listOf("dsh", "dss", "dsi")
+    /** Both front ends include headers; extensionless paths always mean .dsh. */
+    internal val V2_INCLUDE_EXTENSIONS = listOf("dsh", "dss")
     private const val PACKAGE_METADATA_FILE = "dreamshader.package.json"
     private val DREAMSHADER_OBJECT_REGEX = Regex(
         """"dreamshader"\s*:\s*\{(.*?)\}""",
@@ -41,7 +28,7 @@ internal object DreamShaderImportResolver {
 
     fun resolveImport(file: PsiFile, importPath: String, extensions: List<String>): VirtualFile? {
         val containing = file.virtualFile ?: return null
-        val projectBase = file.project.basePath ?: return null
+        val projectBase = projectBase(file) ?: return null
         val settings = file.project.getService(DreamShaderProjectSettings::class.java)?.state
         val sourceDir = settings?.sourceDirectory?.trim().orEmpty().ifBlank { "DShader" }.trimStart('/').trimEnd('/')
         return resolveImport(
@@ -49,7 +36,8 @@ internal object DreamShaderImportResolver {
             containingDirectory = containing.parent,
             importPath = importPath,
             sourceDirectory = sourceDir,
-            extensions = extensions
+            extensions = extensions,
+            fileSystem = rootFileSystem(file)
         )
     }
 
@@ -58,61 +46,77 @@ internal object DreamShaderImportResolver {
         containingDirectory: VirtualFile?,
         importPath: String,
         sourceDirectory: String = "DShader",
-        extensions: List<String> = IMPORT_EXTENSIONS
+        extensions: List<String> = IMPORT_EXTENSIONS,
+        fileSystem: com.intellij.openapi.vfs.VirtualFileSystem = LocalFileSystem.getInstance()
     ): VirtualFile? {
-        val normalized = importPath.trim().replace('\\', '/')
-        if (normalized.isBlank()) return null
-        val fs = LocalFileSystem.getInstance()
+        var normalized = importPath.trim().replace('\\', '/')
+        while (normalized.startsWith("./")) normalized = normalized.removePrefix("./")
+        if (normalized.isBlank() || parseRootQualifiedImport(normalized) != null) return null
+        if (!normalized.substringAfterLast('/').contains('.')) normalized += ".dsh"
+        val fs = fileSystem
         val projectBase = normalizePath(projectBasePath)
         val roots = discoverSourceRoots(fs, projectBase, sourceDirectory)
-        val qualified = parseRootQualifiedImport(normalized)
-        val targetRoot = when (qualified?.qualifier?.lowercase()) {
-            null -> null
-            "project" -> roots.firstOrNull { it.pluginName == null }
-            else -> roots.firstOrNull { root ->
-                root.pluginName?.equals(qualified.pluginName, ignoreCase = true) == true
-            }
-        }
-        if (qualified != null) {
-            if (targetRoot == null) return null
-            return resolveInsideRoot(fs, targetRoot, qualified.path, includeRelative = false, containingDirectory = null, extensions = extensions)
-        }
-
         val owner = containingDirectory?.let { directory ->
-            roots.filter { containsPath(it.sourcePath, directory.path) }
-                .maxByOrNull { it.sourcePath.length }
+            roots.filter { containsPath(it.sourcePath, directory.path) }.maxByOrNull { it.sourcePath.length }
         }
-        if (owner != null) {
-            resolveInsideRoot(fs, owner, normalized, includeRelative = true, containingDirectory = containingDirectory, extensions = extensions)
-                ?.let { return it }
-
-            val packageRootEntry = resolvePackageRootEntryImport(fs, owner.packagesPath, normalized)
-            if (isValidFile(packageRootEntry, extensions)) return packageRootEntry
-        } else {
-            // External/test sources retain a same-directory candidate, then use the project root for
-            // source/packages candidates, exactly as the compiler does for a file owned by no root.
-            if (containingDirectory != null) {
-                buildCandidateRelativePaths(normalized, extensions).firstNotNullOfOrNull { candidate ->
-                    findContainedRelativeVirtualFile(containingDirectory, containingDirectory.path, candidate, extensions)
-                }?.let { return it }
-            }
-            val projectRoot = roots.firstOrNull { it.pluginName == null }
-            if (projectRoot != null) {
-                resolveInsideRoot(fs, projectRoot, normalized, includeRelative = false, containingDirectory = null, extensions = extensions)
-                    ?.let { return it }
-                val packageRootEntry = resolvePackageRootEntryImport(fs, projectRoot.packagesPath, normalized)
-                if (isValidFile(packageRootEntry, extensions)) return packageRootEntry
-            }
-            // IDE light fixtures and loose source files historically resolve project-relative
-            // imports. Keep that compatibility only for files owned by no DreamShader root and
-            // still containment-check it against the project directory.
-            buildCandidateRelativePaths(normalized, extensions).firstNotNullOfOrNull { candidate ->
-                findContainedFile(fs, projectBase, projectBase, candidate, extensions)
-            }?.let { return it }
+        if (isAbsolutePath(normalized)) {
+            fs.findFileByPath(normalized)?.takeIf { isValidFile(it, extensions) }?.let { return it }
         }
-
-        return null
+        if (normalized.startsWith("/")) {
+            val relative = if (normalized.startsWith("/Game/", ignoreCase = true)) normalized.substring(6)
+                else normalized.trimStart('/')
+            return (listOfNotNull(owner) + roots).distinct().firstNotNullOfOrNull { root ->
+                resolveInsideRoot(fs, root, relative, false, null, extensions)
+            }
+        }
+        val targetRoot = owner ?: roots.first()
+        if (containingDirectory != null) {
+            val containment = roots.flatMap { listOf(it.sourcePath, it.packagesPath) }
+                .filter { containsPath(it, containingDirectory.path) }.maxByOrNull { it.length }
+                ?: containingDirectory.path
+            findContainedRelativeVirtualFile(containingDirectory, containment, normalized, extensions)?.let { return it }
+        }
+        return resolveInsideRoot(fs, targetRoot, normalized, false, null, extensions)
     }
+
+    internal fun candidatePaths(file: PsiFile, target: VirtualFile): List<String> {
+        val base = projectBase(file) ?: return emptyList()
+        val roots = discoverSourceRoots(rootFileSystem(file), normalizePath(base),
+            file.project.getService(DreamShaderProjectSettings::class.java)?.state?.sourceDirectory?.ifBlank { "DShader" } ?: "DShader")
+        val candidates = linkedSetOf<String>()
+        file.virtualFile?.parent?.let { directory ->
+            runCatching { Path.of(directory.path).relativize(Path.of(target.path)).toString().replace('\\', '/') }.getOrNull()?.let { candidates += it }
+        }
+        for (root in roots) {
+            for (directory in listOf(root.sourcePath, root.packagesPath)) {
+                if (containsPath(directory, target.path)) {
+                    val relative = target.path.substring(directory.length).trimStart('/')
+                    candidates += relative
+                    candidates += "/$relative"
+                }
+            }
+        }
+        return candidates.filter { resolveImport(file, it) == target }
+    }
+
+    internal fun sourceRoot(file: PsiFile): String? {
+        val settings = file.project.getService(DreamShaderProjectSettings::class.java)?.state
+        val base = projectBase(file) ?: return null
+        val roots = discoverSourceRoots(rootFileSystem(file), normalizePath(base), settings?.sourceDirectory?.ifBlank { "DShader" } ?: "DShader")
+        return roots.filter { containsPath(it.sourcePath, file.virtualFile?.path.orEmpty()) }.maxByOrNull { it.sourcePath.length }?.sourcePath
+            ?: roots.first().sourcePath
+    }
+
+    private fun virtualProjectRoot(file: PsiFile): VirtualFile? {
+        val vf = file.virtualFile ?: return null
+        if (vf.parent == null || vf.fileSystem.protocol == "file") return null
+        val root = com.intellij.openapi.roots.ProjectFileIndex.getInstance(file.project).getContentRootForFile(vf) ?: return null
+        val source = file.project.getService(DreamShaderProjectSettings::class.java)?.state?.sourceDirectory?.ifBlank { "DShader" } ?: "DShader"
+        return root.takeIf { containsPath("${root.path}/$source", vf.path) || containsPath("${root.path}/Plugins", vf.path) }
+    }
+    private fun projectBase(file: PsiFile): String? = virtualProjectRoot(file)?.path ?: file.project.basePath
+    private fun rootFileSystem(file: PsiFile): com.intellij.openapi.vfs.VirtualFileSystem =
+        virtualProjectRoot(file)?.fileSystem ?: LocalFileSystem.getInstance()
 
     private data class SourceRoot(val sourcePath: String, val pluginName: String?) {
         val packagesPath: String get() = "$sourcePath/Packages"
@@ -121,7 +125,7 @@ internal object DreamShaderImportResolver {
     private data class QualifiedImport(val qualifier: String, val pluginName: String?, val path: String)
 
     private fun discoverSourceRoots(
-        fs: LocalFileSystem,
+        fs: com.intellij.openapi.vfs.VirtualFileSystem,
         projectBase: String,
         sourceDirectory: String
     ): List<SourceRoot> {
@@ -143,7 +147,7 @@ internal object DreamShaderImportResolver {
     }
 
     private fun resolveInsideRoot(
-        fs: LocalFileSystem,
+        fs: com.intellij.openapi.vfs.VirtualFileSystem,
         root: SourceRoot,
         importPath: String,
         includeRelative: Boolean,
@@ -170,7 +174,7 @@ internal object DreamShaderImportResolver {
     }
 
     private fun findContainedFile(
-        fs: LocalFileSystem,
+        fs: com.intellij.openapi.vfs.VirtualFileSystem,
         containmentRoot: String,
         basePath: String,
         relativePath: String,
@@ -179,7 +183,7 @@ internal object DreamShaderImportResolver {
         if (isAbsolutePath(relativePath)) return null
         val root = runCatching { Path.of(containmentRoot).normalize() }.getOrNull() ?: return null
         val target = runCatching { Path.of(basePath).resolve(relativePath).normalize() }.getOrNull() ?: return null
-        if (!target.startsWith(root)) return null
+        if (!containsPath(root.toString(), target.toString())) return null
         return fs.findFileByPath(normalizePath(target.toString())).takeIf { isValidFile(it, extensions) }
     }
 
@@ -206,12 +210,7 @@ internal object DreamShaderImportResolver {
         normalizedPath: String,
         extensions: List<String> = IMPORT_EXTENSIONS
     ): List<String> {
-        val candidates = linkedSetOf<String>()
-        candidates.add(normalizedPath)
-        if (!normalizedPath.substringAfterLast('/', "").contains('.')) {
-            extensions.forEach { ext -> candidates.add("$normalizedPath.$ext") }
-        }
-        return candidates.toList()
+        return listOf(if (normalizedPath.substringAfterLast('/').contains('.')) normalizedPath else "$normalizedPath.dsh")
     }
 
     private fun isAbsolutePath(path: String): Boolean {
@@ -240,7 +239,7 @@ internal object DreamShaderImportResolver {
     }
 
     private fun resolvePackageRootEntryImport(
-        fs: LocalFileSystem,
+        fs: com.intellij.openapi.vfs.VirtualFileSystem,
         packagesRoot: String,
         normalizedImportPath: String
     ): VirtualFile? {
@@ -350,7 +349,7 @@ internal object DreamShaderImportResolver {
     }
 
     private fun packageDir(
-        fs: LocalFileSystem,
+        fs: com.intellij.openapi.vfs.VirtualFileSystem,
         packagesRoot: String,
         packageSegments: List<String>
     ): VirtualFile? {

@@ -121,7 +121,19 @@ class DreamShader2WorkspaceSymbols(private val project: Project) {
      * resolved through the shared import path semantics, breadth-first, depth- and
      * cycle-limited. Unresolved targets are skipped silently.
      */
+    private val closureKey = com.intellij.openapi.util.Key.create<com.intellij.psi.util.CachedValue<List<PsiFile>>>("dreamshader2.includeClosure")
+    private val configKey = com.intellij.openapi.util.Key.create<String>("dreamshader2.includeConfig")
     fun includeClosurePsi(file: PsiFile, maxDepth: Int = DEFAULT_INCLUDE_DEPTH): List<PsiFile> {
+        val config = project.getService(com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings::class.java).state.sourceDirectory
+        if (file.getUserData(configKey) != config) { file.putUserData(closureKey, null); file.putUserData(configKey, config) }
+        if (maxDepth != DEFAULT_INCLUDE_DEPTH) return computeIncludeClosure(file, maxDepth)
+        return com.intellij.psi.util.CachedValuesManager.getManager(project).getCachedValue(file, closureKey, {
+            com.intellij.psi.util.CachedValueProvider.Result.create(computeIncludeClosure(file, maxDepth),
+                com.intellij.psi.util.PsiModificationTracker.MODIFICATION_COUNT,
+                com.intellij.openapi.vfs.VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS)
+        }, false)
+    }
+    private fun computeIncludeClosure(file: PsiFile, maxDepth: Int): List<PsiFile> {
         val startPath = file.virtualFile?.path ?: return emptyList()
         val psiManager = PsiManager.getInstance(project)
         val visitedPaths = mutableSetOf(startPath)
@@ -131,9 +143,9 @@ class DreamShader2WorkspaceSymbols(private val project: Project) {
             if (frontier.isEmpty()) return result
             val next = mutableListOf<PsiFile>()
             frontier.forEach { current ->
+                com.intellij.openapi.progress.ProgressManager.checkCanceled()
                 includesOf(current).forEach { path ->
-                    // 2.0 `#include` targets may be .dss/.dsi as well as .dsh; the resolver
-                    // defaults to the frozen 1.x import extension set.
+                    // 2.1.1 accepts explicit .dsh/.dss headers; an omitted extension only adds .dsh.
                     val target = DreamShaderImportResolver.resolveImport(current, path, DreamShaderImportResolver.V2_INCLUDE_EXTENSIONS)
                         ?: return@forEach
                     if (!visitedPaths.add(target.path)) return@forEach
@@ -149,6 +161,9 @@ class DreamShader2WorkspaceSymbols(private val project: Project) {
 
     private fun includesOf(file: PsiFile): List<String> =
         PsiTreeUtil.collectElementsOfType(file, DreamShader2IncludeDirective::class.java)
+            .filter { (file as? com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile)?.let { source ->
+                com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderPreprocessorModel.of(source).stateAt(it.textOffset) !=
+                com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderPreprocessorModel.State.INACTIVE } ?: true }
             .mapNotNull { it.pathText() }
 
     private fun <PsiT : PsiElement, T> query(
@@ -195,6 +210,6 @@ class DreamShader2WorkspaceSymbols(private val project: Project) {
         private const val KIND_STRUCT = "struct"
         private const val KIND_UNIFORM = "uniform"
         private val LINKAGE_ROLES = setOf("export", "extern")
-        const val DEFAULT_INCLUDE_DEPTH = 16
+        const val DEFAULT_INCLUDE_DEPTH = Int.MAX_VALUE
     }
 }

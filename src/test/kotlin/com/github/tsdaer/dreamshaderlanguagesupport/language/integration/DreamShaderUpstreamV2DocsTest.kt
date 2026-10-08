@@ -19,6 +19,32 @@ import org.junit.jupiter.api.Assertions.assertTrue
  */
 class DreamShaderUpstreamV2DocsTest : BasePlatformTestCase() {
 
+    fun testPinned211DocumentedExamplesParseAndExposeDeclarations() {
+        val json = javaClass.getResourceAsStream("/upstream/v2.1.1/documented-examples.json")!!
+            .bufferedReader(Charsets.UTF_8).use { kotlinx.serialization.json.Json.parseToJsonElement(it.readText()) }
+            as kotlinx.serialization.json.JsonObject
+        assertEquals("2.1.1", (json["version"] as kotlinx.serialization.json.JsonPrimitive).content)
+        val examples = json["examples"] as kotlinx.serialization.json.JsonArray
+        assertEquals(11, examples.size)
+        for ((index, example) in examples.withIndex()) {
+            val entry = example as kotlinx.serialization.json.JsonObject
+            val source = (entry["source"] as kotlinx.serialization.json.JsonPrimitive).content
+            val snippet = (entry["code"] as kotlinx.serialization.json.JsonPrimitive).content
+            val (text, name) = materializeCase(source.substringAfterLast('/'), index, "hlsl", snippet)
+            val file = myFixture.configureByText(name, text)
+            assertTrue(PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java).isEmpty(), "$source block $index")
+            if (name.endsWith(".dsi")) {
+                val uniforms = PsiTreeUtil.collectElementsOfType(file,
+                    com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2UniformDeclaration::class.java)
+                assertTrue(uniforms.size >= 5, "Instance examples must expose their overrides, rather than silently routing to V1")
+            } else if (name.endsWith(".dss")) {
+                assertTrue(PsiTreeUtil.collectElementsOfType(file,
+                    com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2FunctionDeclaration::class.java).isNotEmpty(),
+                    "Documented declaration/statement example must expose a V2 function: $source block $index")
+            }
+        }
+    }
+
     fun testLanguageV2DocExamplesParseWithoutErrors() {
         val docs = listOf("index.md", "substrate.md", "instances.md")
         var caseCount = 0

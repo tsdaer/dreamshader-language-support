@@ -2,6 +2,8 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderJson
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -32,7 +34,10 @@ internal object DreamShaderBuiltinCatalogManifest {
         val inputs: List<CatalogPinDto> = emptyList(),
         val outputs: List<CatalogPinDto> = emptyList(),
         val properties: List<CatalogPinDto> = emptyList(),
-        val isAbstract: Boolean = false
+        val isAbstract: Boolean = false,
+        val hasInstanceDependentPins: Boolean = false,
+        val isParameter: Boolean = false,
+        val isCustomOutput: Boolean = false
     )
 
     /** 引脚与属性共用形态：`{ "name", "type", "required"? }`（其余字段宽容忽略）。 */
@@ -40,7 +45,12 @@ internal object DreamShaderBuiltinCatalogManifest {
     private data class CatalogPinDto(
         val name: String? = null,
         val type: String? = null,
-        val required: Boolean = false
+        val required: Boolean = false,
+        val enumValues: List<String> = emptyList(),
+        @SerialName("default") val defaultValue: JsonElement? = null,
+        val aliases: List<String> = emptyList(),
+        val constProperty: String? = null,
+        val property: String? = null
     )
 
     fun parseBundledFallbackEntries(): List<DreamShaderMaterialExpressionInfo> {
@@ -61,7 +71,10 @@ internal object DreamShaderBuiltinCatalogManifest {
         val root = DreamShaderJson.decodeOrNull<JsonObject>(rawJson) ?: return emptyList()
         if (!isSchemaCompatible(root)) return emptyList()
         val expressions = DreamShaderJson.decodeOrNull<CatalogRootDto>(rawJson) ?: return emptyList()
-        return expressions.expressions.mapNotNull { entryFromDto(it, source) }
+        val attributes = expressions.materialAttributes.mapNotNull { attr ->
+            attr.name?.let { DreamShaderMaterialAttribute(it, attr.type, attr.property, attr.aliases) }
+        }
+        return expressions.expressions.mapNotNull { entryFromDto(it, source)?.copy(materialAttributes = attributes) }
     }
 
     /** schema 字符串与版本号都匹配才接受（上游按精确匹配拒绝，插件侧降级而不是报错）。 */
@@ -74,7 +87,8 @@ internal object DreamShaderBuiltinCatalogManifest {
 
     @Serializable
     private data class CatalogRootDto(
-        val expressions: List<CatalogExpressionDto> = emptyList()
+        val expressions: List<CatalogExpressionDto> = emptyList(),
+        val materialAttributes: List<CatalogPinDto> = emptyList()
     )
 
     private fun entryFromDto(
@@ -93,19 +107,26 @@ internal object DreamShaderBuiltinCatalogManifest {
 
         // 输出类型：catalog 的 value-type 拼写（Float3/Bool/Substrate/…），数值/布尔/整型
         // 归一为源码小写拼写（float3），其余保持原样（`Substrate`、`MaterialAttributes`）。
-        val outputType = dto.outputs.firstOrNull()?.type?.takeIf { it.isNotBlank() }?.let(::normalizeOutputType)
+        val outputs = dto.outputs.mapNotNull { output -> output.name?.takeIf { it.isNotBlank() }?.let {
+            DreamShaderMaterialExpressionOutput(it, output.type?.let(::normalizeOutputType))
+        } }
+        val outputType = dto.outputs.singleOrNull()?.type?.takeIf { it.isNotBlank() }?.let(::normalizeOutputType)
 
         return DreamShaderMaterialExpressionInfo(
             namespace = namespace,
             className = rawClassName,
             ueName = ueName,
-            signature = DreamShaderMaterialExpressionManifest.synthesizeSignature(namespace, ueName, parameters, outputType),
+            signature = DreamShaderMaterialExpressionManifest.synthesizeSignature(namespace, ueName, parameters, null),
             parameters = parameters,
             outputType = outputType,
             description = DreamShaderMaterialExpressionManifest.defaultDescription(namespace, ueName, rawClassName),
-            snippet = DreamShaderMaterialExpressionManifest.synthesizeSnippet(namespace, ueName, parameters, outputType),
+            snippet = DreamShaderMaterialExpressionManifest.synthesizeSnippet(namespace, ueName, parameters, null),
             aliases = dto.aliases.filter { it.isNotBlank() },
-            source = source
+            source = source,
+            outputs = outputs,
+            hasInstanceDependentPins = dto.hasInstanceDependentPins,
+            isParameter = dto.isParameter,
+            isCustomOutput = dto.isCustomOutput
         )
     }
 
@@ -125,7 +146,11 @@ internal object DreamShaderBuiltinCatalogManifest {
                     type = pin.type?.takeIf { it.isNotBlank() }?.let(::normalizeOutputType),
                     required = pin.required,
                     placeholder = "Value",
-                    qualifier = qualifier
+                    qualifier = qualifier,
+                    enumValues = pin.enumValues,
+                    defaultValue = (pin.defaultValue as? JsonPrimitive)?.content ?: pin.defaultValue?.toString(),
+                    aliases = pin.aliases,
+                    constProperty = pin.constProperty
                 )
             )
         }

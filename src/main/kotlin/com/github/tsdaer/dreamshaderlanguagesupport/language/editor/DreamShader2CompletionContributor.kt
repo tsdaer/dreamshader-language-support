@@ -19,6 +19,8 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2Uni
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.impl.dreamShader2MeaningfulChildren
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
 import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2WorkspaceSymbols
+import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2SemanticResolver
+import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2InstanceModel
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
@@ -55,8 +57,8 @@ import java.util.Locale
  */
 class DreamShader2CompletionContributor : CompletionContributor() {
     init {
-        extend(
-            CompletionType.BASIC,
+        for (completionType in listOf(CompletionType.BASIC, CompletionType.SMART)) extend(
+            completionType,
             PlatformPatterns.psiElement(),
             object : CompletionProvider<CompletionParameters>() {
                 override fun addCompletions(
@@ -81,7 +83,11 @@ class DreamShader2CompletionContributor : CompletionContributor() {
                             settings?.state?.materialExpressionManifestPath,
                         ),
                     )
-                    items.forEach { entry ->
+                    val additional = if (parameters.invocationCount >= 2)
+                        DreamShader2AutoImport.candidates(file, result.prefixMatcher.prefix, leaf) else emptyList()
+                    val ranked = if (parameters.completionType == CompletionType.SMART)
+                        DreamShader2CompletionContexts.rankByExpectedType(file, leaf, offset, items + additional) else items + additional
+                    ranked.forEach { entry ->
                         result.addElement(DreamShaderLookupElementFactory.create(entry))
                     }
                 }
@@ -97,7 +103,8 @@ internal object DreamShader2CompletionSuggester {
         offset: Int,
         catalogEntries: List<DreamShaderMaterialExpressionInfo>,
     ): List<DreamShaderCompletionItem> {
-        return pragmaMaterialCompletions(file, offset)
+        return DreamShader2CompletionContexts.suggest(file, caretLeaf, offset)
+            ?: pragmaMaterialCompletions(file, offset)
             ?: includePathCompletions(file, offset)
             ?: memberCompletions(file, caretLeaf, catalogEntries)
             ?: namedArgumentCompletions(caretLeaf, catalogEntries)
@@ -105,7 +112,6 @@ internal object DreamShader2CompletionSuggester {
             ?: instanceParameterCompletions(file, caretLeaf)
             ?: instanceOverrideValueCompletions(file, offset)
             ?: bareIdentifierCompletions(file, caretLeaf)
-            ?: emptyList()
     }
 
     // ------------------------------------------------------------------
@@ -123,6 +129,7 @@ internal object DreamShader2CompletionSuggester {
 
         namespaceMemberCompletions(receiverText, catalogEntries)?.let { return it }
 
+        outputCompletions(memberAccess, catalogEntries)?.let { return it }
         val workspace = file.project.getService(DreamShader2WorkspaceSymbols::class.java)
         val inference = DreamShader2InferenceContext.forFile(file, workspace)
         return when (val receiverType = receiverTypeOf(memberAccess, receiverText, inference)) {
@@ -131,9 +138,9 @@ internal object DreamShader2CompletionSuggester {
             is DreamShader2Type.Matrix -> matrixMemberCompletions(receiverType)
             is DreamShader2Type.StructType -> structFieldCompletions(receiverType, inference)
             is DreamShader2Type.Texture -> textureMemberCompletions()
-            is DreamShader2Type.Material -> materialMemberCompletions()
+            is DreamShader2Type.Material -> materialMemberCompletions(catalogEntries)
             is DreamShader2Type.Substrate -> substrateMemberCompletions(file, memberAccess, receiverText, catalogEntries)
-            else -> degradedMemberCompletions(file, catalogEntries)
+            else -> emptyList()
         }
     }
 
@@ -175,33 +182,25 @@ internal object DreamShader2CompletionSuggester {
         return type
     }
 
-    /** The member rules of [DreamShader2InferenceContext.memberOf], replayed for chains. */
-    private fun memberTypeOf(
-        base: DreamShader2Type,
-        member: String,
-        inference: DreamShader2InferenceContext,
-    ): DreamShader2Type = when {
-        base is DreamShader2Type.Vector -> swizzleType(base, member)
-        base is DreamShader2Type.Scalar && member.length == 1 && member[0].lowercaseChar() in SWIZZLE_LETTERS -> base
-        base is DreamShader2Type.Material -> materialAttributeType(member)
-        base is DreamShader2Type.StructType ->
-            inference.structFields(base.name).firstOrNull { it.fieldName() == member }
-                ?.let { DreamShader2Type.fromSpelling(it.typeName()) }
-                ?: DreamShader2Type.Unknown
-        base is DreamShader2Type.Texture && member.equals("sample", ignoreCase = true) ->
-            DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 4)
-        else -> DreamShader2Type.Unknown
-    }
+    private fun memberTypeOf(base: DreamShader2Type, member: String, inference: DreamShader2InferenceContext): DreamShader2Type =
+        inference.memberOf(base, member)
 
-    private fun swizzleType(base: DreamShader2Type.Vector, member: String): DreamShader2Type {
-        if (member.isEmpty()) return DreamShader2Type.Unknown
-        val letters = member.lowercase()
-        if (letters.any { it !in SWIZZLE_LETTERS }) return DreamShader2Type.Unknown
-        return when (letters.length) {
-            1 -> DreamShader2Type.Scalar(base.family)
-            in 2..4 -> DreamShader2Type.Vector(base.family, letters.length)
-            else -> DreamShader2Type.Unknown
-        }
+    private fun outputCompletions(member: PsiElement, entries: List<DreamShaderMaterialExpressionInfo>): List<DreamShaderCompletionItem>? {
+        val call = dreamShader2MeaningfulChildren(member).firstOrNull()?.psi
+            ?.takeIf { it.node.elementType == DreamShader2ElementTypes.CALL_EXPRESSION } ?: return null
+        val name = callCalleeName(call) ?: return null
+        val entry = findCatalogEntry(name, entries)
+        val outputs = entry?.outputs.orEmpty().map { it.name to it.type } +
+            (call.containingFile as? DreamShaderPsiFile)?.let { file -> DreamShader2SemanticResolver.functions(file, name)
+                .flatMap { it.parameterList()?.parameters().orEmpty() }
+                .filter { it.text.trim().startsWith("out ") || it.text.trim().startsWith("inout ") }
+                .mapNotNull { param -> param.parameterName()?.let { it to param.typeName() } } }.orEmpty()
+        if (outputs.isEmpty()) return null
+        val items = outputs.map { (name, type) -> DreamShaderCompletionItem(name, tailText = type?.let { " : $it" },
+            typeText = "output", priority = DreamShaderCompletionPriorities.TYPED_MEMBER) }
+        // Channel views on one numeric value additionally admit ordinary swizzles.
+        val channelView = entry?.outputs?.all { it.name in setOf("RGB", "RGBA", "R", "G", "B", "A") } == true
+        return if (channelView) items + swizzleCompletions(DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 4)) else items
     }
 
     /** All in-set swizzles (`xyzw` and `rgba`, HLSL forbids mixing sets), lengths 1..4. */
@@ -236,15 +235,7 @@ internal object DreamShader2CompletionSuggester {
     }
 
     private fun scalarMemberCompletions(type: DreamShader2Type.Scalar): List<DreamShaderCompletionItem> =
-        listOf("x", "r").map { letter ->
-            DreamShaderCompletionItem(
-                label = letter,
-                tailText = " : ${type.family.spelling}",
-                typeText = "swizzle",
-                icon = DreamShaderIcons.DECLARATION,
-                priority = DreamShaderCompletionPriorities.TYPED_MEMBER,
-            )
-        }
+        swizzleCompletions(DreamShader2Type.Vector(type.family, 1))
 
     private fun matrixMemberCompletions(type: DreamShader2Type.Matrix): List<DreamShaderCompletionItem> {
         val family = type.family.spelling
@@ -294,7 +285,7 @@ internal object DreamShader2CompletionSuggester {
         )
 
     /** Mirrors the attribute table of [materialAttributeType] - keep the two in sync. */
-    private fun materialMemberCompletions(): List<DreamShaderCompletionItem> {
+    private fun materialMemberCompletions(catalogEntries: List<DreamShaderMaterialExpressionInfo>): List<DreamShaderCompletionItem> {
         val attributes = linkedMapOf(
             "FrontMaterial" to "Substrate",
             "BaseColor" to "float3",
@@ -309,6 +300,10 @@ internal object DreamShader2CompletionSuggester {
             "AmbientOcclusion" to "float",
             "PixelDepthOffset" to "float",
         )
+        catalogEntries.flatMap { it.materialAttributes }.forEach { attr ->
+            attributes[attr.name] = attr.type.orEmpty()
+            attr.aliases.forEach { alias -> attributes[alias] = attr.type.orEmpty() }
+        }
         return attributes.map { (name, type) ->
             DreamShaderCompletionItem(
                 label = name,
@@ -328,11 +323,11 @@ internal object DreamShader2CompletionSuggester {
     ): List<DreamShaderCompletionItem> {
         val pins = linkedMapOf<String, String?>()
         catalogEntries
-            .filter { it.namespace.equals("Substrate", ignoreCase = true) }
+            .filter { it.namespace == "Substrate" && it.ueName == "Slab" }
             .forEach { entry ->
                 entry.parameters.forEach { parameter -> pins.putIfAbsent(parameter.name, parameter.type) }
             }
-        FALLBACK_SUBSTRATE_PINS.forEach { pins.putIfAbsent(it, null) }
+        if (pins.isEmpty()) FALLBACK_SUBSTRATE_PINS.forEach { pins.putIfAbsent(it, null) }
 
         val written = substrateWrittenMembers(file, memberAccess, receiverText)
         return pins.filterKeys { pin -> pin !in written }.map { (pin, type) ->
@@ -352,7 +347,15 @@ internal object DreamShader2CompletionSuggester {
         val names = mutableSetOf<String>()
         psiTreeWalk(scope).forEach { element ->
             if (PsiUtilCore.getElementType(element) != DreamShader2ElementTypes.MEMBER_ACCESS_EXPRESSION) return@forEach
-            if (!element.text.startsWith("$receiverName.")) return@forEach
+            if (!element.text.startsWith("$receiverName.") || element.textRange.endOffset >= useSite.textOffset) return@forEach
+            if (DreamShader2SemanticResolver.resolve(receiverName, element)?.identifier !=
+                DreamShader2SemanticResolver.resolve(receiverName, useSite)?.identifier) return@forEach
+            val following = element.containingFile.text.substring(element.textRange.endOffset).trimStart()
+            if (!following.startsWith("=") || following.startsWith("==")) return@forEach
+            val guards = generateSequence(element.parent) { it.parent }.takeWhile { it != scope }
+                .filter { it.node?.elementType in setOf(DreamShader2ElementTypes.IF_STATEMENT, DreamShader2ElementTypes.FOR_STATEMENT,
+                    DreamShader2ElementTypes.WHILE_STATEMENT, DreamShader2ElementTypes.BLOCK) }
+            if (guards.any { !PsiTreeUtil.isAncestor(it, useSite, false) }) return@forEach
             val member = element.lastChild?.text?.trim().orEmpty()
             if (member.isNotEmpty() && member != "." && member != receiverName) names.add(member)
         }
@@ -438,8 +441,11 @@ internal object DreamShader2CompletionSuggester {
 
         val call = argumentList.parent
         val calleeName = callCalleeName(call) ?: return null
-        val entry = findCatalogEntry(calleeName, catalogEntries) ?: return null
-        if (entry.parameters.isEmpty()) return emptyList()
+        val parameters = findCatalogEntry(calleeName, catalogEntries)?.parameters ?: (caretLeaf.containingFile as? DreamShaderPsiFile)
+            ?.let { DreamShader2SemanticResolver.functions(it, calleeName).firstOrNull() }
+            ?.parameterList()?.parameters()?.mapNotNull { param -> param.parameterName()?.let {
+                DreamShaderMaterialExpressionParameter(it, param.typeName()) } } ?: return null
+        if (parameters.isEmpty()) return emptyList()
 
         val arguments = argumentList.children.filter {
             PsiUtilCore.getElementType(it) in setOf(DreamShader2ElementTypes.ARGUMENT, DreamShader2ElementTypes.NAMED_ARGUMENT)
@@ -448,11 +454,12 @@ internal object DreamShader2CompletionSuggester {
             .mapNotNull { it.argumentName() }
             .map { it.lowercase() }
             .toSet()
-        val positionalCount = arguments.count { PsiUtilCore.getElementType(it) == DreamShader2ElementTypes.ARGUMENT }
-        val positionallyConsumed = entry.parameters.take(positionalCount).map { it.name.lowercase() }.toSet()
+        val positionalCount = arguments.count { PsiUtilCore.getElementType(it) == DreamShader2ElementTypes.ARGUMENT &&
+            !PsiTreeUtil.isAncestor(it, caretLeaf, false) }
+        val positionallyConsumed = parameters.take(positionalCount).map { it.name.lowercase() }.toSet()
         val excluded = filledNames + positionallyConsumed
 
-        return entry.parameters
+        return parameters
             .filter { it.name.lowercase() !in excluded }
             .map { parameter ->
                 DreamShaderCompletionItem(
@@ -550,15 +557,20 @@ internal object DreamShader2CompletionSuggester {
         val call = argumentList.parent
         val calleeName = callCalleeName(call) ?: return null
         val entry = findCatalogEntry(calleeName, catalogEntries) ?: return null
-        val parameter = entry.parameters.firstOrNull { it.name.equals(slot.parameterName, ignoreCase = true) }
+        val parameter = entry.parameters.firstOrNull { it.name.equals(slot.parameterName, ignoreCase = true) || it.aliases.any { alias -> alias.equals(slot.parameterName, ignoreCase = true) } }
             ?: return null
-        if (!parameter.type.equals("Enum", ignoreCase = true)) return null
-
-        val values = documentedEnumValues(entry, parameter.name) ?: return null
+        val values = when {
+            parameter.enumValues.isNotEmpty() -> parameter.enumValues
+            parameter.type.equals("Enum", ignoreCase = true) -> documentedEnumValues(entry, parameter.name).orEmpty()
+            parameter.qualifier == "property" -> (listOfNotNull(parameter.defaultValue) +
+                if (parameter.type.equals("bool", ignoreCase = true)) listOf("true", "false") else emptyList()).distinct()
+            else -> return null
+        }
+        if (values.isEmpty()) return null
         return values.map { value ->
             DreamShaderCompletionItem(
                 label = value,
-                insertText = if (slot.insideQuotes) value else "\"$value\"",
+                insertText = value,
                 detail = "${entry.qualifiedName}.${parameter.name}",
                 typeText = "enum value",
                 icon = DreamShaderIcons.SECTION_SETTINGS,
@@ -656,27 +668,29 @@ internal object DreamShader2CompletionSuggester {
         if (DreamShaderDialects.extensionOf(file.name) != "dsi") return null
         val uniform = PsiTreeUtil.getParentOfType(caretLeaf, DreamShader2UniformDeclaration::class.java) ?: return null
         // Only the declaration-name slot (the identifier after the type) suggests parents.
-        nearestAncestorOfType(caretLeaf, DreamShaderTokenTypes.IDENTIFIER) ?: return null
+        val identifier = nearestAncestorOfType(caretLeaf, DreamShaderTokenTypes.IDENTIFIER) ?: return null
+        if (identifier.text != uniform.declarationName() || identifier.parent != uniform) return null
+        return instanceNameItems(file)
+    }
+
+    fun instanceNameItems(file: DreamShaderPsiFile): List<DreamShaderCompletionItem> {
         val schemaParameters = parentSchemaParameters(file.project, file) ?: return emptyList()
-        val declared = uniform.declarationName().orEmpty()
-        return schemaParameters
-            .filter { parameter -> parameter.name != declared }
-            .map { parameter ->
-                DreamShaderCompletionItem(
-                    label = parameter.name,
-                    tailText = parameter.type?.let { " : $it" } ?: "",
-                    typeText = "parent parameter",
-                    icon = DreamShaderIcons.DECLARATION,
-                    priority = DreamShaderCompletionPriorities.INSTANCE_PARAMETER,
-                )
-            }
+        val declared = DreamShader2FileAnalysis.of(file).uniforms.map { DreamShader2InstanceModel.parameterName(it) }.toSet()
+        return schemaParameters.filter { it.name !in declared }.map { parameter ->
+            val identifier = parameter.name.replace(Regex("[^A-Za-z0-9_]"), "").let {
+                if (it.firstOrNull()?.isDigit() == true || it.isEmpty()) "Parameter$it" else it }
+            DreamShaderCompletionItem(parameter.name, insertText = identifier,
+                tailText = parameter.type?.let { " : $it" }, typeText = "parent parameter",
+                priority = DreamShaderCompletionPriorities.INSTANCE_PARAMETER,
+                materialParameterName = parameter.name.takeIf { it != identifier })
+        }
     }
 
     private fun parentSchemaParameters(project: Project, file: DreamShaderPsiFile): List<ParentParameter>? {
         val virtualFile = file.virtualFile ?: return null
         val repository = project.getService(DreamShaderSymbolIndexRepository::class.java)
         val snapshot = repository.indexForSource(virtualFile)
-        val schema = snapshot.data?.instance?.schema ?: return null
+        val schema = snapshot.data?.instance?.schema ?: return DreamShader2InstanceModel.sourceParameters(file).map { ParentParameter(it.first, it.second) }
         if (!schema.valid) return null
         return schema.parameters.mapNotNull { parameter ->
             val name = parameter.name ?: return@mapNotNull null
@@ -713,7 +727,10 @@ internal object DreamShader2CompletionSuggester {
             val schemaParameter = file.project.getService(DreamShader2WorkspaceSymbols::class.java)
                 .instanceSchema(file.virtualFile)
                 ?.parameters
-                ?.firstOrNull { it.name == overrideName }
+                ?.firstOrNull { parameter ->
+                    val uniform = DreamShader2FileAnalysis.of(file).uniforms.firstOrNull { it.declarationName() == overrideName }
+                    parameter.name == (uniform?.let { DreamShader2InstanceModel.parameterName(it) } ?: overrideName)
+                }
             if (schemaParameter != null) {
                 return when {
                     schemaParameter.kind.equals("StaticSwitch", ignoreCase = true) ->
@@ -743,13 +760,11 @@ internal object DreamShader2CompletionSuggester {
             }
             is DreamShader2Type.Vector -> {
                 val spelling = "${type.family.spelling}${type.size}"
-                val zero = if (type.family == DreamShader2Type.Family.BOOL) "false" else "0.0"
+                val zero = when (type.family) { DreamShader2Type.Family.BOOL -> "false"
+                    DreamShader2Type.Family.INT -> "0"; DreamShader2Type.Family.UINT -> "0u"; else -> "0.0" }
                 listOf(item("$spelling(${List(type.size) { zero }.joinToString(", ")})", spelling))
             }
-            is DreamShader2Type.Matrix -> {
-                val spelling = "${type.family.spelling}${type.rows}x${type.cols}"
-                listOf(item("$spelling(1.0)", spelling))
-            }
+            is DreamShader2Type.Matrix -> emptyList()
             else -> emptyList()
         }
     }
@@ -846,39 +861,15 @@ internal object DreamShader2CompletionSuggester {
         val workspace = file.project.getService(DreamShader2WorkspaceSymbols::class.java)
         val items = LinkedHashMap<String, DreamShaderCompletionItem>()
         fun add(item: DreamShaderCompletionItem) {
-            items.putIfAbsent(item.label.lowercase(Locale.ROOT), item)
+            items.putIfAbsent(item.label, item)
         }
 
         val enclosingFunction = PsiTreeUtil.getParentOfType(caretLeaf, DreamShader2FunctionDeclaration::class.java)
-        if (enclosingFunction != null) {
-            localCompletionItems(enclosingFunction, caretLeaf).forEach(::add)
-            parameterCompletionItems(enclosingFunction).forEach(::add)
-        }
-        (analysis.uniforms.asSequence() + analysis.globals.asSequence()).forEach { declaration ->
-            val type = dreamShader2DeclaredTypeSpelling(declaration)
-            dreamShader2DeclaratorNames(declaration).forEach { name ->
-                add(
-                    DreamShaderCompletionItem(
-                        label = name,
-                        tailText = type?.let { " : $it" } ?: "",
-                        typeText = "uniform",
-                        icon = DreamShaderIcons.DECLARATION,
-                        priority = DreamShaderCompletionPriorities.LOCAL_SYMBOL,
-                    )
-                )
-            }
-        }
-        analysis.structs.forEach { struct ->
-            struct.declarationName()?.let { name ->
-                add(
-                    DreamShaderCompletionItem(
-                        label = name,
-                        typeText = "struct",
-                        icon = DreamShaderIcons.DECLARATION,
-                        priority = DreamShaderCompletionPriorities.TYPE,
-                    )
-                )
-            }
+        DreamShader2SemanticResolver.visibleSymbols(file, caretLeaf).forEach { symbol ->
+            if (symbol.owner is DreamShader2FunctionDeclaration) return@forEach
+            add(DreamShaderCompletionItem(symbol.name, tailText = symbol.type?.let { " : $it" },
+                typeText = if (symbol.owner is com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2Parameter) "parameter" else "local",
+                priority = DreamShaderCompletionPriorities.LOCAL_SYMBOL))
         }
         callableCompletionItems(file, analysis, workspace).forEach(::add)
         TYPE_KEYWORDS.forEach { type ->
@@ -1018,23 +1009,14 @@ internal object DreamShader2CompletionSuggester {
         analysis: DreamShader2FileAnalysis,
         workspace: DreamShader2WorkspaceSymbols?,
     ): List<DreamShaderCompletionItem> {
-        val entries = LinkedHashMap<String, String?>()
-        analysis.functions.forEach { function ->
-            function.declarationName()?.let { name -> entries.putIfAbsent(name, function.returnTypeText()) }
-        }
-        workspace?.exportedFunctions(file.virtualFile)?.forEach { entry ->
-            entries.putIfAbsent(entry.name, entry.returnType)
-        }
-        return entries.map { (name, returnType) ->
-            DreamShaderCompletionItem(
-                label = name,
-                insertText = "$name()",
-                caretOffset = name.length + 1,
-                tailText = "()",
-                typeText = "function",
-                icon = DreamShaderIcons.FUNCTION,
-                priority = DreamShaderCompletionPriorities.CALLABLE,
-            )
+        val files = listOf(file) + workspace?.includeClosurePsi(file).orEmpty().filterIsInstance<DreamShaderPsiFile>()
+        return files.flatMap { DreamShader2FileAnalysis.of(it).functions }.distinctBy { it.declarationName() }.mapNotNull { function ->
+            val name = function.declarationName() ?: return@mapNotNull null
+            val signature = DreamShaderCallSignatureResolver.signatureOf(function)
+            DreamShaderCompletionItem(name, insertText = "$name()", caretOffset = name.length + 1,
+                tailText = "(" + signature.parameterNames.joinToString(", ") + ")",
+                typeText = function.returnTypeText(), detail = signature.presentableText,
+                priority = DreamShaderCompletionPriorities.CALLABLE)
         }
     }
 

@@ -195,14 +195,14 @@ class DreamShaderCompletionHotPathTest : BasePlatformTestCase() {
     }
 
     fun testImportCompletionUsesCachedProjectFiles() {
-        myFixture.addFileToProject("Common/Core.dsm", "Shader Core {\n}\n")
-        val file = myFixture.configureByText("importer.dsm", "import \"")
+        myFixture.addFileToProject("DShader/Common/Core.dsh", "Namespace Core {\n}\n")
+        val file = myFixture.addFileToProject("DShader/importer.dsm", "import \"")
 
         // Test-project content roots (/src/...) do not sit under project.basePath, so the
         // normalizer's name-fallback branch provides the candidate - the wiring under test
         // is the lazy supplier feeding from the cached FilenameIndex scan.
         val candidates = collectProjectImportCandidates(file)
-        assertTrue("candidates: $candidates", candidates.contains("Core.dsm"))
+        assertTrue("candidates: $candidates", candidates.contains("Common/Core.dsh"))
 
         val items = DreamShaderCompletionSuggester.suggest(
             file,
@@ -210,6 +210,6 @@ class DreamShaderCompletionHotPathTest : BasePlatformTestCase() {
             importCandidates = { collectProjectImportCandidates(file) },
         )
 
-        assertTrue("items: ${items.map { it.label }}", items.map { it.label }.contains("Core.dsm"))
+        assertTrue("items: ${items.map { it.label }}", items.map { it.label }.contains("Common/Core.dsh"))
     }
 }

@@ -22,6 +22,7 @@ import java.util.ArrayDeque
  */
 internal object DreamShaderImportClosureResolver {
     fun resolveImportClosure(seedFile: PsiFile): List<PsiFile> {
+        invalidateConfiguration(seedFile)
         return CachedValuesManager.getManager(seedFile.project).getCachedValue(
             seedFile,
             IMPORT_CLOSURE_KEY,
@@ -37,6 +38,7 @@ internal object DreamShaderImportClosureResolver {
     }
 
     fun resolveDirectImports(sourceFile: PsiFile): List<PsiFile> {
+        invalidateConfiguration(sourceFile)
         return CachedValuesManager.getManager(sourceFile.project).getCachedValue(
             sourceFile,
             DIRECT_IMPORTS_KEY,
@@ -58,6 +60,7 @@ internal object DreamShaderImportClosureResolver {
 
         queue.add(seedFile)
         while (queue.isNotEmpty()) {
+            com.intellij.openapi.progress.ProgressManager.checkCanceled()
             val current = queue.removeFirst()
             val currentVf = current.virtualFile ?: continue
             val currentPath = currentVf.path
@@ -78,17 +81,11 @@ internal object DreamShaderImportClosureResolver {
 
     private fun computeDirectImports(sourceFile: PsiFile): List<PsiFile> {
         val project = sourceFile.project
-        val projectBasePath = project.basePath ?: return emptyList()
         val psiManager = PsiManager.getInstance(project)
-        val sourceVf = sourceFile.virtualFile ?: return emptyList()
-        val containingDirectory = sourceVf.parent
+        if (sourceFile.virtualFile == null) return emptyList()
         val resolved = linkedMapOf<String, PsiFile>()
         for (importPath in collectImportPaths(sourceFile)) {
-            val targetVf = DreamShaderImportResolver.resolveImport(
-                projectBasePath = projectBasePath,
-                containingDirectory = containingDirectory,
-                importPath = importPath
-            ) ?: continue
+            val targetVf = DreamShaderImportResolver.resolveImport(sourceFile, importPath) ?: continue
             val targetPsi = psiManager.findFile(targetVf) ?: continue
             if (targetPsi.language != DreamShaderLanguage) continue
 
@@ -104,6 +101,10 @@ internal object DreamShaderImportClosureResolver {
         }
         for (literal in stringLiterals) {
             if (!isImportStringLiteralToken(literal)) continue
+            if ((file as? com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile)?.let {
+                    com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderPreprocessorModel.of(it).stateAt(literal.textOffset) ==
+                        com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShaderPreprocessorModel.State.INACTIVE
+                } == true) continue
             val raw = literal.text.trim()
             if (raw.length < 2 || !raw.startsWith('"') || !raw.endsWith('"')) continue
             val importPath = raw.substring(1, raw.length - 1).trim()
@@ -114,6 +115,7 @@ internal object DreamShaderImportClosureResolver {
     }
 
     fun isImportStringLiteralToken(element: PsiElement): Boolean {
+        if (PsiTreeUtil.getParentOfType(element, com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2IncludeDirective::class.java) != null) return true
         var prev = PsiTreeUtil.prevLeaf(element, true)
         while (prev != null) {
             val tokenType = prev.node?.elementType
@@ -127,6 +129,16 @@ internal object DreamShaderImportClosureResolver {
             return tokenType == DreamShaderTokenTypes.KEYWORD && prev.text.equals("import", ignoreCase = true)
         }
         return false
+    }
+
+    private val CONFIG_KEY = Key.create<String>("dreamshader.import.config")
+    private fun invalidateConfiguration(file: PsiFile) {
+        val configuration = file.project.getService(com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings::class.java).state.sourceDirectory
+        if (file.getUserData(CONFIG_KEY) != configuration) {
+            file.putUserData(DIRECT_IMPORTS_KEY, null)
+            file.putUserData(IMPORT_CLOSURE_KEY, null)
+            file.putUserData(CONFIG_KEY, configuration)
+        }
     }
 
     private val DIRECT_IMPORTS_KEY: Key<CachedValue<List<PsiFile>>> =

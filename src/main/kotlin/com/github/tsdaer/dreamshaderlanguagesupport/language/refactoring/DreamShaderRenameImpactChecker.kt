@@ -4,20 +4,16 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDer
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2FunctionDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2NamedDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2UniformDeclaration
-import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2FunctionIndex
-import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2UniformIndex
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
-import com.intellij.psi.stubs.StubIndex
 
 /**
  * The rename safety net (M12 C5): before a 2.0 declaration is renamed this checker
  * spells out the workspace impact -
  *
- * - a `uniform` may be overridden in `.dsi` material instances (same-name uniform
- *   declarations); renaming the parent silently breaks the override link, so those
+ * - a `uniform` may be overridden in `.dsi` material instances (verified parent chains
+ *   and mapped parameter names); renaming the parent silently breaks the override link, so those
  *   files surface as `override` impacts;
  * - an `export` function's call sites across the include closure surface as
  *   `callSite` impacts; files under `Decompiled/` / `Intermediate/DreamShader/` are
@@ -36,50 +32,28 @@ object DreamShaderRenameImpactChecker {
 
         val impacts = mutableListOf<Impact>()
 
-        if (declaration is DreamShader2UniformDeclaration) {
-            StubIndex.getInstance().processElements(
-                DreamShader2UniformIndex.KEY,
-                name,
-                project,
-                scope,
-                DreamShader2UniformDeclaration::class.java,
-            ) { overrideDeclaration ->
-                val file = overrideDeclaration.containingFile?.virtualFile ?: return@processElements true
-                if (file != declaration.containingFile?.virtualFile && !DreamShaderDerivedFiles.isDerivedFile(file)) {
-                    impacts.add(
-                        Impact(
-                            Impact.Kind.OVERRIDE,
-                            file.path,
-                            "material instance overrides this parameter with `uniform ... $name`",
-                        )
-                    )
+        if (declaration is DreamShader2UniformDeclaration &&
+            com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2InstanceModel.metadata(declaration, "name").isNullOrBlank()) {
+            val source = declaration.containingFile as? com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
+            val instanceModel = com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2InstanceModel
+            for (vf in com.intellij.psi.search.FilenameIndex.getAllFilesByExt(project, "dsi", scope)) {
+                com.intellij.openapi.progress.ProgressManager.checkCanceled()
+                if (DreamShaderDerivedFiles.isDerivedFile(vf)) continue
+                val child = com.intellij.psi.PsiManager.getInstance(project).findFile(vf)
+                    as? com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile ?: continue
+                val seen = mutableSetOf<String>()
+                var parent = instanceModel.parentSource(child)
+                while (parent != null && seen.add(parent.virtualFile?.path ?: parent.name) && parent != source)
+                    parent = instanceModel.parentSource(parent)
+                if (parent != source || source == null) continue
+                if (com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShader2FileAnalysis.of(child).uniforms.any {
+                        instanceModel.parameterName(it) == name }) {
+                    impacts += Impact(Impact.Kind.OVERRIDE, vf.path, "material instance overrides this parameter `$name`")
                 }
-                true
             }
         }
 
         if (declaration is DreamShader2FunctionDeclaration && declaration.isExport()) {
-            StubIndex.getInstance().processElements(
-                DreamShader2FunctionIndex.KEY,
-                name,
-                project,
-                scope,
-                DreamShader2FunctionDeclaration::class.java,
-            ) { other ->
-                val file = other.containingFile?.virtualFile
-                if (file != null && !DreamShaderDerivedFiles.isDerivedFile(file) && file != declaration.containingFile?.virtualFile) {
-                    // A sibling declaration of the same export name - e.g. an instance file
-                    // re-exporting - counts as a rename impact site too.
-                    impacts.add(
-                        Impact(
-                            Impact.Kind.CALL_SITE,
-                            file.path,
-                            "declares the same export name; include closures resolve it too",
-                        )
-                    )
-                }
-                true
-            }
             ReferencesSearch.search(declaration, scope).findAll()
                 .mapNotNull { reference -> reference.element?.containingFile?.virtualFile }
                 .filter { !DreamShaderDerivedFiles.isDerivedFile(it) }
@@ -99,5 +73,4 @@ object DreamShaderRenameImpactChecker {
         }
     }
 
-    private fun VirtualFile?.orNull(): VirtualFile? = this
 }

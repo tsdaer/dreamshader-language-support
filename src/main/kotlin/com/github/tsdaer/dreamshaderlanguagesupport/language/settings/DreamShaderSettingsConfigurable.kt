@@ -366,7 +366,7 @@ class DreamShaderSettingsConfigurable(
         enableCodeLensBox = JBCheckBox(DreamShaderBundle.message("settings.enableCodeLens.checkbox"))
         enableInlayParameterHintsBox = JBCheckBox(DreamShaderBundle.message("settings.enableInlayParameterHints.checkbox"))
         outArgumentPlaceholderSuffixField = JBTextField()
-        preferredImportExtensionCombo = com.intellij.openapi.ui.ComboBox(arrayOf(".dsh", ".dsf", ".dsm"))
+        preferredImportExtensionCombo = com.intellij.openapi.ui.ComboBox(arrayOf(".dsh", ".dss"))
         preferredImportExtensionCombo?.name = PREFERRED_IMPORT_EXTENSION_COMBO_NAME
         autoUpdatePreferredImportExtensionBox = JBCheckBox(
             DreamShaderBundle.message("settings.autoUpdatePreferredImportExtension.checkbox")
@@ -1318,7 +1318,7 @@ class DreamShaderSettingsConfigurable(
     }
 
     companion object {
-        private val SUPPORTED_IMPORT_EXTENSIONS = setOf("dsh", "dsf", "dsm")
+        private val SUPPORTED_IMPORT_EXTENSIONS = setOf("dsh", "dss")
         private val HOVER_DOCS_CHANGED_BACKGROUND = JBColor(Color(255, 247, 220), Color(68, 61, 42))
         private val HOVER_DOCS_BUILTIN_PATH_FOREGROUND = JBColor(Color(78, 87, 104), Color(167, 179, 200))
 

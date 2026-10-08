@@ -12,7 +12,12 @@ import java.util.*
 data class DreamShaderCallSignature(
     val presentableText: String,
     val parameterRanges: List<IntRange>,
-    val parameterNames: List<String> = emptyList()
+    val parameterNames: List<String> = emptyList(),
+    val parameterTypes: List<String?> = emptyList(),
+    val parameterQualifiers: List<String?> = emptyList(),
+    val returnType: String? = null,
+    val documentation: String? = null,
+    var activeParameter: Int = -2
 )
 
 /**
@@ -235,7 +240,9 @@ object DreamShaderSignatureHelpAnalyzer {
     private fun catalogSignature(entry: DreamShaderMaterialExpressionInfo): DreamShaderCallSignature {
         val presentable = entry.signature?.takeIf { it.isNotBlank() } ?: defaultCatalogSignature(entry)
         val parameterNames = entry.parameters.map { it.name }.toTypedArray()
-        return signature(presentable, *parameterNames)
+        return signature(presentable, *parameterNames).copy(parameterTypes = entry.parameters.map { it.type },
+            parameterQualifiers = entry.parameters.map { it.qualifier }, returnType = entry.outputType,
+            documentation = entry.description)
     }
 
     private fun defaultCatalogSignature(entry: DreamShaderMaterialExpressionInfo): String =
@@ -269,33 +276,33 @@ object DreamShaderSignatureHelpAnalyzer {
             if (!allowStringInterior) return null
             if (isOffsetInComment(text, safeOffset)) return null
         }
-        var depth = 0
-        var i = safeOffset - 1
-
-        while (i >= 0) {
-            when (text[i]) {
-                ')' -> depth++
-                '(' -> {
-                    if (depth == 0) {
-                        val nameRange = findFunctionNameRange(text, i) ?: return null
-                        val functionName = text.substring(nameRange.first, nameRange.last + 1)
-                        if (isDeclarationHead(text, nameRange.first)) return null
-                        val rightParen = findMatchingRightParen(text, i)
-                        if (rightParen != null && safeOffset > rightParen + 1) return null
-                        val argumentEnd = (rightParen ?: safeOffset).coerceAtLeast(i + 1)
-                        return DreamShaderParsedCall(
-                            functionName = functionName,
-                            nameStartOffset = nameRange.first,
-                            nameEndOffset = nameRange.last + 1,
-                            leftParenOffset = i,
-                            rightParenOffset = rightParen,
-                            arguments = parseArguments(text, i + 1, argumentEnd)
-                        )
-                    }
-                    depth--
-                }
+        val open = mutableListOf<Int>()
+        var quote: Char? = null
+        var lineComment = false
+        var blockComment = false
+        var i = 0
+        while (i < safeOffset) {
+            val ch = text[i]
+            val next = text.getOrNull(i + 1)
+            when {
+                lineComment -> if (ch == '\n') lineComment = false
+                blockComment -> if (ch == '*' && next == '/') { blockComment = false; i++ }
+                quote != null -> if (ch == '\\') i++ else if (ch == quote) quote = null
+                ch == '/' && next == '/' -> { lineComment = true; i++ }
+                ch == '/' && next == '*' -> { blockComment = true; i++ }
+                ch == '"' || ch == '\'' -> quote = ch
+                ch == '(' -> open += i
+                ch == ')' -> if (open.isNotEmpty()) open.removeAt(open.lastIndex)
             }
-            i--
+            i++
+        }
+        for (left in open.asReversed()) {
+            val nameRange = findFunctionNameRange(text, left) ?: continue
+            if (isDeclarationHead(text, nameRange.first)) continue
+            val right = findMatchingRightParen(text, left)
+            return DreamShaderParsedCall(text.substring(nameRange.first, nameRange.last + 1),
+                nameRange.first, nameRange.last + 1, left, right,
+                parseArguments(text, left + 1, (right ?: safeOffset).coerceAtLeast(left + 1)))
         }
         return null
     }
@@ -455,7 +462,7 @@ object DreamShaderSignatureHelpAnalyzer {
         return actualStart..end
     }
 
-    private fun signature(presentableText: String, vararg parameters: String): DreamShaderCallSignature {
+    internal fun signature(presentableText: String, vararg parameters: String): DreamShaderCallSignature {
         val ranges = mutableListOf<IntRange>()
         var searchStart = 0
         for (parameter in parameters) {

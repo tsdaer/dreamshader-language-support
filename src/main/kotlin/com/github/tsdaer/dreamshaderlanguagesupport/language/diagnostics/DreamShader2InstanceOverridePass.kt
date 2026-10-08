@@ -47,7 +47,8 @@ internal object DreamShader2InstanceOverridePass {
 
         PsiTreeUtil.getChildrenOfTypeAsList(file, DreamShader2UniformDeclaration::class.java).forEach { uniform ->
             declarators(uniform).forEach { declarator ->
-                val name = declarator.name ?: return@forEach
+                val variable = declarator.name ?: return@forEach
+                val name = com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2InstanceModel.parameterName(uniform, variable)
                 val parameter = exact[name]
                 when {
                     parameter != null -> checkType(uniform, parameter, declarator.node, holder)

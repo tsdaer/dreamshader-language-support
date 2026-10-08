@@ -1,5 +1,7 @@
 # 智能体开发指导计划（Agent Development Plan）
 
+> 当前规则更新（2026-10-08）：插件 2.5.0 的智能增强已对齐 DreamShader v2.1.1（`dbdcbede47f84b7bf4b9f671138c1f87fd3e5010`）。当前行为与验证见 [2.1.1 智能增强](intelligence-2.1.1.md) 和 [语言基线](language-v2-baseline.md)。以下 2.0.2 / M8–M17 信息保留为历史开发记录；导入、swizzle、作用域、catalog 与预处理的冲突描述以当前基线为准。既有 Bridge 只读、编辑热路径及发布守则继续适用。
+
 - **制定日期**：2026-10-03
 - **上游基线**：TypeDreamMoon/DreamShader **v2.0.2**（2026-10-02，commit `b3bbf48`）
 - **本插件版本**：2.2.0（2026-10-05，M14），语言基线 DreamShader 1.8.0 + upstream main @8f84830（1.x）/ DreamShader 2.0.2 @b3bbf48（2.0）

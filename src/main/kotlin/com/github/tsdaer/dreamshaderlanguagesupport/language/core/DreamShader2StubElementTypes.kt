@@ -51,7 +51,7 @@ abstract class DreamShader2StubElementType<StubT : StubElement<*>, PsiT : PsiEle
 
     companion object {
         /** Bumped whenever any stub payload's serialization shape changes. */
-        const val STUB_VERSION = 1
+        const val STUB_VERSION = 3
     }
 }
 
@@ -112,8 +112,10 @@ internal object DreamShader2StubElementTypeFactory {
                     dataStream.readNullableUtf(),
                 )
 
-            // Globals stay file-local (plan C1 indexes only the workspace-visible kinds).
-            override fun indexStub(stub: DreamShader2GlobalStub, sink: IndexSink) = Unit
+            // Indexing supports explicit expanded completion; inclusion still controls visibility.
+            override fun indexStub(stub: DreamShader2GlobalStub, sink: IndexSink) {
+                stub.name?.let { sink.occurrence(DreamShader2StubIndexesKeys.HEADER_GLOBAL, it) }
+            }
         }
 
     val FUNCTION_DECLARATION: IStubElementType<DreamShader2FunctionStub, DreamShader2FunctionDeclaration> =
@@ -155,6 +157,7 @@ internal object DreamShader2StubElementTypeFactory {
                 )
 
             override fun indexStub(stub: DreamShader2FunctionStub, sink: IndexSink) {
+                stub.name?.let { sink.occurrence(DreamShader2StubIndexesKeys.HEADER_FUNCTION, it) }
                 // Workspace-visible linkage only: file-local helpers stay out of the index.
                 if (stub.isExport || stub.isExtern) {
                     stub.name?.let { sink.occurrence(DreamShader2StubIndexesKeys.FUNCTION, it) }

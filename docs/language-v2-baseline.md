@@ -1,13 +1,24 @@
-# DreamShaderLang 2.0 Baseline (V2 Dialect)
+# DreamShaderLang 2.x Baseline
 
-Coverage notes for the DreamShader 2.0 dialect supported by this Rider plugin. Refresh this file when upstream 2.0 behavior changes. The 1.x baseline lives in `language-baseline.md`; both dialects are supported side by side.
+Current rules are pinned to DreamShader **v2.1.1**, commit `dbdcbede47f84b7bf4b9f671138c1f87fd3e5010`, checked on 2026-10-08 for plugin 2.5.0. Both the 2.x and compiler-supported 1.x dialects remain available. The sections below M8–M17 describe historical implementations; this current section supersedes conflicting old behavior.
 
-## Reference Snapshot
+## Current 2.1.1 Intelligence
 
-- Checked on `2026-10-03`
-- Upstream: DreamShader `2.0.2` (`TypeDreamMoon/DreamShader`, commit `b3bbf48`)
-- Rider plugin version: `1.3.0` (milestone M9; M8 language core unchanged, frozen)
-- Upstream references: `Docs/language-v2/index.md`, `Docs/language-v2/substrate.md`, `Docs/language-v2/instances.md`, `Docs/language/source-files.md`, `Resources/Templates/*.dss|*.dsi`, `Tests/Corpus/Lang/**`
+See [behavior and validation](intelligence-2.1.1.md) for the feature map and fixture commands.
+
+- Completion, inference, documentation, navigation and references share cached lexical bindings: locals obey declaration order, nested blocks, loop scope and shadowing; included helpers are visible through the cycle-safe closure. Rename resolves bindings rather than replacing matching names.
+- Postfix expressions are nested so `UE.Node().Output.r` selects an output before swizzling. Multi-output nodes retain Unknown when no output is selected. Only `xyzw` or `rgba` channels are accepted, case-insensitively, with repetitions and scalar `.xx` / `.rrr`; mixed alphabets and out-of-range channels are invalid.
+- Catalog schema v1 remains compatible while optional enum/default/alias/const-property metadata, complete output lists, material attributes and dynamic-pin flags feed editor features. The bundled catalog is a documented offline fallback, not an engine export.
+- First BASIC completion shows visible symbols; SMART ranks known expected types; the second manual invocation offers legal header symbols, types and values and adds include/import in the same undo operation. Unknown receivers keep silent. Substrate members come from Slab pins and exclude preceding, definitely bound writes.
+- User/node signatures supply named arguments, parameter information, inlay hints and documentation. Strings and nested calls share argument-position parsing. Insert handlers reuse existing parentheses, quotes and separators.
+- `.dsi` suggests parent assets in its source root, unoverridden parameter names (including `@name` mappings), typed values and static/resource templates. Only valid Bridge schemas justify unknown-parameter errors; source inference supplies suggestions.
+- Eight preprocessor directives use isolated file-local definitions. Structure errors and reserved `DS_` changes retain upstream error severity. Known builtins exist, but externally supplied values and unsupported conditional expressions remain Unknown.
+- Graph matrix restrictions, clearly non-unrollable infinite loops and lifted calls depending on HLSL locals are checked only when provable. Dynamic pins are never rejected simply because a catalog pin is missing.
+- Import/include rules follow the [2.1.1 import baseline](package-baseline.md): only `.dsh` is inferred, explicit `.dss` is allowed, relative paths stay in the file's source root, cross-root paths require `/`, and obsolete qualifiers/package entry expansion are removed.
+
+## Historical Milestones
+
+The following snapshots document the original development progression (mostly upstream 2.0.2 at `b3bbf48`). Their older completion/swizzle/import descriptions are historical, not current language rules.
 
 ## Scope of M8 Support (plugin 1.2.0)
 

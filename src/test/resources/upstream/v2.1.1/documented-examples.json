@@ -1,0 +1,72 @@
+{
+  "version": "2.1.1",
+  "commit": "dbdcbede47f84b7bf4b9f671138c1f87fd3e5010",
+  "examples": [
+    {
+      "source": "Docs/language-v2/index.md",
+      "block": 1,
+      "tag": "hlsl",
+      "code": "// M_TeleportGlow.dss\n#pragma material(ShadingModel = Unlit, BlendMode = Additive)\n\n/// @group Glow|Look   @desc Multiplied on top of the particle colour\nuniform float4 Tint = float4(1, 1, 1, 1);\n\n/// @group Glow|Look   @desc Overall emissive gain\nuniform float Intensity = 0.7;\n\nfloat GlowMask(float2 UV)\n{\n    float2 P = UV * 2.0 - 1.0;\n    return pow(saturate(1.0 - dot(P, P)), 2.4);\n}\n\nexport void M_TeleportGlow(inout material m)\n{\n    float2 UV = UE.TexCoord(Index = 0);\n    m.EmissiveColor = Tint.rgb * GlowMask(UV) * Intensity;\n}"
+    },
+    {
+      "source": "Docs/language-v2/index.md",
+      "block": 2,
+      "tag": "hlsl",
+      "code": "// MF_ToonUV.dss\n/// @asset /MoonToon/MaterialFunctions/Utils/MF_UVChannelSwitch\nextern float2 MF_UVChannelSwitch(float UVChannelIndex);\n\n/// @library MoonToon|Shared\n/// @param UVChannel    Which UV channel to read.\nexport float2 MF_ToonUV(float UVChannel = 0.0, float4 ScaleOffset = float4(1, 1, 0, 0))\n{\n    float2 Selected = MF_UVChannelSwitch(UVChannel);\n    return Selected * ScaleOffset.xy + ScaleOffset.zw;\n}"
+    },
+    {
+      "source": "Docs/language-v2/index.md",
+      "block": 3,
+      "tag": "hlsl",
+      "code": "/// @custom\nfloat Pulse(float2 UV, float Gain)\n{\n    float T = UE.Time();                                              // a Time node, wired in\n    float Mixed = UE.LinearInterpolate(A = 0.0, B = Gain, Alpha = 0.5); // built once per call site\n    return sin(UV.x * 8.0 + T) * Mixed;\n}"
+    },
+    {
+      "source": "Docs/language-v2/substrate.md",
+      "block": 1,
+      "tag": "hlsl",
+      "code": "#pragma material(Substrate = Native)\n\n/// @group Surface\nuniform Texture2D Albedo;\nuniform float Rust = 0.3;\nuniform float Coat = 1.0;\n\nexport void M_CoatedMetal(inout material m)\n{\n    float4 Tex = Albedo.Sample(UE.TexCoord(Index = 0));\n\n    Substrate Metal = Substrate.Slab(BaseColor = Tex.rgb, Metallic = 1.0, Roughness = 0.35);   // S3\n    Substrate RustS = Substrate.Slab(BaseColor = Tex.rgb * float3(0.6, 0.3, 0.1), Roughness = 0.9);\n    Substrate Body  = lerp(Metal, RustS, saturate(Tex.a * Rust));                              // S1\n    Substrate Clear = Substrate.Slab(IOR = 1.5, Roughness = 0.1);                              // S3\n\n    m.FrontMaterial = Substrate.Layer(Clear * Coat, Body, 0.01);                               // S1\n}"
+    },
+    {
+      "source": "Docs/language-v2/substrate.md",
+      "block": 2,
+      "tag": "hlsl",
+      "code": "Substrate Front = Dry;\nif (Wetness > 0.5)          // run time: a Substrate.Select\n{\n    Front = Wet;\n}\nm.FrontMaterial = Front;"
+    },
+    {
+      "source": "Docs/language-v2/substrate.md",
+      "block": 3,
+      "tag": "hlsl",
+      "code": "Substrate S = Substrate.Slab();      // no arguments: a builder. With arguments it is a finished node.\nS.BaseColor = Albedo;                // a pin, or an argument of the table above -- in any order\nS.Metallic  = 1.0;\n#if DS_HAS_FUZZ\nS.FuzzAmount = Fuzz;                 // the preprocessor cuts lines, which is what this form is for\n#endif\nm.FrontMaterial = S;                 // the first use of S makes the node"
+    },
+    {
+      "source": "Docs/language-v2/substrate.md",
+      "block": 4,
+      "tag": "hlsl",
+      "code": "/// @layerblend\nexport void MLB_Wet(material Bottom, material Top, float Alpha, inout material R)\n{\n    R.FrontMaterial = lerp(Bottom.FrontMaterial, Top.FrontMaterial, Alpha);\n}"
+    },
+    {
+      "source": "Docs/language-v2/substrate.md",
+      "block": 5,
+      "tag": "c",
+      "code": "Shader(Name = \"Materials/M_CoatedMetal\")\n{\n    Outputs {\n        Base.FrontMaterial = Substrate.Layer(Clear * Coat, Body, 0.01);   // an expression, not a variable name\n    }\n    Graph {\n        Substrate Metal = Substrate.Slab(BaseColor = Tint.rgb, Metallic = 1.0, Roughness = 0.35);\n        Substrate Body  = lerp(Metal, RustS, saturate(Rust));\n        Substrate Clear = Substrate.Slab(IOR = 1.5, Roughness = 0.1);\n    }\n}"
+    },
+    {
+      "source": "Docs/language-v2/instances.md",
+      "block": 1,
+      "tag": "hlsl",
+      "code": "// MI_HeroSkin.dsi\n#pragma instance(Parent = \"M_Skin\", BlendMode = Masked, TwoSided = true)\n\nuniform float Roughness = 0.35;\nuniform float3 Tint = float3(1.0, 0.82, 0.76);\n\n/// @static\nuniform bool UseDetail = true;\n\n/// @default /Game/Characters/Hero/T_Hero_Skin_D\nuniform Texture2D Albedo;\n\n/// @name Base Color Boost\nuniform float BaseColorBoost = 1.2;"
+    },
+    {
+      "source": "Docs/graph/swizzle.md",
+      "block": 2,
+      "tag": "c",
+      "code": "float u  = UE.TexCoord().x;\nvec3  c  = SampleTexture2D(Albedo, uv).rgb;\nvec2  yx = vec4(1.0, 2.0, 3.0, 4.0).yx;\nfloat m  = MyFunction(A, B).r;"
+    },
+    {
+      "source": "Docs/graph/swizzle.md",
+      "block": 3,
+      "tag": "c",
+      "code": "Shader(Name=\"Docs/M_Swizzle\")\n{\n    Properties { vec4 Src = vec4(0.1, 0.2, 0.3, 0.4); }\n    Settings   { Domain = \"UI\"; ShadingModel = \"Unlit\"; }\n    Outputs    { vec3 Color; Base.EmissiveColor = Color; }\n\n    Graph {\n        vec3  Forward   = Src.rgb;   // leading channels -> the parameter's RGB pin\n        vec3  Reordered = Src.bgr;   // reordered        -> a mask per channel, 2 AppendVector\n        float One       = Src.a;     // ascending        -> 1 ComponentMask\n        vec2  Repeated  = One.rr;    // scalar base      -> 1 AppendVector\n        Color = Forward + Reordered * One + vec3(Repeated, 0.0);\n    }\n}"
+    }
+  ]
+}

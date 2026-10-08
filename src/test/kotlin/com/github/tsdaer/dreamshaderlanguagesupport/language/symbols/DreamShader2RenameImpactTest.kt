@@ -50,7 +50,7 @@ class DreamShader2RenameImpactTest : BasePlatformTestCase() {
     fun testRenameImpactReportsDsiOverride() {
         val parent = myFixture.addFileToProject(
             "DShader/Materials/M_Parent.dss",
-            "uniform float Gain;\n",
+            "#pragma material()\nuniform float Gain;\n",
         )
         myFixture.addFileToProject(
             "DShader/Materials/M_Child.dsi",
@@ -88,8 +88,8 @@ class DreamShader2RenameImpactTest : BasePlatformTestCase() {
         // Old.dss is a same-name export site; the Decompiled copy is excluded entirely.
         assertTrue(impacts.none { it.filePath.contains("Decompiled") })
         assertTrue(
-            "Same-name export should be an impact site",
-            impacts.any { it.filePath.endsWith("Old.dss") },
+            "Same-name export must not be an impact site",
+            impacts.none { it.filePath.endsWith("Old.dss") },
         )
     }
 

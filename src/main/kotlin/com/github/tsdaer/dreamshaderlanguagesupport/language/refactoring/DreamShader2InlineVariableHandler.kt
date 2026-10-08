@@ -236,6 +236,7 @@ internal class DreamShader2InlineVariableHandler : RefactoringActionHandler {
                 DreamShader2ElementTypes.ARGUMENT_LIST -> return parts.takeIf { it.isNotEmpty() }?.joinToString(".")
                 DreamShaderTokenTypes.DOT -> Unit
                 DreamShader2ElementTypes.REFERENCE_EXPRESSION,
+                DreamShader2ElementTypes.MEMBER_ACCESS_EXPRESSION,
                 DreamShaderTokenTypes.IDENTIFIER,
                 DreamShaderTokenTypes.KEYWORD,
                 DreamShaderTokenTypes.TYPE,

@@ -17,6 +17,14 @@ object DreamShader2StubIndexesKeys {
         StubIndexKey.createIndexKey("dreamshader2.function")
 
     @JvmField
+    val HEADER_FUNCTION: StubIndexKey<String, com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2FunctionDeclaration> =
+        StubIndexKey.createIndexKey("dreamshader2.headerFunction")
+
+    @JvmField
+    val HEADER_GLOBAL: StubIndexKey<String, com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2GlobalDeclaration> =
+        StubIndexKey.createIndexKey("dreamshader2.headerGlobal")
+
+    @JvmField
     val STRUCT: StubIndexKey<String, com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2StructDeclaration> =
         StubIndexKey.createIndexKey("dreamshader2.struct")
 

@@ -473,6 +473,102 @@
       "docAnchor": "DSH2xxx.md#dsh2258"
     },
     {
+      "code": "DSH2259",
+      "severity": "error",
+      "message": "Expected ShaderFunction, ShaderLayer and ShaderLayerBlend blocks in a '.dsf' file, found a Shader block, wh...",
+      "docAnchor": "DSH2xxx.md#dsh2259"
+    },
+    {
+      "code": "DSH2300",
+      "severity": "error",
+      "message": "Expected '`{' to open the block of pass '{0}', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2300"
+    },
+    {
+      "code": "DSH2301",
+      "severity": "error",
+      "message": "Expected a setting ('Key = Value;'), a 'read', 'write' or 'param' line or an 'hlsl' block in a pass block, ...",
+      "docAnchor": "DSH2xxx.md#dsh2301"
+    },
+    {
+      "code": "DSH2302",
+      "severity": "error",
+      "message": "Expected '=' after the key '{0}', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2302"
+    },
+    {
+      "code": "DSH2303",
+      "severity": "error",
+      "message": "Expected ';' at the end of the pass statement, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2303"
+    },
+    {
+      "code": "DSH2304",
+      "severity": "error",
+      "message": "Expected a buffer after '{0}', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2304"
+    },
+    {
+      "code": "DSH2305",
+      "severity": "error",
+      "message": "'{0}.{1}': the one thing a buffer has after '.' is 'Previous', last frame's contents of a 'History = true' ...",
+      "docAnchor": "DSH2xxx.md#dsh2305"
+    },
+    {
+      "code": "DSH2306",
+      "severity": "error",
+      "message": "Expected a parameter name after 'param', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2306"
+    },
+    {
+      "code": "DSH2307",
+      "severity": "error",
+      "message": "Expected '=' after 'param {0}', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2307"
+    },
+    {
+      "code": "DSH2308",
+      "severity": "error",
+      "message": "Expected a key such as 'Scale' in the arguments of buffer '{0}', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2308"
+    },
+    {
+      "code": "DSH2309",
+      "severity": "error",
+      "message": "Expected '=' after '{0}', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2309"
+    },
+    {
+      "code": "DSH2310",
+      "severity": "error",
+      "message": "Expected ',' or ')' in the arguments of buffer '{0}', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2310"
+    },
+    {
+      "code": "DSH2311",
+      "severity": "error",
+      "message": "Expected ';' after the declaration of buffer '{0}', found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2311"
+    },
+    {
+      "code": "DSH2312",
+      "severity": "error",
+      "message": "The line '#{0}' cannot appear inside a pass block; a pass holds settings, 'read', 'write' and 'param' lines...",
+      "docAnchor": "DSH2xxx.md#dsh2312"
+    },
+    {
+      "code": "DSH2313",
+      "severity": "error",
+      "message": "Expected '{' after 'hlsl' to open a block of HLSL, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2313"
+    },
+    {
+      "code": "DSH2314",
+      "severity": "error",
+      "message": "Expected '`}' to close pass '{0}' before the next declaration, found {1}.",
+      "docAnchor": "DSH2xxx.md#dsh2314"
+    },
+    {
       "code": "DSH3200",
       "severity": "error",
       "message": "Unexpected {0} at file scope; expected a declaration, '#pragma', '#include' or 'import'.",
@@ -487,7 +583,7 @@
     {
       "code": "DSH3202",
       "severity": "error",
-      "message": "'#pragma' needs a name: material, instance, layout, region or endregion.",
+      "message": "'#pragma' needs a name: material, instance, pipeline, layout, region or endregion.",
       "docAnchor": "DSH3xxx.md#dsh3202"
     },
     {
@@ -766,6 +862,90 @@
       "severity": "error",
       "message": "Expected a MaterialAttributes output on '{0}', found none.",
       "docAnchor": "DSH3xxx.md#dsh3278"
+    },
+    {
+      "code": "DSH3300",
+      "severity": "error",
+      "message": "Expected the buffer's name after 'buffer', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3300"
+    },
+    {
+      "code": "DSH3301",
+      "severity": "error",
+      "message": "Expected ':' and a format after 'buffer {0}', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3301"
+    },
+    {
+      "code": "DSH3302",
+      "severity": "error",
+      "message": "Expected a buffer format such as 'R8' or 'RGBA16F', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3302"
+    },
+    {
+      "code": "DSH3303",
+      "severity": "error",
+      "message": "Expected the pass's name after 'pass', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3303"
+    },
+    {
+      "code": "DSH3304",
+      "severity": "error",
+      "message": "Expected ':' and a pass kind after 'pass {0}', found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3304"
+    },
+    {
+      "code": "DSH3305",
+      "severity": "error",
+      "message": "Expected a pass kind: fullscreen, compute, mesh, clear or copy, found {1}.",
+      "docAnchor": "DSH3xxx.md#dsh3305"
+    },
+    {
+      "code": "DSH3310",
+      "severity": "error",
+      "message": "'buffer {0}' declares a buffer of a Custom Pass pipeline, which only a '.dsp' file holds; move it into the ...",
+      "docAnchor": "DSH3xxx.md#dsh3310"
+    },
+    {
+      "code": "DSH3311",
+      "severity": "error",
+      "message": "'#pragma pipeline' configures a Custom Pass pipeline and belongs in a '.dsp' file of its own, and this line...",
+      "docAnchor": "DSH3xxx.md#dsh3311"
+    },
+    {
+      "code": "DSH3312",
+      "severity": "error",
+      "message": "An 'hlsl' block at file scope is the HLSL of a Custom Pass pipeline, which only a '.dsp' file holds, and '{...",
+      "docAnchor": "DSH3xxx.md#dsh3312"
+    },
+    {
+      "code": "DSH3313",
+      "severity": "error",
+      "message": "'#pragma pipeline' is written a second time, and one '.dsp' is one pipeline; the line {0} already configure...",
+      "docAnchor": "DSH3xxx.md#dsh3313"
+    },
+    {
+      "code": "DSH3314",
+      "severity": "error",
+      "message": "'#pragma material' configures a material, and a '.dsp' is configured by '#pragma pipeline(...)'; the materi...",
+      "docAnchor": "DSH3xxx.md#dsh3314"
+    },
+    {
+      "code": "DSH3315",
+      "severity": "warning",
+      "message": "'#pragma {0}' boxes or places graph nodes, and a '.dsp' has no graph; the line was ignored.",
+      "docAnchor": "DSH3xxx.md#dsh3315"
+    },
+    {
+      "code": "DSH3316",
+      "severity": "error",
+      "message": "'{0}' is a file-scope variable of a '.dsp', which is a 'uniform' (a parameter an activation may override) o...",
+      "docAnchor": "DSH3xxx.md#dsh3316"
+    },
+    {
+      "code": "DSH3317",
+      "severity": "warning",
+      "message": "'@{0}' has no effect on {1} in a '.dsp'; remove it.",
+      "docAnchor": "DSH3xxx.md#dsh3317"
     },
     {
       "code": "DSH4200",
@@ -1434,6 +1614,96 @@
       "docAnchor": "DSH4xxx.md#dsh4390"
     },
     {
+      "code": "DSH4400",
+      "severity": "error",
+      "message": "Buffer '{0}' is declared twice; the declaration on line {1} already makes it.",
+      "docAnchor": "DSH4xxx.md#dsh4400"
+    },
+    {
+      "code": "DSH4401",
+      "severity": "error",
+      "message": "A pass named '{0}' is already declared on line {1}; RDG events and stats are named after passes, so each na...",
+      "docAnchor": "DSH4xxx.md#dsh4401"
+    },
+    {
+      "code": "DSH4402",
+      "severity": "error",
+      "message": "'{0}' is a built-in texture a pass binds without declaring it, and cannot be declared as a buffer.",
+      "docAnchor": "DSH4xxx.md#dsh4402"
+    },
+    {
+      "code": "DSH4403",
+      "severity": "error",
+      "message": "'{0}' is neither a buffer of this pipeline nor a built-in texture; declare it with 'buffer {0} : <Format>;'.",
+      "docAnchor": "DSH4xxx.md#dsh4403"
+    },
+    {
+      "code": "DSH4404",
+      "severity": "error",
+      "message": "'{0}' is not a 'uniform' or 'static const' of this pipeline; 'Enabled' takes a 'uniform bool' or 'true'.",
+      "docAnchor": "DSH4xxx.md#dsh4404"
+    },
+    {
+      "code": "DSH4405",
+      "severity": "error",
+      "message": "'{0}' is a '{1}', and 'Enabled' takes a 'uniform bool' or 'true'.",
+      "docAnchor": "DSH4xxx.md#dsh4405"
+    },
+    {
+      "code": "DSH4406",
+      "severity": "error",
+      "message": "No material '{0}' was found: a bare name is the material a '.dss' under the same source root builds, an obj...",
+      "docAnchor": "DSH4xxx.md#dsh4406"
+    },
+    {
+      "code": "DSH4407",
+      "severity": "error",
+      "message": "'{0}' is not a '.usf' or '.ush' file; the engine compiles shader files of those two kinds only.",
+      "docAnchor": "DSH4xxx.md#dsh4407"
+    },
+    {
+      "code": "DSH4408",
+      "severity": "error",
+      "message": "The shader file '{0}' does not exist; a path starting with '/' is a virtual shader path, and any other is r...",
+      "docAnchor": "DSH4xxx.md#dsh4408"
+    },
+    {
+      "code": "DSH4410",
+      "severity": "error",
+      "message": "'{0}' does not define a function '{1}'.",
+      "docAnchor": "DSH4xxx.md#dsh4410"
+    },
+    {
+      "code": "DSH4411",
+      "severity": "error",
+      "message": "'{0}' in '{1}' has no '[numthreads(x, y, z)]' the compiler can read; write 'Threads = uint3(x, y, z)' in th...",
+      "docAnchor": "DSH4xxx.md#dsh4411"
+    },
+    {
+      "code": "DSH4412",
+      "severity": "error",
+      "message": "'{0}' is not a pass layer of this project; the layers are the first {1} names of Project Settings > DreamPl...",
+      "docAnchor": "DSH4xxx.md#dsh4412"
+    },
+    {
+      "code": "DSH4413",
+      "severity": "error",
+      "message": "'Threads = uint3({0}, {1}, {2})' disagrees with '[numthreads({3}, {4}, {5})]' of '{6}', and the dispatch wo...",
+      "docAnchor": "DSH4xxx.md#dsh4413"
+    },
+    {
+      "code": "DSH4414",
+      "severity": "error",
+      "message": "'DreamPassWeight' is the pipeline's weight in a view, which every pass can read as 'param P = DreamPassWeig...",
+      "docAnchor": "DSH4xxx.md#dsh4414"
+    },
+    {
+      "code": "DSH4415",
+      "severity": "error",
+      "message": "'{0}.Previous': a built-in texture keeps no history.",
+      "docAnchor": "DSH4xxx.md#dsh4415"
+    },
+    {
       "code": "DSH5200",
       "severity": "error",
       "message": "A material has no '{0}' pin; did you mean '{1}'? Attribute names are case-sensitive.",
@@ -1659,7 +1929,7 @@
     {
       "code": "DSH5278",
       "severity": "warning",
-      "message": "'{0}' is not spelled like a value of '{1}', and 1.x matched enumerators loosely, so this is '{2}'; a '.dss'...",
+      "message": "'{0}' is the 1.x name of the '{1}' space of '{2}'; a '.dss' writes '{1}'.",
       "docAnchor": "DSH5xxx.md#dsh5278"
     },
     {
@@ -1787,6 +2057,102 @@
       "severity": "error",
       "message": "'{0}' builds a '{1}.{2}', which has no pin called '{3}'.",
       "docAnchor": "DSH5xxx.md#dsh5299"
+    },
+    {
+      "code": "DSH5300",
+      "severity": "error",
+      "message": "'UE.{0}' needs {1}, and this engine's node catalog does not have it.",
+      "docAnchor": "DSH5xxx.md#dsh5300"
+    },
+    {
+      "code": "DSH5301",
+      "severity": "error",
+      "message": "Material '{0}' asks for the new material translator ('bEnableNewHLSLGenerator = true'), and uses {1} (line ...",
+      "docAnchor": "DSH5xxx.md#dsh5301"
+    },
+    {
+      "code": "DSH5302",
+      "severity": "warning",
+      "message": "UE.DreamPassOutput does nothing in '{0}', a {1}: the engine compiles custom outputs from a material's own g...",
+      "docAnchor": "DSH5xxx.md#dsh5302"
+    },
+    {
+      "code": "DSH5303",
+      "severity": "error",
+      "message": "Material '{0}' gets a second UE.DreamPassOutput node here (the first is on line {1}), and a material compil...",
+      "docAnchor": "DSH5xxx.md#dsh5303"
+    },
+    {
+      "code": "DSH5315",
+      "severity": "error",
+      "message": "UE.DreamPassBuffer names no Pipeline: write the name of the '.dsp' (Pipeline = \"CP_Highlight\") or the pipel...",
+      "docAnchor": "DSH5xxx.md#dsh5315"
+    },
+    {
+      "code": "DSH5316",
+      "severity": "error",
+      "message": "No pipeline named '{0}' is built by a .dsp under '{1}'; write the pipeline asset's path, or check the name.",
+      "docAnchor": "DSH5xxx.md#dsh5316"
+    },
+    {
+      "code": "DSH5317",
+      "severity": "error",
+      "message": "'{0}' names more than one pipeline under this source root ({1}); write the pipeline asset's path instead.",
+      "docAnchor": "DSH5xxx.md#dsh5317"
+    },
+    {
+      "code": "DSH5318",
+      "severity": "error",
+      "message": "The pipeline '{0}' names nothing: no pipeline asset exists at '{1}', and no .dsp under the source roots bui...",
+      "docAnchor": "DSH5xxx.md#dsh5318"
+    },
+    {
+      "code": "DSH5319",
+      "severity": "error",
+      "message": "The pipeline '{0}' comes from '{1}', which failed to compile, so the buffer this material reads cannot be c...",
+      "docAnchor": "DSH5xxx.md#dsh5319"
+    },
+    {
+      "code": "DSH5320",
+      "severity": "info",
+      "message": "The pipeline '{0}' was missing or older than its source, so '{1}' was compiled first.",
+      "docAnchor": "DSH5xxx.md#dsh5320"
+    },
+    {
+      "code": "DSH5321",
+      "severity": "error",
+      "message": "(built at runtime)",
+      "docAnchor": "DSH5xxx.md#dsh5321"
+    },
+    {
+      "code": "DSH5322",
+      "severity": "error",
+      "message": "The pipeline '{0}' declares no buffer '{1}'.",
+      "docAnchor": "DSH5xxx.md#dsh5322"
+    },
+    {
+      "code": "DSH5323",
+      "severity": "error",
+      "message": "Buffer '{1}' of the pipeline '{0}' is {2}, which a material cannot sample. Export a float or normalized buf...",
+      "docAnchor": "DSH5xxx.md#dsh5323"
+    },
+    {
+      "code": "DSH5324",
+      "severity": "error",
+      "message": "UE.DreamPassBuffer names no Buffer of '{0}': write the exported buffer's name (Buffer = \"Blurred\").",
+      "docAnchor": "DSH5xxx.md#dsh5324"
+    },
+    {
+      "code": "DSH5325",
+      "severity": "error",
+      "message": "The pipeline '{0}' needs this material to be built -- it is one of its pass materials, or the material of a...",
+      "docAnchor": "DSH5xxx.md#dsh5325"
+    },
+    {
+      "code": "DSH5326",
+      "severity": "error",
+      "message": "'{0}' is a {1}, not a DreamShader pass pipeline.",
+      "docAnchor": "DSH5xxx.md#dsh5326"
     },
     {
       "code": "DSH6200",
@@ -2007,7 +2373,7 @@
     {
       "code": "DSH6306",
       "severity": "warning",
-      "message": "'Inline' is the old spelling of 'SelfContained'; the function becomes '@custom selfcontained'.",
+      "message": "'Inline' is the old spelling of 'SelfContained', and both read the same: the function's node embeds the fun...",
       "docAnchor": "DSH6xxx.md#dsh6306"
     },
     {
@@ -2467,6 +2833,12 @@
       "docAnchor": "DSH7xxx.md#dsh7232"
     },
     {
+      "code": "DSH7233",
+      "severity": "warning",
+      "message": "A slider range ('@slider', or 'Slider(min, max)' in a 1.x property) is for a scalar parameter; this one is ...",
+      "docAnchor": "DSH7xxx.md#dsh7233"
+    },
+    {
       "code": "DSH7250",
       "severity": "error",
       "message": "A '.dsi' needs one '#pragma instance(Parent = \"...\")' naming the material it is an instance of, and this fi...",
@@ -2591,6 +2963,396 @@
       "severity": "error",
       "message": "'#pragma instance' takes 'Key = Value' pairs, and '{0}' has no key.",
       "docAnchor": "DSH7xxx.md#dsh7270"
+    },
+    {
+      "code": "DSH7300",
+      "severity": "error",
+      "message": "'{0}' is not a key of '#pragma pipeline'; the keys are {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7300"
+    },
+    {
+      "code": "DSH7301",
+      "severity": "error",
+      "message": "'{0}' is set twice by '#pragma pipeline'; it was already set on line {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7301"
+    },
+    {
+      "code": "DSH7302",
+      "severity": "error",
+      "message": "(built at runtime)",
+      "docAnchor": "DSH7xxx.md#dsh7302"
+    },
+    {
+      "code": "DSH7303",
+      "severity": "error",
+      "message": "'{0}' is not an injection point; the points are {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7303"
+    },
+    {
+      "code": "DSH7304",
+      "severity": "error",
+      "message": "'{0}' is not a pass kind; a pass is {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7304"
+    },
+    {
+      "code": "DSH7305",
+      "severity": "error",
+      "message": "'{0}' is not a buffer format; the formats are {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7305"
+    },
+    {
+      "code": "DSH7306",
+      "severity": "error",
+      "message": "'{0}' is not a key of a buffer; the keys are {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7306"
+    },
+    {
+      "code": "DSH7307",
+      "severity": "error",
+      "message": "'{0}' is set twice for buffer '{1}'; it was already set on line {2}.",
+      "docAnchor": "DSH7xxx.md#dsh7307"
+    },
+    {
+      "code": "DSH7308",
+      "severity": "error",
+      "message": "(built at runtime)",
+      "docAnchor": "DSH7xxx.md#dsh7308"
+    },
+    {
+      "code": "DSH7309",
+      "severity": "error",
+      "message": "'Size' gives buffer '{0}' a fixed size, so '{1}' has nothing to say; remove one of them.",
+      "docAnchor": "DSH7xxx.md#dsh7309"
+    },
+    {
+      "code": "DSH7310",
+      "severity": "error",
+      "message": "'{0}' is not a key of a {1} pass; its keys are {2}.",
+      "docAnchor": "DSH7xxx.md#dsh7310"
+    },
+    {
+      "code": "DSH7311",
+      "severity": "error",
+      "message": "'{0}' is a key of {1} passes, and '{2}' is a {3} pass.",
+      "docAnchor": "DSH7xxx.md#dsh7311"
+    },
+    {
+      "code": "DSH7312",
+      "severity": "error",
+      "message": "'{0}' is set twice in pass '{1}'; it was already set on line {2}.",
+      "docAnchor": "DSH7xxx.md#dsh7312"
+    },
+    {
+      "code": "DSH7313",
+      "severity": "error",
+      "message": "(built at runtime)",
+      "docAnchor": "DSH7xxx.md#dsh7313"
+    },
+    {
+      "code": "DSH7314",
+      "severity": "error",
+      "message": "A filter joins its terms with '\\|' (either) and '&' (both), and nothing else.",
+      "docAnchor": "DSH7xxx.md#dsh7314"
+    },
+    {
+      "code": "DSH7315",
+      "severity": "error",
+      "message": "Mesh pass '{0}' needs 'Filter = ...' to say which primitives it draws: 'Stencil(1)', 'Layer(Name)', 'List(N...",
+      "docAnchor": "DSH7xxx.md#dsh7315"
+    },
+    {
+      "code": "DSH7316",
+      "severity": "error",
+      "message": "Fullscreen pass '{0}' draws a 'Material' or runs a 'Shader', and it names both.",
+      "docAnchor": "DSH7xxx.md#dsh7316"
+    },
+    {
+      "code": "DSH7317",
+      "severity": "error",
+      "message": "A fullscreen material pass writes exactly one buffer, as 'write Buffer;', and '{0}' writes {1}.",
+      "docAnchor": "DSH7xxx.md#dsh7317"
+    },
+    {
+      "code": "DSH7318",
+      "severity": "error",
+      "message": "'{0}.Previous' is last frame's contents, which nothing writes any more; write '{0}'.",
+      "docAnchor": "DSH7xxx.md#dsh7318"
+    },
+    {
+      "code": "DSH7319",
+      "severity": "error",
+      "message": "'{0}' is bound twice in pass '{1}'; inside a pass every input, output and parameter has a name of its own.",
+      "docAnchor": "DSH7xxx.md#dsh7319"
+    },
+    {
+      "code": "DSH7320",
+      "severity": "error",
+      "message": "'{0}' is an array, and a pipeline has no array parameters or constants; declare one per element.",
+      "docAnchor": "DSH7xxx.md#dsh7320"
+    },
+    {
+      "code": "DSH7321",
+      "severity": "error",
+      "message": "'{0}' is an integer format, which no pass can read or write yet: HLSL passes see float4 textures, and mater...",
+      "docAnchor": "DSH7xxx.md#dsh7321"
+    },
+    {
+      "code": "DSH7322",
+      "severity": "error",
+      "message": "'Enabled' is false, so this would never run, and a pipeline asset has no switch that is always off; drive i...",
+      "docAnchor": "DSH7xxx.md#dsh7322"
+    },
+    {
+      "code": "DSH7325",
+      "severity": "error",
+      "message": "A fullscreen material pass needs the scene textures, which do not exist yet at {0}; run '{1}' at AfterBaseP...",
+      "docAnchor": "DSH7xxx.md#dsh7325"
+    },
+    {
+      "code": "DSH7326",
+      "severity": "info",
+      "message": "At AfterBasePass scene colour holds the emissive light only; nothing is lit yet, so pass '{0}' {1} that.",
+      "docAnchor": "DSH7xxx.md#dsh7326"
+    },
+    {
+      "code": "DSH7327",
+      "severity": "error",
+      "message": "'CustomStencil' is the stencil half of the custom depth texture, which no pass can bind as a texture of its...",
+      "docAnchor": "DSH7xxx.md#dsh7327"
+    },
+    {
+      "code": "DSH7328",
+      "severity": "error",
+      "message": "(built at runtime)",
+      "docAnchor": "DSH7xxx.md#dsh7328"
+    },
+    {
+      "code": "DSH7329",
+      "severity": "info",
+      "message": "'{0}' exists at AfterBasePass only when r.CustomDepth.Order draws custom depth before the base pass; where ...",
+      "docAnchor": "DSH7xxx.md#dsh7329"
+    },
+    {
+      "code": "DSH7330",
+      "severity": "error",
+      "message": "'Depth = Own({0})' tests against a depth of this pipeline's own, and '{0}' is a built-in texture; declare '...",
+      "docAnchor": "DSH7xxx.md#dsh7330"
+    },
+    {
+      "code": "DSH7331",
+      "severity": "error",
+      "message": "Pass '{0}' reads '{1}', which no pass writes, and '{1}' is 'Clear = None', so what it reads is undefined.",
+      "docAnchor": "DSH7xxx.md#dsh7331"
+    },
+    {
+      "code": "DSH7332",
+      "severity": "warning",
+      "message": "Pass '{0}' reads '{1}' before '{2}' writes it in the frame, so it reads the buffer's 'Clear' value; move th...",
+      "docAnchor": "DSH7xxx.md#dsh7332"
+    },
+    {
+      "code": "DSH7333",
+      "severity": "error",
+      "message": "Pass '{0}' reads and writes '{1}', and one pass cannot have one texture as its input and its output; write ...",
+      "docAnchor": "DSH7xxx.md#dsh7333"
+    },
+    {
+      "code": "DSH7334",
+      "severity": "error",
+      "message": "'{0}' reads no UserSceneTexture of '{1}': its inputs are {2}.",
+      "docAnchor": "DSH7xxx.md#dsh7334"
+    },
+    {
+      "code": "DSH7335",
+      "severity": "warning",
+      "message": "'{0}' reads the UserSceneTexture '{1}', and pass '{2}' binds nothing to it, so it samples black; add 'read ...",
+      "docAnchor": "DSH7xxx.md#dsh7335"
+    },
+    {
+      "code": "DSH7336",
+      "severity": "error",
+      "message": "Fullscreen material pass '{0}' reads {1} buffers, and a post-process material has {2} input slots, shared w...",
+      "docAnchor": "DSH7xxx.md#dsh7336"
+    },
+    {
+      "code": "DSH7337",
+      "severity": "error",
+      "message": "'{0}' is a {1} material, and a fullscreen pass draws a Post Process one: '#pragma material(Domain = PostPro...",
+      "docAnchor": "DSH7xxx.md#dsh7337"
+    },
+    {
+      "code": "DSH7338",
+      "severity": "error",
+      "message": "Pass '{0}' writes a data buffer, and '{1}' scales what it reads and writes by the exposure; give it '#pragm...",
+      "docAnchor": "DSH7xxx.md#dsh7338"
+    },
+    {
+      "code": "DSH7339",
+      "severity": "warning",
+      "message": "'{0}' is compiled for BlendableLocation {1}, and pass '{2}' runs it at {3}, {4} tonemapping, so its colours...",
+      "docAnchor": "DSH7xxx.md#dsh7339"
+    },
+    {
+      "code": "DSH7340",
+      "severity": "error",
+      "message": "'{0}' has no UE.DreamPassOutput in its graph, so a mesh pass has nothing to write; add 'UE.DreamPassOutput(...",
+      "docAnchor": "DSH7xxx.md#dsh7340"
+    },
+    {
+      "code": "DSH7341",
+      "severity": "error",
+      "message": "'{0}' leaves Output{1} of its UE.DreamPassOutput unconnected, so '{2}' would receive nothing.",
+      "docAnchor": "DSH7xxx.md#dsh7341"
+    },
+    {
+      "code": "DSH7342",
+      "severity": "error",
+      "message": "Mesh pass '{0}' draws {1} primitives, and '{2}' is not compiled for them; give the material its usage flag ...",
+      "docAnchor": "DSH7xxx.md#dsh7342"
+    },
+    {
+      "code": "DSH7343",
+      "severity": "error",
+      "message": "Mesh pass '{0}' writes '{1}', a texture of the scene, together with '{2}', a buffer of the pipeline. A mesh...",
+      "docAnchor": "DSH7xxx.md#dsh7343"
+    },
+    {
+      "code": "DSH7344",
+      "severity": "error",
+      "message": "'{0}' is a {1} material, and a mesh pass draws primitives with a Surface one.",
+      "docAnchor": "DSH7xxx.md#dsh7344"
+    },
+    {
+      "code": "DSH7345",
+      "severity": "error",
+      "message": "'{0}' asks for the new material translator, which UE.DreamPassOutput does not support; remove 'bEnableNewHL...",
+      "docAnchor": "DSH7xxx.md#dsh7345"
+    },
+    {
+      "code": "DSH7346",
+      "severity": "error",
+      "message": "Fullscreen pass '{0}' reads {1} and writes {2} buffers, and the pixel slot a '.usf' pass runs in has {3} in...",
+      "docAnchor": "DSH7xxx.md#dsh7346"
+    },
+    {
+      "code": "DSH7347",
+      "severity": "error",
+      "message": "'{0}' is a {1}, and the parameter block of a shader slot holds numbers only, so no texture parameter reache...",
+      "docAnchor": "DSH7xxx.md#dsh7347"
+    },
+    {
+      "code": "DSH7350",
+      "severity": "error",
+      "message": "Pass '{0}' writes scene colour, which is {1} at {2}, and '{3}' with it, which is {4}; targets drawn togethe...",
+      "docAnchor": "DSH7xxx.md#dsh7350"
+    },
+    {
+      "code": "DSH7351",
+      "severity": "error",
+      "message": "Pass '{0}' replaces the tonemapper, and so does '{1}'; one view runs one tonemapper, so a pipeline replaces...",
+      "docAnchor": "DSH7xxx.md#dsh7351"
+    },
+    {
+      "code": "DSH7352",
+      "severity": "error",
+      "message": "A 'param' is a parameter of the pipeline (times a number, plus a number), 'DreamPassWeight' (the same), or ...",
+      "docAnchor": "DSH7xxx.md#dsh7352"
+    },
+    {
+      "code": "DSH7353",
+      "severity": "error",
+      "message": "What scales or offsets a parameter in a 'param' is one number the compiler can fold; a vector, or a value k...",
+      "docAnchor": "DSH7xxx.md#dsh7353"
+    },
+    {
+      "code": "DSH7354",
+      "severity": "info",
+      "message": "Buffer '{0}' is exported and last written at {1}: opaque and translucent materials that sample it see the p...",
+      "docAnchor": "DSH7xxx.md#dsh7354"
+    },
+    {
+      "code": "DSH7355",
+      "severity": "error",
+      "message": "Buffer '{0}' is exported, and an exported buffer becomes a render target asset that materials sample, which...",
+      "docAnchor": "DSH7xxx.md#dsh7355"
+    },
+    {
+      "code": "DSH7356",
+      "severity": "warning",
+      "message": "No pass writes buffer '{0}', so whoever reads it reads its 'Clear' value.",
+      "docAnchor": "DSH7xxx.md#dsh7356"
+    },
+    {
+      "code": "DSH7357",
+      "severity": "warning",
+      "message": "No pass reads buffer '{0}' and it is not exported, so writing it is wasted work; read it, export it, or rem...",
+      "docAnchor": "DSH7xxx.md#dsh7357"
+    },
+    {
+      "code": "DSH7359",
+      "severity": "warning",
+      "message": "'Mode = Own' draws every primitive with its own material, so the 'Material' of mesh pass '{0}' is never used.",
+      "docAnchor": "DSH7xxx.md#dsh7359"
+    },
+    {
+      "code": "DSH7360",
+      "severity": "info",
+      "message": "The materials, shader files and pass layers this pipeline names are not available here, so they were taken ...",
+      "docAnchor": "DSH7xxx.md#dsh7360"
+    },
+    {
+      "code": "DSH7361",
+      "severity": "error",
+      "message": "Pass '{0}' holds a second 'hlsl' block, and the code of a pass is one block; the one on line {1} is it.",
+      "docAnchor": "DSH7xxx.md#dsh7361"
+    },
+    {
+      "code": "DSH7362",
+      "severity": "error",
+      "message": "This file already has an 'hlsl' block, on line {0}, and a '.dsp' has one: write every shared function and e...",
+      "docAnchor": "DSH7xxx.md#dsh7362"
+    },
+    {
+      "code": "DSH7364",
+      "severity": "error",
+      "message": "Pass '{0}' runs the shader file '{1}' and holds an 'hlsl' block as well, and the code of a pass is in one p...",
+      "docAnchor": "DSH7xxx.md#dsh7364"
+    },
+    {
+      "code": "DSH7365",
+      "severity": "error",
+      "message": "The 'hlsl' block of pass '{0}' holds the statements of its entry, whose function the compiler writes, so 'E...",
+      "docAnchor": "DSH7xxx.md#dsh7365"
+    },
+    {
+      "code": "DSH7366",
+      "severity": "error",
+      "message": "'#include' cannot stand among the statements of a function, and the 'hlsl' block of pass '{0}' holds the st...",
+      "docAnchor": "DSH7xxx.md#dsh7366"
+    },
+    {
+      "code": "DSH7367",
+      "severity": "error",
+      "message": "'{0}' is a name of pass '{1}', and its 'hlsl' block holds the statements of a function the compiler writes,...",
+      "docAnchor": "DSH7xxx.md#dsh7367"
+    },
+    {
+      "code": "DSH7368",
+      "severity": "error",
+      "message": "'{0}' is in the shared code of the file's 'hlsl' block, and is the entry of pass '{1}' as well, which the p...",
+      "docAnchor": "DSH7xxx.md#dsh7368"
+    },
+    {
+      "code": "DSH7369",
+      "severity": "error",
+      "message": "'{0}' is the entry of pass '{1}' in the file's 'hlsl' block, and is called here; an entry is compiled only ...",
+      "docAnchor": "DSH7xxx.md#dsh7369"
+    },
+    {
+      "code": "DSH7370",
+      "severity": "error",
+      "message": "A {0} pass runs no HLSL of its own, so pass '{1}' cannot hold an 'hlsl' block.",
+      "docAnchor": "DSH7xxx.md#dsh7370"
     },
     {
       "code": "DSH8088",
@@ -3267,7 +4029,7 @@
     {
       "code": "DSH8296",
       "severity": "error",
-      "message": "'{0}' is not a source the compiler builds on its own; it builds '.dss', '.dsi', '.dsm' and '.dsf' files, an...",
+      "message": "'{0}' is not a source the compiler builds on its own; it builds '.dss', '.dsi', '.dsp', '.dsm' and '.dsf' f...",
       "docAnchor": "DSH8xxx.md#dsh8296"
     },
     {
@@ -3287,6 +4049,234 @@
       "severity": "error",
       "message": "The exported functions {0} call one another in a cycle, so there is no order in which they can be built; an...",
       "docAnchor": "DSH8xxx.md#dsh8299"
+    },
+    {
+      "code": "DSH8300",
+      "severity": "error",
+      "message": "'{0}' is a Custom Pass pipeline, which needs Unreal Engine 5.8 or later; this engine has the DreamShaderPas...",
+      "docAnchor": "DSH8xxx.md#dsh8300"
+    },
+    {
+      "code": "DSH8301",
+      "severity": "error",
+      "message": "Failed to create package '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8301"
+    },
+    {
+      "code": "DSH8302",
+      "severity": "error",
+      "message": "Asset '%s' already exists as a '%s'; a .dsp builds a DreamPassPipeline. Rename the .dsp or move the existin...",
+      "docAnchor": "DSH8xxx.md#dsh8302"
+    },
+    {
+      "code": "DSH8303",
+      "severity": "error",
+      "message": "Asset '%s' already exists and was not generated by DreamShader. Rename the .dsp or move/delete the existing...",
+      "docAnchor": "DSH8xxx.md#dsh8303"
+    },
+    {
+      "code": "DSH8304",
+      "severity": "error",
+      "message": "'{1}' is not a {0} the Custom Pass runtime knows; the pipeline was not built. This is a compiler gap: the b...",
+      "docAnchor": "DSH8xxx.md#dsh8304"
+    },
+    {
+      "code": "DSH8305",
+      "severity": "error",
+      "message": "The material '{0}' of pass '{1}' does not load; compile the source that builds it, or correct the Material ...",
+      "docAnchor": "DSH8xxx.md#dsh8305"
+    },
+    {
+      "code": "DSH8306",
+      "severity": "error",
+      "message": "The default of '{0}' could not be applied: {1}.",
+      "docAnchor": "DSH8xxx.md#dsh8306"
+    },
+    {
+      "code": "DSH8307",
+      "severity": "error",
+      "message": "Pass '{0}' selects the layer '{1}', which is not one of the project's pass layers (Project Settings > Dream...",
+      "docAnchor": "DSH8xxx.md#dsh8307"
+    },
+    {
+      "code": "DSH8308",
+      "severity": "error",
+      "message": "Buffer '{0}' is {1} and cannot be exported: materials, Blueprints and UMG read an exported buffer as a floa...",
+      "docAnchor": "DSH8xxx.md#dsh8308"
+    },
+    {
+      "code": "DSH8309",
+      "severity": "error",
+      "message": "The render target of the exported buffer '{0}' could not be created or reused. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8309"
+    },
+    {
+      "code": "DSH8310",
+      "severity": "warning",
+      "message": "'{0}' was left in place although its buffer is no longer exported: {1}. Delete it by hand once nothing read...",
+      "docAnchor": "DSH8xxx.md#dsh8310"
+    },
+    {
+      "code": "DSH8311",
+      "severity": "error",
+      "message": "'{0}' was built but could not be saved with its render targets; its slots are already in the registry. In t...",
+      "docAnchor": "DSH8xxx.md#dsh8311"
+    },
+    {
+      "code": "DSH8312",
+      "severity": "info",
+      "message": "'{0}' was deleted: its buffer is no longer exported.",
+      "docAnchor": "DSH8xxx.md#dsh8312"
+    },
+    {
+      "code": "DSH8313",
+      "severity": "error",
+      "message": "Asset '%s' already exists as a '%s'; an exported buffer needs a TextureRenderTarget2D there. Move the exist...",
+      "docAnchor": "DSH8xxx.md#dsh8313"
+    },
+    {
+      "code": "DSH8314",
+      "severity": "error",
+      "message": "Failed to create package '%s'.",
+      "docAnchor": "DSH8xxx.md#dsh8314"
+    },
+    {
+      "code": "DSH8315",
+      "severity": "error",
+      "message": "The Custom Pass slot registry cannot be read: {0}. Nothing was written, because writing over it would lose ...",
+      "docAnchor": "DSH8xxx.md#dsh8315"
+    },
+    {
+      "code": "DSH8316",
+      "severity": "error",
+      "message": "Pass '{0}' needs a {1} slot and all {2} are taken. Merge passes, run 'dsc pass-registry -Gc' to free the sl...",
+      "docAnchor": "DSH8xxx.md#dsh8316"
+    },
+    {
+      "code": "DSH8317",
+      "severity": "error",
+      "message": "Pass '{0}' cannot be mapped onto its HLSL slot: {1}",
+      "docAnchor": "DSH8xxx.md#dsh8317"
+    },
+    {
+      "code": "DSH8318",
+      "severity": "error",
+      "message": "[{0}] pass '{1}' runs at BeginView, where the view uniform buffer does not exist yet, and its slot uses 'Vi...",
+      "docAnchor": "DSH8xxx.md#dsh8318"
+    },
+    {
+      "code": "DSH8319",
+      "severity": "error",
+      "message": "The HLSL that pass '{0}' has in its '.dsp' could not be put together for its slot (its entry is not in the ...",
+      "docAnchor": "DSH8xxx.md#dsh8319"
+    },
+    {
+      "code": "DSH8320",
+      "severity": "error",
+      "message": "'{0}' is included by a relative path and names no file, so the snapshot of pass '{1}' cannot be built.",
+      "docAnchor": "DSH8xxx.md#dsh8320"
+    },
+    {
+      "code": "DSH8321",
+      "severity": "warning",
+      "message": "'{0}' is included by a virtual path outside /Engine/, /Plugin/ and /ThirdParty/, so the snapshot of pass '{...",
+      "docAnchor": "DSH8xxx.md#dsh8321"
+    },
+    {
+      "code": "DSH8322",
+      "severity": "error",
+      "message": "[{0}] pass '{1}' does not compile in its HLSL slot: {2}",
+      "docAnchor": "DSH8xxx.md#dsh8322"
+    },
+    {
+      "code": "DSH8323",
+      "severity": "error",
+      "message": "The {0} slot shader cannot be pre-checked: the global shader type {1} is not registered, or its source no l...",
+      "docAnchor": "DSH8xxx.md#dsh8323"
+    },
+    {
+      "code": "DSH8324",
+      "severity": "warning",
+      "message": "The project targets the shader format {0}, which this machine has no shader compiler for, so the HLSL slots...",
+      "docAnchor": "DSH8xxx.md#dsh8324"
+    },
+    {
+      "code": "DSH8325",
+      "severity": "error",
+      "message": "There is no shader format to pre-check the HLSL slots with: no active feature level and no target platform ...",
+      "docAnchor": "DSH8xxx.md#dsh8325"
+    },
+    {
+      "code": "DSH8326",
+      "severity": "error",
+      "message": "'{0}' cannot be written or deleted, so nothing of the slot registry was changed: no snapshot written, no sl...",
+      "docAnchor": "DSH8xxx.md#dsh8326"
+    },
+    {
+      "code": "DSH8327",
+      "severity": "info",
+      "message": "{0} slot {1} of pass '{2}' was freed: the pipeline no longer runs that pass in HLSL there.",
+      "docAnchor": "DSH8xxx.md#dsh8327"
+    },
+    {
+      "code": "DSH8330",
+      "severity": "error",
+      "message": "'{0}' names more than one material under this source root ({1}); write the material's asset path instead.",
+      "docAnchor": "DSH8xxx.md#dsh8330"
+    },
+    {
+      "code": "DSH8331",
+      "severity": "error",
+      "message": "The material '{0}' comes from '{1}', which failed to compile, so this pipeline has no material to check its...",
+      "docAnchor": "DSH8xxx.md#dsh8331"
+    },
+    {
+      "code": "DSH8332",
+      "severity": "info",
+      "message": "'{0}' was missing or older than its source, so '{1}' was compiled first.",
+      "docAnchor": "DSH8xxx.md#dsh8332"
+    },
+    {
+      "code": "DSH8333",
+      "severity": "error",
+      "message": "'{0}' is built by '{1}', which reads this pipeline's exported buffer through UE.DreamPassBuffer (directly, ...",
+      "docAnchor": "DSH8xxx.md#dsh8333"
+    },
+    {
+      "code": "DSH8334",
+      "severity": "error",
+      "message": "The material '{0}' does not resolve to an asset path. {1}",
+      "docAnchor": "DSH8xxx.md#dsh8334"
+    },
+    {
+      "code": "DSH8335",
+      "severity": "error",
+      "message": "The Custom Pass slot registry cannot be read: {0}. Nothing was changed; 'dsc pass-registry -Rebuild' replac...",
+      "docAnchor": "DSH8xxx.md#dsh8335"
+    },
+    {
+      "code": "DSH8336",
+      "severity": "error",
+      "message": "The Custom Pass slot registry cannot be read ({0}) and could not be moved aside to '{1}', so nothing was re...",
+      "docAnchor": "DSH8xxx.md#dsh8336"
+    },
+    {
+      "code": "DSH8337",
+      "severity": "warning",
+      "message": "{0} slot {1} ({2}, pass '{3}') names snapshot files that are not on disk, so it is now reserved and compile...",
+      "docAnchor": "DSH8xxx.md#dsh8337"
+    },
+    {
+      "code": "DSH8338",
+      "severity": "error",
+      "message": "HLSL slots need Unreal Engine 5.8 or later; this engine has no Custom Pass runtime to pre-check them for.",
+      "docAnchor": "DSH8xxx.md#dsh8338"
+    },
+    {
+      "code": "DSH8339",
+      "severity": "info",
+      "message": "'{0}' has no HLSL pass, so there is no slot to pre-check; its materials are checked by the sources that bui...",
+      "docAnchor": "DSH8xxx.md#dsh8339"
     },
     {
       "code": "DSH9001",
@@ -3393,13 +4383,13 @@
     {
       "code": "DSH9034",
       "severity": "error",
-      "message": "DreamShader cannot dump '%s': %s is not a Material, MaterialFunction or material instance.",
+      "message": "DreamShader cannot dump '%s': %s is not a Material, MaterialFunction, material instance or pass pipeline.",
       "docAnchor": "DSH9xxx.md#dsh9034"
     },
     {
       "code": "DSH9035",
       "severity": "error",
-      "message": "'{0}' is not a compilable DreamShader source (.dss, .dsi, .dsm or .dsf), so '{1}' has nothing to do with it...",
+      "message": "'{0}' is not a compilable DreamShader source (.dss, .dsi, .dsp, .dsm or .dsf), so '{1}' has nothing to do w...",
       "docAnchor": "DSH9xxx.md#dsh9035"
     },
     {
@@ -3841,7 +4831,175 @@
       "severity": "error",
       "message": "Expected a '#pragma instance(...)' line in this .dsi file, found none; the file was left unchanged.",
       "docAnchor": "DSH9xxx.md#dsh9109"
+    },
+    {
+      "code": "DSH9110",
+      "severity": "error",
+      "message": "'-{0}={1}' is neither on nor off. A flag takes true, 1, yes or on, or false, 0, no or off, and '-{0}' alone...",
+      "docAnchor": "DSH9xxx.md#dsh9110"
+    },
+    {
+      "code": "DSH9200",
+      "severity": "error",
+      "message": "The Custom Pass slot registry cannot be read: {0}. 'dsc pass-registry -Rebuild' moves it aside and gives ev...",
+      "docAnchor": "DSH9xxx.md#dsh9200"
+    },
+    {
+      "code": "DSH9201",
+      "severity": "warning",
+      "message": "No .dsp builds '{0}' any more, but the asset is still there and its pass '{1}' points at {2} slot {3}. Dele...",
+      "docAnchor": "DSH9xxx.md#dsh9201"
+    },
+    {
+      "code": "DSH9202",
+      "severity": "info",
+      "message": "{0} slot {1} was freed: {2}",
+      "docAnchor": "DSH9xxx.md#dsh9202"
+    },
+    {
+      "code": "DSH9203",
+      "severity": "warning",
+      "message": "Registry.json did not parse and was moved aside to '{0}'; the compiles that follow give every HLSL pass a s...",
+      "docAnchor": "DSH9xxx.md#dsh9203"
+    },
+    {
+      "code": "DSH9204",
+      "severity": "error",
+      "message": "'{0}' did not compile, so its pipeline keeps the slots it had: {1}",
+      "docAnchor": "DSH9xxx.md#dsh9204"
+    },
+    {
+      "code": "DSH9205",
+      "severity": "warning",
+      "message": "Pass '{1}' of '{0}' points at {2} slot {3}, which the registry {4}. Its source '{5}' did not compile, so th...",
+      "docAnchor": "DSH9xxx.md#dsh9205"
+    },
+    {
+      "code": "DSH9206",
+      "severity": "info",
+      "message": "No .dsp under the source roots; the registry is rewritten from Registry.json as it stands.",
+      "docAnchor": "DSH9xxx.md#dsh9206"
+    },
+    {
+      "code": "DSH9208",
+      "severity": "warning",
+      "message": "The snapshot of {0} slot {1} (pass '{2}' of '{3}') is not on disk, and the registry file includes it: the n...",
+      "docAnchor": "DSH9xxx.md#dsh9208"
+    },
+    {
+      "code": "DSH9209",
+      "severity": "warning",
+      "message": "'{0}' does not compile far enough to tell whether it still runs pass '{1}' in {2} slot {3}, so the slot is ...",
+      "docAnchor": "DSH9xxx.md#dsh9209"
+    },
+    {
+      "code": "DSH9210",
+      "severity": "error",
+      "message": "'{0}' is a pass pipeline, which decompiles to a '.dsp', and '{1}' is not one.",
+      "docAnchor": "DSH9xxx.md#dsh9210"
+    },
+    {
+      "code": "DSH9211",
+      "severity": "warning",
+      "message": "The pass '{0}' has neither a material nor a shader, so the text names neither, and it does not build until ...",
+      "docAnchor": "DSH9xxx.md#dsh9211"
+    },
+    {
+      "code": "DSH9212",
+      "severity": "warning",
+      "message": "The pass '{0}' has both a material, '{1}', and a shader, '{2}'; a fullscreen pass names one of the two, and...",
+      "docAnchor": "DSH9xxx.md#dsh9212"
+    },
+    {
+      "code": "DSH9214",
+      "severity": "info",
+      "message": "A layer filter of the pass '{0}' kept no spelling of its layers, so they are written as the project's layer...",
+      "docAnchor": "DSH9xxx.md#dsh9214"
+    },
+    {
+      "code": "DSH9215",
+      "severity": "warning",
+      "message": "A layer filter of the pass '{0}' selects layer bit(s) {1}, which the project's layer table has no name for;...",
+      "docAnchor": "DSH9xxx.md#dsh9215"
+    },
+    {
+      "code": "DSH9216",
+      "severity": "warning",
+      "message": "'{0}' runs in no kind of view, which a '.dsp' cannot say; the text leaves 'Views' out, and a rebuild runs i...",
+      "docAnchor": "DSH9xxx.md#dsh9216"
+    },
+    {
+      "code": "DSH9217",
+      "severity": "warning",
+      "message": "The pass '{0}' checks its override material for no usage flag at all, which a '.dsp' cannot say; the text l...",
+      "docAnchor": "DSH9xxx.md#dsh9217"
+    },
+    {
+      "code": "DSH9218",
+      "severity": "warning",
+      "message": "The parameter '{0}' defaults to '{1}', which is not a 2D texture. A '.dsp' declares every texture parameter...",
+      "docAnchor": "DSH9xxx.md#dsh9218"
+    },
+    {
+      "code": "DSH9219",
+      "severity": "warning",
+      "message": "The pass '{0}' binds '{1}' to a texture constant, which a 'param' cannot state; the binding is left out of ...",
+      "docAnchor": "DSH9xxx.md#dsh9219"
+    },
+    {
+      "code": "DSH9220",
+      "severity": "warning",
+      "message": "The pass '{0}' tests against its own depth but names no Depth32 buffer for it; the text writes 'Own()' empt...",
+      "docAnchor": "DSH9xxx.md#dsh9220"
+    },
+    {
+      "code": "DSH9221",
+      "severity": "warning",
+      "message": "The decompiled pipeline does not parse back: {0}: {1}. It is written as it is; this is a defect of the deco...",
+      "docAnchor": "DSH9xxx.md#dsh9221"
+    },
+    {
+      "code": "DSH9222",
+      "severity": "warning",
+      "message": "The decompiled pipeline parses but does not bind back into a pipeline: {0}: {1}. It is written as it is; ei...",
+      "docAnchor": "DSH9xxx.md#dsh9222"
+    },
+    {
+      "code": "DSH9223",
+      "severity": "warning",
+      "message": "The decompiled pipeline reads back as a different pipeline ({0} difference(s); the first: {1}). It is writt...",
+      "docAnchor": "DSH9xxx.md#dsh9223"
+    },
+    {
+      "code": "DSH9224",
+      "severity": "warning",
+      "message": "A '.dsp' names its pipeline after its file and has no '/// @name', so '{0}' builds '{1}' where it is writte...",
+      "docAnchor": "DSH9xxx.md#dsh9224"
+    },
+    {
+      "code": "DSH9225",
+      "severity": "error",
+      "message": "There is no pass pipeline to decompile.",
+      "docAnchor": "DSH9xxx.md#dsh9225"
+    },
+    {
+      "code": "DSH9226",
+      "severity": "error",
+      "message": "DSH9226: '{0}' is built from the pipeline file '{1}' but is not a pass pipeline, so nothing was adopted.",
+      "docAnchor": "DSH9xxx.md#dsh9226"
+    },
+    {
+      "code": "DSH9227",
+      "severity": "error",
+      "message": "DSH9227: '{0}' is not a .dsp pipeline file, so the settings of '{1}' cannot be spliced into it.",
+      "docAnchor": "DSH9xxx.md#dsh9227"
+    },
+    {
+      "code": "DSH9228",
+      "severity": "error",
+      "message": "DSH9228: '{0}' builds no pass pipeline any more, so '{1}' has nothing to be spliced into.",
+      "docAnchor": "DSH9xxx.md#dsh9228"
     }
   ],
-  "source": "DreamShader 2.0.2 @b3bbf48 (Docs/diagnostics/README.md)"
+  "source": "DreamShader 2.1.1 @dbdcbede47f84b7bf4b9f671138c1f87fd3e5010"
 }

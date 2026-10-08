@@ -170,7 +170,7 @@ class DreamShader2PsiParser : PsiParser {
         if (builder.tokenType == DreamShaderTokenTypes.TYPE || builder.tokenType == DreamShaderTokenTypes.IDENTIFIER) {
             builder.advanceLexer() // declared type (user struct spelling included)
         }
-        parseDeclaratorListTail(builder)
+        parseDeclaratorListTail(builder, localNames = true)
         marker.done(DreamShader2ElementTypes.UNIFORM_DECLARATION)
     }
 
@@ -191,18 +191,22 @@ class DreamShader2PsiParser : PsiParser {
         if (builder.tokenType == DreamShaderTokenTypes.TYPE || builder.tokenType == DreamShaderTokenTypes.IDENTIFIER) {
             builder.advanceLexer() // type (user struct spelling included)
         }
-        parseDeclaratorListTail(builder)
+        parseDeclaratorListTail(builder, localNames = true)
         marker.done(DreamShader2ElementTypes.GLOBAL_DECLARATION)
     }
 
     /** `Name (= expr)? (, Name (= expr)?)* ;` starting at the first declarator name. */
-    private fun parseDeclaratorListTail(builder: PsiBuilder) {
+    private fun parseDeclaratorListTail(builder: PsiBuilder, localNames: Boolean = false) {
+        var first = true
         while (!builder.eof()) {
             skipTrivia(builder)
             if (builder.tokenType == DreamShaderTokenTypes.IDENTIFIER ||
                 builder.tokenType == DreamShaderTokenTypes.KEYWORD
             ) {
+                val name = if (localNames && !first) builder.mark() else null
                 builder.advanceLexer() // declarator name (a keyword used as a name stays permissive)
+                name?.done(DreamShader2ElementTypes.LOCAL_DECLARATOR_NAME)
+                first = false
             }
             parseArrayDimensions(builder)
             skipTrivia(builder)
@@ -746,7 +750,7 @@ class DreamShader2PsiParser : PsiParser {
         if (builder.tokenType == DreamShaderTokenTypes.TYPE || builder.tokenType == DreamShaderTokenTypes.IDENTIFIER) {
             builder.advanceLexer() // type
         }
-        parseDeclaratorListTail(builder)
+        parseDeclaratorListTail(builder, localNames = true)
         marker.done(DreamShader2ElementTypes.VARIABLE_DECLARATION_STATEMENT)
     }
 
@@ -813,9 +817,14 @@ class DreamShader2PsiParser : PsiParser {
     }
 
     private fun parsePostfixExpression(builder: PsiBuilder) {
-        val outer = builder.mark()
+        var outer = builder.mark()
         var kind = parsePrimary(builder)
         while (!builder.eof()) {
+            val suffix = builder.tokenType in setOf(DreamShaderTokenTypes.LPAREN, DreamShaderTokenTypes.DOT, DreamShaderTokenTypes.LBRACKET)
+            if (suffix && kind != PostfixKind.PLAIN) {
+                outer.done(kind.nodeType)
+                outer = outer.precede()
+            }
             when (builder.tokenType) {
                 DreamShaderTokenTypes.LPAREN -> {
                     parseArgumentList(builder)

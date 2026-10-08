@@ -29,7 +29,7 @@ class DreamShaderSourceRootImportResolutionTest : BasePlatformTestCase() {
         assertTrue(resolved!!.path.replace('\\', '/').contains("/Plugins/MoonToon/DShader/"))
     }
 
-    fun testRootQualifiedImportsCrossRootsExplicitly() {
+    fun testAnchoredImportsCrossRootsAndOldQualifiersAreRefused() {
         val base = project.basePath ?: error("project base path is null")
         val projectShared = Paths.get(base, "DShader", "Shared", "Common.dsh")
         val pluginShared = Paths.get(base, "Plugins", "MoonToon", "DShader", "Shared", "Toon.dsh")
@@ -42,9 +42,11 @@ class DreamShaderSourceRootImportResolutionTest : BasePlatformTestCase() {
             }
         }
         val source = myFixture.configureByText("loose.dsm", "Shader Main { Graph { } }")
-        assertEquals("Common.dsh", DreamShaderImportResolver.resolveImport(source, "Project:Shared/Common.dsh")?.name)
-        assertEquals("Toon.dsh", DreamShaderImportResolver.resolveImport(source, "Plugin.MoonToon:Shared/Toon.dsh")?.name)
-        assertEquals("Toon.dsh", DreamShaderImportResolver.resolveImport(source, "Plugins/MoonToon:Shared/Toon.dsh")?.name)
+        assertEquals("Common.dsh", DreamShaderImportResolver.resolveImport(source, "/Game/Shared/Common.dsh")?.name)
+        assertEquals("Toon.dsh", DreamShaderImportResolver.resolveImport(source, "/Shared/Toon.dsh")?.name)
+        assertNull(DreamShaderImportResolver.resolveImport(source, "Project:Shared/Common.dsh"))
+        assertNull(DreamShaderImportResolver.resolveImport(source, "Plugin.MoonToon:Shared/Toon.dsh"))
+        assertNull(DreamShaderImportResolver.resolveImport(source, "Plugins/MoonToon:Shared/Toon.dsh"))
     }
 
     fun testOwnedRootCannotEscapeWithDotDot() {

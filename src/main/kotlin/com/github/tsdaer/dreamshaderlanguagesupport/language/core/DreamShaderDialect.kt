@@ -93,10 +93,31 @@ object DreamShaderDialects {
     fun hasV2Markers(text: CharSequence): Boolean {
         val lexer = DreamShaderLexer()
         lexer.start(text)
+        var braces = 0
+        var parentheses = 0
+        var previous: String? = null
         while (lexer.tokenType != null) {
             val type = lexer.tokenType
             val tokenStart = lexer.tokenStart
             val tokenEnd = lexer.tokenEnd
+            if (braces == 0 && parentheses == 0 && previous?.lowercase(Locale.ROOT) !in V1_BLOCK_KEYWORDS && (type == DreamShaderTokenTypes.TYPE ||
+                    type == DreamShaderTokenTypes.IDENTIFIER && text.subSequence(tokenStart, tokenEnd).toString() == "struct")) {
+                val ahead = DreamShaderLexer(); ahead.start(text, tokenEnd, text.length, 0)
+                val next = mutableListOf<Pair<com.intellij.psi.tree.IElementType?, String>>()
+                while (ahead.tokenType != null && next.size < 2) {
+                    if (ahead.tokenType !in setOf(DreamShaderTokenTypes.WHITE_SPACE, DreamShaderTokenTypes.LINE_COMMENT, DreamShaderTokenTypes.BLOCK_COMMENT))
+                        next += ahead.tokenType to text.subSequence(ahead.tokenStart, ahead.tokenEnd).toString()
+                    ahead.advance()
+                }
+                if (next.size == 2 && next[0].first == DreamShaderTokenTypes.IDENTIFIER && next[1].second in setOf("(", "=", "{")) return true
+            }
+            when (type) {
+                DreamShaderTokenTypes.LBRACE -> braces++
+                DreamShaderTokenTypes.RBRACE -> braces--
+                DreamShaderTokenTypes.LPAREN -> parentheses++
+                DreamShaderTokenTypes.RPAREN -> parentheses--
+            }
+
             if (type === DreamShaderTokenTypes.IDENTIFIER &&
                 text.subSequence(tokenStart, tokenEnd).toString() in V2_DECLARATION_MARKERS
             ) {
@@ -113,6 +134,8 @@ object DreamShaderDialects {
                     return true
                 }
             }
+            if (type !in setOf(DreamShaderTokenTypes.WHITE_SPACE, DreamShaderTokenTypes.LINE_COMMENT, DreamShaderTokenTypes.BLOCK_COMMENT))
+                previous = text.subSequence(tokenStart, tokenEnd).toString()
             lexer.advance()
         }
         return false

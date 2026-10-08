@@ -86,7 +86,7 @@ internal object DreamShader2DiagnosticsPass {
                 PsiTreeUtil.collectElements(uniform) { it.node?.elementType == DreamShaderTokenTypes.IDENTIFIER && it.text == name }
                     .firstOrNull()
             } ?: return@forEach
-            if (nameLeaf.text in schemaParameters) {
+            if (com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2InstanceModel.parameterName(uniform) in schemaParameters) {
                 holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                     .range(nameLeaf)
                     .textAttributes(DreamShaderTextAttributes.PARENT_OVERRIDE)
@@ -344,7 +344,7 @@ internal object DreamShader2DiagnosticsPass {
         val callPsi = unwrapCall(initializer)
         val callPath = callPsi?.callPath()
         val emptyCall = callPsi != null &&
-            callPath!!.startsWith("Substrate.", ignoreCase = true) &&
+            callPath?.startsWith("Substrate.", ignoreCase = true) == true &&
             dreamShader2MeaningfulChildren(
                 callPsi.node.findChildByType(DreamShader2ElementTypes.ARGUMENT_LIST)?.psi ?: callPsi,
             ).none {
@@ -679,21 +679,8 @@ internal object DreamShader2DiagnosticsPass {
         val callNode = unwrapCall(this) ?: return null
         if (callNode.node.elementType != DreamShader2ElementTypes.CALL_EXPRESSION) return null
 
-        val parts = mutableListOf<String>()
-        dreamShader2MeaningfulChildren(callNode).forEach { child: ASTNode ->
-            when (child.elementType) {
-                DreamShader2ElementTypes.ARGUMENT_LIST -> return parts.takeIf { it.isNotEmpty() }?.joinToString(".")
-                DreamShaderTokenTypes.DOT -> Unit
-                // The namespace/base of a dotted callee arrives as a reference node.
-                DreamShader2ElementTypes.REFERENCE_EXPRESSION,
-                DreamShaderTokenTypes.IDENTIFIER,
-                DreamShaderTokenTypes.KEYWORD,
-                DreamShaderTokenTypes.TYPE,
-                -> parts.add(child.text)
-                else -> Unit
-            }
-        }
-        return parts.takeIf { it.isNotEmpty() }?.joinToString(".")
+        val arguments = callNode.node.findChildByType(DreamShader2ElementTypes.ARGUMENT_LIST)?.psi ?: return null
+        return callNode.text.substring(0, arguments.textOffset - callNode.textOffset).trim().takeIf { it.isNotEmpty() }
     }
 
     internal fun dreamShader2TypeSpellingOfStatement(statement: PsiElement): String? =

@@ -13,15 +13,19 @@ import com.intellij.psi.PsiFile
  */
 internal object DreamShaderCallSignatureResolver {
     fun resolveSignatures(functionName: String, sourceFile: PsiFile): List<DreamShaderCallSignature> {
+        (sourceFile as? com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile)?.let { file ->
+            val declared = com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2SemanticResolver.functions(file, functionName)
+            if (declared.isNotEmpty()) return declared.map(::signatureOf)
+        }
         val localDeclared = DreamShaderSignatureHelpAnalyzer.resolveDeclaredSignatures(
             functionName = functionName,
-            sourceText = sourceFile.text
+            sourceText = legacyDeclarationText(sourceFile)
         )
         if (localDeclared.isNotEmpty()) return localDeclared
 
         val importedSourceTexts = DreamShaderImportClosureResolver.resolveImportClosure(sourceFile)
             .drop(1)
-            .map { it.text }
+            .map(::legacyDeclarationText)
         if (importedSourceTexts.isNotEmpty()) {
             val importedDeclared = DreamShaderSignatureHelpAnalyzer.resolveDeclaredSignatures(
                 functionName = functionName,
@@ -46,6 +50,25 @@ internal object DreamShaderCallSignatureResolver {
         }
 
         return DreamShaderSignatureHelpAnalyzer.resolveSignatures(functionName)
+    }
+
+    private fun legacyDeclarationText(file: PsiFile): String =
+        if (file is com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile &&
+            DreamShaderCompletionDialects.dialectOf(file) != com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDialect.V1) {
+            file.children.filter { it.node.elementType == com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2ElementTypes.LEGACY_BLOCK }
+                .joinToString("\n") { it.text }
+        } else file.text
+
+    fun signatureOf(function: com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2FunctionDeclaration): DreamShaderCallSignature {
+        val parameters = function.parameterList()?.parameters().orEmpty()
+        val names = parameters.map { it.parameterName().orEmpty() }
+        val text = "${function.returnTypeText()} ${function.declarationName()}(" + parameters.joinToString(", ") { it.text.trim() } + ")"
+        val doc = function.children.firstOrNull { it.node.elementType ==
+            com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2ElementTypes.DOC_BLOCK }?.text
+        return DreamShaderSignatureHelpAnalyzer.signature(text, *names.toTypedArray()).copy(
+            parameterTypes = parameters.map { it.typeName() },
+            parameterQualifiers = parameters.map { it.text.trim().substringBefore(' ').takeIf { word -> word in setOf("in", "out", "inout") } },
+            returnType = function.returnTypeText(), documentation = doc)
     }
 
     private fun collectCatalogEntries(sourceFile: PsiFile): List<DreamShaderMaterialExpressionInfo> {

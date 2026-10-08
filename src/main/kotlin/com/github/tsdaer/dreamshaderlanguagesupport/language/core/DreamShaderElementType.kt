@@ -23,6 +23,14 @@ object DreamShaderElementTypes {
     val FILE: IFileElementType = object : IStubFileElementType<PsiFileStub<PsiFile>>(DreamShaderLanguage) {
         override fun getExternalId(): String = "dreamshader.FILE"
 
+        override fun doParseContents(chameleon: com.intellij.lang.ASTNode, psi: com.intellij.psi.PsiElement): com.intellij.lang.ASTNode? {
+            val name = (psi as? PsiFile)?.name ?: psi.containingFile?.name.orEmpty()
+            if (DreamShaderDialects.extensionOf(name) !in DreamShaderDialects.V2_EXTENSIONS) return super.doParseContents(chameleon, psi)
+            val builder = com.intellij.lang.PsiBuilderFactory.getInstance().createBuilder(psi.project, chameleon,
+                com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShader2Lexer(), DreamShaderLanguage, chameleon.chars)
+            return com.github.tsdaer.dreamshaderlanguagesupport.language.parser.DreamShader2PsiParser().parse(this, builder).firstChildNode
+        }
+
         override fun getStubVersion(): Int = DreamShader2StubElementType.STUB_VERSION
     }
 

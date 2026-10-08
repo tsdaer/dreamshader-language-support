@@ -52,3 +52,12 @@ class DreamShader2IncludeIndex : StringStubIndexExtension<DreamShader2IncludeDir
         val KEY: StubIndexKey<String, DreamShader2IncludeDirective> = DreamShader2StubIndexesKeys.INCLUDE
     }
 }
+
+/** All callable names for explicitly expanded, filtered auto-import completion. */
+class DreamShader2HeaderFunctionIndex : StringStubIndexExtension<DreamShader2FunctionDeclaration>() {
+    override fun getKey() = DreamShader2StubIndexesKeys.HEADER_FUNCTION
+}
+
+class DreamShader2HeaderGlobalIndex : StringStubIndexExtension<com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2GlobalDeclaration>() {
+    override fun getKey() = DreamShader2StubIndexesKeys.HEADER_GLOBAL
+}

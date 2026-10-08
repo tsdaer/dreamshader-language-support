@@ -77,6 +77,10 @@ internal fun dreamShader2DeclaratorNames(declaration: DreamShader2NamedDeclarati
                     expectName = false
                 }
             }
+            com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2ElementTypes.LOCAL_DECLARATOR_NAME -> {
+                names.add(leaf.text)
+                expectName = false
+            }
             DreamShaderTokenTypes.COMMA -> expectName = true
             else -> Unit
         }

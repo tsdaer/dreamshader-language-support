@@ -272,7 +272,7 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
 
     fun testRenameShaderFunctionNameAttributePathLeafKeepsPrefixAndUpdatesCrossFileUsages() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val importedPath = Paths.get(projectBase, "Shared", "Library.dsf")
+        val importedPath = Paths.get(projectBase, "DShader", "Shared", "Library.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(importedPath.parent.toString())
             val file = parent.findOrCreateChildData(this, importedPath.fileName.toString())
@@ -298,7 +298,7 @@ class DreamShaderDeclarationRenameTest : BasePlatformTestCase() {
         val caller = myFixture.configureByText(
             "rename_name_attr_cross_file_caller.dsm",
             """
-            import "Shared/Library.dsf";
+            import "Shared/Library.dsh";
 
             Shader Main {
                 Graph {

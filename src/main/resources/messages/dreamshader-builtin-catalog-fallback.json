@@ -1,130 +1,680 @@
 {
   "schema": "dreamshader-builtin-catalog",
   "version": 1,
-  "engine": "bundled fallback; derived from DreamShader 2.0.2 @b3bbf48 Docs/builtins/ue.md",
+  "engine": "bundled documentation fallback; DreamShader 2.1.1 @dbdcbede47f84b7bf4b9f671138c1f87fd3e5010 (not an engine-generated catalog)",
   "expressions": [
-    { "namespace": "UE", "shortName": "TexCoord", "className": "TextureCoordinate",
-      "outputs": [ { "type": "Float2" } ],
-      "properties": [
-        { "name": "Index", "type": "Int" },
-        { "name": "UTiling", "type": "Float1" },
-        { "name": "VTiling", "type": "Float1" },
-        { "name": "UnMirrorU", "type": "Bool" },
-        { "name": "UnMirrorV", "type": "Bool" }
-      ] },
-    { "namespace": "UE", "shortName": "Time", "className": "Time",
-      "outputs": [ { "type": "Float1" } ],
-      "properties": [
-        { "name": "Period", "type": "Float1" },
-        { "name": "IgnorePause", "type": "Bool" }
-      ] },
-    { "namespace": "UE", "shortName": "Panner", "className": "Panner",
-      "outputs": [ { "type": "Float2" } ],
-      "inputs": [
-        { "name": "Coordinate", "type": "Numeric" },
-        { "name": "Time", "type": "Numeric" },
-        { "name": "Speed", "type": "Numeric" }
+    {
+      "namespace": "UE",
+      "shortName": "TexCoord",
+      "className": "TextureCoordinate",
+      "outputs": [
+        {
+          "type": "Float2"
+        }
       ],
       "properties": [
-        { "name": "SpeedX", "type": "Float1" },
-        { "name": "SpeedY", "type": "Float1" },
-        { "name": "FractionalPart", "type": "Bool" }
-      ] },
-    { "namespace": "UE", "shortName": "WorldPosition", "className": "WorldPosition",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "ObjectPositionWS", "className": "ObjectPositionWS",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "CameraVectorWS", "className": "CameraVectorWS",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "VertexNormalWS", "className": "VertexNormalWS",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "VertexTangentWS", "className": "VertexTangentWS",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "ScreenPosition", "className": "ScreenPosition",
-      "outputs": [ { "type": "Float2" } ] },
-    { "namespace": "UE", "shortName": "VertexColor", "className": "VertexColor",
-      "outputs": [ { "type": "Float4" } ] },
-    { "namespace": "UE", "shortName": "PixelDepth", "className": "PixelDepth",
-      "outputs": [ { "type": "Float1" } ] },
-    { "namespace": "UE", "shortName": "SceneDepth", "className": "SceneDepth",
-      "outputs": [ { "type": "Float1" } ] },
-    { "namespace": "UE", "shortName": "SceneColor", "className": "SceneColor",
-      "outputs": [ { "type": "Float4" } ] },
-    { "namespace": "UE", "shortName": "TranslatedWorldPosition", "className": "WorldPosition",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "ObjectPosition", "className": "ObjectPositionWS",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "ObjectRadius", "className": "ObjectRadius",
-      "outputs": [ { "type": "Float1" } ] },
-    { "namespace": "UE", "shortName": "ObjectBounds", "className": "ObjectBounds",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "CameraVector", "className": "CameraVectorWS",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "CameraPosition", "className": "CameraPositionWS",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "ReflectionVector", "className": "ReflectionVectorWS",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "PixelNormalWS", "className": "PixelNormalWS",
-      "outputs": [ { "type": "Float3" } ] },
-    { "namespace": "UE", "shortName": "TwoSidedSign", "className": "TwoSidedSign",
-      "outputs": [ { "type": "Float1" } ] },
-    { "namespace": "UE", "shortName": "PerInstanceRandom", "className": "PerInstanceRandom",
-      "outputs": [ { "type": "Float1" } ] },
-    { "namespace": "UE", "shortName": "PerInstanceFadeAmount", "className": "PerInstanceFadeAmount",
-      "outputs": [ { "type": "Float1" } ] },
-    { "namespace": "UE", "shortName": "ViewportUV", "className": "ScreenPosition",
-      "outputs": [ { "type": "Float2" } ] },
-    { "namespace": "UE", "shortName": "TransformVector", "className": "Transform",
-      "outputs": [ { "type": "Float3" } ],
-      "inputs": [ { "name": "Input", "type": "Numeric", "required": true } ],
-      "properties": [
-        { "name": "Source", "type": "Enum" },
-        { "name": "Destination", "type": "Enum" }
-      ] },
-    { "namespace": "UE", "shortName": "TransformPosition", "className": "TransformPosition",
-      "outputs": [ { "type": "Float3" } ],
-      "inputs": [ { "name": "Input", "type": "Numeric", "required": true } ],
-      "properties": [
-        { "name": "Source", "type": "Enum" },
-        { "name": "Destination", "type": "Enum" },
-        { "name": "PeriodicWorldTileSize", "type": "Float1" },
-        { "name": "FirstPersonInterpolationAlpha", "type": "Float1" }
-      ] },
-    { "namespace": "UE", "shortName": "StaticSwitchParameter", "className": "StaticSwitchParameter",
-      "positional": [ "True", "False" ],
-      "inputs": [
-        { "name": "True", "type": "Numeric", "required": true },
-        { "name": "False", "type": "Numeric", "required": true }
+        {
+          "name": "Index",
+          "type": "Int"
+        },
+        {
+          "name": "UTiling",
+          "type": "Float1"
+        },
+        {
+          "name": "VTiling",
+          "type": "Float1"
+        },
+        {
+          "name": "UnMirrorU",
+          "type": "Bool"
+        },
+        {
+          "name": "UnMirrorV",
+          "type": "Bool"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "Time",
+      "className": "Time",
+      "outputs": [
+        {
+          "type": "Float1"
+        }
       ],
       "properties": [
-        { "name": "Name", "type": "String" },
-        { "name": "Default", "type": "Bool" },
-        { "name": "Group", "type": "String" },
-        { "name": "Description", "type": "String" },
-        { "name": "SortPriority", "type": "Int" }
-      ] },
-    { "namespace": "UE", "shortName": "CollectionParam", "className": "CollectionParameter",
-      "aliases": [ "CollectionParameter" ],
+        {
+          "name": "Period",
+          "type": "Float1"
+        },
+        {
+          "name": "IgnorePause",
+          "type": "Bool"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "Panner",
+      "className": "Panner",
+      "outputs": [
+        {
+          "type": "Float2"
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Coordinate",
+          "type": "Numeric"
+        },
+        {
+          "name": "Time",
+          "type": "Numeric"
+        },
+        {
+          "name": "Speed",
+          "type": "Numeric"
+        }
+      ],
       "properties": [
-        { "name": "Collection", "type": "String" },
-        { "name": "Parameter", "type": "String" },
-        { "name": "Group", "type": "String" },
-        { "name": "SortPriority", "type": "Int" },
-        { "name": "Description", "type": "String" }
-      ] },
-    { "namespace": "UE", "shortName": "SceneTexture", "className": "SceneTexture",
-      "outputs": [ { "type": "Float4" } ],
+        {
+          "name": "SpeedX",
+          "type": "Float1"
+        },
+        {
+          "name": "SpeedY",
+          "type": "Float1"
+        },
+        {
+          "name": "FractionalPart",
+          "type": "Bool"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "WorldPosition",
+      "className": "WorldPosition",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "ObjectPositionWS",
+      "className": "ObjectPositionWS",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "CameraVectorWS",
+      "className": "CameraVectorWS",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "VertexNormalWS",
+      "className": "VertexNormalWS",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "VertexTangentWS",
+      "className": "VertexTangentWS",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "ScreenPosition",
+      "className": "ScreenPosition",
+      "outputs": [
+        {
+          "name": "ViewportUV",
+          "type": "Unknown"
+        },
+        {
+          "name": "PixelPosition",
+          "type": "Unknown"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "VertexColor",
+      "className": "VertexColor",
+      "outputs": [
+        {
+          "name": "RGB",
+          "type": "Float3"
+        },
+        {
+          "name": "R",
+          "type": "Float1"
+        },
+        {
+          "name": "G",
+          "type": "Float1"
+        },
+        {
+          "name": "B",
+          "type": "Float1"
+        },
+        {
+          "name": "A",
+          "type": "Float1"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "PixelDepth",
+      "className": "PixelDepth",
+      "outputs": [
+        {
+          "type": "Float1"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "SceneDepth",
+      "className": "SceneDepth",
+      "outputs": [
+        {
+          "type": "Float1"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "SceneColor",
+      "className": "SceneColor",
+      "outputs": [
+        {
+          "type": "Float4"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "TranslatedWorldPosition",
+      "className": "WorldPosition",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "ObjectPosition",
+      "className": "ObjectPositionWS",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "ObjectRadius",
+      "className": "ObjectRadius",
+      "outputs": [
+        {
+          "type": "Float1"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "ObjectBounds",
+      "className": "ObjectBounds",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "CameraVector",
+      "className": "CameraVectorWS",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "CameraPosition",
+      "className": "CameraPositionWS",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "ReflectionVector",
+      "className": "ReflectionVectorWS",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "PixelNormalWS",
+      "className": "PixelNormalWS",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "TwoSidedSign",
+      "className": "TwoSidedSign",
+      "outputs": [
+        {
+          "type": "Float1"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "PerInstanceRandom",
+      "className": "PerInstanceRandom",
+      "outputs": [
+        {
+          "type": "Float1"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "PerInstanceFadeAmount",
+      "className": "PerInstanceFadeAmount",
+      "outputs": [
+        {
+          "type": "Float1"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "ViewportUV",
+      "className": "ScreenPosition",
+      "outputs": [
+        {
+          "type": "Float2"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "TransformVector",
+      "className": "Transform",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Input",
+          "type": "Numeric",
+          "required": true
+        }
+      ],
       "properties": [
-        { "name": "Id", "type": "String" }
-      ] },
-    { "namespace": "UE", "shortName": "Expression", "className": "Expression",
+        {
+          "name": "Source",
+          "type": "Enum",
+          "enumValues": [
+            "Tangent",
+            "Local",
+            "World",
+            "View",
+            "Camera",
+            "Instance"
+          ]
+        },
+        {
+          "name": "Destination",
+          "type": "Enum",
+          "enumValues": [
+            "Tangent",
+            "Local",
+            "World",
+            "View",
+            "Camera",
+            "Instance"
+          ]
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "TransformPosition",
+      "className": "TransformPosition",
+      "outputs": [
+        {
+          "type": "Float3"
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Input",
+          "type": "Numeric",
+          "required": true
+        }
+      ],
       "properties": [
-        { "name": "Class", "type": "String" },
-        { "name": "OutputType", "type": "String" },
-        { "name": "ResultType", "type": "String" },
-        { "name": "Output", "type": "String" },
-        { "name": "OutputIndex", "type": "Int" }
-      ] }
+        {
+          "name": "Source",
+          "type": "Enum"
+        },
+        {
+          "name": "Destination",
+          "type": "Enum"
+        },
+        {
+          "name": "PeriodicWorldTileSize",
+          "type": "Float1"
+        },
+        {
+          "name": "FirstPersonInterpolationAlpha",
+          "type": "Float1"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "StaticSwitchParameter",
+      "className": "StaticSwitchParameter",
+      "positional": [
+        "True",
+        "False"
+      ],
+      "inputs": [
+        {
+          "name": "True",
+          "type": "Numeric",
+          "required": true
+        },
+        {
+          "name": "False",
+          "type": "Numeric",
+          "required": true
+        }
+      ],
+      "properties": [
+        {
+          "name": "Name",
+          "type": "String"
+        },
+        {
+          "name": "Default",
+          "type": "Bool"
+        },
+        {
+          "name": "Group",
+          "type": "String"
+        },
+        {
+          "name": "Description",
+          "type": "String"
+        },
+        {
+          "name": "SortPriority",
+          "type": "Int"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "CollectionParam",
+      "className": "CollectionParameter",
+      "aliases": [
+        "CollectionParameter"
+      ],
+      "properties": [
+        {
+          "name": "Collection",
+          "type": "String"
+        },
+        {
+          "name": "Parameter",
+          "type": "String"
+        },
+        {
+          "name": "Group",
+          "type": "String"
+        },
+        {
+          "name": "SortPriority",
+          "type": "Int"
+        },
+        {
+          "name": "Description",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "SceneTexture",
+      "className": "SceneTexture",
+      "outputs": [
+        {
+          "type": "Float4"
+        }
+      ],
+      "properties": [
+        {
+          "name": "Id",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "namespace": "UE",
+      "shortName": "Expression",
+      "className": "Expression",
+      "properties": [
+        {
+          "name": "Class",
+          "type": "String"
+        },
+        {
+          "name": "OutputType",
+          "type": "String"
+        },
+        {
+          "name": "ResultType",
+          "type": "String"
+        },
+        {
+          "name": "Output",
+          "type": "String"
+        },
+        {
+          "name": "OutputIndex",
+          "type": "Int"
+        }
+      ]
+    }
   ],
-  "materialAttributes": []
+  "materialAttributes": [
+    {
+      "name": "BaseColor",
+      "type": "Float3"
+    },
+    {
+      "name": "Metallic",
+      "type": "Float1"
+    },
+    {
+      "name": "Specular",
+      "type": "Float1"
+    },
+    {
+      "name": "Roughness",
+      "type": "Float1"
+    },
+    {
+      "name": "Anisotropy",
+      "type": "Float1"
+    },
+    {
+      "name": "EmissiveColor",
+      "type": "Float3",
+      "aliases": [
+        "Emissive"
+      ]
+    },
+    {
+      "name": "Opacity",
+      "type": "Float1"
+    },
+    {
+      "name": "OpacityMask",
+      "type": "Float1"
+    },
+    {
+      "name": "Normal",
+      "type": "Float3"
+    },
+    {
+      "name": "Tangent",
+      "type": "Float3"
+    },
+    {
+      "name": "WorldPositionOffset",
+      "type": "Float3",
+      "aliases": [
+        "WPO"
+      ]
+    },
+    {
+      "name": "SubsurfaceColor",
+      "type": "Float3"
+    },
+    {
+      "name": "CustomData0",
+      "type": "Float1",
+      "aliases": [
+        "ClearCoat"
+      ]
+    },
+    {
+      "name": "CustomData1",
+      "type": "Float1",
+      "aliases": [
+        "ClearCoatRoughness"
+      ]
+    },
+    {
+      "name": "AmbientOcclusion",
+      "type": "Float1",
+      "aliases": [
+        "AO"
+      ]
+    },
+    {
+      "name": "Refraction",
+      "type": "Float3"
+    },
+    {
+      "name": "PixelDepthOffset",
+      "type": "Float1",
+      "aliases": [
+        "PDO"
+      ]
+    },
+    {
+      "name": "Displacement",
+      "type": "Float1"
+    },
+    {
+      "name": "DiffuseColor",
+      "type": "Float3"
+    },
+    {
+      "name": "SpecularColor",
+      "type": "Float3"
+    },
+    {
+      "name": "SurfaceThickness",
+      "type": "Float1"
+    },
+    {
+      "name": "FrontMaterial",
+      "type": "Substrate"
+    },
+    {
+      "name": "MaterialAttributes",
+      "type": "MaterialAttributes",
+      "aliases": [
+        "Attributes"
+      ]
+    },
+    {
+      "name": "CustomizedUV0",
+      "type": "Float2"
+    },
+    {
+      "name": "CustomizedUV1",
+      "type": "Float2"
+    },
+    {
+      "name": "CustomizedUV2",
+      "type": "Float2"
+    },
+    {
+      "name": "CustomizedUV3",
+      "type": "Float2"
+    },
+    {
+      "name": "CustomizedUV4",
+      "type": "Float2"
+    },
+    {
+      "name": "CustomizedUV5",
+      "type": "Float2"
+    },
+    {
+      "name": "CustomizedUV6",
+      "type": "Float2"
+    },
+    {
+      "name": "CustomizedUV7",
+      "type": "Float2"
+    }
+  ]
 }

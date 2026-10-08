@@ -9,9 +9,9 @@ import java.nio.file.Paths
 class DreamShaderImportClosureResolverTest : BasePlatformTestCase() {
     fun testResolveDirectImportsReturnsImmediateImportedFilesOnly() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val aPath = Paths.get(projectBase, "Shared", "A.dsh")
-        val bPath = Paths.get(projectBase, "Shared", "B.dsh")
-        val cPath = Paths.get(projectBase, "Shared", "C.dsh")
+        val aPath = Paths.get(projectBase, "DShader", "Shared", "A.dsh")
+        val bPath = Paths.get(projectBase, "DShader", "Shared", "B.dsh")
+        val cPath = Paths.get(projectBase, "DShader", "Shared", "C.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(aPath.parent.toString())
             VfsUtil.saveText(parent.findOrCreateChildData(this, aPath.fileName.toString()), "Function A { }")
@@ -36,9 +36,9 @@ class DreamShaderImportClosureResolverTest : BasePlatformTestCase() {
 
     fun testResolveImportClosureIncludesRecursiveImportsInBfsOrder() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val apiPath = Paths.get(projectBase, "Shared", "Api.dsh")
-        val implPath = Paths.get(projectBase, "Shared", "Impl.dsh")
-        val utilPath = Paths.get(projectBase, "Shared", "Util.dsh")
+        val apiPath = Paths.get(projectBase, "DShader", "Shared", "Api.dsh")
+        val implPath = Paths.get(projectBase, "DShader", "Shared", "Impl.dsh")
+        val utilPath = Paths.get(projectBase, "DShader", "Shared", "Util.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(apiPath.parent.toString())
             VfsUtil.saveText(parent.findOrCreateChildData(this, apiPath.fileName.toString()), "import \"Impl.dsh\";\nFunction Api { }")
@@ -67,8 +67,8 @@ class DreamShaderImportClosureResolverTest : BasePlatformTestCase() {
 
     fun testResolveImportClosureHandlesImportCycleWithoutDuplicates() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val aPath = Paths.get(projectBase, "Shared", "CycleA.dsh")
-        val bPath = Paths.get(projectBase, "Shared", "CycleB.dsh")
+        val aPath = Paths.get(projectBase, "DShader", "Shared", "CycleA.dsh")
+        val bPath = Paths.get(projectBase, "DShader", "Shared", "CycleB.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(aPath.parent.toString())
             VfsUtil.saveText(parent.findOrCreateChildData(this, aPath.fileName.toString()), "import \"CycleB.dsh\";\nFunction A { }")
@@ -91,8 +91,8 @@ class DreamShaderImportClosureResolverTest : BasePlatformTestCase() {
 
     fun testResolveDirectImportsCacheInvalidatesAfterImportEdit() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val aPath = Paths.get(projectBase, "Shared", "CachedA.dsh")
-        val bPath = Paths.get(projectBase, "Shared", "CachedB.dsh")
+        val aPath = Paths.get(projectBase, "DShader", "Shared", "CachedA.dsh")
+        val bPath = Paths.get(projectBase, "DShader", "Shared", "CachedB.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(aPath.parent.toString())
             VfsUtil.saveText(parent.findOrCreateChildData(this, aPath.fileName.toString()), "Function CachedA { }")

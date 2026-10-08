@@ -87,11 +87,12 @@ class DreamShader2InlineUniformTest : BasePlatformTestCase() {
         myFixture.addFileToProject(
             "DShader/Instances/M_Entry.dsi",
             """
-            #pragma instance(Parent = "DShader/Materials/M_Inline.dss")
+            #pragma instance(Parent = "M_Inline")
             uniform float Gain = 2.0;
             """.trimIndent(),
         )
-        val file = openFile()
+        val file = myFixture.addFileToProject("DShader/Materials/M_Inline.dss", body)
+        myFixture.configureFromExistingVirtualFile(file.virtualFile)
         val before = myFixture.editor.document.text
         moveTo(file, "Gain = 0.5")
 
@@ -129,7 +130,7 @@ class DreamShader2InlineUniformTest : BasePlatformTestCase() {
         val importer = myFixture.addFileToProject(
             "DShader/Materials/M_Importer.dss",
             """
-            #include "DShader/Materials/Shared.dss"
+            #include "Shared.dss"
 
             export void M_Import()
             {

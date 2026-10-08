@@ -18,7 +18,11 @@ internal data class DreamShaderMaterialExpressionParameter(
     val type: String? = null,
     val required: Boolean = false,
     val placeholder: String? = null,
-    val qualifier: String? = null
+    val qualifier: String? = null,
+    val enumValues: List<String> = emptyList(),
+    val defaultValue: String? = null,
+    val aliases: List<String> = emptyList(),
+    val constProperty: String? = null
 )
 
 internal enum class DreamShaderMaterialExpressionSource {
@@ -40,11 +44,19 @@ internal data class DreamShaderMaterialExpressionInfo(
     val description: String? = null,
     val snippet: String? = null,
     val aliases: List<String> = emptyList(),
-    val source: DreamShaderMaterialExpressionSource
+    val source: DreamShaderMaterialExpressionSource,
+    val outputs: List<DreamShaderMaterialExpressionOutput> = emptyList(),
+    val materialAttributes: List<DreamShaderMaterialAttribute> = emptyList(),
+    val hasInstanceDependentPins: Boolean = false,
+    val isParameter: Boolean = false,
+    val isCustomOutput: Boolean = false
 ) {
     val qualifiedName: String
         get() = "$namespace.$ueName"
 }
+
+internal data class DreamShaderMaterialExpressionOutput(val name: String, val type: String?)
+internal data class DreamShaderMaterialAttribute(val name: String, val type: String?, val property: String?, val aliases: List<String>)
 
 /**
  * Singleton for DreamShaderMaterialExpressionManifest.
@@ -123,7 +135,26 @@ internal object DreamShaderMaterialExpressionManifest {
         val parameters: List<ParameterDto> = emptyList()
     )
 
+    private val bundledEntries by lazy { readCatalogEntriesFromBundledManifest() }
+    private val catalogCache = java.util.Collections.synchronizedMap(object : LinkedHashMap<String, Pair<String, List<DreamShaderMaterialExpressionInfo>>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<String, List<DreamShaderMaterialExpressionInfo>>>?): Boolean = size > 32
+    })
     fun catalogEntries(project: Project?, explicitManifestPath: String?): List<DreamShaderMaterialExpressionInfo> {
+        val settings = project?.getService(DreamShaderProjectSettings::class.java)?.state
+        val root = settings?.projectRoot?.takeIf { it.isNotBlank() } ?: project?.basePath.orEmpty()
+        val bridge = File(root, BRIDGE_RELATIVE_DIR)
+        val paths = listOfNotNull(explicitManifestPath, settings?.materialExpressionScanCachePath) +
+            (BRIDGE_MANIFEST_FILE_NAMES + BUILTIN_CATALOG_FILE_NAME + SUBSTRATE_BUILTINS_FILE_NAME).map { File(bridge, it).path }
+        val key = paths.joinToString("|")
+        val stamp = paths.joinToString("|") { path -> val f = File(path); "$path:${f.lastModified()}:${f.length()}:" +
+            (LocalFileSystem.getInstance().findFileByPath(f.path.replace('\\', '/'))?.modificationStamp ?: -1) }
+        catalogCache[key]?.takeIf { it.first == stamp }?.let { return it.second }
+        val result = computeCatalogEntries(project, explicitManifestPath)
+        catalogCache[key] = stamp to result
+        return result
+    }
+
+    private fun computeCatalogEntries(project: Project?, explicitManifestPath: String?): List<DreamShaderMaterialExpressionInfo> {
         val merged = linkedMapOf<String, DreamShaderMaterialExpressionInfo>()
         fun add(entries: Iterable<DreamShaderMaterialExpressionInfo>) {
             entries.forEach { entry ->
@@ -142,7 +173,7 @@ internal object DreamShaderMaterialExpressionManifest {
         add(readCatalogEntriesFromBridgeManifest(project))
         add(readSubstrateBuiltinsFromBridge(project))
         add(readCatalogEntriesFromScanCache(project))
-        add(readCatalogEntriesFromBundledManifest())
+        add(bundledEntries)
         return merged.values.distinct()
     }
 
@@ -286,11 +317,8 @@ internal object DreamShaderMaterialExpressionManifest {
             }
         }
 
-        if (!settings.materialExpressionScanEnabled) return emptyList()
-        val sourceRoot = settings.unrealEngineSourceRoot.takeIf { it.isNotBlank() } ?: return emptyList()
-        return runCatching {
-            DreamShaderMaterialExpressionScanner.scanDirectory(File(sourceRoot))
-        }.getOrDefault(emptyList())
+        // Scanning is an explicit background action, never part of completion or hover.
+        return emptyList()
     }
 
     private fun readCatalogEntriesFromBundledManifest(): List<DreamShaderMaterialExpressionInfo> {
@@ -415,7 +443,7 @@ internal object DreamShaderMaterialExpressionManifest {
     ): String {
         val args = mutableListOf<String>()
         if (outputType != null) args.add("OutputType=\"$outputType\"")
-        parameters.forEach { args.add("${it.name}=${it.placeholder ?: "Value"}") }
+        parameters.forEach { args.add("${it.name}=${it.defaultValue ?: it.placeholder ?: "Value"}") }
         return "$namespace.$ueName(${args.joinToString(", ")})"
     }
 
@@ -438,7 +466,7 @@ internal object DreamShaderMaterialExpressionManifest {
             stop++
         }
         parameters.forEach { parameter ->
-            args.add("${parameter.name}=\${${stop}:${parameter.placeholder ?: "Value"}}")
+            args.add("${parameter.name}=\${${stop}:${parameter.defaultValue ?: parameter.placeholder ?: "Value"}}")
             stop++
         }
         return "$namespace.$ueName(${args.joinToString(", ")})\$0"

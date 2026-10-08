@@ -279,7 +279,7 @@ class DreamShader2CompletionTest : BasePlatformTestCase() {
         assertTrue("Substrate.Slab factory expected, got $labels", labels.contains("Slab"))
     }
 
-    fun testUnknownReceiverDegradesToNamespacesAndCallables() {
+    fun testUnknownReceiverStaysQuiet() {
         val file = myFixture.configureByText(
             "degraded.dss",
             "export void Work() {\n    Q.\n}\n",
@@ -287,8 +287,7 @@ class DreamShader2CompletionTest : BasePlatformTestCase() {
         val offset = file.text.indexOf("Q.") + 2
         val entries = suggest(file, offset)
         val labels = entries.map { it.label }
-        assertTrue("namespace roots expected, got $labels", labels.contains("UE"))
-        assertTrue("enclosing function suggested as callable", labels.contains("Work"))
+        assertTrue("Unknown receivers must not insert unrelated members: $labels", labels.isEmpty())
     }
 
     // ------------------------------------------------------------------
@@ -362,8 +361,8 @@ class DreamShader2CompletionTest : BasePlatformTestCase() {
             labels,
         )
         assertTrue(
-            "a bare slot inserts the value quoted, got ${entries.firstOrNull()?.insertText}",
-            entries.all { it.insertText == "\"${it.label}\"" },
+            "a bare slot inserts the canonical enum token, got ${entries.firstOrNull()?.insertText}",
+            entries.all { it.insertText == it.label },
         )
         assertTrue(entries.all { it.typeText == "enum value" })
     }

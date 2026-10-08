@@ -232,7 +232,7 @@ class DreamShaderFindReferencesTest : BasePlatformTestCase() {
 
     fun testReferencesSearchFindsUsagesAcrossImportedFiles() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val importedPath = Paths.get(projectBase, "Shared", "Utils.dsh")
+        val importedPath = Paths.get(projectBase, "DShader", "Shared", "Utils.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(importedPath.parent.toString())
             val file = parent.findOrCreateChildData(this, importedPath.fileName.toString())
@@ -283,8 +283,8 @@ class DreamShaderFindReferencesTest : BasePlatformTestCase() {
 
     fun testReferencesSearchFindsUsagesThroughRecursiveImportChain() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val apiPath = Paths.get(projectBase, "Shared", "Api.dsh")
-        val implPath = Paths.get(projectBase, "Shared", "Impl.dsh")
+        val apiPath = Paths.get(projectBase, "DShader", "Shared", "Api.dsh")
+        val implPath = Paths.get(projectBase, "DShader", "Shared", "Impl.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val apiParent = VfsUtil.createDirectories(apiPath.parent.toString())
             val apiFile = apiParent.findOrCreateChildData(this, apiPath.fileName.toString())
@@ -378,7 +378,7 @@ class DreamShaderFindReferencesTest : BasePlatformTestCase() {
 
     fun testReferencesSearchFindsShaderFunctionUsagesByNameAttributePathLeafAcrossImportedFiles() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val importedPath = Paths.get(projectBase, "Shared", "Library.dsf")
+        val importedPath = Paths.get(projectBase, "DShader", "Shared", "Library.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(importedPath.parent.toString())
             val file = parent.findOrCreateChildData(this, importedPath.fileName.toString())
@@ -404,7 +404,7 @@ class DreamShaderFindReferencesTest : BasePlatformTestCase() {
         myFixture.configureByText(
             "refs_name_attr_cross_file_caller.dsm",
             """
-            import "Shared/Library.dsf";
+            import "Shared/Library.dsh";
 
             Shader Main {
                 Graph {
@@ -435,7 +435,7 @@ class DreamShaderFindReferencesTest : BasePlatformTestCase() {
 
     fun testReferencesSearchRespectsGlobalFileScope() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val importedPath = Paths.get(projectBase, "Shared", "ScopedUtils.dsh")
+        val importedPath = Paths.get(projectBase, "DShader", "Shared", "ScopedUtils.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(importedPath.parent.toString())
             val file = parent.findOrCreateChildData(this, importedPath.fileName.toString())
@@ -495,7 +495,7 @@ class DreamShaderFindReferencesTest : BasePlatformTestCase() {
 
     fun testReferencesSearchRespectsLocalSearchScopeFileBoundary() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val importedPath = Paths.get(projectBase, "Shared", "LocalScopeUtils.dsh")
+        val importedPath = Paths.get(projectBase, "DShader", "Shared", "LocalScopeUtils.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(importedPath.parent.toString())
             val file = parent.findOrCreateChildData(this, importedPath.fileName.toString())

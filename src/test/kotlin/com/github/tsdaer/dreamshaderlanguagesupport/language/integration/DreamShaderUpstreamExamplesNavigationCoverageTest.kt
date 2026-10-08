@@ -69,7 +69,7 @@ class DreamShaderUpstreamExamplesNavigationCoverageTest : BasePlatformTestCase()
 
     fun testExample3ImportedNamespaceCallResolvesAcrossImportedFile() {
         val projectBase = project.basePath ?: error("project base path is null")
-        val commonPath = Paths.get(projectBase, "Shared", "Common.dsh")
+        val commonPath = Paths.get(projectBase, "DShader", "Shared", "Common.dsh")
         WriteCommandAction.runWriteCommandAction(project) {
             val parent = VfsUtil.createDirectories(commonPath.parent.toString())
             val file = parent.findOrCreateChildData(this, commonPath.fileName.toString())

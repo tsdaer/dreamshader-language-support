@@ -44,8 +44,8 @@ class DreamShaderSettingsToggleTest : DreamShaderSettingsUiTestBase() {
     fun testPreferredImportExtensionNormalization() {
         val configurable = DreamShaderSettingsConfigurable(project)
         assertTrue(configurable.testNormalizePreferredImportExtension(null) == "dsh")
-        assertTrue(configurable.testNormalizePreferredImportExtension(".dsf") == "dsf")
-        assertTrue(configurable.testNormalizePreferredImportExtension("DSM") == "dsm")
+        assertTrue(configurable.testNormalizePreferredImportExtension(".dss") == "dss")
+        assertTrue(configurable.testNormalizePreferredImportExtension("DSM") == "dsh")
         assertTrue(configurable.testNormalizePreferredImportExtension("invalid") == "dsh")
     }
 

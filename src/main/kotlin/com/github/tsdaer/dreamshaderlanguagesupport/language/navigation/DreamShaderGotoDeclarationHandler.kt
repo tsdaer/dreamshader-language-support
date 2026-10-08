@@ -46,16 +46,18 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
 
         val project = element.project
         val psiManager = PsiManager.getInstance(project)
-        val vf = DreamShaderImportResolver.resolveImport(
-            projectBasePath = project.basePath ?: return null,
-            containingDirectory = element.containingFile?.virtualFile?.parent,
-            importPath = importPath
-        ) ?: return null
+        val vf = DreamShaderImportResolver.resolveImport(element.containingFile ?: return null, importPath) ?: return null
         val psiFile = psiManager.findFile(vf) ?: return null
         return arrayOf(psiFile)
     }
 
     private fun resolveDeclarationTargets(element: PsiElement): Array<PsiElement>? {
+        if (com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionDialects
+                .servesV2At(element.containingFile as? com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
+                    ?: return null, element.textOffset)) {
+            val binding = com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2SemanticResolver.resolveIdentifier(element)
+            return binding?.takeIf { it.identifier != element }?.let { arrayOf(it.identifier) }
+        }
         if (isDeclarationNameIdentifier(element)) return null
         if (!isInsideDeclarationTree(element)) return null
         val elementType = element.node?.elementType

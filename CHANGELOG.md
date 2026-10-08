@@ -6,6 +6,20 @@
 
 ### Added
 
+- DreamShader 2.1.1 intelligence: shared lexical bindings for completion, inference, navigation and Rename; expected-type SMART ranking; expanded second-invocation completion with legal header auto-import in the same undo command.
+- Rich catalog metadata for enum/default values, aliases, named outputs, complete material attributes and dynamic-pin flags. Unified user/node signatures drive parameter information, named arguments, inlay hints and documentation.
+- Instance parent/resource/static templates and material parameter `@name` mapping; metadata keys/values, eight preprocessor directives, local defines and `DS_*` suggestions; conservative preprocessor structure, swizzle, graph matrix/loop and `@custom` lifted-call checks. Updated the diagnostic catalog to 832 upstream codes.
+- Editor regression fixtures cover real Rename, automatic import/Undo, include cycles/diamonds, cancellation and cached 10,000-line/100-include completion performance; pinned 2.1.1 document samples supplement the historical corpus.
+
+### Changed
+
+- Import/include paths follow the current file's source root; omitted extensions only add `.dsh`, explicit `.dss` headers remain legal, `/` anchors cross-root paths, and obsolete `Project:`/`Plugin:` qualifiers and implicit package entries no longer resolve.
+- Multi-output nodes retain Unknown until the chosen output is known; swizzles share `xyzw`/`rgba` validation across completion, inference and diagnostics. `out`/`inout` narrowing uses the bound declaration and proven control flow. Unknown environments and missing Bridge schemas do not create hard errors.
+- File analysis, include closures, catalog files, Bridge indexes and instance parent candidates are cached; completion does not start network requests or Unreal source scans.
+
+
+### Added
+
 - Refactoring milestone M17 (plan: `docs/m17-plan.md`):
   - **Inline Function for the 2.0 dialect** (C31): the Refactoring-menu action (`DreamShader.InlineFunction`) replaces a call to a user function declared in the file or its include closure with the function's body statements. The side-effect matrix runs fully before the write: by-value arguments must be drift-proof (no side-effect operators, no user-declared or unknown callees), `out`/`inout` arguments must be plain unaliased variable references whose formals carry the body's writes back, by-value formals may never be written in the body (including through member/index chains), the body transfers control only through a single trailing `return` (dropped in statement position, rewritten onto the assignment target or receiving declaration at value sites), `break`/`continue` must stay inside the body's own loops, recursion refuses, body locals may not share a name visible at the call site, and the call must be a whole statement, an assignment RHS, or a declaration initializer. The callee declaration stays.
   - **Per-declaration completion in mixed-`.dsh` legacy regions** (C32): each legacy block's text gets a cached 1.x reparse (the C27 structure-view rule shared by the completion context), so the caret inside a legacy function body now sees `isInDeclarationBody`/`isFunctionLike` context — HLSL intrinsics, `UE`, local symbols — and a legacy `Settings` section serves its setting keys, where the region-coarse dispatch previously answered top-level keywords everywhere inside the block. Pure V1/V2 files and V2 regions keep the existing branches byte-for-byte.

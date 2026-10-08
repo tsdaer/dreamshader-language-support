@@ -23,7 +23,7 @@ class DreamShaderFindUsagesProvider : FindUsagesProvider {
         )
     }
 
-    override fun canFindUsagesFor(psiElement: PsiElement): Boolean = targetDeclaration(psiElement) != null
+    override fun canFindUsagesFor(psiElement: PsiElement): Boolean = targetDeclaration(psiElement) != null || psiElement is com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2NamedDeclaration
 
     override fun getHelpId(psiElement: PsiElement): String? = null
 

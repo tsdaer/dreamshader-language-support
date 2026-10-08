@@ -64,6 +64,15 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
         val source = originalElement ?: element ?: return null
         if (source.language != DreamShaderLanguage && resolved?.language != DreamShaderLanguage) return null
 
+        com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2SemanticResolver.resolveIdentifier(source)?.let { binding ->
+            fun escape(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            val function = binding.owner as? com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2FunctionDeclaration
+            val signature = function?.let { DreamShaderCallSignatureResolver.signatureOf(it) }
+            val doc = signature?.documentation ?: binding.owner.children.firstOrNull {
+                it.node.elementType == com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2ElementTypes.DOC_BLOCK }?.text
+            return "<b>${escape(signature?.presentableText ?: "${binding.type.orEmpty()} ${binding.name}")}</b>" +
+                doc?.let { "<br/>" + escape(it).replace("\n", "<br/>") }.orEmpty()
+        }
         val tokenElement = source
         val token = normalizeTokenText(tokenElement.text)
         if (token.isNotBlank()) {
@@ -312,6 +321,7 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
                 append(": ")
                 append(outputType)
             }
+            if (entry.outputs.isNotEmpty()) append("<br/>Outputs: ").append(entry.outputs.joinToString(", ") { "${it.name}: ${it.type ?: "Unknown"}" })
             if (entry.parameters.isNotEmpty()) {
                 append("<br/>")
                 append(DreamShaderBundle.message("docs.label.parameters"))
@@ -321,7 +331,9 @@ class DreamShaderDocumentationProvider : AbstractDocumentationProvider() {
                     parameter.qualifier?.takeIf { it.isNotBlank() }?.let { append(it).append(' ') }
                     append(parameter.name)
                     parameter.type?.takeIf { it.isNotBlank() }?.let { append(": ").append(it) }
-                    parameter.placeholder?.takeIf { it.isNotBlank() }?.let { append(" = ").append(it) }
+                    (parameter.defaultValue ?: parameter.placeholder)?.takeIf { it.isNotBlank() }?.let { append(" = ").append(it) }
+                    if (parameter.enumValues.isNotEmpty()) append(" — ").append(parameter.enumValues.joinToString(" | "))
+                    if (parameter.aliases.isNotEmpty()) append(" (aliases: ").append(parameter.aliases.joinToString(", ")).append(")")
                     append("</li>")
                 }
                 append("</ul>")

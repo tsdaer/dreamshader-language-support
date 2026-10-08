@@ -8,7 +8,8 @@ This directory is the long-form home for project knowledge. The top-level README
 - [Code Map](code-map.md): quick file links for core plugin areas and tests.
 - [Project Structure](project-structure.md): source and test directory layout rules.
 - [DreamShaderLang Baseline](language-baseline.md): upstream language rules and Rider coverage mapping.
-- [DreamShaderLang 2.0 Baseline](language-v2-baseline.md): 2.0 dialect (`.dss`/`.dsi`) coverage map, dispatch rules, and test mapping.
+- [DreamShaderLang 2.x Baseline](language-v2-baseline.md): 2.0 dialect (`.dss`/`.dsi`) coverage map, dispatch rules, and test mapping.
+- [2.1.1 Intelligence](intelligence-2.1.1.md): current semantic/editor behavior, pinned samples and validation.
 - [Package Baseline](package-baseline.md): package layout, import resolution, store/index behavior, and implementation notes.
 - [Roadmap and Progress](roadmap.md): project goal, current progress, detailed TODOs, audit matrices, and changelog policy.
 - [Agent Development Plan](agent-development-plan.md): executable milestone plan (M8–M12) for upstream DreamShader 2.0.x support, fixes, and intelligence goals; task cards and agent working rules.

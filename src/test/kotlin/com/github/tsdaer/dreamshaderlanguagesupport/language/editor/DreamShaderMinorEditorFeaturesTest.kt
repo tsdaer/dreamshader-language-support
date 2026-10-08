@@ -34,6 +34,11 @@ class DreamShaderMinorEditorFeaturesTest : BasePlatformTestCase() {
         assertEquals(listOf("Shared/Common.dsh", "@scope/pkg/Library/Main.dsh"), imports)
     }
 
+    fun testIncludeProviderExtractsV2IncludesAndImports() {
+        val paths = DreamShaderFileIncludeProvider().testIncludeInfos("#include \"Shared.dsh\"\nimport \"Tools.dss\";")
+        assertEquals(listOf("Shared.dsh", "Tools.dss"), paths)
+    }
+
     fun testQualifiedNameProviderForNamespaceMemberAndSection() {
         val file = myFixture.configureByText(
             "qualified_name.dsh",

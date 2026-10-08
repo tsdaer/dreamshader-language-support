@@ -370,7 +370,9 @@ internal data class DreamShaderCompletionItem(
     val priority: Double = 0.0,
     val caretOffset: Int? = null,
     val snippet: String? = null,
-    val replacementStartOffset: Int? = null
+    val replacementStartOffset: Int? = null,
+    val includePath: String? = null,
+    val materialParameterName: String? = null
 )
 
 /**
@@ -1500,7 +1502,9 @@ internal object DreamShaderCompletionSuggester {
 internal class DreamShaderInsertTextHandler(
     private val insertText: String,
     private val caretOffset: Int?,
-    private val replacementStartOffset: Int? = null
+    private val replacementStartOffset: Int? = null,
+    private val includePath: String? = null,
+    private val materialParameterName: String? = null
 ) : InsertHandler<com.intellij.codeInsight.lookup.LookupElement> {
     override fun handleInsert(
         insertionContext: InsertionContext,
@@ -1510,11 +1514,68 @@ internal class DreamShaderInsertTextHandler(
             ?.coerceIn(0, insertionContext.document.textLength)
             ?.takeIf { it <= insertionContext.tailOffset }
             ?: insertionContext.startOffset
-        val end = insertionContext.tailOffset
-        insertionContext.document.replaceString(start, end, insertText)
-        val finalCaret = start + (caretOffset ?: insertText.length)
-        insertionContext.editor.caretModel.moveToOffset(finalCaret.coerceIn(start, start + insertText.length))
+        var end = insertionContext.tailOffset
+        val document = insertionContext.document
+        var text = insertText
+        val paren = text.indexOf('(')
+        var existingArguments = false
+        val following = document.charsSequence.subSequence(end, document.textLength).toString()
+        if (paren >= 0 && text.endsWith(')') && following.trimStart().startsWith('(')) {
+            text = text.take(paren)
+            existingArguments = true
+        } else if (text.endsWith('"') && following.startsWith('"')) end++
+        else if (text.endsWith(" = ") && following.trimStart().startsWith('=')) text = text.removeSuffix(" = ")
+        document.replaceString(start, end, text)
+        var finalCaret = start + (if (existingArguments) text.length + following.takeWhile { it.isWhitespace() }.length + 1
+            else (caretOffset ?: text.length).coerceAtMost(text.length))
+        if (includePath != null) {
+            PsiDocumentManager.getInstance(insertionContext.project).commitDocument(document)
+            val file = insertionContext.file as? DreamShaderPsiFile
+            if (file != null && !file.name.endsWith(".dsi")) {
+                val target = com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver.resolveImport(file, includePath)
+                val closure = file.project.getService(com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2WorkspaceSymbols::class.java).includeClosurePsi(file)
+                if (target != null && closure.none { it.virtualFile == target }) {
+                    var insertion = 0
+                    for (child in file.children) {
+                        if (child.node.elementType in setOf(com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes.WHITE_SPACE,
+                            com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes.LINE_COMMENT,
+                            com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes.BLOCK_COMMENT,
+                            com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2ElementTypes.PRAGMA_DIRECTIVE,
+                            com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2ElementTypes.INCLUDE_DIRECTIVE)) insertion = child.textRange.endOffset
+                        else break
+                    }
+                    val directive = (if (insertion > 0 && document.charsSequence[insertion - 1] != '\n') "\n" else "") + "#include \"$includePath\"\n"
+                    document.insertString(insertion, directive)
+                    if (insertion <= finalCaret) finalCaret += directive.length
+                }
+            }
+        }
+        if (materialParameterName != null) {
+            PsiDocumentManager.getInstance(insertionContext.project).commitDocument(document)
+            val file = insertionContext.file as? DreamShaderPsiFile
+            val leaf = file?.findElementAt(start)
+            val uniform = leaf?.let { PsiTreeUtil.getParentOfType(it, com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2UniformDeclaration::class.java) }
+            if (uniform != null) {
+                val nameDoc = Regex("(?m)^\\s*///\\s*@name[^\\r\\n]*").find(uniform.text)
+                if (nameDoc != null) {
+                    val from = uniform.textOffset + nameDoc.range.first
+                    val to = uniform.textOffset + nameDoc.range.last + 1
+                    val replacement = "/// @name $materialParameterName"
+                    document.replaceString(from, to, replacement)
+                    if (to <= finalCaret) finalCaret += replacement.length - (to - from)
+                } else {
+                    val declaration = document.charsSequence.toString().lastIndexOf("uniform", start)
+                    val lineStart = document.charsSequence.toString().lastIndexOf('\n', declaration - 1).let { it + 1 }
+                    val doc = "/// @name $materialParameterName\n"
+                    document.insertString(lineStart, doc)
+                    finalCaret += doc.length
+                }
+            }
+        }
+        insertionContext.editor.caretModel.moveToOffset(finalCaret.coerceIn(0, document.textLength))
+        insertionContext.tailOffset = finalCaret
     }
+
 }
 
 /**
@@ -1530,6 +1591,12 @@ internal class DreamShaderTemplateInsertHandler(
     ) {
         val editor = insertionContext.editor
         val project = insertionContext.project
+        val following = insertionContext.document.charsSequence.subSequence(insertionContext.tailOffset, insertionContext.document.textLength).toString()
+        if (following.trimStart().startsWith('(') && snippet.contains('(')) {
+            val callee = snippet.substringBefore('(')
+            DreamShaderInsertTextHandler("$callee()", callee.length + 1).handleInsert(insertionContext, item)
+            return
+        }
         insertionContext.document.deleteString(insertionContext.startOffset, insertionContext.tailOffset)
         editor.caretModel.moveToOffset(insertionContext.startOffset)
         PsiDocumentManager.getInstance(project).commitDocument(insertionContext.document)
@@ -1543,8 +1610,8 @@ internal class DreamShaderTemplateInsertHandler(
 }
 
 /** Import path candidates serve `import "` (1.x); 2.0 `#include` shares the collector. */
-internal val V1_IMPORT_EXTENSIONS = listOf("dsh", "dsf", "dsm")
-internal val V2_INCLUDE_EXTENSIONS = listOf("dsh", "dss", "dsi")
+internal val V1_IMPORT_EXTENSIONS = listOf("dsh", "dss")
+internal val V2_INCLUDE_EXTENSIONS = listOf("dsh", "dss")
 
 private val SHADER_FILE_LIST_KEYS = ConcurrentHashMap<String, Key<CachedValue<List<VirtualFile>>>>()
 
@@ -1579,27 +1646,9 @@ internal fun collectProjectShaderFiles(project: Project, extensions: List<String
 }
 
 internal fun collectProjectImportCandidates(file: PsiFile, extensions: List<String> = V1_IMPORT_EXTENSIONS): List<String> {
-    val project = file.project
-    val basePath = project.basePath?.replace('\\', '/')
-    val pathCandidates = collectProjectShaderFiles(project, extensions)
-        .asSequence()
-        .filter { it != file.virtualFile }
-        .flatMap { vf ->
-            val normalizedPath = vf.path.replace('\\', '/')
-            if (basePath != null && normalizedPath.startsWith("$basePath/")) {
-                normalizeProjectRelativeImportCandidates(normalizedPath.removePrefix("$basePath/")).asSequence()
-            } else {
-                sequenceOf(vf.name)
-            }
-        }
-        .distinct()
-        .sorted()
-        .toList()
-
-    val packageRootCandidates = collectPackageRootImportCandidates(file)
-    return (pathCandidates + packageRootCandidates)
-        .distinct()
-        .sorted()
+    return collectProjectShaderFiles(file.project, extensions).asSequence().filter { it != file.virtualFile }
+        .flatMap { com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver.candidatePaths(file, it).asSequence() }
+        .distinct().sorted().toList()
 }
 
 internal fun normalizeProjectRelativeImportCandidates(projectRelativePath: String): List<String> {
@@ -1624,38 +1673,7 @@ internal fun normalizeProjectRelativeImportCandidates(projectRelativePath: Strin
     return listOf(normalized)
 }
 
-private fun collectPackageRootImportCandidates(file: PsiFile): List<String> {
-    val projectBase = file.project.basePath ?: return emptyList()
-    val packagesRoot = LocalFileSystem.getInstance()
-        .findFileByPath("${projectBase.replace('\\', '/')}/DShader/Packages")
-        ?: return emptyList()
-    if (!packagesRoot.isDirectory) return emptyList()
 
-    val results = linkedSetOf<String>()
-    val scopedRoots = packagesRoot.children.filter { it.isDirectory && it.name.startsWith("@") }
-    scopedRoots.forEach { scopeDir ->
-        scopeDir.children
-            .filter { it.isDirectory }
-            .forEach { packageDir ->
-                results.add("${scopeDir.name}/${packageDir.name}")
-            }
-    }
-
-    packagesRoot.children
-        .filter { it.isDirectory && !it.name.startsWith("@") }
-        .forEach { packageDir ->
-            results.add(packageDir.name)
-        }
-
-    // Prefer manifest name when available to respect canonical package naming.
-    (scopedRoots + packagesRoot.children.filter { it.isDirectory && !it.name.startsWith("@") }).forEach { dir ->
-        val packageDirs = if (dir.name.startsWith("@")) dir.children.filter { it.isDirectory } else listOf(dir)
-        packageDirs.forEach { packageDir ->
-            readPackageManifestName(packageDir)?.let { results.add(it) }
-        }
-    }
-    return results.toList()
-}
 
 private fun readPackageManifestName(packageDir: VirtualFile): String? {
     val metadata = packageDir.findChild("dreamshader.package.json") ?: return null
@@ -1811,6 +1829,13 @@ class DreamShaderCompletionContributor : CompletionContributor() {
                     // without this gate the 1.x suggester answered `.` in `.dss` with 1.x keywords.
                     // C23: in a mixed `.dsh` the caret's region decides - legacy blocks only.
                     if (file is DreamShaderPsiFile && !DreamShaderCompletionDialects.servesV1At(file, parameters.offset)) return
+                    if (file is DreamShaderPsiFile) {
+                        val leaf = file.findElementAt((parameters.offset - 1).coerceAtLeast(0))
+                        if (leaf != null) DreamShader2CompletionContexts.preprocessorSuggestions(file, leaf, parameters.offset)?.let { entries ->
+                            entries.forEach { result.addElement(DreamShaderLookupElementFactory.create(it)) }
+                            return
+                        }
+                    }
                     val importPrefix = DreamShaderCompletionSuggester.importCompletionPrefix(file.text, parameters.offset)
                     val targetResult = importPrefix?.let { result.withPrefixMatcher(it.prefix) } ?: result
 

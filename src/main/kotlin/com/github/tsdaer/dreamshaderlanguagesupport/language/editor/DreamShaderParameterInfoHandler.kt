@@ -36,7 +36,7 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
         val owner = context.parameterOwner as? PsiFile
         val file = context.file
         if (file.language != DreamShaderLanguage) return null
-        val call = DreamShaderSignatureHelpAnalyzer.findEnclosingCall(file.text, context.offset) ?: return null
+        val call = DreamShaderSignatureHelpAnalyzer.findEnclosingCall(file.text, context.offset, allowStringInterior = true) ?: return null
         if (owner != null && owner.isValid && owner == file) return owner
         return file
     }
@@ -76,12 +76,15 @@ class DreamShaderParameterInfoHandler : ParameterInfoHandler<PsiFile, DreamShade
 
         val objects = context.objectsToView
         for (i in objects.indices) {
-            context.setUIComponentEnabled(i, true)
+            val row = objects[i] as? DreamShaderCallSignature ?: continue
+            row.activeParameter = DreamShaderSignatureHelpAnalyzer.parameterIndex(element.text, call, row, context.offset)
+            val named = call.arguments.filter { it.isNamed }.map { it.text.substringBefore('=').trim() }
+            context.setUIComponentEnabled(i, named.all { it in row.parameterNames })
         }
     }
 
     override fun updateUI(signature: DreamShaderCallSignature, context: ParameterInfoUIContext) {
-        val parameterIndex = context.currentParameterIndex
+        val parameterIndex = signature.activeParameter.takeIf { it != -2 } ?: context.currentParameterIndex
         val parameterRanges = signature.parameterRanges
 
         val highlightRange = if (parameterIndex in parameterRanges.indices) {

@@ -114,7 +114,7 @@ class DreamShaderPackageImportResolutionTest : BasePlatformTestCase() {
         assertTrue(sharedTargets!!.first().containingFile.virtualFile.path.replace('\\', '/').endsWith("/DShader/Lib/Shared.dsh"))
     }
 
-    fun testResolvesScopedPackageRootImportToManifestEntry() {
+    fun testPackageRootDoesNotExpandManifestEntry() {
         val projectBase = project.basePath ?: error("project base path is null")
         val packageRoot = Paths.get(
             projectBase,
@@ -151,11 +151,11 @@ class DreamShaderPackageImportResolutionTest : BasePlatformTestCase() {
 
         val targets = DreamShaderGotoDeclarationHandler()
             .getGotoDeclarationTargets(sourceElement, offset, myFixture.editor)
-        assertNotNull(targets)
-        assertEquals("NoiseMain.dsh", targets!!.first().containingFile.name)
+        assertNull(targets)
+        assertEquals("NoiseMain.dsh", DreamShaderImportResolver.resolveImport(source, "@typedreammoon/dream-noise/Library/NoiseMain.dsh")?.name)
     }
 
-    fun testResolvesUnscopedPackageRootImportToDefaultLibraryEntry() {
+    fun testPackageRootDoesNotExpandDefaultLibraryEntry() {
         val projectBase = project.basePath ?: error("project base path is null")
         val packageRoot = Paths.get(projectBase, "DShader", "Packages", "dream-common")
         val entryPath = packageRoot.resolve("Library").resolve("dream-commonLib.dsh")
@@ -184,7 +184,7 @@ class DreamShaderPackageImportResolutionTest : BasePlatformTestCase() {
 
         val targets = DreamShaderGotoDeclarationHandler()
             .getGotoDeclarationTargets(sourceElement, offset, myFixture.editor)
-        assertNotNull(targets)
-        assertEquals("dream-commonLib.dsh", targets!!.first().containingFile.name)
+        assertNull(targets)
+        assertEquals("dream-commonLib.dsh", DreamShaderImportResolver.resolveImport(source, "dream-common/Library/dream-commonLib.dsh")?.name)
     }
 }

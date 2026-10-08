@@ -47,7 +47,7 @@ internal object DreamShaderCompletionPriorities {
     const val TYPE = 35.0
     const val HLSL_INTRINSIC = 30.0
     const val CONSTRUCTOR = 25.0
-    const val LOCAL_SYMBOL = 20.0
+    const val LOCAL_SYMBOL = 95.0
 }
 
 /**
@@ -194,17 +194,20 @@ internal object DreamShaderLegacyCompletionSubtrees {
 internal object DreamShaderLookupElementFactory {
     fun create(item: DreamShaderCompletionItem): LookupElement {
         val builder = LookupElementBuilder.create(item.label)
+            .withLookupString(item.insertText.substringBefore('(').trim())
             .withTailText(item.tailText, true)
             .withTypeText(item.typeText ?: item.detail, true)
             .withIcon(item.icon)
         val element = when {
             item.snippet != null -> builder.withInsertHandler(DreamShaderTemplateInsertHandler(item.snippet))
-            item.insertText != item.label || item.replacementStartOffset != null ->
+            item.insertText != item.label || item.replacementStartOffset != null || item.includePath != null ->
                 builder.withInsertHandler(
                     DreamShaderInsertTextHandler(
                         insertText = item.insertText,
                         caretOffset = item.caretOffset,
                         replacementStartOffset = item.replacementStartOffset,
+                        includePath = item.includePath,
+                        materialParameterName = item.materialParameterName,
                     )
                 )
             else -> builder

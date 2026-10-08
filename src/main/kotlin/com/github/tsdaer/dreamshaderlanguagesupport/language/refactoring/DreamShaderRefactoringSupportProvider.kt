@@ -9,11 +9,13 @@ import com.intellij.refactoring.RefactoringActionHandler
 
 class DreamShaderRefactoringSupportProvider : RefactoringSupportProvider() {
     override fun isSafeDeleteAvailable(element: PsiElement): Boolean {
-        return element is DreamShaderDeclaration && element.nameIdentifier != null
+        return (element is DreamShaderDeclaration || element is com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2NamedDeclaration) &&
+            (element as? com.intellij.psi.PsiNameIdentifierOwner)?.nameIdentifier != null
     }
 
     override fun isInplaceRenameAvailable(element: PsiElement, context: PsiElement?): Boolean {
-        return element is DreamShaderDeclaration && element.nameIdentifier != null
+        return (element is DreamShaderDeclaration || element is com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2NamedDeclaration) &&
+            (element as? com.intellij.psi.PsiNameIdentifierOwner)?.nameIdentifier != null
     }
 
     /** Introduce Variable is wired for pure 2.0 files only (C20); 1.x keeps the platform default. */

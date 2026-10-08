@@ -140,8 +140,9 @@ internal data class DreamShaderSymbolIndexSnapshot(
 @Service(Service.Level.PROJECT)
 class DreamShaderSymbolIndexRepository(private val project: Project) {
 
-    @Volatile
-    private var cacheEntry: CacheEntry? = null
+    private val cache = java.util.Collections.synchronizedMap(object : LinkedHashMap<String, CacheEntry>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CacheEntry>?): Boolean = size > 128
+    })
 
     private data class CacheEntry(val path: String, val stamp: String, val snapshot: DreamShaderSymbolIndexSnapshot)
 
@@ -155,11 +156,11 @@ class DreamShaderSymbolIndexRepository(private val project: Project) {
     internal fun indexForPath(indexPath: String): DreamShaderSymbolIndexSnapshot {
         val file = File(indexPath)
         if (!file.exists() || !file.isFile) {
-            if (cacheEntry?.path == indexPath) cacheEntry = null
+            cache.remove(indexPath)
             return DreamShaderSymbolIndexSnapshot(null, indexPath)
         }
         val stamp = "${file.lastModified()}:${file.length()}"
-        cacheEntry?.let { cached ->
+        cache[indexPath]?.let { cached ->
             if (cached.path == indexPath && cached.stamp == stamp) return cached.snapshot
         }
         val raw = runCatching { file.readText(StandardCharsets.UTF_8) }.getOrNull()
@@ -167,7 +168,7 @@ class DreamShaderSymbolIndexRepository(private val project: Project) {
         val data = DreamShaderJson.decodeOrNull<DreamShaderSymbolIndexData>(raw)
             ?.takeIf { it.isSchemaCompatible() }
         val snapshot = DreamShaderSymbolIndexSnapshot(data, indexPath)
-        cacheEntry = CacheEntry(indexPath, stamp, snapshot)
+        cache[indexPath] = CacheEntry(indexPath, stamp, snapshot)
         return snapshot
     }
 

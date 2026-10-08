@@ -10,6 +10,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2Par
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2ParameterList
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2StructField
 import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2WorkspaceSymbols
+import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2SemanticResolver
 import com.intellij.lang.ASTNode
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -30,12 +31,14 @@ internal class DreamShader2InferenceContext private constructor(
     private val project: Project?,
     private val analysis: DreamShader2FileAnalysis,
     private val workspace: DreamShader2WorkspaceSymbols?,
-    private val sourceFile: VirtualFile?,
+    private val sourceFile: DreamShaderPsiFile?,
     private val includeClosure: List<DreamShaderPsiFile>,
 ) {
     private val typeCache = HashMap<PsiElement, DreamShader2Type>()
     private val closureStructFields = HashMap<String, List<DreamShader2StructField>>()
     private val writeBacks = HashMap<DreamShader2FunctionDeclaration, List<WriteBackRecord>>()
+    private val catalogEntries by lazy { DreamShaderMaterialExpressionManifest.catalogEntries(project,
+        project?.getService(com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings::class.java)?.state?.materialExpressionManifestPath) }
     private val catalogReturnTypes by lazy { buildCatalogReturnTypes() }
 
     fun typeOf(expression: PsiElement?): DreamShader2Type {
@@ -54,18 +57,11 @@ internal class DreamShader2InferenceContext private constructor(
      * first), then parameters, then file scope.
      */
     fun typeOfName(name: String, useSite: PsiElement): DreamShader2Type {
+        val binding = DreamShader2SemanticResolver.resolve(name, useSite) ?: return DreamShader2Type.Unknown
         enclosingFunctionOf(useSite)?.let { function ->
-            val declaration = localDeclarationBefore(function, name, useSite)
-            val record = latestWriteBackBefore(function, name, useSite)
-            when {
-                record != null && (declaration == null || declaration.first < record.callStart) ->
-                    return record.type
-                declaration != null -> return declaration.second
-            }
-            parameterType(function, name)?.let { return it }
+            latestWriteBackBefore(function, name, useSite)?.let { return it.type }
         }
-        fileScopeType(name)?.let { return it }
-        return DreamShader2Type.Unknown
+        return DreamShader2Type.fromSpelling(binding.type)
     }
 
     fun structFields(typeName: String): List<DreamShader2StructField> {
@@ -137,29 +133,29 @@ internal class DreamShader2InferenceContext private constructor(
         if (basePsi === element || baseNode.elementType == DreamShaderTokenTypes.DOT) {
             return DreamShader2Type.Unknown
         }
+        if (baseNode.elementType == DreamShader2ElementTypes.CALL_EXPRESSION) {
+            val path = calleePath(basePsi)
+            val output = catalogEntries.firstOrNull { it.qualifiedName == path || path in it.aliases }
+                ?.outputs?.firstOrNull { it.name == memberNode.text }
+            if (output != null) return DreamShader2Type.fromSpelling(output.type)
+            val formal = path?.let { calleeParameters(it) }?.firstOrNull {
+                it.parameterName() == memberNode.text && firstKeywordText(it) in WRITE_BACK_QUALIFIERS
+            }
+            if (formal != null) return DreamShader2Type.fromSpelling(formal.typeName())
+        }
         return memberOf(typeOf(basePsi), memberNode.text)
     }
 
-    private fun memberOf(base: DreamShader2Type, member: String): DreamShader2Type = when {
-        base is DreamShader2Type.Vector -> swizzleType(base, member)
-        base is DreamShader2Type.Scalar && member.length == 1 && member[0].lowercaseChar() in SWIZZLE_LETTERS -> base
-        base is DreamShader2Type.Material -> materialAttributeType(member)
+    fun memberOf(base: DreamShader2Type, member: String): DreamShader2Type = when {
+        base is DreamShader2Type.Vector || base is DreamShader2Type.Scalar -> DreamShader2Swizzle.type(base, member)
+        base is DreamShader2Type.Material -> catalogEntries.asSequence().flatMap { it.materialAttributes.asSequence() }
+            .firstOrNull { it.name == member || member in it.aliases }?.let { DreamShader2Type.fromSpelling(it.type) }
+            ?: materialAttributeType(member)
         base is DreamShader2Type.StructType ->
             structFields(base.name).firstOrNull { it.fieldName() == member }
                 ?.let { DreamShader2Type.fromSpelling(it.typeName()) }
                 ?: DreamShader2Type.Unknown
         else -> DreamShader2Type.Unknown
-    }
-
-    private fun swizzleType(base: DreamShader2Type.Vector, member: String): DreamShader2Type {
-        if (member.isEmpty()) return DreamShader2Type.Unknown
-        val letters = member.lowercase()
-        if (letters.any { it !in SWIZZLE_LETTERS }) return DreamShader2Type.Unknown
-        return when (letters.length) {
-            1 -> DreamShader2Type.Scalar(base.family)
-            in 2..4 -> DreamShader2Type.Vector(base.family, letters.length)
-            else -> DreamShader2Type.Unknown
-        }
     }
 
     private fun indexType(element: PsiElement): DreamShader2Type {
@@ -178,6 +174,7 @@ internal class DreamShader2InferenceContext private constructor(
         val lowerPath = path.lowercase()
         return when {
             lowerPath.startsWith("substrate.") -> DreamShader2Type.Substrate
+            lowerPath == "ue.vertexcolor" -> DreamShader2Type.Vector(DreamShader2Type.Family.FLOAT, 4)
             lowerPath.startsWith("ue.") -> catalogReturnType(path) ?: DreamShader2Type.Unknown
             lowerPath.endsWith(".sample") -> sampledType(path, element)
             lowerPath == "dot" -> dotResultType(element)
@@ -193,11 +190,10 @@ internal class DreamShader2InferenceContext private constructor(
      * workspace export layer stays unchecked — its entries carry no parameter shapes.
      */
     fun calleeParameters(path: String): List<DreamShader2Parameter>? {
-        analysis.functionByName(path)?.let { return it.parameterList()?.parameters() }
-        includeClosure.forEach { includee ->
-            DreamShader2FileAnalysis.of(includee).functionByName(path)?.let { return it.parameterList()?.parameters() }
-        }
-        return null
+        val file = sourceFile ?: return null
+        val signatures = DreamShader2SemanticResolver.functions(file, path).map { it.parameterList()?.parameters().orEmpty() }
+        return signatures.distinctBy { parameters -> parameters.map { Triple(it.parameterName(), it.typeName(), firstKeywordText(it)) } }
+            .singleOrNull()
     }
 
     /** HLSL operand-typed intrinsics: the result carries the first argument's type. */
@@ -370,7 +366,11 @@ internal class DreamShader2InferenceContext private constructor(
         useSite: PsiElement,
     ): WriteBackRecord? {
         val useOffset = useSite.textRange.startOffset
-        return writeBacksIn(function).lastOrNull { it.name == name && it.callEnd <= useOffset }
+        val binding = DreamShader2SemanticResolver.resolve(name, useSite)?.identifier ?: return null
+        return writeBacksIn(function).lastOrNull {
+            it.name == name && it.callEnd <= useOffset && it.binding == binding &&
+                it.guards.all { guard -> PsiTreeUtil.isAncestor(guard, useSite, false) }
+        }
     }
 
     /**
@@ -384,6 +384,13 @@ internal class DreamShader2InferenceContext private constructor(
             val records = mutableListOf<WriteBackRecord>()
             psiTreeWalk(function).forEach { node ->
                 if (node.node.elementType != DreamShader2ElementTypes.CALL_EXPRESSION) return@forEach
+                val source = function.containingFile as? DreamShaderPsiFile ?: return@forEach
+                if (DreamShaderPreprocessorModel.of(source).stateAt(node.textOffset) != DreamShaderPreprocessorModel.State.ACTIVE) return@forEach
+                // A short-circuit or conditional expression does not prove the call ran.
+                if (generateSequence(node.parent) { it.parent }.takeWhile { it != function }.any { parent ->
+                        parent.node.elementType == DreamShader2ElementTypes.EXPRESSION && dreamShader2MeaningfulChildren(parent)
+                            .any { it.elementType == DreamShaderTokenTypes.OPERATOR && it.text in setOf("&&", "||", "?") }
+                    }) return@forEach
                 val path = calleePath(node) ?: return@forEach
                 val formals = calleeParameters(path) ?: return@forEach
                 val argumentList = node.node.findChildByType(DreamShader2ElementTypes.ARGUMENT_LIST)?.psi
@@ -418,6 +425,11 @@ internal class DreamShader2InferenceContext private constructor(
                             node.textRange.endOffset,
                             written,
                             formalType,
+                            DreamShader2SemanticResolver.resolve(written, node)?.identifier,
+                            generateSequence(node.parent) { it.parent }.takeWhile { it != function }
+                                .filter { it.node?.elementType in setOf(DreamShader2ElementTypes.BLOCK,
+                                    DreamShader2ElementTypes.IF_STATEMENT, DreamShader2ElementTypes.FOR_STATEMENT,
+                                    DreamShader2ElementTypes.WHILE_STATEMENT, DreamShader2ElementTypes.DO_WHILE_STATEMENT) }.toList(),
                         ),
                     )
                 }
@@ -448,6 +460,8 @@ internal class DreamShader2InferenceContext private constructor(
         val callEnd: Int,
         val name: String,
         val type: DreamShader2Type,
+        val binding: PsiElement?,
+        val guards: List<PsiElement>,
     )
 
     /** Every BLOCK / `for` header on [useSite]'s ancestor chain — the scopes it can see. */
@@ -535,49 +549,31 @@ internal class DreamShader2InferenceContext private constructor(
     }
 
     private fun userFunctionReturnType(path: String, useSite: PsiElement): DreamShader2Type {
-        analysis.functionByName(path)?.let { function ->
-            function.returnTypeText()?.let { return DreamShader2Type.fromSpelling(it) }
-        }
-        // Include-closure declarations (non-export helpers included) resolve before the
-        // workspace export view: lexical proximity wins, and helpers are invisible to the
-        // export index. First closure hit in include order keeps this deterministic.
-        includeClosure.forEach { includee ->
-            DreamShader2FileAnalysis.of(includee).functionByName(path)?.let { function ->
-                function.returnTypeText()?.let { return DreamShader2Type.fromSpelling(it) }
-            }
-        }
-        workspace?.exportedFunctions(sourceFile)?.forEach { entry ->
-            if (entry.name == path) {
-                entry.returnType?.let { return DreamShader2Type.fromSpelling(it) }
-                return DreamShader2Type.Unknown
-            }
-        }
-        return DreamShader2Type.Unknown
+        val binding = DreamShader2SemanticResolver.resolve(path, useSite)
+        if (binding?.owner !is DreamShader2FunctionDeclaration) return DreamShader2Type.Unknown
+        if (binding.type == null) return DreamShader2Type.Unknown
+        val file = useSite.containingFile as? DreamShaderPsiFile ?: return DreamShader2Type.Unknown
+        val returns = DreamShader2SemanticResolver.functions(file, path).map { DreamShader2Type.fromSpelling(it.returnTypeText()) }.distinct()
+        return returns.singleOrNull() ?: DreamShader2Type.Unknown
     }
-
-    // ------------------------------------------------------------------
-    // catalog
-    // ------------------------------------------------------------------
 
     private fun buildCatalogReturnTypes(): Map<String, DreamShader2Type> {
         if (project == null) return emptyMap()
-        return DreamShaderMaterialExpressionManifest.catalogEntries(project, null)
+        return catalogEntries
             .mapNotNull { entry ->
                 val type = when {
                     entry.namespace.equals("Substrate", ignoreCase = true) -> DreamShader2Type.Substrate
                     else -> DreamShader2Type.fromSpelling(entry.outputType)
                 }
-                if (type == DreamShader2Type.Unknown) null else entry.qualifiedName.lowercase() to type
+                if (type == DreamShader2Type.Unknown) null else entry.qualifiedName to type
             }
             .toMap()
     }
 
     private fun catalogReturnType(path: String): DreamShader2Type? =
-        catalogReturnTypes[path.lowercase()]
+        catalogReturnTypes[path]
 
     companion object {
-        /** x/y/z/w, r/g/b/a, s/t/p/q — the three HLSL swizzle sets, any case. */
-        private const val SWIZZLE_LETTERS = "xyzwrgbastpq"
 
         /**
          * HLSL component-wise intrinsics whose result carries the first argument's type
@@ -601,7 +597,7 @@ internal class DreamShader2InferenceContext private constructor(
                 project = file.project,
                 analysis = DreamShader2FileAnalysis.of(file),
                 workspace = workspace,
-                sourceFile = file.virtualFile,
+                sourceFile = file,
                 includeClosure = closure,
             )
         }
@@ -615,21 +611,8 @@ internal class DreamShader2InferenceContext private constructor(
          * never contaminate the path.
          */
         private fun calleePath(call: PsiElement): String? {
-            val parts = mutableListOf<String>()
-            dreamShader2MeaningfulChildren(call).forEach { child ->
-                when (child.elementType) {
-                    DreamShader2ElementTypes.ARGUMENT_LIST -> return parts.takeIf { it.isNotEmpty() }?.joinToString(".")
-                    DreamShaderTokenTypes.DOT -> Unit
-                    // The namespace/base of a dotted callee arrives as a reference node.
-                    DreamShader2ElementTypes.REFERENCE_EXPRESSION,
-                    DreamShaderTokenTypes.IDENTIFIER,
-                    DreamShaderTokenTypes.KEYWORD,
-                    DreamShaderTokenTypes.TYPE,
-                    -> parts.add(child.text)
-                    else -> Unit
-                }
-            }
-            return parts.takeIf { it.isNotEmpty() }?.joinToString(".")
+            val arguments = call.node.findChildByType(DreamShader2ElementTypes.ARGUMENT_LIST)?.psi ?: return null
+            return call.text.substring(0, arguments.textOffset - call.textOffset).trim().takeIf { it.isNotEmpty() }
         }
 
         private fun booleanResult(

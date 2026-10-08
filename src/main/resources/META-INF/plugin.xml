@@ -176,6 +176,8 @@
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2UniformIndex"/>
         <stubIndex
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2FunctionIndex"/>
+        <stubIndex implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2HeaderFunctionIndex"/>
+        <stubIndex implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2HeaderGlobalIndex"/>
         <stubIndex
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2StructIndex"/>
         <stubIndex

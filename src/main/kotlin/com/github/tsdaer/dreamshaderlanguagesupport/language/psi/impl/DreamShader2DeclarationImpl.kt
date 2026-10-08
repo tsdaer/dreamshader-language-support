@@ -76,6 +76,18 @@ internal fun dreamShader2FirstTypeLeafText(element: PsiElement): String = dreamS
 internal fun dreamShader2MeaningfulChildren(element: PsiElement): List<ASTNode> =
     element.node.getChildren(null).filter { it.elementType != DreamShaderTokenTypes.WHITE_SPACE }
 
+/** A user struct type is an identifier too: skip the type before choosing the name. */
+internal fun dreamShader2DeclarationIdentifier(element: PsiElement): PsiElement? {
+    var sawType = false
+    dreamShader2Leafs(element).forEach { child ->
+        when (child.elementType) {
+            DreamShaderTokenTypes.TYPE -> sawType = true
+            DreamShaderTokenTypes.IDENTIFIER -> if (sawType) return child.psi else sawType = true
+        }
+    }
+    return null
+}
+
 /**
  * The type spelling of a typed declaration (`uniform float3 a;` → `float3`, `MyStruct v;` →
  * `MyStruct`): the first TYPE/IDENTIFIER leaf after the leading modifier keywords. Only
@@ -87,7 +99,7 @@ internal fun dreamShader2TypeSpellingOf(declaration: PsiElement): String? {
         when (leaf.elementType) {
             DreamShaderTokenTypes.TYPE -> return leaf.text
             DreamShaderTokenTypes.IDENTIFIER -> return leaf.text
-            DreamShaderTokenTypes.KEYWORD -> Unit // uniform / static / const / export / extern / inout
+            DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.WHITE_SPACE, DreamShaderTokenTypes.LINE_COMMENT, DreamShaderTokenTypes.BLOCK_COMMENT -> Unit // modifiers and trivia
             else -> if (leaf.elementType != DreamShader2ElementTypes.DOC_BLOCK) {
                 // Anything else before a type leaf means the node is not a plain declaration.
                 return null
@@ -97,7 +109,25 @@ internal fun dreamShader2TypeSpellingOf(declaration: PsiElement): String? {
     return null
 }
 
+/** Type identifiers carry a reference range independent of the declaration's own name. */
+private fun dreamShader2TypeReferences(element: PsiElement): Array<com.intellij.psi.PsiReference> {
+    val owner = element as? PsiNameIdentifierOwner ?: return emptyArray()
+    val type = dreamShader2MeaningfulChildren(element).firstOrNull {
+        it.elementType == DreamShaderTokenTypes.TYPE || it.elementType == DreamShaderTokenTypes.IDENTIFIER
+    }?.takeIf { it.elementType == DreamShaderTokenTypes.IDENTIFIER }?.psi ?: return emptyArray()
+    if (type == owner.nameIdentifier) return emptyArray()
+    val binding = com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2SemanticResolver.resolveIdentifier(type)
+        ?: return emptyArray()
+    val target = binding.owner as? DreamShader2StructDeclaration ?: return emptyArray()
+    if (target == element || (target as? PsiNameIdentifierOwner)?.nameIdentifier != binding.identifier) return emptyArray()
+    return arrayOf(com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2LightReference(element, target, type))
+}
+
 abstract class DreamShader2PsiElementBase(node: ASTNode) : ASTWrapperPsiElement(node) {
+    override fun getReferences(): Array<com.intellij.psi.PsiReference> =
+        if (this is DreamShader2NamedDeclaration) dreamShader2TypeReferences(this) else super.getReferences()
+    override fun getReference(): com.intellij.psi.PsiReference? =
+        if (this is DreamShader2NamedDeclaration) dreamShader2TypeReferences(this).singleOrNull() else super.getReference()
 
     protected fun leafs(): Sequence<ASTNode> = dreamShader2Leafs(this)
 
@@ -124,33 +154,43 @@ abstract class DreamShader2StubbedDeclarationBase<StubT : StubElement<*>> :
     constructor(stub: StubT, nodeType: IElementType) : super(stub, nodeType)
 
     override fun getStub(): StubT? = super.getStub()
+    override fun getReferences(): Array<com.intellij.psi.PsiReference> = dreamShader2TypeReferences(this)
+    override fun getReference(): com.intellij.psi.PsiReference? = dreamShader2TypeReferences(this).singleOrNull()
 }
 
 open class DreamShader2UniformDeclarationImpl : DreamShader2StubbedDeclarationBase<DreamShader2UniformStub>,
-    DreamShader2UniformDeclaration {
+    DreamShader2UniformDeclaration, PsiNameIdentifierOwner {
 
     constructor(node: ASTNode) : super(node)
     constructor(stub: DreamShader2UniformStub, nodeType: IElementType) : super(stub, nodeType)
 
-    override fun declarationName(): String? = stub?.name
-        ?: dreamShader2FirstLeafAfterType(this, DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.TYPE)?.text
+    override fun getName(): String? = declarationName()
+    override fun getNameIdentifier(): PsiElement? = dreamShader2DeclarationIdentifier(this)
+    override fun setName(name: String): PsiElement = renameLocalIdentifier(this, name)
 
-    override fun typeName(): String = stub?.typeName ?: dreamShader2FirstTypeLeafText(this)
+    override fun declarationName(): String? = stub?.name
+        ?: dreamShader2DeclarationIdentifier(this)?.text
+
+    override fun typeName(): String = stub?.typeName ?: dreamShader2TypeSpellingOf(this).orEmpty()
 
     override fun isStaticSwitch(): Boolean =
         stub?.isStaticSwitch ?: dreamShader2DocBlockText(this).contains("@static")
 }
 
 open class DreamShader2GlobalDeclarationImpl : DreamShader2StubbedDeclarationBase<DreamShader2GlobalStub>,
-    DreamShader2GlobalDeclaration {
+    DreamShader2GlobalDeclaration, PsiNameIdentifierOwner {
 
     constructor(node: ASTNode) : super(node)
     constructor(stub: DreamShader2GlobalStub, nodeType: IElementType) : super(stub, nodeType)
 
-    override fun declarationName(): String? = stub?.name
-        ?: dreamShader2FirstLeafAfterType(this, DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.TYPE)?.text
+    override fun getName(): String? = declarationName()
+    override fun getNameIdentifier(): PsiElement? = dreamShader2DeclarationIdentifier(this)
+    override fun setName(name: String): PsiElement = renameLocalIdentifier(this, name)
 
-    override fun typeName(): String = stub?.typeName ?: dreamShader2FirstTypeLeafText(this)
+    override fun declarationName(): String? = stub?.name
+        ?: dreamShader2DeclarationIdentifier(this)?.text
+
+    override fun typeName(): String = stub?.typeName ?: dreamShader2TypeSpellingOf(this).orEmpty()
 }
 
 open class DreamShader2FunctionDeclarationImpl : DreamShader2StubbedDeclarationBase<DreamShader2FunctionStub>,
@@ -164,14 +204,14 @@ open class DreamShader2FunctionDeclarationImpl : DreamShader2StubbedDeclarationB
     override fun getName(): String? = declarationName()
 
     override fun getNameIdentifier(): PsiElement? =
-        dreamShader2FirstLeafAfterType(this, DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.TYPE)?.psi
+        dreamShader2DeclarationIdentifier(this)
 
     override fun setName(name: String): PsiElement {
         val identifier = getNameIdentifier() ?: throw incorrectOperation("Function declaration has no name")
         val newName = PsiFileFactory.getInstance(project)
             .createFileFromText("dummy.dss", DreamShaderLanguage, "export void $name() {}")
             .let { dummy ->
-                dreamShader2FirstLeafAfterType(dummy, DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.TYPE)?.psi
+                PsiTreeUtil.findChildOfType(dummy, DreamShader2FunctionDeclaration::class.java)?.let(::dreamShader2DeclarationIdentifier)
             } ?: throw incorrectOperation("Cannot create identifier '$name'")
         return identifier.replace(newName)
     }
@@ -185,7 +225,7 @@ open class DreamShader2FunctionDeclarationImpl : DreamShader2StubbedDeclarationB
     }
 
     override fun declarationName(): String? = stub?.name
-        ?: dreamShader2FirstLeafAfterType(this, DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.TYPE)?.text
+        ?: dreamShader2DeclarationIdentifier(this)?.text
 
     override fun isExport(): Boolean = stub?.isExport ?: dreamShader2Leafs(this).any {
         it.elementType == DreamShaderTokenTypes.KEYWORD && it.text == "export"
@@ -196,7 +236,7 @@ open class DreamShader2FunctionDeclarationImpl : DreamShader2StubbedDeclarationB
     }
 
     override fun returnTypeText(): String? = stub?.typeName
-        ?: dreamShader2FirstTypeLeafText(this).takeIf { it.isNotEmpty() }
+        ?: dreamShader2TypeSpellingOf(this)
 
     override fun parameterList(): DreamShader2ParameterList? =
         PsiTreeUtil.getChildOfType(this, DreamShader2ParameterList::class.java)
@@ -208,10 +248,14 @@ open class DreamShader2FunctionDeclarationImpl : DreamShader2StubbedDeclarationB
 }
 
 open class DreamShader2StructDeclarationImpl : DreamShader2StubbedDeclarationBase<DreamShader2StructStub>,
-    DreamShader2StructDeclaration {
+    DreamShader2StructDeclaration, PsiNameIdentifierOwner {
 
     constructor(node: ASTNode) : super(node)
     constructor(stub: DreamShader2StructStub, nodeType: IElementType) : super(stub, nodeType)
+
+    override fun getName(): String? = declarationName()
+    override fun getNameIdentifier(): PsiElement? = dreamShader2Leafs(this).firstOrNull { it.elementType == DreamShaderTokenTypes.IDENTIFIER }?.psi
+    override fun setName(name: String): PsiElement = renameLocalIdentifier(this, name)
 
     override fun declarationName(): String? = stub?.name
         ?: dreamShader2Leafs(this)
@@ -222,7 +266,7 @@ open class DreamShader2StructFieldImpl(node: ASTNode) :
     DreamShader2PsiElementBase(node), com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2StructField {
 
     override fun fieldName(): String? =
-        dreamShader2FirstLeafAfterType(this, DreamShaderTokenTypes.TYPE)?.text
+        dreamShader2DeclarationIdentifier(this)?.text
 
     override fun typeName(): String? = dreamShader2TypeSpellingOf(this)
 }
@@ -250,9 +294,13 @@ open class DreamShader2ParameterListImpl(node: ASTNode) : DreamShader2PsiElement
         PsiTreeUtil.getChildrenOfTypeAsList(this, DreamShader2Parameter::class.java)
 }
 
-open class DreamShader2ParameterImpl(node: ASTNode) : DreamShader2PsiElementBase(node), DreamShader2Parameter {
+open class DreamShader2ParameterImpl(node: ASTNode) : DreamShader2PsiElementBase(node), DreamShader2Parameter, PsiNameIdentifierOwner {
+    override fun getName(): String? = parameterName()
+    override fun getNameIdentifier(): PsiElement? = dreamShader2DeclarationIdentifier(this)
+    override fun setName(name: String): PsiElement = renameLocalIdentifier(this, name)
+
     override fun parameterName(): String? =
-        dreamShader2FirstLeafAfterType(this, DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.TYPE)?.text
+        dreamShader2DeclarationIdentifier(this)?.text
 
     override fun typeName(): String? = dreamShader2Leafs(this)
         .firstOrNull {
@@ -302,6 +350,39 @@ open class DreamShader2PragmaDirectiveImpl(node: ASTNode) :
     }
 }
 
+private fun renameLocalIdentifier(owner: PsiNameIdentifierOwner, name: String): PsiElement {
+    val id = owner.nameIdentifier ?: return owner
+    val dummy = PsiFileFactory.getInstance(owner.project).createFileFromText("rename.dss", DreamShaderLanguage, "void $name() {}")
+    val function = PsiTreeUtil.findChildOfType(dummy, DreamShader2FunctionDeclaration::class.java) as? PsiNameIdentifierOwner
+    function?.nameIdentifier?.let { id.replace(it) }
+    return owner
+}
+
+/** A local declaration exposes its first declarator to the platform rename UI. */
+class DreamShader2LocalDeclarationImpl(node: ASTNode) : DreamShader2PsiElementBase(node), DreamShader2NamedDeclaration, PsiNameIdentifierOwner {
+    override fun declarationName(): String? = dreamShader2DeclarationIdentifier(this)?.text
+    override fun getName(): String? = declarationName()
+    override fun getNameIdentifier(): PsiElement? = dreamShader2DeclarationIdentifier(this)
+    override fun setName(name: String): PsiElement = renameLocalIdentifier(this, name)
+}
+
+/** The second and subsequent names in a grouped declaration bind independently. */
+class DreamShader2LocalDeclaratorNameImpl(node: ASTNode) : DreamShader2PsiElementBase(node), DreamShader2NamedDeclaration, PsiNameIdentifierOwner {
+    override fun declarationName(): String? = nameIdentifier?.text
+    override fun getName(): String? = declarationName()
+    override fun getNameIdentifier(): PsiElement? = node.findChildByType(DreamShaderTokenTypes.IDENTIFIER)?.psi
+    override fun setName(name: String): PsiElement = renameLocalIdentifier(this, name)
+}
+
+class DreamShader2ReferenceExpressionImpl(node: ASTNode) : DreamShader2PsiElementBase(node) {
+    override fun getReference(): com.intellij.psi.PsiReference? {
+        val id = node.firstChildNode?.psi ?: return null
+        val binding = com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2SemanticResolver.resolveIdentifier(id) ?: return null
+        if (binding.owner !is DreamShader2NamedDeclaration || (binding.owner as? PsiNameIdentifierOwner)?.nameIdentifier != binding.identifier) return null
+        return com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2LightReference(this, binding.owner, id)
+    }
+}
+
 /**
  * PSI factory for the 2.0 element types; wired through the shared parser definition so one
  * language serves both dialects.
@@ -317,6 +398,9 @@ object DreamShader2PsiElementFactory {
         DreamShader2ElementTypes.STRUCT_FIELD -> DreamShader2StructFieldImpl(node)
         DreamShader2ElementTypes.PARAMETER_LIST -> DreamShader2ParameterListImpl(node)
         DreamShader2ElementTypes.PARAMETER -> DreamShader2ParameterImpl(node)
+        DreamShader2ElementTypes.VARIABLE_DECLARATION_STATEMENT -> DreamShader2LocalDeclarationImpl(node)
+        DreamShader2ElementTypes.LOCAL_DECLARATOR_NAME -> DreamShader2LocalDeclaratorNameImpl(node)
+        DreamShader2ElementTypes.REFERENCE_EXPRESSION -> DreamShader2ReferenceExpressionImpl(node)
         DreamShader2ElementTypes.ARGUMENT_LIST -> DreamShader2ArgumentListImpl(node)
         DreamShader2ElementTypes.ARGUMENT -> DreamShader2ArgumentImpl(node)
         DreamShader2ElementTypes.NAMED_ARGUMENT -> DreamShader2NamedArgumentImpl(node)

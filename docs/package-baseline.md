@@ -7,7 +7,7 @@ Version-specific package impacts should first be captured in `roadmap.md` or a d
 ## DreamShader Package Baseline
 
 Primary package reference (upstream):
-- https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/tools/packages.md
+- https://github.com/TypeDreamMoon/DreamShader/blob/v2.1.1/Docs/tools/packages.md
 
 Reference snapshot used for this README alignment:
 - Checked on `2026-09-01`
@@ -49,13 +49,16 @@ Package import form:
 - `import "@scope/name/Library/Noise.dsh";`
 - Extension-less form should also resolve: `import "@scope/name/Library/Noise";`
 
-Expected import resolution order:
-1. Current file relative path
-2. Project `DShader/`
-3. Project `DShader/Packages/`
+Current import baseline: upstream [v2.1.1 import rules](https://github.com/TypeDreamMoon/DreamShader/blob/v2.1.1/Docs/language/import.md), checked 2026-10-08.
 
-Upstream update note (`2026-05-29` sync):
-- Built-in plugin library import fallback (`Plugins/DreamShader/Library/`) has been removed from upstream docs and should not be used as a resolver source.
+For a relative path, resolve only within the current file's owning source root:
+1. Current file directory
+2. Owning source root
+3. That root's `Packages/` directory
+
+Omitting the extension only appends `.dsh`; explicit `.dsh` / `.dss` headers are legal. `.dsi` and legacy material/function asset files are excluded. Use `/` (including `/Game/`) to anchor cross-root resolution; an own-root match takes precedence over other source roots. Automatic import validates the final target so a shadowing file cannot redirect the selected symbol.
+
+`Project:` / `Plugin:` qualifiers do not resolve. `dreamshader.entry` remains useful package metadata and an explicit-path suggestion; the resolver does not automatically expand an import of the package directory into that entry. No plugin library fallback is added.
 
 ### 4. Package Store and Index Sources
 
@@ -104,8 +107,8 @@ Runtime prerequisite:
 ### 7. Rider Coverage Mapping
 
 Already implemented in this plugin:
-- Import completion can suggest project `.dsh` / `.dsf` / `.dsm` files and package root imports.
-- Import navigation resolves local files, package files, and package metadata `dreamshader.entry` roots when paths are valid.
+- Import completion suggests resolvable `.dsh` / `.dss` header paths in source roots and installed packages.
+- Import navigation resolves legal explicit header paths; a package root import requires an explicit entry-path correction.
 - Package diagnostics distinguish missing package entry files from invalid/unsafe package entry metadata and map them to dedicated messages/quick-fixes.
 - Package install, update, and remove actions update the package install folder and lock file.
 - Package store UI supports card-style search results/details, install, update, remove, open repository, refresh, installed/updates filters, GitHub search, empty states, and index source management.

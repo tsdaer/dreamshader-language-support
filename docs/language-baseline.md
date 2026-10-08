@@ -4,7 +4,9 @@ Stable language-reference notes used by this Rider plugin. Refresh this file whe
 
 ## Dual Baseline (since 1.2.0)
 
-This file covers the **1.x legacy dialect** (`.dsm` / `.dsf` / `.dsh`). Upstream DreamShader 2.0 added a second front end (`2.0.0`, 2026-09-21; this plugin aligns against `2.0.2` @ `b3bbf48`) whose `.dss` / `.dsi` syntax and the 2.0 coverage map live in **`language-v2-baseline.md`**. Both dialects are active: files route by extension plus content markers, and the 1.x pipeline below is frozen - behavior changes to it require a zero-fixture-diff proof first.
+This file covers the **1.x legacy dialect** (`.dsm` / `.dsf` / `.dsh`) retained by the DreamShader **v2.1.1** compiler (`dbdcbede47f84b7bf4b9f671138c1f87fd3e5010`, checked 2026-10-08). The 2.x coverage map is in [language-v2-baseline.md](language-v2-baseline.md). Grammar compatibility remains; shared import and preprocessor services follow the current compiler's rules. Historical grammar/example snapshots below are preserved as regression references.
+
+Current import/include behavior: omitted extensions only add `.dsh`; explicit `.dsh` and `.dss` headers are accepted; relative paths resolve in the current file's source root (directory, root, then its Packages directory); `/` anchors cross-root lookup. `Project:` / `Plugin:` qualifiers and package-entry auto-expansion are unsupported. See [package-baseline.md](package-baseline.md).
 
 ## DreamShaderLang Syntax Baseline
 
