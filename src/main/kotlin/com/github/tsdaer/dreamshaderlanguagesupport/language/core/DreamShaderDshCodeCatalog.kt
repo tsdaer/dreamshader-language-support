@@ -43,7 +43,7 @@ internal object DreamShaderDshCodeCatalog {
 
     /** Upstream docs are browsable on GitHub; [DreamShaderDshCodeEntry.docAnchor] is appended. */
     const val UPSTREAM_DOCS_BASE_URL: String =
-        "https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/diagnostics/"
+        "https://github.com/TypeDreamMoon/DreamShader/blob/v2.2.0/Docs/diagnostics/"
 
     private val cache = AtomicReference<Map<String, DreamShaderDshCodeEntry>?>(null)
 
@@ -56,6 +56,9 @@ internal object DreamShaderDshCodeCatalog {
 
     fun documentationUrl(entry: DreamShaderDshCodeEntry): String =
         UPSTREAM_DOCS_BASE_URL + entry.docAnchor
+
+    fun matching(prefix: String, severity: String): List<DreamShaderDshCodeEntry> =
+        codesByCode().values.filter { it.severity.equals(severity, ignoreCase = true) && it.code.startsWith(prefix, ignoreCase = true) }
 
     /**
      * First `DSHnnnn` code occurring in free text — the form used by bridge messages that

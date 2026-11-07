@@ -1870,6 +1870,7 @@ internal object DreamShaderCompletionAutoPopup {
             // lexical - no full-file re-parse on the typed-handler hot path.
             return when (charTyped) {
                 '.' -> V2_MEMBER_ACCESS_PREFIX.containsMatchIn(linePrefix(text, safeOffset))
+                ':' -> linePrefix(text, safeOffset).trimEnd().endsWith("::")
                 '(' -> true
                 '=' -> V2_PRAGMA_VALUE_PREFIX.containsMatchIn(linePrefix(text, safeOffset))
                 else -> false

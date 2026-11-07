@@ -1,4 +1,5 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.lexer
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPragmas
 import com.intellij.lexer.LexerBase
 import com.intellij.psi.tree.IElementType
 import java.util.*
@@ -47,6 +48,16 @@ class DreamShaderLexer : LexerBase() {
         val i = tokenEnd
         tokenStart = i
         val c = buffer[i]
+
+        // A shared file pragma is one legacy token, like a line directive: its arguments
+        // must not be interpreted as the start of a legacy declaration.
+        if (c == '#' && DreamShaderPragmas.isSharedAt(buffer, i) && isLineStart(i)) {
+            var end = i + 1
+            while (end < endOffset && buffer[end] != '\n' && buffer[end] != '\r') end++
+            tokenEnd = end
+            tokenType = DreamShaderTokenTypes.PREPROCESSOR_DIRECTIVE
+            return
+        }
 
         if (c.isWhitespace()) {
             var j = i + 1
@@ -156,6 +167,15 @@ class DreamShaderLexer : LexerBase() {
 
         tokenEnd = i + 1
         tokenType = DreamShaderTokenTypes.BAD_CHARACTER
+    }
+
+    private fun isLineStart(offset: Int): Boolean {
+        for (i in offset - 1 downTo 0) {
+            val ch = buffer[i]
+            if (ch == '\n' || ch == '\r') return true
+            if (!ch.isWhitespace()) return false
+        }
+        return true
     }
 
     private fun classifyIdentifier(word: String): IElementType {

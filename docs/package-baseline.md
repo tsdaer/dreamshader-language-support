@@ -7,7 +7,9 @@ Version-specific package impacts should first be captured in `roadmap.md` or a d
 ## DreamShader Package Baseline
 
 Primary package reference (upstream):
-- https://github.com/TypeDreamMoon/DreamShader/blob/v2.1.1/Docs/tools/packages.md
+- https://github.com/TypeDreamMoon/DreamShader/blob/v2.2.0/Docs/tools/packages.md
+
+DreamShader 2.2.0 builds supported package sources under `Assets/` and package headers that opt into generation. Examples are excluded. Rider offers header generation completions; Unreal generates the assets and reports their paths.
 
 Reference snapshot used for this README alignment:
 - Checked on `2026-09-01`

@@ -479,6 +479,12 @@
       "docAnchor": "DSH2xxx.md#dsh2259"
     },
     {
+      "code": "DSH2260",
+      "severity": "warning",
+      "message": "'{0}' is not a value of NoGeneration, which is true or false; the block is built as if it were false.",
+      "docAnchor": "DSH2xxx.md#dsh2260"
+    },
+    {
       "code": "DSH2300",
       "severity": "error",
       "message": "Expected '`{' to open the block of pass '{0}', found {1}.",
@@ -670,6 +676,12 @@
       "severity": "error",
       "message": "Expected ')' to close the parameter list, found {1}.",
       "docAnchor": "DSH3xxx.md#dsh3218"
+    },
+    {
+      "code": "DSH3219",
+      "severity": "warning",
+      "message": "'#pragma nogeneration' takes no arguments, and '{0}' was ignored: the file is still marked. Remove the line...",
+      "docAnchor": "DSH3xxx.md#dsh3219"
     },
     {
       "code": "DSH3220",
@@ -2229,7 +2241,7 @@
     {
       "code": "DSH6221",
       "severity": "error",
-      "message": "Inlining '{0}' would go {1} calls deep, past the limit of {2}; flatten the call chain or move part of it in...",
+      "message": "Resolving the defaults of '{0}' would go {1} calls deep, past the limit of {2}; pass explicit values or fla...",
       "docAnchor": "DSH6xxx.md#dsh6221"
     },
     {
@@ -2243,6 +2255,12 @@
       "severity": "error",
       "message": "'{0}' is this file's material entry and is called by the engine, not by the shader.",
       "docAnchor": "DSH6xxx.md#dsh6223"
+    },
+    {
+      "code": "DSH6224",
+      "severity": "error",
+      "message": "The default value of '{0}' in '{1}' depends on itself; pass an explicit value for a parameter in the cycle.",
+      "docAnchor": "DSH6xxx.md#dsh6224"
     },
     {
       "code": "DSH6250",
@@ -2333,6 +2351,18 @@
       "severity": "warning",
       "message": "'{0}' is 'selfcontained', so the '@custom' function '{1}' it calls is not embedded in its node; the call is...",
       "docAnchor": "DSH6xxx.md#dsh6264"
+    },
+    {
+      "code": "DSH6265",
+      "severity": "error",
+      "message": "'{0}' takes {1} argument(s) in the HLSL it becomes, but this call passes {2}.",
+      "docAnchor": "DSH6xxx.md#dsh6265"
+    },
+    {
+      "code": "DSH6266",
+      "severity": "error",
+      "message": "'{0}' returns nothing in the HLSL it becomes, so this call has no value to read; pass a variable for each o...",
+      "docAnchor": "DSH6xxx.md#dsh6266"
     },
     {
       "code": "DSH6300",
@@ -2471,6 +2501,18 @@
       "severity": "error",
       "message": "'{0}' reaches itself through the 'UE.' calls lifted out of its body, and each call makes a new custom node,...",
       "docAnchor": "DSH6xxx.md#dsh6330"
+    },
+    {
+      "code": "DSH6331",
+      "severity": "warning",
+      "message": "'{0}' is not an attribute of a '{1}' block, and was ignored; the header takes Generate, Library and Descrip...",
+      "docAnchor": "DSH6xxx.md#dsh6331"
+    },
+    {
+      "code": "DSH6332",
+      "severity": "error",
+      "message": "'{0}' holds a placeholder other than '`{Name`}', the only one a Generate template has.",
+      "docAnchor": "DSH6xxx.md#dsh6332"
     },
     {
       "code": "DSH7111",
@@ -2837,6 +2879,24 @@
       "severity": "warning",
       "message": "A slider range ('@slider', or 'Slider(min, max)' in a 1.x property) is for a scalar parameter; this one is ...",
       "docAnchor": "DSH7xxx.md#dsh7233"
+    },
+    {
+      "code": "DSH7234",
+      "severity": "warning",
+      "message": "'{0}' asks to generate '{1}', and only a package's header generates material functions; this file is not in...",
+      "docAnchor": "DSH7xxx.md#dsh7234"
+    },
+    {
+      "code": "DSH7235",
+      "severity": "warning",
+      "message": "'#pragma nogeneration' in '{0}' was ignored: it marks the file it is written in, a header builds nothing, a...",
+      "docAnchor": "DSH7xxx.md#dsh7235"
+    },
+    {
+      "code": "DSH7236",
+      "severity": "warning",
+      "message": "A 'disable_warning' or 'disable_error' list names no code, and disables nothing; write the codes after it, ...",
+      "docAnchor": "DSH7xxx.md#dsh7236"
     },
     {
       "code": "DSH7250",
@@ -3625,6 +3685,12 @@
       "docAnchor": "DSH8xxx.md#dsh8132"
     },
     {
+      "code": "DSH8133",
+      "severity": "error",
+      "message": "DSH8133: '{0}' is built from '{1}', a file of an installed package, which the package's installer replaces ...",
+      "docAnchor": "DSH8xxx.md#dsh8133"
+    },
+    {
       "code": "DSH8149",
       "severity": "error",
       "message": "DSH8149: '{0}' uses conditional compilation, and '{1}' holds only the branch that was taken -- adopting it ...",
@@ -3945,7 +4011,7 @@
     {
       "code": "DSH8260",
       "severity": "error",
-      "message": "The parent '{0}' comes from '{1}', which does not compile, so the parameters this instance overrides cannot...",
+      "message": "The parent source '{0}' failed to compile, so this instance has no parent to build against. {1}",
       "docAnchor": "DSH8xxx.md#dsh8260"
     },
     {
@@ -3989,6 +4055,48 @@
       "severity": "error",
       "message": "The default texture reference '{0}' of parameter '{1}' does not resolve to an asset path. {2}",
       "docAnchor": "DSH8xxx.md#dsh8271"
+    },
+    {
+      "code": "DSH8273",
+      "severity": "error",
+      "message": "'{0}' holds a placeholder other than '`{Name`}', the only one a generate template has.",
+      "docAnchor": "DSH8xxx.md#dsh8273"
+    },
+    {
+      "code": "DSH8274",
+      "severity": "error",
+      "message": "'{0}' cannot be generated as the material function '{1}': {2}.",
+      "docAnchor": "DSH8xxx.md#dsh8274"
+    },
+    {
+      "code": "DSH8275",
+      "severity": "error",
+      "message": "'{0}' is generated a second time here; the line {1} already generates it from another function.",
+      "docAnchor": "DSH8xxx.md#dsh8275"
+    },
+    {
+      "code": "DSH8276",
+      "severity": "warning",
+      "message": "'{0}' is not a key of '#pragma generate', and was ignored; it takes Functions, Library and Desc.",
+      "docAnchor": "DSH8xxx.md#dsh8276"
+    },
+    {
+      "code": "DSH8277",
+      "severity": "info",
+      "message": "'{0}' was left alone: '{1}' marks it NoGeneration, and only a compile that names the file builds it.",
+      "docAnchor": "DSH8xxx.md#dsh8277"
+    },
+    {
+      "code": "DSH8278",
+      "severity": "warning",
+      "message": "'{0}' has never been built: '{1}' marks it NoGeneration, so only a compile that names the file builds it, a...",
+      "docAnchor": "DSH8xxx.md#dsh8278"
+    },
+    {
+      "code": "DSH8279",
+      "severity": "error",
+      "message": "The parent '{0}' comes from '{1}', which marks it NoGeneration, and it has never been built, so there is no...",
+      "docAnchor": "DSH8xxx.md#dsh8279"
     },
     {
       "code": "DSH8290",
@@ -4119,7 +4227,7 @@
     {
       "code": "DSH8311",
       "severity": "error",
-      "message": "'{0}' was built but could not be saved with its render targets; its slots are already in the registry. In t...",
+      "message": "'{0}' was built but could not be saved with its render targets; its slots are already in the registry. Make...",
       "docAnchor": "DSH8xxx.md#dsh8311"
     },
     {
@@ -4839,6 +4947,12 @@
       "docAnchor": "DSH9xxx.md#dsh9110"
     },
     {
+      "code": "DSH9111",
+      "severity": "warning",
+      "message": "'{0}' is in a package's asset folder and no source builds it any more: its package was removed or stopped g...",
+      "docAnchor": "DSH9xxx.md#dsh9111"
+    },
+    {
       "code": "DSH9200",
       "severity": "error",
       "message": "The Custom Pass slot registry cannot be read: {0}. 'dsc pass-registry -Rebuild' moves it aside and gives ev...",
@@ -5001,5 +5115,5 @@
       "docAnchor": "DSH9xxx.md#dsh9228"
     }
   ],
-  "source": "DreamShader 2.1.1 @dbdcbede47f84b7bf4b9f671138c1f87fd3e5010"
+  "source": "DreamShader 2.2.0 @b5169970e3e8fb75199b1c0cef17d213ca3a3573"
 }

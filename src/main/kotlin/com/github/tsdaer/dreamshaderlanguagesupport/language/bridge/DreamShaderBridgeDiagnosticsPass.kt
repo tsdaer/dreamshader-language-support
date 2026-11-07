@@ -1,5 +1,7 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.bridge
 
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
+
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDshCodeCatalog
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDshCodeEntry
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
@@ -27,10 +29,10 @@ internal object DreamShaderBridgeDiagnosticsPass {
             val end = (start + 1).coerceAtMost(file.textLength)
             if (start >= end) return@forEach
 
-            val severity = if (diagnostic.severity == "warning" || diagnostic.severity == "warn") {
-                HighlightSeverity.WARNING
-            } else {
-                HighlightSeverity.ERROR
+            val severity = when (diagnostic.severity.lowercase()) {
+                "warning", "warn" -> HighlightSeverity.WARNING
+                "info", "information" -> HighlightSeverity.INFORMATION
+                else -> HighlightSeverity.ERROR
             }
             val code = diagnostic.code?.takeIf { it.isNotBlank() }
                 ?: DreamShaderDshCodeCatalog.firstCodeIn(diagnostic.message)
@@ -74,7 +76,14 @@ internal object DreamShaderBridgeDiagnosticsPass {
                     .append("</small>")
             }
         }
+        noGenerationHint(code)?.let { append("<br>").append(StringUtil.escapeXmlEntities(it)) }
     }
+
+    internal fun noGenerationHint(code: String?): String? =
+        when (code?.uppercase()) {
+            "DSH8277", "DSH8278" -> DreamShaderBundle.message("bridge.diagnostic.noGeneration")
+            else -> null
+        }
 
     private fun displayMessageOf(diagnostic: DreamShaderBridgeDiagnostic, code: String?): String =
         code?.let { "[$it] ${diagnostic.message}" } ?: diagnostic.message

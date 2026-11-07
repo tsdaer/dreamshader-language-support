@@ -124,6 +124,7 @@ internal object DreamShader2SemanticResolver {
         bindings(file).firstOrNull { it.identifier == identifier }?.let { return it }
         // Members, named arguments, and metadata are different namespaces.
         val parent = identifier.parent ?: return null
+        if (parent.node.elementType == E.REFERENCE_EXPRESSION && DreamShaderLegacyNamespaceSymbols.referenceParts(parent).isNotEmpty()) return null
         if (parent.node.elementType == E.MEMBER_ACCESS_EXPRESSION &&
             dreamShader2MeaningfulChildren(parent).lastOrNull()?.psi == identifier) return null
         if (parent is DreamShader2NamedArgument && parent.argumentName() == identifier.text) return null

@@ -75,6 +75,18 @@ class DreamShaderDialectPreventionPassTest : BasePlatformTestCase() {
         )
     }
 
+    fun testSharedFilePragmasKeepLegacyDeclarationsAndAvoidDsh2248() {
+        val file = myFixture.configureByText("Legacy.dsf", """
+            #pragma nogeneration
+            #pragma disable_warning(DSH7224)
+            #pragma disable_error(DSH8219)
+            ShaderFunction(Name = "MF_Legacy", NoGeneration = true) { }
+        """.trimIndent())
+        val declaration = com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil.topLevelDeclarations(file).single()
+        assertEquals("MF_Legacy", declaration.declarationName())
+        assertFalse(highlightDescriptions(HighlightSeverity.ERROR).any { "DSH2248" in it })
+    }
+
     // ------------------------------------------------------------------
     // DSH3203: angle-bracket #include
     // ------------------------------------------------------------------

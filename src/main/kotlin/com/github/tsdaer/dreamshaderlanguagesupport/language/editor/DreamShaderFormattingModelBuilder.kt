@@ -92,11 +92,11 @@ private class DreamShaderFormattingBlock(
             return spaces(0)
         }
 
-        if (isBeforeDoubleColon(left, right)) {
+        if (rightType == DreamShaderTokenTypes.OPERATOR && rightText == "::" || isBeforeDoubleColon(left, right)) {
             return spaces(if (custom.SPACE_AROUND_DOUBLE_COLON) 1 else 0)
         }
 
-        if (isAfterDoubleColon(left, right)) {
+        if (leftType == DreamShaderTokenTypes.OPERATOR && left.text == "::" || isAfterDoubleColon(left, right)) {
             return spaces(if (custom.SPACE_AROUND_DOUBLE_COLON) 1 else 0)
         }
 

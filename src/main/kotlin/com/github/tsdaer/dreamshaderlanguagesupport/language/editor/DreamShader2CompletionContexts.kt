@@ -15,6 +15,8 @@ internal object DreamShader2CompletionContexts {
 
     fun preprocessorSuggestions(file: DreamShaderPsiFile, leaf: PsiElement, offset: Int): List<DreamShaderCompletionItem>? {
         val line = file.text.take(offset).substringAfterLast('\n').trimStart()
+        DreamShader22Completion.suggest(file, leaf, offset, line)?.let { return it }
+        if (line.startsWith("///") && DreamShader22Completion.isPackageHeader(file)) return suggest(file, leaf, offset)
         if (!line.startsWith('#')) return null
         return suggest(file, leaf, offset)
     }
@@ -24,11 +26,17 @@ internal object DreamShader2CompletionContexts {
         val before = file.text.take(offset.coerceIn(0, file.textLength))
         val line = before.substringAfterLast('\n').trimStart()
         val instance = file.name.endsWith(".dsi")
+        DreamShader22Completion.suggest(file, leaf, offset, line)?.let { return it }
         if (line.startsWith("///")) {
             val slot = Regex("""^///\s*@([A-Za-z_]*)(?:\s+(.*))?$""").find(line) ?: return emptyList()
             val key = slot.groupValues[1]
-            if (slot.groups[2] == null) return listOf("name", "default", "sampler", "static", "asset", "page", "slider", "group", "sort", "desc", "library", "layer", "layerblend", "param", "custom")
-                .map { item(it, "$it ", "metadata") }
+            if (slot.groups[2] == null) {
+                val keys = listOf("name", "default", "sampler", "static", "asset", "page", "slider", "group", "sort",
+                    "desc", "library", "layer", "layerblend", "param", "custom") +
+                    if (DreamShader22Completion.isPackageHeader(file)) listOf("generate") else emptyList()
+                return keys.map { item(it, "$it ", "metadata") } +
+                    if (file.name.endsWith(".dss", ignoreCase = true)) listOf(item("nogeneration", type = "metadata")) else emptyList()
+            }
             return when (key) {
                 "sampler" -> listOf("Color", "LinearColor", "Normal", "Masks", "Grayscale", "Alpha", "DistanceFieldFont", "External").map { item(it, type = "sampler") }
                 "name" -> if (instance) {
@@ -39,6 +47,7 @@ internal object DreamShader2CompletionContexts {
                 "page", "sort" -> listOf(item("0", type = "integer"))
                 "slider" -> listOf(item("0 1", type = "range"))
                 "default" -> listOf(item("None", type = "resource"))
+                "generate" -> if (DreamShader22Completion.isPackageHeader(file)) listOf(item("none", type = "opt out")) else emptyList()
                 else -> emptyList()
             }
         }

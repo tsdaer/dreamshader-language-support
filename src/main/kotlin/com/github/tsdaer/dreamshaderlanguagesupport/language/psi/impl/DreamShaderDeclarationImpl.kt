@@ -63,6 +63,9 @@ class DreamShaderDeclarationImpl(node: ASTNode) :
     }
 
     override fun returnType(): String? {
+        functionHeadAfterAttributes()?.let { head ->
+            return head.takeIf { it.elementType == DreamShaderTokenTypes.TYPE }?.text
+        }
         var child = node.firstChildNode
         var seenKeyword = false
         while (child != null) {
@@ -84,6 +87,10 @@ class DreamShaderDeclarationImpl(node: ASTNode) :
 
     override fun getNameIdentifier(): PsiElement? {
         nameAttributeValueElement()?.let { return it }
+        functionHeadAfterAttributes()?.let { head ->
+            val name = if (head.elementType == DreamShaderTokenTypes.TYPE) nextHeaderToken(head) else head
+            return name?.takeIf { it.elementType == DreamShaderTokenTypes.IDENTIFIER }?.psi
+        }
         var child = node.firstChildNode
         var seenKeyword = false
         while (child != null) {
@@ -107,6 +114,30 @@ class DreamShaderDeclarationImpl(node: ASTNode) :
         }
         return null
     }
+
+    // DreamShader 2.2 permits an attribute list before a package function's name.
+    private fun functionHeadAfterAttributes(): ASTNode? {
+        if (keywordText() !in setOf("function", "graphfunction")) return null
+        val keyword = node.findChildByType(DreamShaderTokenTypes.KEYWORD) ?: return null
+        val opening = nextHeaderToken(keyword)?.takeIf { it.elementType == DreamShaderTokenTypes.LPAREN } ?: return null
+        var depth = 1
+        var child = opening.treeNext
+        while (child != null) {
+            when (child.elementType) {
+                DreamShaderTokenTypes.LPAREN -> depth++
+                DreamShaderTokenTypes.RPAREN -> if (--depth == 0) return nextHeaderToken(child)
+                DreamShaderTokenTypes.LBRACE -> return null
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
+    private fun nextHeaderToken(node: ASTNode): ASTNode? =
+        generateSequence(node.treeNext) { it.treeNext }.firstOrNull {
+            it.elementType != DreamShaderTokenTypes.WHITE_SPACE && it.elementType != DreamShaderTokenTypes.LINE_COMMENT &&
+                it.elementType != DreamShaderTokenTypes.BLOCK_COMMENT
+        }
 
     override fun setName(newName: String): PsiElement {
         if (newName.isBlank()) throw IncorrectOperationException("DreamShader declaration name cannot be blank")

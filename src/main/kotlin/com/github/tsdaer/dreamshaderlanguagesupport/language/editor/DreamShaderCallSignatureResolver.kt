@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportClosureResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.settings.DreamShaderProjectSettings
+import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShaderLegacyNamespaceSymbols
 import com.intellij.psi.PsiFile
 
 /**
@@ -14,6 +15,10 @@ import com.intellij.psi.PsiFile
 internal object DreamShaderCallSignatureResolver {
     fun resolveSignatures(functionName: String, sourceFile: PsiFile): List<DreamShaderCallSignature> {
         (sourceFile as? com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile)?.let { file ->
+            if ("::" in functionName && DreamShaderCompletionDialects.dialectOf(file) !=
+                com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDialect.V1) {
+                return DreamShaderLegacyNamespaceSymbols.resolve(file, functionName).map { it.signature }
+            }
             val declared = com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2SemanticResolver.functions(file, functionName)
             if (declared.isNotEmpty()) return declared.map(::signatureOf)
         }

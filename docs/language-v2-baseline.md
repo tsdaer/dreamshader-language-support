@@ -1,8 +1,12 @@
 # DreamShaderLang 2.x Baseline
 
-Current rules are pinned to DreamShader **v2.1.1**, commit `dbdcbede47f84b7bf4b9f671138c1f87fd3e5010`, checked on 2026-10-08 for plugin 2.5.0. Both the 2.x and compiler-supported 1.x dialects remain available. The sections below M8–M17 describe historical implementations; this current section supersedes conflicting old behavior.
+Current compatibility is pinned to DreamShader **v2.2.0**, commit `b5169970e3e8fb75199b1c0cef17d213ca3a3573`, for plugin 2.5.1. Both the 2.x and compiler-supported 1.x dialects remain available.
 
-## Current 2.1.1 Intelligence
+- Shared file pragmas `nogeneration`, `disable_warning` and `disable_error` preserve legacy parsing. The editor completes diagnostic codes by severity. Bridge diagnostics remain authoritative, including errors that the compiler had to re-report.
+- A `.dss` call written `Ns::Fn(...)` resolves 1.x functions in its include closure, including legacy blocks within mixed headers. Completion, Go to Declaration and parameter hints preserve the qualified spelling.
+- Generation completions follow [Package assets](https://github.com/TypeDreamMoon/DreamShader/blob/v2.2.0/Docs/tools/packages.md#package-assets). Unreal handles generation and the [NoGeneration](https://github.com/TypeDreamMoon/DreamShader/blob/v2.2.0/Docs/generation/no-generation.md) skip rules. Custom Pass `.dsp` support is deferred.
+
+## Editing behavior introduced in 2.1.1
 
 See [behavior and validation](intelligence-2.1.1.md) for the feature map and fixture commands.
 

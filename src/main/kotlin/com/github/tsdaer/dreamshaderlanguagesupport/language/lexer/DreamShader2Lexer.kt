@@ -269,7 +269,7 @@ class DreamShader2Lexer : LexerBase() {
             c == '<' && next == '<' -> 2
             c == '>' && next == '>' -> 2
             next == '=' && c in "=!<>+-*/%&|^" -> 2
-            next == c && c in "&|+-" -> 2 // && || ++ --
+            next == c && c in "&|+-:" -> 2 // && || ++ -- ::
             else -> 1
         }
     }

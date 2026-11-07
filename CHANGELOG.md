@@ -2,6 +2,19 @@
 
 # dreamshader-language-support Changelog
 
+## [2.5.1] - 2026-11-07
+
+### Added
+
+- DreamShader 2.2.0 compatibility: qualified calls such as `BL::TexNoise3D(...)` in `.dss` support completion, Go to Declaration and parameter hints for included 1.x namespace functions.
+- Completion for diagnostic pragmas and severity-specific codes, NoGeneration markers, and package asset generation declarations. The bundled catalog covers all 851 upstream diagnostic codes.
+
+### Fixed
+
+- Shared file pragmas preserve 1.x parsing in `.dsm` and `.dsf` and no longer cause spurious `DSH2248` errors.
+- Bridge informational diagnostics keep their severity. NoGeneration diagnostics explain how to compile the source explicitly.
+- The file icon provider uses the correct IntelliJ extension point so `.dss` and `.dsi` icons load without a Rider plugin exception.
+
 ## [2.5.0] - 2026-10-07
 
 ### Added
@@ -387,6 +400,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[2.5.1]: https://github.com/tsdaer/dreamshader-language-support/compare/2.5.0...2.5.1
 [2.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.0.0...2.1.0

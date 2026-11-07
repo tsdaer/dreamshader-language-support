@@ -17,7 +17,7 @@
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileType"
                 fieldName="INSTANCE"
                 extensions="dsm;dsf;dsh;dss;dsi"/>
-        <iconProvider
+        <fileIconProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderFileIconProvider"/>
         <lang.syntaxHighlighterFactory
                 language="DreamShaderLang"

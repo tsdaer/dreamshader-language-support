@@ -1,4 +1,6 @@
 package com.github.tsdaer.dreamshaderlanguagesupport.language.editor
+
+import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.normalizeLegacyQualifiedCall
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderLanguageKeywords
 import java.util.regex.Pattern
 import java.util.*
@@ -300,7 +302,7 @@ object DreamShaderSignatureHelpAnalyzer {
             val nameRange = findFunctionNameRange(text, left) ?: continue
             if (isDeclarationHead(text, nameRange.first)) continue
             val right = findMatchingRightParen(text, left)
-            return DreamShaderParsedCall(text.substring(nameRange.first, nameRange.last + 1),
+            return DreamShaderParsedCall(normalizeLegacyQualifiedCall(text.substring(nameRange.first, nameRange.last + 1)),
                 nameRange.first, nameRange.last + 1, left, right,
                 parseArguments(text, left + 1, (right ?: safeOffset).coerceAtLeast(left + 1)))
         }
@@ -341,7 +343,9 @@ object DreamShaderSignatureHelpAnalyzer {
         if (i >= text.length || text[i] != '(') return null
         if (isDeclarationHead(text, left)) return null
         val rightParen = findMatchingRightParen(text, i) ?: return null
-        val functionName = text.substring(left, safeEnd).trim()
+        val qualifiedRange = findFunctionNameRange(text, i)?.takeIf { it.last + 1 == safeEnd && "::" in text.substring(it) }
+        if (qualifiedRange != null) left = qualifiedRange.first
+        val functionName = normalizeLegacyQualifiedCall(text.substring(left, safeEnd).trim())
         if (functionName.isBlank()) return null
         return DreamShaderParsedCall(
             functionName = functionName,
@@ -448,8 +452,11 @@ object DreamShaderSignatureHelpAnalyzer {
                 start--
                 continue
             }
-            if (ch == ':' && start > 0 && text[start - 1] == ':') {
-                start -= 2
+            var separator = start
+            while (separator >= 0 && text[separator].isWhitespace()) separator--
+            if (separator > 0 && text[separator] == ':' && text[separator - 1] == ':') {
+                start = separator - 2
+                while (start >= 0 && text[start].isWhitespace()) start--
                 continue
             }
             break
@@ -476,6 +483,20 @@ object DreamShaderSignatureHelpAnalyzer {
             presentableText = presentableText,
             parameterRanges = ranges,
             parameterNames = parameters.toList()
+        )
+    }
+
+    internal fun legacyNamespaceSignature(name: String, text: String, nameEnd: Int, returnType: String?): DreamShaderCallSignature? {
+        val left = (nameEnd until text.length).firstOrNull { !text[it].isWhitespace() }
+            ?.takeIf { text[it] == '(' } ?: return null
+        val right = findMatchingRightParen(text, left) ?: return null
+        val parameters = splitTopLevelCommaSegments(text.substring(left + 1, right)).mapNotNull(::parseDeclaredParameter)
+        val display = "$name(" + parameters.joinToString(", ", transform = ::formatDeclaredParameter) + ")" +
+            (returnType?.let { " : $it" } ?: "")
+        return signature(display, *parameters.map { it.name }.toTypedArray()).copy(
+            parameterTypes = parameters.map { it.typeName },
+            parameterQualifiers = parameters.map { it.qualifier },
+            returnType = returnType,
         )
     }
 

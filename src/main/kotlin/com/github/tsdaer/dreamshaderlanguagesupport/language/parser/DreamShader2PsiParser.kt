@@ -881,7 +881,13 @@ class DreamShader2PsiParser : PsiParser {
             }
             DreamShaderTokenTypes.KEYWORD, DreamShaderTokenTypes.IDENTIFIER -> {
                 val marker = builder.mark()
+                val identifier = builder.tokenType == DreamShaderTokenTypes.IDENTIFIER
                 builder.advanceLexer()
+                while (identifier && builder.tokenType == DreamShaderTokenTypes.OPERATOR && builder.tokenText == "::") {
+                    builder.advanceLexer()
+                    if (builder.tokenType != DreamShaderTokenTypes.IDENTIFIER) break
+                    builder.advanceLexer()
+                }
                 marker.done(DreamShader2ElementTypes.REFERENCE_EXPRESSION)
                 PostfixKind.PLAIN
             }

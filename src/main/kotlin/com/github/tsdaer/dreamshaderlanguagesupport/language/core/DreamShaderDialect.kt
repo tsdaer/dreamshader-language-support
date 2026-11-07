@@ -48,7 +48,7 @@ object DreamShaderDialects {
     /** 2.0 declaration keywords, matched case-sensitively on V1 identifier tokens. */
     private val V2_DECLARATION_MARKERS: Set<String> = setOf("uniform", "export", "extern")
 
-    /** 2.0 preprocessor spellings; 1.x only ever writes `#Region`/`#EndRegion` at line start. */
+    /** The legacy lexer consumes the 2.2 shared file pragmas before this marker scan. */
     private val V2_PREPROCESSOR_MARKERS: Set<String> = setOf(
         "pragma", "include", "if", "ifdef", "ifndef", "elif", "else", "endif", "define", "undef",
     )

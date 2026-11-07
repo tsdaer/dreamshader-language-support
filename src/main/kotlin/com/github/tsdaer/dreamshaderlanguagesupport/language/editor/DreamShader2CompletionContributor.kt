@@ -5,6 +5,8 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2El
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDialects
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderIcons
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
+import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShaderLegacyNamespaceSymbols
+import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.normalizeLegacyQualifiedCall
 import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShader2FileAnalysis
 import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShader2InferenceContext
 import com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics.DreamShader2Type
@@ -106,12 +108,38 @@ internal object DreamShader2CompletionSuggester {
         return DreamShader2CompletionContexts.suggest(file, caretLeaf, offset)
             ?: pragmaMaterialCompletions(file, offset)
             ?: includePathCompletions(file, offset)
+            ?: legacyNamespaceCompletions(file, caretLeaf, offset)
             ?: memberCompletions(file, caretLeaf, catalogEntries)
             ?: namedArgumentCompletions(caretLeaf, catalogEntries)
             ?: namedArgumentValueCompletions(offset, caretLeaf, catalogEntries)
             ?: instanceParameterCompletions(file, caretLeaf)
             ?: instanceOverrideValueCompletions(file, offset)
             ?: bareIdentifierCompletions(file, caretLeaf)
+    }
+
+    private val legacyNamespacePrefix = Regex("""\b((?:[A-Za-z_]\w*[ \t]*::[ \t]*)+)\w*$""")
+
+    private fun legacyNamespaceCompletions(file: DreamShaderPsiFile, leaf: PsiElement, offset: Int): List<DreamShaderCompletionItem>? {
+        if (isInCommentOrString(leaf)) return null
+        val line = linePrefixBefore(file.text, offset) ?: return null
+        val match = legacyNamespacePrefix.find(line) ?: return null
+        val path = normalizeLegacyQualifiedCall(match.groupValues[1].trimEnd()).removeSuffix("::").split("::")
+        return DreamShaderLegacyNamespaceSymbols.visible(file)
+            .filter { it.path.size > path.size && it.path.take(path.size) == path }
+            .distinctBy { it.path[path.size] }
+            .map { callable ->
+                val name = callable.path[path.size]
+                if (callable.path.size > path.size + 1) {
+                    DreamShaderCompletionItem(name, "$name::", typeText = "namespace", priority = DreamShaderCompletionPriorities.NAMESPACE_CALLABLE)
+                } else {
+                    val signature = callable.signature
+                    DreamShaderCompletionItem(name, "$name()", detail = signature.presentableText,
+                        caretOffset = name.length + if (signature.parameterNames.isEmpty()) 2 else 1,
+                        tailText = "(" + signature.parameterNames.joinToString(", ") + ")",
+                        typeText = signature.returnType, icon = DreamShaderIcons.FUNCTION,
+                        priority = DreamShaderCompletionPriorities.NAMESPACE_CALLABLE)
+                }
+            }.toList()
     }
 
     // ------------------------------------------------------------------
@@ -441,7 +469,11 @@ internal object DreamShader2CompletionSuggester {
 
         val call = argumentList.parent
         val calleeName = callCalleeName(call) ?: return null
-        val parameters = findCatalogEntry(calleeName, catalogEntries)?.parameters ?: (caretLeaf.containingFile as? DreamShaderPsiFile)
+        val legacy = if ("::" in calleeName) (caretLeaf.containingFile as? DreamShaderPsiFile)
+            ?.let { DreamShaderLegacyNamespaceSymbols.resolve(it, calleeName).singleOrNull()?.signature } else null
+        val parameters = legacy?.let { signature -> signature.parameterNames.mapIndexed { index, name ->
+            DreamShaderMaterialExpressionParameter(name, signature.parameterTypes.getOrNull(index))
+        } } ?: findCatalogEntry(calleeName, catalogEntries)?.parameters ?: (caretLeaf.containingFile as? DreamShaderPsiFile)
             ?.let { DreamShader2SemanticResolver.functions(it, calleeName).firstOrNull() }
             ?.parameterList()?.parameters()?.mapNotNull { param -> param.parameterName()?.let {
                 DreamShaderMaterialExpressionParameter(it, param.typeName()) } } ?: return null

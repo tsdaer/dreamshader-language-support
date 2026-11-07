@@ -5,6 +5,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShade
 import com.github.tsdaer.dreamshaderlanguagesupport.language.packages.DreamShaderImportResolver
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderPsiUtil
+import com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShaderLegacyNamespaceSymbols
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -52,9 +53,16 @@ class DreamShaderGotoDeclarationHandler : GotoDeclarationHandler {
     }
 
     private fun resolveDeclarationTargets(element: PsiElement): Array<PsiElement>? {
+        val sourceFile = element.containingFile as? com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
+            ?: return null
         if (com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCompletionDialects
-                .servesV2At(element.containingFile as? com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPsiFile
-                    ?: return null, element.textOffset)) {
+                .servesV2At(sourceFile, element.textOffset)) {
+            val parts = DreamShaderLegacyNamespaceSymbols.referenceParts(element.parent)
+            if (parts.isNotEmpty()) {
+                if (parts.size < 2 || parts.last() != element) return null
+                val targets = DreamShaderLegacyNamespaceSymbols.resolve(sourceFile, parts.joinToString("::") { it.text })
+                return targets.map { it.identifier }.distinct().toTypedArray().takeIf { it.isNotEmpty() }
+            }
             val binding = com.github.tsdaer.dreamshaderlanguagesupport.language.symbols.DreamShader2SemanticResolver.resolveIdentifier(element)
             return binding?.takeIf { it.identifier != element }?.let { arrayOf(it.identifier) }
         }

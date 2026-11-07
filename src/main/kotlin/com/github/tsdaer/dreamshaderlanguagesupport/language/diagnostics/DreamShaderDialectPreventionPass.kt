@@ -2,6 +2,7 @@ package com.github.tsdaer.dreamshaderlanguagesupport.language.diagnostics
 
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderBundle
 import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderDialects
+import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShaderPragmas
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.lang.annotation.AnnotationHolder
@@ -59,6 +60,9 @@ internal object DreamShaderDialectPreventionPass {
             if (masked.any { it.intersects(range) }) return@forEachLineRange
             val marker = match.groupValues.drop(1).firstOrNull { it.isNotEmpty() }
                 ?: match.value.trim().split(WHITESPACE).first()
+            if (marker == "#pragma" && DreamShaderPragmas.isSharedAt(lineText, lineText.indexOf('#'))) {
+                return@forEachLineRange
+            }
             holder.newAnnotation(
                 HighlightSeverity.ERROR,
                 DreamShaderBundle.message("diagnostic.dsh2248.v2SyntaxInLegacyFile", extension, marker)

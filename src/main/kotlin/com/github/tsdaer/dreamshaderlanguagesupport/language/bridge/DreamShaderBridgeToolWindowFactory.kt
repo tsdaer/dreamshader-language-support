@@ -223,6 +223,7 @@ private class DiagnosticTableCellRenderer : ColoredTableCellRenderer() {
                         append("\n\n").append(entry.code).append(" (").append(entry.severity).append(")")
                         entry.summaryZh?.let { append("\n").append(it) }
                     }
+                    DreamShaderBridgeDiagnosticsPass.noGenerationHint(code)?.let { append("\n\n").append(it) }
                 }
             }
             2 -> {

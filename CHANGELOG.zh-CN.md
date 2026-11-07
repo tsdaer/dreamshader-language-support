@@ -2,6 +2,19 @@
 
 # dreamshader-language-support 更新日志
 
+## [2.5.1] - 2026-11-07
+
+### 新增
+
+- 兼容 DreamShader 2.2.0：`.dss` 中的 `BL::TexNoise3D(...)` 一类调用可从包含的 1.x 命名空间补全、跳转到声明并显示参数提示。
+- 支持诊断禁用指令及对应严重度的 DSH 码、NoGeneration 标记和包资产生成声明的补全。内置码表覆盖上游的 851 个诊断码。
+
+### 修复
+
+- `.dsm` 和 `.dsf` 中合法的文件级 pragma 保持 1.x 解析，不再误报 `DSH2248`。
+- Bridge 信息级诊断保留原严重度；资产因 NoGeneration 跳过时，提示如何显式编译源文件。
+- 修正文件图标扩展点注册，避免 Rider 加载 `.dss` 和 `.dsi` 图标时抛出插件异常。
+
 ## [2.5.0] - 2026-10-07
 
 ### 新增
@@ -395,6 +408,7 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[2.5.1]: https://github.com/tsdaer/dreamshader-language-support/compare/2.5.0...2.5.1
 [2.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.0.0...2.1.0

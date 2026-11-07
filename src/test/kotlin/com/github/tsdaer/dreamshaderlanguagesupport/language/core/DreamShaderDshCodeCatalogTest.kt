@@ -49,8 +49,16 @@ class DreamShaderDshCodeCatalogTest {
         val entry = requireNotNull(DreamShaderDshCodeCatalog.lookup("DSH2248"))
         val url = DreamShaderDshCodeCatalog.documentationUrl(entry)
         assertEquals(
-            "https://github.com/TypeDreamMoon/DreamShader/blob/main/Docs/diagnostics/DSH2xxx.md#dsh2248",
+            "https://github.com/TypeDreamMoon/DreamShader/blob/v2.2.0/Docs/diagnostics/DSH2xxx.md#dsh2248",
             url
         )
+    }
+
+    @Test
+    fun catalogIncludesNewCodesAndMatchesBySeverity() {
+        assertEquals("error", DreamShaderDshCodeCatalog.lookup("DSH6224")?.severity)
+        assertEquals("info", DreamShaderDshCodeCatalog.lookup("DSH8277")?.severity)
+        assertEquals(listOf("DSH8278"), DreamShaderDshCodeCatalog.matching("dsh827", "warning")
+            .map { it.code }.filter { it >= "DSH8277" })
     }
 }
