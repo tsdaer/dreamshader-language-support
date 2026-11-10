@@ -208,9 +208,6 @@
                 implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderListSplitJoinContext"/>
         <multiHostInjector
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderHlslInjector"/>
-        <suggestedRefactoringSupport
-                language="DreamShaderLang"
-                implementationClass="com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderSuggestedRefactoringSupport"/>
         <copyPathProvider
                 implementation="com.github.tsdaer.dreamshaderlanguagesupport.language.editor.DreamShaderCopyPathProvider"/>
     </extensions>

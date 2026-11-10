@@ -228,6 +228,7 @@ intellijPlatform {
         failureLevel.set(
             listOf(
                 FailureLevel.COMPATIBILITY_PROBLEMS,
+                FailureLevel.INTERNAL_API_USAGES,
                 FailureLevel.OVERRIDE_ONLY_API_USAGES
             )
         )

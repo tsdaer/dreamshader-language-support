@@ -2,6 +2,12 @@
 
 # dreamshader-language-support Changelog
 
+## [2.5.2] - 2026-11-07
+
+### Fixed
+
+- Removed automatic rename suggestions that relied on internal IntelliJ APIs. The explicit Rename action still updates declarations and their references.
+
 ## [2.5.1] - 2026-11-07
 
 ### Added
@@ -400,6 +406,7 @@
 - Internationalization: bundle-driven UI/messages with `DreamShaderBundle.properties` and `DreamShaderBundle_zh_CN.properties`.
 - Quality and release readiness: broad unit/integration/UI test coverage, large-file smoke tests, Marketplace signing/publishing workflow, and changelog patching in release CI.
 
+[2.5.2]: https://github.com/tsdaer/dreamshader-language-support/compare/2.5.1...2.5.2
 [2.5.1]: https://github.com/tsdaer/dreamshader-language-support/compare/2.5.0...2.5.1
 [2.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.1.0...2.2.0

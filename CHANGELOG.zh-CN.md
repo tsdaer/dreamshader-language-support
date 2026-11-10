@@ -2,6 +2,12 @@
 
 # dreamshader-language-support 更新日志
 
+## [2.5.2] - 2026-11-07
+
+### 修复
+
+- 移除依赖 IntelliJ 内部 API 的自动重命名建议。手动「重命名」仍会同步更新声明和引用。
+
 ## [2.5.1] - 2026-11-07
 
 ### 新增
@@ -408,6 +414,7 @@
 - 国际化：基于 `DreamShaderBundle.properties` 与 `DreamShaderBundle_zh_CN.properties` 的 UI/消息本地化。
 - 质量与发布就绪：完善的单元/集成/UI 测试覆盖、大文件性能冒烟测试、Marketplace 签名发布流程、Release CI 的 changelog 自动补丁。
 
+[2.5.2]: https://github.com/tsdaer/dreamshader-language-support/compare/2.5.1...2.5.2
 [2.5.1]: https://github.com/tsdaer/dreamshader-language-support/compare/2.5.0...2.5.1
 [2.3.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/tsdaer/dreamshader-language-support/compare/2.1.0...2.2.0

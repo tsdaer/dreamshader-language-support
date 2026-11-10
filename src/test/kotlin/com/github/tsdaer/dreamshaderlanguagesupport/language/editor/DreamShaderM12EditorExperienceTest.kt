@@ -4,9 +4,7 @@ import com.github.tsdaer.dreamshaderlanguagesupport.language.core.DreamShader2El
 import com.github.tsdaer.dreamshaderlanguagesupport.language.lexer.DreamShaderTokenTypes
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShaderDeclaration
 import com.github.tsdaer.dreamshaderlanguagesupport.language.psi.DreamShader2FunctionDeclaration
-import com.github.tsdaer.dreamshaderlanguagesupport.language.refactoring.DreamShaderSuggestedRefactoringSupport
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
@@ -15,8 +13,8 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 /**
  * Milestone M12 D-line editor experience: copy path (D6), in-file usage highlight (D1),
- * code block support (D5), Surround With (D2), editor action handlers (D4), conditional
- * HLSL injection ranges (D7) and suggested rename refactoring (D3).
+ * code block support (D5), Surround With (D2), editor action handlers (D4),
+ * and conditional HLSL injection ranges (D7).
  */
 class DreamShaderM12EditorExperienceTest : BasePlatformTestCase() {
     // ------------------------------------------------------------------
@@ -331,67 +329,6 @@ class DreamShaderM12EditorExperienceTest : BasePlatformTestCase() {
         injector.getLanguagesToInject(registrar, declaration)
         assertFalse(registrar.started)
     }
-
-    // ------------------------------------------------------------------
-    // D3 suggested refactoring (rename-only)
-    // ------------------------------------------------------------------
-
-    fun testSuggestedRefactoringExtractsSignature() {
-        val file = myFixture.configureByText(
-            "suggested.dss",
-            "export float3 Blend(float a, float b) {\n    return a;\n}\n",
-        )
-        val function = PsiTreeUtil.findChildrenOfType(file, DreamShader2FunctionDeclaration::class.java).first()
-        val support = DreamShaderSuggestedRefactoringSupport()
-        assertTrue(support.isAnchor(function))
-
-        val signature = support.stateChanges.signature(function, null)!!
-        assertEquals("Blend", signature.name)
-        assertEquals("float3", signature.type)
-        assertEquals(listOf("a", "b"), signature.parameters.map { it.name })
-    }
-
-    fun testSuggestedRenameTriggersAfterNameEdit() {
-        val file = myFixture.configureByText(
-            "suggested_rename.dss",
-            "export void Work(float x) {\n}\n",
-        )
-        val function = PsiTreeUtil.findChildrenOfType(file, DreamShader2FunctionDeclaration::class.java).first()
-        val support = DreamShaderSuggestedRefactoringSupport()
-        val stateChanges = support.stateChanges
-        val state = stateChanges.createInitialState(function)
-
-        WriteCommandAction.runWriteCommandAction(project) {
-            val document = file.viewProvider.document!!
-            val nameOffset = file.text.indexOf("Work")
-            document.replaceString(nameOffset, nameOffset + "Work".length, "Work2")
-            PsiDocumentManager.getInstance(project).commitDocument(document)
-        }
-        val updated = stateChanges.updateState(state!!, function)
-        assertNotNull("State should survive the name edit", updated)
-        assertTrue(
-            "Name change should be detected (the suggestion trigger condition)",
-            updated!!.oldSignature.name != updated.newSignature.name,
-        )
-        val data = support.availability.detectAvailableRefactoring(updated)
-        assertTrue(data is com.intellij.refactoring.suggested.SuggestedRenameData)
-        assertEquals("Work", (data as com.intellij.refactoring.suggested.SuggestedRenameData).oldName)
-    }
-
-    fun testSuggestedRenameDoesNotTriggerWithoutEdit() {
-        val file = myFixture.configureByText(
-            "suggested_stable.dss",
-            "export void Work(float x) {\n}\n",
-        )
-        val function = PsiTreeUtil.findChildrenOfType(file, DreamShader2FunctionDeclaration::class.java).first()
-        val support = DreamShaderSuggestedRefactoringSupport()
-        val state = support.stateChanges.createInitialState(function)
-        val updated = support.stateChanges.updateState(state!!, function)
-        val triggered = updated != null && updated.oldSignature.name != updated.newSignature.name
-        assertFalse("No suggestion expected when nothing changed", triggered)
-    }
-
-    // ------------------------------------------------------------------
 
     private class RecordingRegistrar : com.intellij.lang.injection.MultiHostRegistrar {
         var started = false
